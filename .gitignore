@@ -1,0 +1,40 @@
+# General
+.DS_Store
+Thumbs.db
+*.swp
+*.tmp
+.vscode/
+.idea/
+logs/
+
+# Swift / Xcode
+DerivedData/
+*.xcuserstate
+*.xcuserdata/
+.swiftpm/
+.build/
+Packages/
+Package.resolved
+
+# Swift Package Manager & CocoaPods
+Pods/
+Podfile.lock
+
+# JavaScript/Node (future Azure services)
+node_modules/
+dist/
+build/
+coverage/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-lock.yaml
+
+# Environment
+.env
+.env.*
+
+# Tooling
+*.xcscmblueprint
+*.xccheckout
+xcuserdata/

@@ -1,0 +1,16 @@
+[
+  {
+    "id": "420dcbfb-42a8-4fb6-b7ed-248896f9e9d4",
+    "romHash": "nes-super-mario",
+    "minDeviceTier": "Tier1",
+    "tier": "Stable",
+    "notes": "Full speed on all supported devices."
+  },
+  {
+    "id": "2b01d8e3-35ce-4b61-8abc-63951675dd79",
+    "romHash": "ps2-shadow-colossus",
+    "minDeviceTier": "Tier3",
+    "tier": "Experimental",
+    "notes": "Enable frameskip on devices below A17."
+  }
+]

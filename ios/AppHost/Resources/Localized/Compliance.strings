@@ -1,0 +1,4 @@
+"COMPLIANCE_BYO_ROM" = "Bring your own ROMs and BIOS files. Xemu never supplies copyrighted content.";
+"COMPLIANCE_DMCA_CONTACT" = "Use Settings › Legal to submit takedown requests or to report content.";
+"COMPLIANCE_CONTROLLER_GUIDANCE" = "Supports MFi, Bluetooth HID, PlayStation, and Xbox controllers. Availability varies per game.";
+"COMPLIANCE_EXPERIMENTAL_WARNING" = "Experimental systems may run slowly on unsupported devices.";

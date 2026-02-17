@@ -1,0 +1,16 @@
+{
+  "entitlements": [
+    {
+      "productCode": "REMOVE_ADS",
+      "status": "Active",
+      "features": { "adsDisabled": true },
+      "offlineGraceEnd": "2026-02-24T00:00:00Z"
+    },
+    {
+      "productCode": "EXPERIMENTAL_PACK",
+      "status": "Active",
+      "features": { "ps2Enabled": true, "ds3dEnabled": true },
+      "offlineGraceEnd": "2026-02-20T00:00:00Z"
+    }
+  ]
+}

@@ -1,0 +1,442 @@
+openapi: 3.1.0
+info:
+  title: iOS Multi-System Emulator Platform APIs
+  version: 0.1.0
+  description: |
+    Contracts supporting entitlements, telemetry, achievements, leaderboards, and multiplayer signaling
+    for the iOS multi-system emulator. All endpoints require bearer JWTs issued by the entitlement service
+    unless stated otherwise.
+servers:
+  - url: https://api.emu-platform.example.com/v1
+    description: Production
+  - url: https://sandbox.emu-platform.example.com/v1
+    description: Sandbox/TestFlight
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    DeviceFingerprint:
+      type: object
+      required: [deviceId, model, osVersion, socClass]
+      properties:
+        deviceId:
+          type: string
+          format: uuid
+        model:
+          type: string
+        osVersion:
+          type: string
+        socClass:
+          type: string
+          enum: [Tier1, Tier2, Tier3, Unsupported]
+        jailbreakSignal:
+          type: boolean
+          description: True when heuristic detects compromised device.
+    EntitlementSummary:
+      type: object
+      required: [productCode, status, features, offlineGraceEnd]
+      properties:
+        productCode:
+          type: string
+          enum: [REMOVE_ADS, EXPERIMENTAL_PACK, PRO_BUNDLE]
+        status:
+          type: string
+          enum: [Active, Revoked, Refunded, Expired]
+        features:
+          type: object
+          additionalProperties: { type: boolean }
+        offlineGraceEnd:
+          type: string
+          format: date-time
+        deviceBindings:
+          type: array
+          items:
+            type: object
+            required: [deviceId, validatedAt]
+            properties:
+              deviceId:
+                type: string
+                format: uuid
+              validatedAt:
+                type: string
+                format: date-time
+    SessionEnvelope:
+      type: object
+      required: [sessionId, entryId, mode]
+      properties:
+        sessionId:
+          type: string
+          format: uuid
+        entryId:
+          type: string
+          format: uuid
+        mode:
+          type: string
+          enum: [SinglePlayer, Legit, MultiplayerHost, MultiplayerGuest]
+        startedAt:
+          type: string
+          format: date-time
+    AchievementTrigger:
+      type: object
+      required: [achievementId, payload, occurredAt]
+      properties:
+        achievementId:
+          type: string
+          format: uuid
+        payload:
+          type: object
+        occurredAt:
+          type: string
+          format: date-time
+    LeaderboardEntry:
+      type: object
+      properties:
+        userId:
+          type: string
+          format: uuid
+        username:
+          type: string
+        rank:
+          type: integer
+        score:
+          type: number
+        region:
+          type: string
+        flags:
+          type: array
+          items: { type: string }
+    MatchTicket:
+      type: object
+      required: [matchId, token, region]
+      properties:
+        matchId:
+          type: string
+          format: uuid
+        token:
+          type: string
+          description: Short-lived JWT used for signaling + TURN auth.
+        region:
+          type: string
+          enum: [NA, EU, APAC, LATAM]
+        host:
+          type: boolean
+        romHash:
+          type: string
+          description: SHA-256 hash of ROM required for validation.
+    QualityReport:
+      type: object
+      required: [matchId, sessionId, metrics]
+      properties:
+        matchId:
+          type: string
+          format: uuid
+        sessionId:
+          type: string
+          format: uuid
+        metrics:
+          type: object
+          properties:
+            rttMs:
+              type: number
+            jitterMs:
+              type: number
+            packetLossPct:
+              type: number
+            rollbackDepthMax:
+              type: integer
+            candidateType:
+              type: string
+              enum: [host, srflx, relay]
+paths:
+  /entitlements/refresh:
+    post:
+      summary: Validate StoreKit receipt and return entitlements
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [bundleId, receipt, device]
+              properties:
+                bundleId:
+                  type: string
+                receipt:
+                  type: string
+                  description: Base64 app receipt blob
+                device:
+                  $ref: '#/components/schemas/DeviceFingerprint'
+      responses:
+        '200':
+          description: Entitlements issued
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [entitlements, jwt]
+                properties:
+                  entitlements:
+                    type: array
+                    items: { $ref: '#/components/schemas/EntitlementSummary' }
+                  jwt:
+                    type: string
+                    description: Short-lived bearer token for subsequent API calls
+        '409':
+          description: Device limit exceeded
+        '422':
+          description: Invalid receipt or mismatched bundle
+
+  /devices/register:
+    post:
+      summary: Register device binding for entitlement enforcement
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [device]
+              properties:
+                device:
+                  $ref: '#/components/schemas/DeviceFingerprint'
+      responses:
+        '200': { description: Device registered }
+        '409': { description: Registration denied (limit exceeded) }
+
+  /sessions/start:
+    post:
+      summary: Register beginning of gameplay or multiplayer session
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [entryId, mode, deviceId]
+              properties:
+                entryId: { type: string, format: uuid }
+                mode:
+                  type: string
+                  enum: [SinglePlayer, Legit, MultiplayerHost, MultiplayerGuest]
+                deviceId: { type: string, format: uuid }
+                legitModeEnabled: { type: boolean }
+                romHash: { type: string }
+      responses:
+        '201':
+          description: Session created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionEnvelope'
+
+  /sessions/heartbeat:
+    post:
+      summary: Send periodic heartbeat plus telemetry flags
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [sessionId, timestamp]
+              properties:
+                sessionId: { type: string, format: uuid }
+                timestamp: { type: string, format: date-time }
+                rewindsSinceLast: { type: integer, minimum: 0 }
+                achievementTriggers:
+                  type: array
+                  items: { $ref: '#/components/schemas/AchievementTrigger' }
+                metrics: { type: object }
+      responses:
+        '204': { description: Heartbeat accepted }
+
+  /sessions/end:
+    post:
+      summary: Complete session and receive verdict placeholder
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [sessionId, endedAt]
+              properties:
+                sessionId: { type: string, format: uuid }
+                endedAt: { type: string, format: date-time }
+                outcome:
+                  type: string
+                  enum: [Win, Loss, Completed, Quit]
+                totalRewinds: { type: integer, minimum: 0 }
+      responses:
+        '200':
+          description: Verdict queued
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  verdict: { type: string }
+                  pendingReview: { type: boolean }
+
+  /achievements/report:
+    post:
+      summary: Submit achievement triggers for evaluation
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [sessionId, triggers]
+              properties:
+                sessionId: { type: string, format: uuid }
+                triggers:
+                  type: array
+                  items: { $ref: '#/components/schemas/AchievementTrigger' }
+      responses:
+        '200': { description: Triggers accepted }
+
+  /leaderboards:
+    get:
+      summary: Retrieve leaderboard slice
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: query
+          name: seasonId
+          schema: { type: string }
+        - in: query
+          name: console
+          schema: { type: string }
+        - in: query
+          name: region
+          schema: { type: string }
+        - in: query
+          name: limit
+          schema: { type: integer, default: 100, maximum: 200 }
+      responses:
+        '200':
+          description: Leaderboard page
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  seasonId: { type: string }
+                  entries:
+                    type: array
+                    items: { $ref: '#/components/schemas/LeaderboardEntry' }
+
+  /multiplayer/matchmaking:
+    post:
+      summary: Request invite-only or ranked multiplayer match ticket
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [entryId, region]
+              properties:
+                entryId: { type: string, format: uuid }
+                region: { type: string }
+                mode:
+                  type: string
+                  enum: [Invite, Ranked]
+                romHash: { type: string }
+                preferredRole:
+                  type: string
+                  enum: [Host, Guest, Auto]
+      responses:
+        '201':
+          description: Match ticket issued
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MatchTicket'
+
+  /multiplayer/webrtc/offer:
+    post:
+      summary: Submit WebRTC SDP offer + gather ICE instructions
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [matchId, sdp]
+              properties:
+                matchId: { type: string, format: uuid }
+                role:
+                  type: string
+                  enum: [Host, Guest]
+                sdp: { type: string }
+      responses:
+        '200':
+          description: Return remote SDP answer token
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [answer]
+                properties:
+                  answer: { type: string }
+                  iceServers:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        urls: { type: array, items: { type: string } }
+                        username: { type: string }
+                        credential: { type: string }
+
+  /multiplayer/webrtc/ice:
+    post:
+      summary: Exchange trickle ICE candidates
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [matchId, candidate]
+              properties:
+                matchId: { type: string, format: uuid }
+                candidate: { type: string }
+                role: { type: string, enum: [Host, Guest] }
+      responses:
+        '204': { description: Candidate relayed }
+
+  /multiplayer/report:
+    post:
+      summary: Upload post-match quality + enforcement signals
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/QualityReport'
+      responses:
+        '202': { description: Report accepted }
