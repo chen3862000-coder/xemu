@@ -1,0 +1,14 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "plugin": ["@tarquinen/opencode-dcp@latest", "opencode-agent-skills", "opencode-agent-memory"],
+  "mcp": {
+    "context7": {
+      "type": "remote",
+      "url": "https://mcp.context7.com/mcp",
+      "headers": {
+        "CONTEXT7_API_KEY": "ctx7sk-026ed49e-b90b-4eb5-bea0-8fa4df4cf175"
+      },
+      "enabled": true
+    }
+  }
+}
