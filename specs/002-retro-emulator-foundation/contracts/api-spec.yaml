@@ -1,0 +1,158 @@
+openapi: 3.0.0
+info:
+  title: XEMU Entitlement Validation API
+  version: 1.0.0
+  description: Server-side IAP receipt validation for retro emulator app
+  contact:
+    name: XEMU Development Team
+    email: dev@xemu.app
+  license: MIT
+
+servers:
+  - url: https://api.xemu.app/v1
+    description: Production server
+
+paths:
+  /validate-receipt:
+    post:
+      summary: Validate IAP receipt
+      operationId: validateReceipt
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReceiptValidationRequest'
+      responses:
+        '200':
+          description: Receipt validated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Invalid receipt
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Expired receipt
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          description: Rate limited
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /health:
+    get:
+      summary: API health check
+      operationId: healthCheck
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+
+components:
+  schemas:
+    ReceiptValidationRequest:
+      type: object
+      required:
+        - receipt_data
+        - device_id
+        - product_code
+      properties:
+        receipt_data:
+          type: string
+          description: Base64-encoded receipt from StoreKit 2
+        device_id:
+          type: string
+          description: Unique device identifier
+        product_code:
+          type: string
+          enum:
+            - REMOVE_ADS
+          description: Product code to validate
+
+    Entitlement:
+      type: object
+      properties:
+        product_code:
+          type: string
+          enum:
+            - REMOVE_ADS
+        is_active:
+          type: boolean
+        purchase_date:
+          type: string
+          format: date-time
+        expiry_date:
+          type: string
+          format: date-time
+          nullable: true
+
+    ValidationResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          enum:
+            - valid
+            - invalid
+            - expired
+        entitlement:
+          $ref: '#/components/schemas/Entitlement'
+        cache_until:
+          type: string
+          format: date-time
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+          enum:
+            - invalid_request
+            - invalid_receipt
+            - expired_receipt
+            - rate_limited
+            - server_error
+            - service_unavailable
+        message:
+          type: string
+        details:
+          type: object
+
+    HealthResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          enum:
+            - healthy
+            - degraded
+        timestamp:
+          type: string
+          format: date-time
+        version:
+          type: string
