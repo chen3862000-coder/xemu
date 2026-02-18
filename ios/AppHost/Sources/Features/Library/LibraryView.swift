@@ -496,17 +496,28 @@ final class LibraryViewModel: ObservableObject {
     @Published var filteredEntries: [ROMLibraryEntry] = []
 
     private var allEntries: [ROMLibraryEntry] = []
+    private var fetchedResultsController: NSFetchedResultsController<ROMLibraryEntry>?
+    private weak var viewContext: NSManagedObjectContext?
 
     func loadEntries(in context: NSManagedObjectContext) {
         isLoading = true
+        viewContext = context
 
         let fetchRequest: NSFetchRequest<ROMLibraryEntry> = ROMLibraryEntry.fetchRequest()
         fetchRequest.sortDescriptors = [
             NSSortDescriptor(keyPath: \ROMLibraryEntry.lastPlayedAt, ascending: false)
         ]
-
+        
+        fetchedResultsController = NSFetchedResultsController(
+            fetchRequest: fetchRequest,
+            managedObjectContext: context,
+            sectionNameKeyPath: nil,
+            cacheName: nil
+        )
+        
         do {
-            allEntries = try context.fetch(fetchRequest)
+            try fetchedResultsController?.performFetch()
+            allEntries = fetchedResultsController?.fetchedObjects ?? []
             filteredEntries = allEntries
         } catch {
             print("Failed to fetch ROMs: \(error)")
@@ -514,6 +525,11 @@ final class LibraryViewModel: ObservableObject {
         }
 
         isLoading = false
+    }
+
+    func refreshEntries() {
+        guard let fetchedObjects = fetchedResultsController?.fetchedObjects else { return }
+        allEntries = fetchedObjects
     }
 
     func applyFilter(_ filter: LibraryFilter) {

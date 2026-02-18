@@ -85,7 +85,7 @@ public struct CompatibilityDiagnosticsSheet: View {
             .cornerRadius(8)
         }
         .padding()
-        .background(Color(nsColor: .controlBackgroundColor))
+        .background(Color.secondary.opacity(0.1))
         .cornerRadius(12)
     }
 
@@ -101,7 +101,7 @@ public struct CompatibilityDiagnosticsSheet: View {
             }
         }
         .padding()
-        .background(Color(nsColor: .controlBackgroundColor))
+        .background(Color.secondary.opacity(0.1))
         .cornerRadius(12)
     }
 
@@ -146,7 +146,7 @@ public struct CompatibilityDiagnosticsSheet: View {
             }
         }
         .padding()
-        .background(Color(nsColor: .controlBackgroundColor))
+        .background(Color.secondary.opacity(0.1))
         .cornerRadius(12)
     }
 

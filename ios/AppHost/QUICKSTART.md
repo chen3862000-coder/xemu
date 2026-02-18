@@ -14,19 +14,19 @@
 cd ios/AppHost
 
 # Run all tests
-./demo.sh test
+./test.sh test
 
 # Run tests with coverage report
-./demo.sh test-coverage
+./test.sh test-coverage
 
 # Launch the app on iOS Simulator
-./demo.sh demo
+./test.sh demo
 
 # List available simulators
-./demo.sh list-sims
+./test.sh list-sims
 
 # Use specific simulator
-./demo.sh demo --simulator "iPhone 15 Pro"
+./test.sh demo --simulator "iPhone 15 Pro"
 ```
 
 ### Option 2: Using Xcode
@@ -91,7 +91,7 @@ Current coverage: **> 70%**
 
 ```bash
 # Generate detailed coverage report
-./demo.sh test-coverage
+./test.sh test-coverage
 
 # View in Xcode
 # 1. Run tests
@@ -137,32 +137,32 @@ Current coverage: **> 70%**
 
 ### "No such module 'XCTest'" error
 
-This is expected when building for macOS. Tests are iOS-only. Use `./demo.sh test` instead of `swift test`.
+This is expected when building for macOS. Tests are iOS-only. Use `./test.sh test` instead of `swift test`.
 
 ### Simulator not found
 
 ```bash
 # List available simulators
-./demo.sh list-sims
+./test.sh list-sims
 
 # Use specific simulator
-./demo.sh demo --simulator "iPhone 15 Pro"
+./test.sh demo --simulator "iPhone 15 Pro"
 ```
 
 ### Build fails
 
 ```bash
 # Clean and rebuild
-./demo.sh clean
-./demo.sh build
+./test.sh clean
+./test.sh build
 ```
 
 ### Tests fail
 
 1. Check that simulator is available
-2. Clean build artifacts: `./demo.sh clean`
-3. Rebuild: `./demo.sh build`
-4. Run tests: `./demo.sh test`
+2. Clean build artifacts: `./test.sh clean`
+3. Rebuild: `./test.sh build`
+4. Run tests: `./test.sh test`
 
 ## Next Steps
 

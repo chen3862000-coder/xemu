@@ -8,7 +8,6 @@ final class RomImportCoordinatorTests: XCTestCase {
         let controller = PersistenceController(inMemory: true)
         let coordinator = RomImportCoordinator(
             persistence: controller,
-            compatibility: [],
             romsDirectory: URL(fileURLWithPath: "/tmp/roms")
         )
         
@@ -20,7 +19,6 @@ final class RomImportCoordinatorTests: XCTestCase {
         let controller = PersistenceController(inMemory: true)
         let coordinator = RomImportCoordinator(
             persistence: controller,
-            compatibility: [],
             romsDirectory: URL(fileURLWithPath: "/tmp/roms")
         )
         

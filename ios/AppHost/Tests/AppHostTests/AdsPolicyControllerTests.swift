@@ -10,6 +10,7 @@ final class AdsPolicyControllerTests: XCTestCase {
 
     override func setUp() {
         super.setUp()
+        AdPreferences.shared.resetToDefaults()
         controller = AdsPolicyController()
         cancellables = Set<AnyCancellable>()
     }
