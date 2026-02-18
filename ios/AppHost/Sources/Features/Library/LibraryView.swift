@@ -130,7 +130,7 @@ struct RomCard: View {
                         .cornerRadius(12)
                 }
 
-                if entry.tier == .experimental {
+                if entry.tier == "experimental" {
                     VStack {
                         Spacer()
                         HStack {
@@ -169,11 +169,11 @@ struct RomCard: View {
                 }
 
                 HStack {
-                    if entry.completionState == .completed {
+                    if entry.completionState == "completed" {
                         Label("Completed", systemImage: "checkmark.circle.fill")
                             .font(.caption2)
                             .foregroundColor(.green)
-                    } else if entry.completionState == .inProgress {
+                    } else if entry.completionState == "inProgress" {
                         Label("In Progress", systemImage: "circle.fill")
                             .font(.caption2)
                             .foregroundColor(.orange)
@@ -254,16 +254,15 @@ struct RomDetailView: View {
             .padding()
         }
         .navigationTitle(rom.title ?? "ROM Details")
-        .navigationBarTitleDisplayMode(.inline)
         .toolbar {
-            ToolbarItem(placement: .navigationBarTrailing) {
+            ToolbarItem(placement: .cancellationAction) {
                 Button("Close") {
                     dismiss()
                     onDismiss()
                 }
             }
         }
-        .fullScreenCover(isPresented: $isLaunching) {
+        .sheet(isPresented: $isLaunching) {
             GameView(rom: rom)
         }
         .alert(isPresented: $adShouldShow) {
@@ -334,9 +333,9 @@ struct RomDetailView: View {
                 .font(.headline)
 
             DetailRow(label: "Platform", value: rom.platform ?? "Unknown")
-            DetailRow(label: "ROM Hash", value: rom.romHash?.prefix(16) ?? "Unknown")
+            DetailRow(label: "ROM Hash", value: String(rom.romHash?.prefix(16) ?? "Unknown"))
             DetailRow(label: "Last Played", value: rom.lastPlayedAt?.formatted(date: .abbreviated, time: .shortened) ?? "Never")
-            DetailRow(label: "Completion", value: rom.completionState?.replacingOccurrences(of: camelCaseToWords, with: " ").capitalized ?? "Not Started")
+            DetailRow(label: "Completion", value: formatCompletionState(rom.completionState))
         }
         .padding()
         .background(Color.gray.opacity(0.1))
@@ -421,6 +420,21 @@ struct RomDetailView: View {
         }
     }
 
+    private func formatCompletionState(_ state: String?) -> String {
+        guard let state = state else { return "Not Started" }
+        let result = state.replacingOccurrences(of: "([a-z])([A-Z])", with: "$1 $2", options: .regularExpression)
+        return result.capitalized
+    }
+
+    private func formatPlaytime(_ seconds: Int64) -> String {
+        let minutes = seconds / 60
+        if minutes < 60 {
+            return "\(minutes)m"
+        }
+        let hours = minutes / 60
+        return "\(hours)h"
+    }
+
     private let camelCaseToWords = try! NSRegularExpression(pattern: "([a-z])([A-Z])")
 }
 
@@ -463,6 +477,10 @@ struct GameView: View {
 
 @objc(ROMLibraryEntry)
 class ROMLibraryEntry: NSManagedObject {
+    @NSManaged var entryId: UUID?
+    @NSManaged var userId: UUID?
+    @NSManaged var romHash: String?
+    @NSManaged var perGameSettings: String?
     @NSManaged var title: String?
     @NSManaged var platform: String?
     @NSManaged var tier: String?

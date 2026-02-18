@@ -1,17 +1,17 @@
 import Foundation
 
-enum Platform: String, Codable, CaseIterable {
-    case nes = "NES"
-    case gb = "GB"
-    case gba = "GBA"
-    case genesis = "GENESIS"
-    case nds = "NDS"
-    case ps1 = "PS1"
-    case ps2 = "PS2"
-    case threeDS = "3DS"
+public enum Platform: String, Codable, CaseIterable, Sendable {
+    case NES = "NES"
+    case GB = "GB"
+    case GBA = "GBA"
+    case GENESIS = "GENESIS"
+    case NDS = "NDS"
+    case PS1 = "PS1"
+    case PS2 = "PS2"
+    case _3DS = "3DS"
 }
 
-enum Tier: String, Codable {
+public enum Tier: String, Codable {
     case stable
     case experimental
     case unknown
@@ -38,24 +38,35 @@ enum SessionVerdict: String, Codable {
     case flagged = "Flagged"
 }
 
-enum EntitlementStatus: String, Codable {
+public enum EntitlementStatus: String, Codable {
     case active = "Active"
+    case inactive = "Inactive"
     case revoked = "Revoked"
     case refunded = "Refunded"
     case expired = "Expired"
+    case unknown = "Unknown"
 }
 
-enum ProductCode: String, Codable {
+public enum ProductCode: String, Codable {
     case removeAds = "REMOVE_ADS"
     case experimentalPack = "EXPERIMENTAL_PACK"
     case proBundle = "PRO_BUNDLE"
 }
 
-enum HardwareClass: String, Codable {
+public enum HardwareClass: String, Codable, Comparable {
     case tier1 = "Tier1"
     case tier2 = "Tier2"
     case tier3 = "Tier3"
     case unsupported = "Unsupported"
+    
+    public static func < (lhs: HardwareClass, rhs: HardwareClass) -> Bool {
+        let order: [HardwareClass] = [.unsupported, .tier1, .tier2, .tier3]
+        guard let lhsIndex = order.firstIndex(of: lhs),
+              let rhsIndex = order.firstIndex(of: rhs) else {
+            return false
+        }
+        return lhsIndex < rhsIndex
+    }
 }
 
 enum Region: String, Codable {
@@ -89,4 +100,52 @@ struct DeviceBinding: Codable, Identifiable {
     let deviceName: String
     let deviceId: UUID
     let boundAt: Date
+}
+
+public protocol InputRouting: Sendable {
+    nonisolated func route(_ event: InputEvent)
+    nonisolated func addListener(_ listener: @escaping @Sendable (InputEvent) -> Void) -> UUID
+}
+
+public struct InputEvent: Codable, Sendable, Equatable {
+    public let button: ControllerButton
+    public let isPressed: Bool
+    public let timestamp: Date
+
+    public init(button: ControllerButton, isPressed: Bool, timestamp: Date) {
+        self.button = button
+        self.isPressed = isPressed
+        self.timestamp = timestamp
+    }
+}
+
+enum InputEventType: String, Codable {
+    case buttonPress
+    case axisMove
+    case triggerPull
+}
+
+public enum ControllerButton: String, Codable, Sendable {
+    case a
+    case b
+    case x
+    case y
+    case dpadUp
+    case dpadDown
+    case dpadLeft
+    case dpadRight
+    case leftShoulder
+    case rightShoulder
+    case leftTrigger
+    case rightTrigger
+    case l
+    case r
+    case start
+    case select
+    case menu
+    case triggerLeft
+    case triggerRight
+    case leftStick
+    case rightStick
+    case home
 }

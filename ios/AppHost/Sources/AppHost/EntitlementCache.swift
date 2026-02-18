@@ -20,11 +20,15 @@ public struct DeviceProfile: Codable, Equatable {
     public let deviceId: UUID
     public let hardwareClass: HardwareClass
     public let whitelistVersion: String
+    public var offlineGraceEnd: Date?
+    public var lastSeenOnline: Date?
     
-    public init(deviceId: UUID, hardwareClass: HardwareClass, whitelistVersion: String) {
+    public init(deviceId: UUID, hardwareClass: HardwareClass, whitelistVersion: String, offlineGraceEnd: Date? = nil, lastSeenOnline: Date? = nil) {
         self.deviceId = deviceId
         self.hardwareClass = hardwareClass
         self.whitelistVersion = whitelistVersion
+        self.offlineGraceEnd = offlineGraceEnd
+        self.lastSeenOnline = lastSeenOnline
     }
 }
 
@@ -41,6 +45,7 @@ public struct EntitlementBundle: Codable, Equatable {
 }
 
 public final class EntitlementCache: @unchecked Sendable {
+    public static let shared = EntitlementCache()
     private var bundle: EntitlementBundle?
     private var deviceProfile: DeviceProfile?
     private var cacheExpiry: Date?
@@ -90,7 +95,7 @@ public final class EntitlementCache: @unchecked Sendable {
     
     public func hasActiveEntitlement(_ productCode: ProductCode) -> Bool {
         guard let bundle = getCachedBundle() else { return false }
-        return bundle.entitlements.contains { $0.productCode == productCode && $0.status == .Active }
+        return bundle.entitlements.contains { entitlement in entitlement.productCode == productCode && entitlement.status == .active }
     }
     
     public func getEntitlement(by id: UUID) -> Entitlement? {

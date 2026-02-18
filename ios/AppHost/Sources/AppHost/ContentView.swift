@@ -15,12 +15,12 @@ struct RomItem: Identifiable {
     
     init(from entry: ROMLibraryEntry) {
         self.id = entry.entryId ?? UUID()
-        self.title = entry.title
-        self.platform = entry.platform
-        self.tier = entry.tier
-        self.artworkUri = entry.artworkUri
-        self.playtimeTotal = Int(entry.playtimeTotal)
-        self.completionState = entry.completionState
+        self.title = entry.title ?? "Unknown"
+        self.platform = entry.platform ?? ""
+        self.tier = entry.tier ?? ""
+        self.artworkUri = entry.artworkUri.flatMap { URL(string: $0) }
+        self.playtimeTotal = Int(entry.playtimeTotal ?? 0)
+        self.completionState = entry.completionState ?? ""
         self.lastPlayedAt = entry.lastPlayedAt
     }
 }
@@ -269,7 +269,7 @@ struct ContentView: View {
         importProgress = "Importing \(url.lastPathComponent)..."
         
         let romsDir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
-        let coordinator = RomImportCoordinator(persistenceController: PersistenceController.shared, romsDirectory: romsDir)
+        let coordinator = RomImportCoordinator(persistence: PersistenceController.shared, romsDirectory: romsDir)
         
         do {
             try coordinator.importROM(from: url)

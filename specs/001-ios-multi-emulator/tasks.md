@@ -69,11 +69,11 @@
 
 ### Implementation for User Story 2
 
-- [ ] T020 [P] [US2] Build compatibility data store seeded from `ios/AppHost/Resources/Configs/compatibility.json`
-- [ ] T021 [US2] Implement Experimental gating manager (hardware checks, entitlement flag evaluation) in `ios/AppHost/Sources/Features/Experimental/ExperimentalGatingManager.swift`
-- [ ] T022 [P] [US2] Create experimental launch UI (warning copy, resolution scaling, frame-skip controls) in `ios/AppHost/Sources/Features/Experimental/ExperimentalLaunchView.swift`
-- [ ] T023 [US2] Wire StoreKit purchase flow + entitlement refresh using Azure stub receipts in `ios/AppHost/Sources/Features/Store/PurchaseFlowController.swift`
-- [ ] T024 [US2] Surface compatibility diagnostics + refund guidance sheet in `ios/AppHost/Sources/Features/Experimental/CompatibilityDiagnosticsSheet.swift`
+- [X] T020 [P] [US2] Build compatibility data store seeded from `ios/AppHost/Resources/Configs/compatibility.json`
+- [X] T021 [US2] Implement Experimental gating manager (hardware checks, entitlement flag evaluation) in `ios/AppHost/Sources/Features/Experimental/ExperimentalGatingManager.swift`
+- [X] T022 [P] [US2] Create experimental launch UI (warning copy, resolution scaling, frame-skip controls) in `ios/AppHost/Sources/Features/Experimental/ExperimentalLaunchView.swift`
+- [X] T023 [US2] Wire StoreKit purchase flow + entitlement refresh using Azure stub receipts in `ios/AppHost/Sources/Features/Store/PurchaseFlowController.swift`
+- [X] T024 [US2] Surface compatibility diagnostics + refund guidance sheet in `ios/AppHost/Sources/Features/Experimental/CompatibilityDiagnosticsSheet.swift`
 
 **Checkpoint**: Experimental consoles are monetized/gated entirely on-device, ready for real Azure services later.
 

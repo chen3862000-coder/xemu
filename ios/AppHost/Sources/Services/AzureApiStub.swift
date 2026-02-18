@@ -35,8 +35,13 @@ struct AzureApiStub {
     // MARK: - Helpers
 
     private static func stubData(named name: String) -> Data? {
-        let url = Bundle.main.url(forResource: name, withExtension: "json", subdirectory: "MockData")
-        return url.flatMap { try? Data(contentsOf: $0) }
+        guard Bundle.main.bundleURL.path != "/" else {
+            return nil
+        }
+        guard let url = Bundle.main.url(forResource: name, withExtension: "json", subdirectory: "MockData") else {
+            return nil
+        }
+        return try? Data(contentsOf: url)
     }
 }
 

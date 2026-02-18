@@ -23,9 +23,8 @@ struct EntitlementStatusView: View {
                 }
             }
             .navigationTitle("Account Status")
-            .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
+                ToolbarItem(placement: .cancellationAction) {
                     Button("Done") {
                         dismiss()
                     }
@@ -73,7 +72,7 @@ struct EntitlementStatusView: View {
     }
 
     private var offlineGraceCard: some View {
-        VStack(alignment: .leading, spelling: 16) {
+        VStack(alignment: .leading, spacing: 16) {
             Text("Offline Grace Period")
                 .font(.headline)
 
@@ -140,7 +139,7 @@ struct EntitlementStatusView: View {
                     .background(Color.gray.opacity(0.1))
                     .cornerRadius(8)
             } else {
-                ForEach(viewModel.entitlements) { entitlement in
+                ForEach(viewModel.entitlements, id: \.entitlementId) { entitlement in
                     EntitlementRow(entitlement: entitlement)
                 }
             }
@@ -196,7 +195,7 @@ struct EntitlementStatusView: View {
         switch viewModel.entitlementStatus {
         case .active:
             return "checkmark.shield.fill"
-        case .inactive:
+        case .inactive, .revoked, .refunded, .expired:
             return "exclamationmark.shield.fill"
         case .unknown:
             return "questionmark.shield.fill"
@@ -206,7 +205,7 @@ struct EntitlementStatusView: View {
     private var statusColor: Color {
         switch viewModel.entitlementStatus {
         case .active: return .green
-        case .inactive: return .orange
+        case .inactive, .revoked, .refunded, .expired: return .red
         case .unknown: return .gray
         }
     }
@@ -215,6 +214,9 @@ struct EntitlementStatusView: View {
         switch viewModel.entitlementStatus {
         case .active: return "Entitlement Active"
         case .inactive: return "Entitlement Inactive"
+        case .revoked: return "Entitlement Revoked"
+        case .refunded: return "Entitlement Refunded"
+        case .expired: return "Entitlement Expired"
         case .unknown: return "Status Unknown"
         }
     }
@@ -223,6 +225,8 @@ struct EntitlementStatusView: View {
         switch viewModel.entitlementStatus {
         case .active: return "Your account is in good standing"
         case .inactive: return "Please check your subscription"
+        case .revoked, .refunded: return "Contact support for assistance"
+        case .expired: return "Please renew your subscription"
         case .unknown: return "Unable to verify status"
         }
     }
@@ -244,7 +248,7 @@ struct InfoRow: View {
 }
 
 struct EntitlementRow: View {
-    let entitlement: CachedEntitlement
+    let entitlement: Entitlement
 
     var body: some View {
         HStack {
@@ -278,10 +282,11 @@ struct EntitlementRow: View {
     }
 }
 
+@MainActor
 final class EntitlementViewModel: ObservableObject {
     @Published var entitlementStatus: EntitlementStatus = .unknown
     @Published var isRefreshing = false
-    @Published var entitlements: [CachedEntitlement] = []
+    @Published var entitlements: [Entitlement] = []
     @Published var deviceId: UUID = UUID()
     @Published var hardwareClass: String = "Unknown"
     @Published var lastChecked: String = "Never"
@@ -305,40 +310,37 @@ final class EntitlementViewModel: ObservableObject {
         let azureStub = AzureApiStub.shared
 
         do {
-            let profile = try await azureStub.fetchDeviceProfile(deviceId: deviceId)
-            await MainActor.run {
-                self.hardwareClass = profile.hardwareClass
-                self.legitModeCapable = profile.legitModeCapable
-                self.romStorageBytes = profile.romStorageBytes
-                self.lastChecked = Date().formatted(date: .abbreviated, time: .shortened)
-                self.entitlementStatus = .active
-            }
-
-            deviceProfileCache.cache(profile)
-        } catch {
-            await MainActor.run {
+            _ = try azureStub.fetchCompatibilityMatrix()
+            let entitlementBundle = try await azureStub.fetchEntitlements()
+            
+            self.lastChecked = Date().formatted(date: .abbreviated, time: .shortened)
+            if let firstEnt = entitlementBundle.entitlements.first {
+                self.entitlementStatus = EntitlementStatus(rawValue: firstEnt.status) ?? .inactive
+            } else {
                 self.entitlementStatus = .inactive
             }
+        } catch {
+            self.entitlementStatus = .inactive
         }
 
         loadCachedData()
     }
 
     private func loadCachedData() {
-        entitlements = entitlementCache.loadEntitlements()
+        if let bundle = entitlementCache.getCachedBundle() {
+            entitlements = bundle.entitlements
+        }
 
-        if let profile = deviceProfileCache.loadProfile() {
-            deviceId = profile.deviceId ?? deviceId
-            hardwareClass = profile.hardwareClass ?? "Unknown"
-            legitModeCapable = profile.legitModeCapable ?? true
-            romStorageBytes = profile.romStorageBytes ?? 0
+        if let profile = deviceProfileCache.getCachedProfile() {
+            deviceId = profile.deviceId
+            hardwareClass = profile.hardwareClass.rawValue
 
             if let graceEnd = profile.offlineGraceEnd {
                 offlineGraceEnd = graceEnd
             }
 
-            if let lastCheck = profile.lastEntitlementRefresh {
-                lastChecked = lastCheck.formatted(date: .abbreviated, time: .shortened)
+            if let lastSeen = profile.lastSeenOnline {
+                lastChecked = lastSeen.formatted(date: .abbreviated, time: .shortened)
             }
         }
     }
@@ -361,8 +363,8 @@ final class EntitlementViewModel: ObservableObject {
                 await refreshStatus()
             }
         case .cacheClear:
-            entitlementCache.clear()
-            deviceProfileCache.clear()
+            entitlementCache.clearCache()
+            deviceProfileCache.clearCache()
             loadCachedData()
         }
     }
@@ -382,66 +384,6 @@ struct CachedEntitlement: Identifiable, Codable {
     let expiresAt: Date?
 }
 
-final class EntitlementCache {
-    static let shared = EntitlementCache()
-
-    private let encoder = JSONEncoder()
-    private let decoder = JSONDecoder()
-    private let fileURL: URL
-
-    private init() {
-        let documentsPath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
-        fileURL = documentsPath.appendingPathComponent("entitlements_cache.json")
-    }
-
-    func loadEntitlements() -> [CachedEntitlement] {
-        guard let data = try? Data(contentsOf: fileURL),
-              let entitlements = try? decoder.decode([CachedEntitlement].self, from: data) else {
-            return []
-        }
-        return entitlements
-    }
-
-    func cache(_ entitlements: [CachedEntitlement]) {
-        guard let data = try? encoder.encode(entitlements) else { return }
-        try? data.write(to: fileURL, options: .atomic)
-    }
-
-    func clear() {
-        try? FileManager.default.removeItem(at: fileURL)
-    }
-}
-
-final class DeviceProfileCache {
-    static let shared = DeviceProfileCache()
-
-    private let encoder = JSONEncoder()
-    private let decoder = JSONDecoder()
-    private let fileURL: URL
-
-    private init() {
-        let documentsPath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
-        fileURL = documentsPath.appendingPathComponent("device_profile_cache.json")
-    }
-
-    func loadProfile() -> CachedDeviceProfile? {
-        guard let data = try? Data(contentsOf: fileURL),
-              let profile = try? decoder.decode(CachedDeviceProfile.self, from: data) else {
-            return nil
-        }
-        return profile
-    }
-
-    func cache(_ profile: CachedDeviceProfile) {
-        guard let data = try? encoder.encode(profile) else { return }
-        try? data.write(to: fileURL, options: .atomic)
-    }
-
-    func clear() {
-        try? FileManager.default.removeItem(at: fileURL)
-    }
-}
-
 struct CachedDeviceProfile: Codable {
     let deviceId: UUID
     let hardwareClass: String
@@ -449,20 +391,4 @@ struct CachedDeviceProfile: Codable {
     let romStorageBytes: Int64
     let offlineGraceEnd: Date?
     let lastEntitlementRefresh: Date?
-}
-
-extension AzureApiStub {
-    func fetchDeviceProfile(deviceId: UUID) async throws -> CachedDeviceProfile {
-        let compat = try await fetchCompatibilityMatrix()
-        let entitlement = try await fetchEntitlements(userId: deviceId)
-
-        return CachedDeviceProfile(
-            deviceId: deviceId,
-            hardwareClass: "Tier1",
-            legitModeCapable: true,
-            romStorageBytes: 1024 * 1024 * 100,
-            offlineGraceEnd: Date().addingTimeInterval(7 * 24 * 60 * 60),
-            lastEntitlementRefresh: Date()
-        )
-    }
 }

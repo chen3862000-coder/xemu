@@ -12,7 +12,7 @@ let package = Package(
     targets: [
         .executableTarget(
             name: "AppHost",
-            path: "Sources/AppHost"
+            path: "Sources"
         ),
         .testTarget(
             name: "AppHostTests",

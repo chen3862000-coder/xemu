@@ -19,6 +19,7 @@ enum CoreError: Error {
     case loadStateFailed
 }
 
+@MainActor
 final class StableSystemsCoordinator {
     static let shared = StableSystemsCoordinator()
 
@@ -85,8 +86,12 @@ final class StableSystemsCoordinator {
 
     private func setupInputHandling(for core: EmulatorCoreProtocol) {
         inputBus.addListener { [weak self] event in
-            guard let self = self, let core = self.activeCore else { return }
-            self.handleInput(event, for: core)
+            guard let self = self else { return }
+            let capturedEvent = event
+            Task { @MainActor in
+                guard let core = self.activeCore else { return }
+                self.handleInput(capturedEvent, for: core)
+            }
         }
     }
 
@@ -96,15 +101,15 @@ final class StableSystemsCoordinator {
         case .b: core.input(.buttonB, pressed: event.isPressed)
         case .x: core.input(.buttonX, pressed: event.isPressed)
         case .y: core.input(.buttonY, pressed: event.isPressed)
-        case .l: core.input(.buttonL, pressed: event.isPressed)
-        case .r: core.input(.buttonR, pressed: event.isPressed)
         case .dpadUp: core.input(.dpadUp, pressed: event.isPressed)
         case .dpadDown: core.input(.dpadDown, pressed: event.isPressed)
         case .dpadLeft: core.input(.dpadLeft, pressed: event.isPressed)
         case .dpadRight: core.input(.dpadRight, pressed: event.isPressed)
         case .start: core.input(.start, pressed: event.isPressed)
         case .select: core.input(.select, pressed: event.isPressed)
-        case .menu, .triggerLeft, .triggerRight:
+        case .menu, .triggerLeft, .triggerRight, .l, .r, .leftShoulder, .rightShoulder, .leftTrigger, .rightTrigger:
+            break
+        @unknown default:
             break
         }
     }
@@ -130,26 +135,30 @@ enum CoreButton {
     case select
 }
 
+@MainActor
 final class CoreFactory {
+    @MainActor
     static let shared = CoreFactory()
 
     private init() {}
 
     func createCore(for platform: Platform) -> EmulatorCoreProtocol? {
         switch platform {
-        case .nes:
+        case .NES:
             return NESCore()
-        case .gba:
+        case .GBA:
             return GBACore()
-        case .gb:
+        case .GB:
             return GBCore()
-        case .genesis:
+        case .GENESIS:
             return GenesisCore()
-        case .nds:
+        case .NDS:
             return NDSCore()
-        case .ps1:
+        case .PS1:
             return PS1Core()
-        case .ps2, .threeDS:
+        case .PS2, ._3DS:
+            return nil
+        default:
             return nil
         }
     }

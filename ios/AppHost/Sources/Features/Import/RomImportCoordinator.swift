@@ -1,6 +1,8 @@
 import CryptoKit
 import Foundation
+#if os(iOS)
 import UIKit
+#endif
 import UniformTypeIdentifiers
 import CoreData
 
@@ -46,23 +48,25 @@ final class RomImportCoordinator: ObservableObject {
     private var completedItems: Int = 0
 
     private let persistence: PersistenceController
-    private let compatibility: [CompatibilityEntry]
+    private let compatibility: [AzureApiStub.CompatibilityEntry]
     let romsDirectory: URL
 
-    init(persistence: PersistenceController = .shared, compatibility: [CompatibilityEntry] = [], romsDirectory: URL) {
+    init(persistence: PersistenceController, compatibility: [AzureApiStub.CompatibilityEntry] = [], romsDirectory: URL) {
         self.persistence = persistence
         self.compatibility = compatibility
         self.romsDirectory = romsDirectory
     }
 
+    #if os(iOS)
     func presentFilePicker(on viewController: UIViewController, completion: @escaping (URL?) -> Void) {
         let documentPicker = UIDocumentPickerViewController(forOpeningContentTypes: [UTType.data, UTType("public.composite-content"), UTType("org.nes.rom"), UTType("org.gameboy.rom"), UTType("org.gba.rom"), UTType("org.sega.rom")], in: .import)
         documentPicker.delegate = FilePickerDelegate(completion: completion)
         documentPicker.allowsMultipleSelection = true
         viewController.present(documentPicker, animated: true)
     }
+    #endif
 
-    func importROM(from url: URL) async throws {
+    func importROM(from url: URL) async throws -> ROMLibraryEntry {
         isImporting = true
         importProgress = 0
 
@@ -93,7 +97,7 @@ final class RomImportCoordinator: ObservableObject {
         importProgress = 0.6
 
         let compatibilityEntry = compatibility.first { $0.romHash == hash }
-        let tier = Tier(rawValue: compatibilityEntry?.tier ?? "unknown") ?? .unknown
+        let tier = Tier(rawValue: compatibilityEntry?.tier.lowercased() ?? "unknown") ?? .unknown
 
         let entry = ROMLibraryEntry(context: context)
         entry.entryId = UUID()
@@ -116,10 +120,8 @@ final class RomImportCoordinator: ObservableObject {
 
         try context.save()
         importProgress = 1.0
-
-        await MainActor.run {
-            importedEntries.append(entry)
-        }
+        importedEntries.append(entry)
+        return entry
     }
 
     func importROM(from url: URL) throws -> ROMLibraryEntry {
@@ -153,7 +155,7 @@ final class RomImportCoordinator: ObservableObject {
         importProgress = 0.6
 
         let compatibilityEntry = compatibility.first { $0.romHash == hash }
-        let tier = Tier(rawValue: compatibilityEntry?.tier ?? "unknown") ?? .unknown
+        let tier = Tier(rawValue: compatibilityEntry?.tier.lowercased() ?? "unknown") ?? .unknown
 
         let entry = ROMLibraryEntry(context: context)
         entry.entryId = UUID()
@@ -180,26 +182,12 @@ final class RomImportCoordinator: ObservableObject {
         return entry
     }
 
-    func batchImport(urls: [URL]) {
+    func batchImport(urls: [URL]) async throws {
         totalItems = urls.count
         completedItems = 0
         importProgressValue = ImportProgress(total: totalItems, completed: completedItems)
 
-        for url in urls {
-            do {
-                _ = try importROM(from: url)
-            } catch {
-                print("Error importing ROM: \(error)")
-            }
-            completedItems += 1
-            importProgressValue = ImportProgress(total: totalItems, completed: completedItems)
-        }
-    }
-
-    func batchImport(urls: [URL]) async throws {
         var results: [Result<ROMLibraryEntry, Error>] = []
-        totalItems = urls.count
-        completedItems = 0
 
         for (index, url) in urls.enumerated() {
             do {
@@ -209,13 +197,19 @@ final class RomImportCoordinator: ObservableObject {
                 results.append(.failure(error))
             }
             completedItems += 1
-            importProgress = Double(index + 1) / Double(urls.count)
             importProgressValue = ImportProgress(total: totalItems, completed: completedItems)
         }
 
-        let errors = results.compactMap { try? $0.get() == nil ? $0 : nil }
-        if !errors.isEmpty {
-            throw errors.first!
+        let failures = results.compactMap { result -> Error? in
+            switch result {
+            case .success:
+                return nil
+            case .failure(let error):
+                return error
+            }
+        }
+        if let firstError = failures.first {
+            throw firstError
         }
     }
 
@@ -238,41 +232,41 @@ final class RomImportCoordinator: ObservableObject {
         let signature = data.prefix(16)
 
         if signature.starts(with: [0x4E, 0x45, 0x53, 0x1A]) {
-            return .nes
+            return .NES
         } else if signature.starts(with: [0xC3, 0x00, 0x00, 0x00, 0x00]) {
-            return .gba
+            return .GBA
         } else if signature.starts(with: [0xCE, 0xED, 0x66, 0x66, 0xCC, 0x0D, 0x00, 0x0B]) {
-            return .gb
+            return .GB
         } else if signature.starts(with: [0x53, 0x45, 0x47, 0x41]) {
-            return .genesis
+            return .GENESIS
         } else if signature.starts(with: [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]) {
-            return .nds
+            return .NDS
         }
 
         let lowercased = fileName.lowercased()
-        if lowercased.hasSuffix(".nes") { return .nes }
-        if lowercased.hasSuffix(".gba") { return .gba }
-        if lowercased.hasSuffix(".gb") || lowercased.hasSuffix(".gbc") { return .gb }
-        if lowercased.hasSuffix(".md") || lowercased.hasSuffix(".gen") { return .genesis }
-        if lowercased.hasSuffix(".nds") { return .nds }
+        if lowercased.hasSuffix(".nes") { return .NES }
+        if lowercased.hasSuffix(".gba") { return .GBA }
+        if lowercased.hasSuffix(".gb") || lowercased.hasSuffix(".gbc") { return .GB }
+        if lowercased.hasSuffix(".md") || lowercased.hasSuffix(".gen") { return .GENESIS }
+        if lowercased.hasSuffix(".nds") { return .NDS }
 
-        return .unknown
+        return .NES
     }
 
     func detectPlatform(from fileName: String) -> Platform? {
         let lowercased = fileName.lowercased()
-        if lowercased.hasSuffix(".nes") { return .nes }
-        if lowercased.hasSuffix(".gba") { return .gba }
-        if lowercased.hasSuffix(".gb") || lowercased.hasSuffix(".gbc") { return .gb }
-        if lowercased.hasSuffix(".gen") { return .genesis }
-        if lowercased.hasSuffix(".nds") { return .nds }
-        if lowercased.hasSuffix(".iso") { return .ps1 }
-        if lowercased.hasSuffix(".3ds") { return .threeDS }
+        if lowercased.hasSuffix(".nes") { return .NES }
+        if lowercased.hasSuffix(".gba") { return .GBA }
+        if lowercased.hasSuffix(".gb") || lowercased.hasSuffix(".gbc") { return .GB }
+        if lowercased.hasSuffix(".gen") { return .GENESIS }
+        if lowercased.hasSuffix(".nds") { return .NDS }
+        if lowercased.hasSuffix(".iso") { return .PS1 }
+        if lowercased.hasSuffix(".3ds") { return ._3DS }
         return nil
     }
 
     private func deriveTitle(from fileName: String, platform: Platform) -> String {
-        var title = fileName.deletingPathExtension
+        var title = (fileName as NSString).deletingPathExtension
         title = title.replacingOccurrences(of: "_", with: " ")
         title = title.replacingOccurrences(of: ".", with: " ")
         return title.trimmingCharacters(in: .whitespaces)
@@ -286,6 +280,7 @@ final class RomImportCoordinator: ObservableObject {
     }
 }
 
+#if os(iOS)
 private final class FilePickerDelegate: NSObject, UIDocumentPickerDelegate {
     private let completion: (URL?) -> Void
 
@@ -311,85 +306,7 @@ private final class FilePickerDelegate: NSObject, UIDocumentPickerDelegate {
         completion(nil)
     }
 }
+#endif
 
-extension ROMLibraryEntry: Identifiable {
-    var entryId: UUID? {
-        get { value(forKey: "entryId") as? UUID }
-        set { setValue(newValue, forKey: "entryId") }
-    }
 
-    var userId: UUID? {
-        get { value(forKey: "userId") as? UUID }
-        set { setValue(newValue, forKey: "userId") }
-    }
 
-    var romHash: String? {
-        get { value(forKey: "romHash") as? String }
-        set { setValue(newValue, forKey: "romHash") }
-    }
-
-    var title: String? {
-        get { value(forKey: "title") as? String }
-        set { setValue(newValue, forKey: "title") }
-    }
-
-    var platform: String? {
-        get { value(forKey: "platform") as? String }
-        set { setValue(newValue, forKey: "platform") }
-    }
-
-    var tier: String? {
-        get { value(forKey: "tier") as? String }
-        set { setValue(newValue, forKey: "tier") }
-    }
-
-    var artworkUri: URL? {
-        get { (value(forKey: "artworkUri") as? String).flatMap { URL(string: $0) } }
-        set { setValue(newValue?.absoluteString, forKey: "artworkUri") }
-    }
-
-    var playtimeTotal: Int64 {
-        get { value(forKey: "playtimeTotal") as? Int64 ?? 0 }
-        set { setValue(newValue, forKey: "playtimeTotal") }
-    }
-
-    var completionState: String? {
-        get { value(forKey: "completionState") as? String }
-        set { setValue(newValue, forKey: "completionState") }
-    }
-
-    var perGameSettings: String? {
-        get { value(forKey: "perGameSettings") as? String }
-        set { setValue(newValue, forKey: "perGameSettings") }
-    }
-
-    var lastPlayedAt: Date? {
-        get { value(forKey: "lastPlayedAt") as? Date }
-        set { setValue(newValue, forKey: "lastPlayedAt") }
-    }
-
-    var eligibleForLeaderboard: Bool {
-        get { value(forKey: "eligibleForLeaderboard") as? Bool ?? false }
-        set { setValue(newValue, forKey: "eligibleForLeaderboard") }
-    }
-
-    static func fetchRequest() -> NSFetchRequest<ROMLibraryEntry> {
-        return NSFetchRequest<ROMLibraryEntry>(entityName: "ROMLibraryEntry")
-    }
-}
-
-@objc(ROMLibraryEntry)
-class ROMLibraryEntry: NSManagedObject {
-    @NSManaged var entryId: UUID?
-    @NSManaged var userId: UUID?
-    @NSManaged var romHash: String?
-    @NSManaged var title: String?
-    @NSManaged var platform: String?
-    @NSManaged var tier: String?
-    @NSManaged var artworkUri: String?
-    @NSManaged var playtimeTotal: Int64
-    @NSManaged var completionState: String?
-    @NSManaged var perGameSettings: String?
-    @NSManaged var lastPlayedAt: Date?
-    @NSManaged var eligibleForLeaderboard: Bool
-}

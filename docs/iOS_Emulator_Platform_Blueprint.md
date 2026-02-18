@@ -52,6 +52,10 @@ Core Features:
 -   Server-side entitlement validation
 -   Offline grace period
 
+UX:
+-   Use given figma make output (generated in HTML and Typescript already) under "figma" directory to generate UI
+-   Ideally, use HTML and Typescript provided by figma directly as foundation of UI (convert to native only when necessary)
+
 Goal: Launch commercially viable base app.
 
 ------------------------------------------------------------------------

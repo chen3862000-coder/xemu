@@ -5,6 +5,7 @@ enum PersistenceError: Error {
     case directoryCreationFailed(URL)
 }
 
+@MainActor
 final class PersistenceController {
     static let shared = PersistenceController()
 
@@ -27,15 +28,27 @@ final class PersistenceController {
             }
         }
 
-        container.viewContext.mergePolicy = NSMergeByPropertyStoreTrumpMergePolicy
+        #if os(iOS)
+        container.viewContext.mergePolicy = NSMergePolicy(mergeByPropertyObjectTrump: true)
         container.viewContext.automaticallyMergesChangesFromParent = true
+        #endif
 
         romDirectory = try! PersistenceController.createDirectory(named: "roms")
         saveStateDirectory = try! PersistenceController.createDirectory(named: "savestates")
     }
 
+    #if os(iOS)
+    var viewContext: NSManagedObjectContext {
+        container.viewContext
+    }
+    #else
+    var viewContext: NSManagedObjectContext {
+        container.newBackgroundContext()
+    }
+    #endif
+
     func saveContext() {
-        let context = container.viewContext
+        let context = viewContext
         guard context.hasChanges else { return }
 
         do {
@@ -48,7 +61,7 @@ final class PersistenceController {
 
     private static func createDirectory(named name: String) throws -> URL {
         let baseURL = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
-        let directory = baseURL.appendingPathComponent("AppHost", isDirectory: true).appendingPathComponent(name, isDirectory: true)
+        var directory = baseURL.appendingPathComponent("AppHost", isDirectory: true).appendingPathComponent(name, isDirectory: true)
 
         if !FileManager.default.fileExists(atPath: directory.path) {
             do {

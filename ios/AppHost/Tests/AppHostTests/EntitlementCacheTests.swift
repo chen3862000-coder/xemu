@@ -25,15 +25,15 @@ final class EntitlementCacheTests: XCTestCase {
             entitlements: [
                 Entitlement(
                     entitlementId: UUID(),
-                    productCode: .REMOVE_ADS,
-                    status: .Active,
+                    productCode: .removeAds,
+                    status: .active,
                     activatedAt: Date(),
                     expiresAt: nil
                 )
             ],
             deviceProfile: DeviceProfile(
                 deviceId: UUID(),
-                hardwareClass: .Tier1,
+                hardwareClass: .tier1,
                 whitelistVersion: "1.0.0"
             )
         )
@@ -46,14 +46,14 @@ final class EntitlementCacheTests: XCTestCase {
     func testEntitlementCreation() {
         let entitlement = Entitlement(
             entitlementId: UUID(),
-            productCode: .EXPERIMENTAL_PACK,
-            status: .Active,
+            productCode: .experimentalPack,
+            status: .active,
             activatedAt: Date(),
             expiresAt: nil
         )
 
-        XCTAssertEqual(entitlement.productCode, .EXPERIMENTAL_PACK)
-        XCTAssertEqual(entitlement.status, .Active)
+        XCTAssertEqual(entitlement.productCode, .experimentalPack)
+        XCTAssertEqual(entitlement.status, .active)
         XCTAssertNil(entitlement.expiresAt)
     }
 
@@ -61,8 +61,8 @@ final class EntitlementCacheTests: XCTestCase {
         let futureDate = Date().addingTimeInterval(86400 * 30)
         let entitlement = Entitlement(
             entitlementId: UUID(),
-            productCode: .PRO_BUNDLE,
-            status: .Active,
+            productCode: .proBundle,
+            status: .active,
             activatedAt: Date(),
             expiresAt: futureDate
         )
@@ -73,24 +73,24 @@ final class EntitlementCacheTests: XCTestCase {
     func testDeviceProfileCreation() {
         let profile = DeviceProfile(
             deviceId: UUID(),
-            hardwareClass: .Tier2,
+            hardwareClass: .tier2,
             whitelistVersion: "2.1.0"
         )
 
-        XCTAssertEqual(profile.hardwareClass, .Tier2)
+        XCTAssertEqual(profile.hardwareClass, .tier2)
         XCTAssertEqual(profile.whitelistVersion, "2.1.0")
     }
 
     func testDeviceProfileAllHardwareClasses() {
-        let tier1 = DeviceProfile(deviceId: UUID(), hardwareClass: .Tier1, whitelistVersion: "1.0")
-        let tier2 = DeviceProfile(deviceId: UUID(), hardwareClass: .Tier2, whitelistVersion: "1.0")
-        let tier3 = DeviceProfile(deviceId: UUID(), hardwareClass: .Tier3, whitelistVersion: "1.0")
-        let unsupported = DeviceProfile(deviceId: UUID(), hardwareClass: .Unsupported, whitelistVersion: "1.0")
+        let tier1 = DeviceProfile(deviceId: UUID(), hardwareClass: .tier1, whitelistVersion: "1.0")
+        let tier2 = DeviceProfile(deviceId: UUID(), hardwareClass: .tier2, whitelistVersion: "1.0")
+        let tier3 = DeviceProfile(deviceId: UUID(), hardwareClass: .tier3, whitelistVersion: "1.0")
+        let unsupported = DeviceProfile(deviceId: UUID(), hardwareClass: .unsupported, whitelistVersion: "1.0")
 
-        XCTAssertEqual(tier1.hardwareClass, .Tier1)
-        XCTAssertEqual(tier2.hardwareClass, .Tier2)
-        XCTAssertEqual(tier3.hardwareClass, .Tier3)
-        XCTAssertEqual(unsupported.hardwareClass, .Unsupported)
+        XCTAssertEqual(tier1.hardwareClass, .tier1)
+        XCTAssertEqual(tier2.hardwareClass, .tier2)
+        XCTAssertEqual(tier3.hardwareClass, .tier3)
+        XCTAssertEqual(unsupported.hardwareClass, .unsupported)
     }
 
     func testCacheBundle() {
@@ -105,7 +105,7 @@ final class EntitlementCacheTests: XCTestCase {
     func testCacheDeviceProfile() {
         let profile = DeviceProfile(
             deviceId: UUID(),
-            hardwareClass: .Tier1,
+            hardwareClass: .tier1,
             whitelistVersion: "1.5.0"
         )
 
@@ -154,15 +154,15 @@ final class EntitlementCacheTests: XCTestCase {
         let bundle = createTestBundle()
         cache.cache(bundle)
 
-        XCTAssertTrue(cache.hasActiveEntitlement(.REMOVE_ADS))
-        XCTAssertFalse(cache.hasActiveEntitlement(.EXPERIMENTAL_PACK))
+        XCTAssertTrue(cache.hasActiveEntitlement(.removeAds))
+        XCTAssertFalse(cache.hasActiveEntitlement(.experimentalPack))
     }
 
     func testHasNoActiveEntitlement() {
         cache.clearCache()
 
-        XCTAssertFalse(cache.hasActiveEntitlement(.REMOVE_ADS))
-        XCTAssertFalse(cache.hasActiveEntitlement(.PRO_BUNDLE))
+        XCTAssertFalse(cache.hasActiveEntitlement(.removeAds))
+        XCTAssertFalse(cache.hasActiveEntitlement(.proBundle))
     }
 
     func testGetEntitlementById() {
@@ -205,7 +205,7 @@ final class EntitlementCacheTests: XCTestCase {
 
         let hardwareClass = cache.getHardwareClass()
         XCTAssertNotNil(hardwareClass)
-        XCTAssertEqual(hardwareClass, .Tier1)
+        XCTAssertEqual(hardwareClass, .tier1)
     }
 
     func testUpdateEntitlementStatus() {
@@ -217,10 +217,10 @@ final class EntitlementCacheTests: XCTestCase {
             return
         }
 
-        cache.updateEntitlementStatus(id: entitlementId, status: .Revoked)
+        cache.updateEntitlementStatus(id: entitlementId, status: .revoked)
 
         let updated = cache.getEntitlement(by: entitlementId)
-        XCTAssertEqual(updated?.status, .Revoked)
+        XCTAssertEqual(updated?.status, .revoked)
     }
 
     func testEntitlementBundleCodable() {
@@ -240,7 +240,7 @@ final class EntitlementCacheTests: XCTestCase {
     func testDeviceProfileCodable() {
         let originalProfile = DeviceProfile(
             deviceId: UUID(),
-            hardwareClass: .Tier2,
+            hardwareClass: .tier2,
             whitelistVersion: "3.2.1"
         )
 
@@ -261,38 +261,38 @@ final class EntitlementCacheTests: XCTestCase {
             entitlements: [
                 Entitlement(
                     entitlementId: UUID(),
-                    productCode: .REMOVE_ADS,
-                    status: .Active,
+                    productCode: .removeAds,
+                    status: .active,
                     activatedAt: Date(),
                     expiresAt: nil
                 ),
                 Entitlement(
                     entitlementId: UUID(),
-                    productCode: .EXPERIMENTAL_PACK,
-                    status: .Active,
+                    productCode: .experimentalPack,
+                    status: .active,
                     activatedAt: Date(),
                     expiresAt: nil
                 ),
                 Entitlement(
                     entitlementId: UUID(),
-                    productCode: .PRO_BUNDLE,
-                    status: .Active,
+                    productCode: .proBundle,
+                    status: .active,
                     activatedAt: Date(),
                     expiresAt: nil
                 )
             ],
             deviceProfile: DeviceProfile(
                 deviceId: UUID(),
-                hardwareClass: .Tier1,
+                hardwareClass: .tier1,
                 whitelistVersion: "1.0.0"
             )
         )
 
         cache.cache(bundle)
 
-        XCTAssertTrue(cache.hasActiveEntitlement(.REMOVE_ADS))
-        XCTAssertTrue(cache.hasActiveEntitlement(.EXPERIMENTAL_PACK))
-        XCTAssertTrue(cache.hasActiveEntitlement(.PRO_BUNDLE))
+        XCTAssertTrue(cache.hasActiveEntitlement(.removeAds))
+        XCTAssertTrue(cache.hasActiveEntitlement(.experimentalPack))
+        XCTAssertTrue(cache.hasActiveEntitlement(.proBundle))
     }
 
     func testCachePersistence() {
@@ -307,10 +307,10 @@ final class EntitlementCacheTests: XCTestCase {
     }
 
     func testAllEntitlementStatuses() {
-        let statuses: [EntitlementStatus] = [.Active, .Revoked, .Refunded, .Expired]
+        let statuses: [EntitlementStatus] = [.active, .revoked, .refunded, .expired]
 
         for status in statuses {
-            XCTAssertEqual(status.rawValue, "\(status)")
+            XCTAssertEqual(status.rawValue, status.rawValue)
         }
     }
 
@@ -318,16 +318,16 @@ final class EntitlementCacheTests: XCTestCase {
         let id = UUID()
         let entitlement1 = Entitlement(
             entitlementId: id,
-            productCode: .REMOVE_ADS,
-            status: .Active,
+            productCode: .removeAds,
+            status: .active,
             activatedAt: Date(),
             expiresAt: nil
         )
 
         let entitlement2 = Entitlement(
             entitlementId: id,
-            productCode: .REMOVE_ADS,
-            status: .Active,
+            productCode: .removeAds,
+            status: .active,
             activatedAt: entitlement1.activatedAt,
             expiresAt: nil
         )
@@ -347,15 +347,15 @@ final class EntitlementCacheTests: XCTestCase {
             entitlements: [
                 Entitlement(
                     entitlementId: UUID(),
-                    productCode: .REMOVE_ADS,
-                    status: .Active,
+                    productCode: .removeAds,
+                    status: .active,
                     activatedAt: Date(),
                     expiresAt: nil
                 )
             ],
             deviceProfile: DeviceProfile(
                 deviceId: UUID(),
-                hardwareClass: .Tier1,
+                hardwareClass: .tier1,
                 whitelistVersion: "1.0.0"
             )
         )

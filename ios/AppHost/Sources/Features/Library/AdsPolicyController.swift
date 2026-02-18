@@ -1,7 +1,10 @@
 import Foundation
 import UserNotifications
+#if canImport(SwiftUI)
+import SwiftUI
+#endif
 
-final class AdsPolicyController: ObservableObject {
+@MainActor final class AdsPolicyController: ObservableObject {
     enum AdPlacement {
         case libraryBanner
         case preLaunchInterstitial
@@ -10,14 +13,14 @@ final class AdsPolicyController: ObservableObject {
 
     @Published var shouldShowLibraryBanner = false
     @Published var adFreeUntil: Date?
-    @Published var entitlementStatus: EntitlementStatus = .unknown
+    @Published var entitlementStatus: EntitlementDisplayStatus = .unknown
 
     private let entitlementService: EntitlementService
     private let preferences: AdPreferences
 
-    init(entitlementService: EntitlementService = .shared, preferences: AdPreferences = .shared) {
-        self.entitlementService = entitlementService
-        self.preferences = preferences
+    @MainActor init(entitlementService: EntitlementService? = nil, preferences: AdPreferences? = nil) {
+        self.entitlementService = entitlementService ?? MockEntitlementService.shared
+        self.preferences = preferences ?? AdPreferences.shared
         loadAdPreferences()
     }
 
@@ -44,6 +47,19 @@ final class AdsPolicyController: ObservableObject {
             preferences.lastPreLaunchShown = Date()
         case .interstitial:
             preferences.lastInterstitialShown = Date()
+        }
+
+        saveAdPreferences()
+    }
+
+    func recordAdLoadFailed(for placement: AdPlacement) {
+        switch placement {
+        case .libraryBanner:
+            preferences.bannerFailureCount += 1
+        case .preLaunchInterstitial:
+            preferences.preLaunchFailureCount += 1
+        case .interstitial:
+            preferences.interstitialFailureCount += 1
         }
 
         saveAdPreferences()
@@ -111,14 +127,15 @@ final class AdsPolicyController: ObservableObject {
 
     private func loadAdPreferences() {
         if let data = UserDefaults.standard.data(forKey: "adPreferences"),
-           let decoded = try? JSONDecoder().decode(AdPreferences.self, from: data) {
+           let decoded = try? JSONDecoder().decode(AdPreferencesData.self, from: data) {
             preferences.updateFrom(decoded)
         }
     }
 
     private func saveAdPreferences() {
-        if let data = try? JSONEncoder().encode(preferences) {
-            UserDefaults.standard.set(data, forKey: "adPreferences")
+        let data = AdPreferencesData(from: preferences)
+        if let encoded = try? JSONEncoder().encode(data) {
+            UserDefaults.standard.set(encoded, forKey: "adPreferences")
         }
     }
 
@@ -132,8 +149,50 @@ final class AdsPolicyController: ObservableObject {
     }
 }
 
-final class AdPreferences: Codable, ObservableObject {
-    static let shared = AdPreferences()
+private struct AdPreferencesData: Codable {
+    let libraryBannerEnabled: Bool
+    let preLaunchInterstitialEnabled: Bool
+    let interstitialEnabled: Bool
+    let preLaunchAdIntervalMinutes: Int
+    let interstitialAdIntervalMinutes: Int
+    let lastBannerShown: Date?
+    let lastPreLaunchShown: Date?
+    let lastInterstitialShown: Date?
+    var bannerFailureCount: Int
+    var preLaunchFailureCount: Int
+    var interstitialFailureCount: Int
+    
+    init(from preferences: AdPreferences) {
+        self.libraryBannerEnabled = preferences.libraryBannerEnabled
+        self.preLaunchInterstitialEnabled = preferences.preLaunchInterstitialEnabled
+        self.interstitialEnabled = preferences.interstitialEnabled
+        self.preLaunchAdIntervalMinutes = preferences.preLaunchAdIntervalMinutes
+        self.interstitialAdIntervalMinutes = preferences.interstitialAdIntervalMinutes
+        self.lastBannerShown = preferences.lastBannerShown
+        self.lastPreLaunchShown = preferences.lastPreLaunchShown
+        self.lastInterstitialShown = preferences.lastInterstitialShown
+        self.bannerFailureCount = preferences.bannerFailureCount
+        self.preLaunchFailureCount = preferences.preLaunchFailureCount
+        self.interstitialFailureCount = preferences.interstitialFailureCount
+    }
+    
+    func apply(to preferences: AdPreferences) {
+        preferences.libraryBannerEnabled = libraryBannerEnabled
+        preferences.preLaunchInterstitialEnabled = preLaunchInterstitialEnabled
+        preferences.interstitialEnabled = interstitialEnabled
+        preferences.preLaunchAdIntervalMinutes = preLaunchAdIntervalMinutes
+        preferences.interstitialAdIntervalMinutes = interstitialAdIntervalMinutes
+        preferences.lastBannerShown = lastBannerShown
+        preferences.lastPreLaunchShown = lastPreLaunchShown
+        preferences.lastInterstitialShown = lastInterstitialShown
+        preferences.bannerFailureCount = bannerFailureCount
+        preferences.preLaunchFailureCount = preLaunchFailureCount
+        preferences.interstitialFailureCount = interstitialFailureCount
+    }
+}
+
+final class AdPreferences: ObservableObject {
+    @MainActor static let shared = AdPreferences()
 
     @Published var libraryBannerEnabled = true
     @Published var preLaunchInterstitialEnabled = true
@@ -146,17 +205,24 @@ final class AdPreferences: Codable, ObservableObject {
     @Published var lastPreLaunchShown: Date?
     @Published var lastInterstitialShown: Date?
 
+    @Published var bannerFailureCount = 0
+    @Published var preLaunchFailureCount = 0
+    @Published var interstitialFailureCount = 0
+
     private init() {}
 
-    func updateFrom(_ other: AdPreferences) {
-        libraryBannerEnabled = other.libraryBannerEnabled
-        preLaunchInterstitialEnabled = other.preLaunchInterstitialEnabled
-        interstitialEnabled = other.interstitialEnabled
-        preLaunchAdIntervalMinutes = other.preLaunchAdIntervalMinutes
-        interstitialAdIntervalMinutes = other.interstitialAdIntervalMinutes
-        lastBannerShown = other.lastBannerShown
-        lastPreLaunchShown = other.lastPreLaunchShown
-        lastInterstitialShown = other.lastInterstitialShown
+    fileprivate func updateFrom(_ data: AdPreferencesData) {
+        libraryBannerEnabled = data.libraryBannerEnabled
+        preLaunchInterstitialEnabled = data.preLaunchInterstitialEnabled
+        interstitialEnabled = data.interstitialEnabled
+        preLaunchAdIntervalMinutes = data.preLaunchAdIntervalMinutes
+        interstitialAdIntervalMinutes = data.interstitialAdIntervalMinutes
+        lastBannerShown = data.lastBannerShown
+        lastPreLaunchShown = data.lastPreLaunchShown
+        lastInterstitialShown = data.lastInterstitialShown
+        bannerFailureCount = data.bannerFailureCount
+        preLaunchFailureCount = data.preLaunchFailureCount
+        interstitialFailureCount = data.interstitialFailureCount
     }
 
     func resetToDefaults() {
@@ -171,22 +237,23 @@ final class AdPreferences: Codable, ObservableObject {
     }
 }
 
-enum EntitlementStatus {
+enum EntitlementDisplayStatus {
     case active
     case inactive
     case unknown
 }
 
-protocol EntitlementService {
-    func checkEntitlementStatus() async -> EntitlementStatus
+@MainActor protocol EntitlementService: AnyObject {
+    static var shared: Self { get }
+    func checkEntitlementStatus() async -> EntitlementDisplayStatus
 }
 
-final class MockEntitlementService: EntitlementService {
+@MainActor final class MockEntitlementService: EntitlementService {
     static let shared = MockEntitlementService()
 
     private init() {}
 
-    func checkEntitlementStatus() async -> EntitlementStatus {
+    func checkEntitlementStatus() async -> EntitlementDisplayStatus {
         return .inactive
     }
 }

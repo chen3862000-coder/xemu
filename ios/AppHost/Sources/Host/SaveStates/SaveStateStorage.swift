@@ -1,6 +1,16 @@
 import Compression
 import Foundation
 
+struct SaveStateMetadata: Codable {
+    let slot: Int
+    let romHash: String
+    let platform: String
+    let createdAt: Date
+    let gameTitle: String
+    let emulatorVersion: String
+}
+
+@MainActor
 final class SaveStateStorage {
     enum StorageError: Error {
         case metadataEncodingFailed
@@ -14,8 +24,8 @@ final class SaveStateStorage {
     private let encoder = JSONEncoder()
     private let decoder = JSONDecoder()
 
-    init(directory: URL = PersistenceController.shared.saveStateDirectory) {
-        self.directory = directory
+    init(directory: URL? = nil) {
+        self.directory = directory ?? FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!.appendingPathComponent("SaveStates")
         encoder.dateEncodingStrategy = .iso8601
         decoder.dateDecodingStrategy = .iso8601
     }
@@ -23,7 +33,7 @@ final class SaveStateStorage {
     func persist(data: Data, metadata: SaveStateMetadata, completion: @escaping (Result<URL, Error>) -> Void) {
         workQueue.async {
             do {
-                let slotDirectory = self.directory.appendingPathComponent(metadata.slot, isDirectory: true)
+                let slotDirectory = self.directory.appendingPathComponent(String(metadata.slot), isDirectory: true)
                 try FileManager.default.createDirectory(at: slotDirectory, withIntermediateDirectories: true)
 
                 let binaryURL = slotDirectory.appendingPathComponent("payload.bin")
@@ -72,59 +82,10 @@ final class SaveStateStorage {
     // MARK: - Compression helpers
 
     private func compress(data: Data) throws -> Data {
-        return try performCompression(data: data, operation: COMPRESSION_STREAM_ENCODE)
+        return try (data as NSData).compressed(using: .lzfse) as Data
     }
 
     private func decompress(data: Data) throws -> Data {
-        return try performCompression(data: data, operation: COMPRESSION_STREAM_DECODE)
-    }
-
-    private func performCompression(data: Data, operation: compression_stream_operation) throws -> Data {
-        let algorithm = COMPRESSION_LZFSE
-        let destinationBufferSize = 64 * 1024
-        var stream = compression_stream()
-        var status = compression_stream_init(&stream, operation, algorithm)
-
-        guard status != COMPRESSION_STATUS_ERROR else {
-            throw StorageError.decompressionFailed
-        }
-
-        defer { compression_stream_destroy(&stream) }
-
-        let dstBuffer = UnsafeMutablePointer<UInt8>.allocate(capacity: destinationBufferSize)
-        defer { dstBuffer.deallocate() }
-
-        return data.withUnsafeBytes { (sourcePointer: UnsafeRawBufferPointer) -> Data in
-            var output = Data()
-
-            stream.src_ptr = sourcePointer.bindMemory(to: UInt8.self).baseAddress!
-            stream.src_size = sourcePointer.count
-            stream.dst_ptr = dstBuffer
-            stream.dst_size = destinationBufferSize
-
-            repeat {
-                status = compression_stream_process(&stream, Int32(COMPRESSION_STREAM_FINALIZE.rawValue))
-
-                switch status {
-                case COMPRESSION_STATUS_OK, COMPRESSION_STATUS_END:
-                    let count = destinationBufferSize - stream.dst_size
-                    if count > 0 {
-                        output.append(dstBuffer, count: count)
-                    }
-                    stream.dst_ptr = dstBuffer
-                    stream.dst_size = destinationBufferSize
-                case COMPRESSION_STATUS_ERROR:
-                    return Data()
-                default:
-                    break
-                }
-            } while status == COMPRESSION_STATUS_OK
-
-            if status == COMPRESSION_STATUS_ERROR {
-                return Data()
-            }
-
-            return output
-        }
+        return try (data as NSData).decompressed(using: .lzfse) as Data
     }
 }

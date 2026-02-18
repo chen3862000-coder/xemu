@@ -1,6 +1,7 @@
 import SwiftUI
 import GameController
 
+@MainActor
 final class ControllerOverlayViewModel: ObservableObject {
     @Published var isOverlayVisible = false
     @Published var selectedProfile: ControllerProfile?
@@ -31,7 +32,7 @@ final class ControllerOverlayViewModel: ObservableObject {
         let profile = ControllerProfile(
             id: UUID(),
             name: name,
-            platform: selectedProfile?.platform ?? .nes,
+            platform: selectedProfile?.platform ?? .NES,
             mappings: customButtonMappings,
             layout: currentLayout
         )
@@ -78,15 +79,14 @@ struct ControllerOverlayView: View {
                 .padding()
             }
             .navigationTitle("Controller Config")
-            .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
+                ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") {
                         viewModel.resetToDefault()
                         dismiss()
                     }
                 }
-                ToolbarItem(placement: .navigationBarTrailing) {
+                ToolbarItem(placement: .confirmationAction) {
                     Button("Done") {
                         onConfigUpdated?()
                         dismiss()
@@ -210,11 +210,18 @@ struct ControllerOverlayView: View {
         case .dpadDown: return "D-Pad Down"
         case .dpadLeft: return "D-Pad Left"
         case .dpadRight: return "D-Pad Right"
+        case .leftShoulder: return "Left Shoulder"
+        case .rightShoulder: return "Right Shoulder"
+        case .leftTrigger: return "Left Trigger"
+        case .rightTrigger: return "Right Trigger"
         case .start: return "Start"
         case .select: return "Select"
         case .menu: return "Menu"
         case .triggerLeft: return "L Trigger"
         case .triggerRight: return "R Trigger"
+        case .leftStick: return "Left Stick"
+        case .rightStick: return "Right Stick"
+        case .home: return "Home"
         }
     }
 }
@@ -247,16 +254,23 @@ struct ControllerButtonPreview: View {
         case .dpadDown: return "↓"
         case .dpadLeft: return "←"
         case .dpadRight: return "→"
+        case .leftShoulder: return "LS"
+        case .rightShoulder: return "RS"
+        case .leftTrigger: return "LT"
+        case .rightTrigger: return "RT"
         case .start: return "ST"
         case .select: return "SL"
         case .menu: return "M"
         case .triggerLeft: return "LT"
         case .triggerRight: return "RT"
+        case .leftStick: return "LK"
+        case .rightStick: return "RK"
+        case .home: return "H"
         }
     }
 }
 
-struct ControllerProfile: Identifiable, Codable, Equatable {
+struct ControllerProfile: Identifiable, Codable, Equatable, Hashable, Sendable {
     let id: UUID
     let name: String
     let platform: Platform
@@ -264,13 +278,15 @@ struct ControllerProfile: Identifiable, Codable, Equatable {
     let layout: [ControllerButton: LayoutPosition]
 }
 
-struct LayoutPosition: Codable, Equatable {
+struct LayoutPosition: Codable, Equatable, Hashable, Sendable {
     let x: CGFloat
     let y: CGFloat
 }
 
+@MainActor
 final class ControllerProfileStore {
     static let shared = ControllerProfileStore()
+    private let queue = DispatchQueue(label: "com.xemu.controllerprofiles", qos: .userInitiated)
 
     private let encoder = JSONEncoder()
     private let decoder = JSONDecoder()
@@ -282,19 +298,23 @@ final class ControllerProfileStore {
     }
 
     func loadProfiles() -> [ControllerProfile] {
-        guard let data = try? Data(contentsOf: fileURL),
-              let profiles = try? decoder.decode([ControllerProfile].self, from: data) else {
-            return defaultProfiles()
+        return queue.sync {
+            guard let data = try? Data(contentsOf: fileURL),
+                  let profiles = try? decoder.decode([ControllerProfile].self, from: data) else {
+                return defaultProfiles()
+            }
+            return profiles
         }
-        return profiles
     }
 
     func saveProfile(_ profile: ControllerProfile) {
-        var profiles = loadProfiles()
-        profiles.append(profile)
+        queue.async {
+            var profiles = self.loadProfiles()
+            profiles.append(profile)
 
-        guard let data = try? encoder.encode(profiles) else { return }
-        try? data.write(to: fileURL, options: .atomic)
+            guard let data = try? self.encoder.encode(profiles) else { return }
+            try? data.write(to: self.fileURL, options: .atomic)
+        }
     }
 
     private func defaultProfiles() -> [ControllerProfile] {
@@ -326,14 +346,14 @@ final class ControllerProfileStore {
             ControllerProfile(
                 id: UUID(),
                 name: "NES Default",
-                platform: .nes,
+                platform: .NES,
                 mappings: [:],
                 layout: nesDefaultLayout
             ),
             ControllerProfile(
                 id: UUID(),
                 name: "GBA Default",
-                platform: .gba,
+                platform: .GBA,
                 mappings: [:],
                 layout: gbaDefaultLayout
             )

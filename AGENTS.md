@@ -3,10 +3,10 @@
 This document equips any autonomous coding agent working inside `/Users/spiderck/Development/xemu` with enough tribal knowledge to operate safely even though the repository currently contains no tracked files. Update this file whenever concrete tooling, frameworks, or workflows become available. The goal length is intentional (~150 lines) so that agents have ample cues to avoid missteps.
 
 ## 1. Repository Snapshot
-1. The workspace is presently empty: no git metadata, no package manifests, no build artifacts.
-2. Treat every action as greenfield development; assume you own the entire tree unless told otherwise.
-3. Before adding dependencies or scaffolding, confirm with the user whether a particular stack (Node, Python, Go, etc.) is expected.
-4. If you create a project structure (e.g., `npm init`, `cargo init`), log it in this file and mention it in your summary so humans stay in sync.
+1. The workspace contains a Swift Package Manager project at `ios/AppHost/` for iOS multi-system emulator development.
+2. The `ios/AppHost/` directory uses Swift Package Manager (Package.swift) with a demo.sh script for build/test automation.
+3. Treat new development as incremental additions to the existing Swift Package; follow Swift/SwiftUI conventions.
+4. Build scripts use `swift build` and `swift test` for macOS, and `xcodebuild` for iOS Simulator targets.
 5. Keep all generated files deterministic; prefer checked-in configuration over ad-hoc flags.
 6. Because git is not initialized, running `git` commands will fail unless you call `git init`. Only initialize git if explicitly asked.
 7. Do not delete user-provided files if they later appear; integrate them carefully.
@@ -66,6 +66,18 @@ This document equips any autonomous coding agent working inside `/Users/spiderck
 ```
 3. Keep the table sorted by workflow order: install → build → lint → test.
 4. Once real commands exist, delete placeholders and describe concrete behavior.
+
+### 3.5 Swift Package Manager (iOS/AppHost)
+1. Build and test commands are centralized in `ios/AppHost/demo.sh`.
+2. Available commands:
+   - `./demo.sh build-macos`: Build for macOS using `swift build`
+   - `./demo.sh build`: Build for iOS Simulator using `xcodebuild`
+   - `./demo.sh test-macos`: Run tests on macOS using `swift test`
+   - `./demo.sh test`: Run tests on iOS Simulator
+   - `./demo.sh test-coverage`: Run tests with coverage report
+   - `./demo.sh clean`: Clean build artifacts
+   - `./demo.sh list-sims`: List available iOS Simulators
+3. Use iOS Simulator builds for UI testing; use macOS for fast unit testing.
 
 ## 4. Code Style and Engineering Guidelines
 1. Treat this section as the living spec for formatting, naming, types, and error handling.
@@ -136,6 +148,28 @@ This document equips any autonomous coding agent working inside `/Users/spiderck
 2. Once git exists, enforce pull-request templates capturing tests run, screenshots, and risk assessment.
 3. Keep branches short-lived; rebase frequently once applicable.
 
+### 4.12 Test-Driven Development (TDD) Discipline
+1. **Red-Green-Refactor Cycle**: Always follow the TDD cycle:
+   - **Red**: Write a failing test that defines the desired behavior
+   - **Green**: Write the minimal implementation to make the test pass
+   - **Refactor**: Improve the code while keeping tests passing
+2. **Write Tests First**: For new features, start with test cases before implementation. Tests should:
+   - Be descriptive and readable (test names should explain what behavior is being verified)
+   - Cover edge cases and error conditions, not just happy paths
+   - Be isolated and independent (no shared state between tests)
+3. **Test Organization**:
+   - Group tests by feature/module (e.g., `InputBusTests.swift` for `InputBus.swift`)
+   - Use consistent naming: `test<MethodName>_<ExpectedBehavior>` (e.g., `testAdCooldownPeriodInterstitial`)
+   - Arrange-Act-Assert (AAA) pattern: Setup, Execute, Verify
+4. **Mock External Dependencies**: Use mocks/stubs for external services (network, databases, file system) to keep tests fast and deterministic
+5. **Coverage Requirements**: Maintain >80% code coverage for core logic. Use `swift test --enable-code-coverage` to verify
+6. **No Regressions**: All tests must pass before committing. If a test fails, either fix the implementation or update the test if requirements changed (with justification)
+7. **Test Speed**: Unit tests should run in milliseconds. Slow tests (>1s) should be integration tests and run separately
+8. **When Not to Use TDD**: Accept writing implementation first for:
+   - Pure UI code (SwiftUI views)
+   - Exploratory research/prototyping
+   - Trivial wrappers around external APIs (add tests afterward)
+
 ## 5. Adding Real Tooling (Checklist)
 1. Confirm desired language/runtime with the user.
 2. Initialize the project (`npm init`, `cargo init`, etc.).
@@ -161,3 +195,11 @@ This document equips any autonomous coding agent working inside `/Users/spiderck
 ---
 
 Keep this guide synchronized with reality; outdated automation instructions harm agents more than no instructions at all.
+
+## Active Technologies
+- Swift 5.10 (Xcode 16) plus limited C/C++ bridges for existing emulator cores + SwiftUI, Combine, MetalKit, GameController, GoogleWebRTC, StoreKit 2, URLSession, Core Data (001-ios-multi-emulator)
+- Core Data for ROM metadata and telemetry caches; FileManager sandbox for ROMs/save states with checksum metadata; Keychain for device entitlement keys (001-ios-multi-emulator)
+
+## Recent Changes
+- 001-ios-multi-emulator: Added Swift 5.10 (Xcode 16) plus limited C/C++ bridges for existing emulator cores + SwiftUI, Combine, MetalKit, GameController, GoogleWebRTC, StoreKit 2, URLSession, Core Data
+- Updated demo.sh to work with Swift Package Manager instead of CocoaPods; added build-macos and test-macos commands

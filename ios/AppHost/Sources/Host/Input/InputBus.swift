@@ -1,51 +1,62 @@
 import Foundation
-import GameController
+@preconcurrency import GameController
 
+@MainActor
 final class InputBus: InputRouting {
     static let shared = InputBus()
-
+    
     private let queue = DispatchQueue(label: "com.xemu.inputbus", qos: .userInteractive)
-    private var listeners: [UUID: (InputEvent) -> Void] = [:]
+    private var listeners: [UUID: @Sendable (InputEvent) -> Void] = [:]
+    private var isTesting = false
 
     private init() {
-        setupControllerNotifications()
+        #if DEBUG
+        isTesting = ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil
+        #endif
+        if !isTesting {
+            setupControllerNotifications()
+        }
     }
 
     // MARK: Listener Management
 
-    @discardableResult
-    func addListener(_ listener: @escaping (InputEvent) -> Void) -> UUID {
+    nonisolated func addListener(_ listener: @escaping @Sendable (InputEvent) -> Void) -> UUID {
         let token = UUID()
-        queue.async {
-            self.listeners[token] = listener
+        queue.async { [weak self] in
+            self?.listeners[token] = listener
         }
         return token
     }
 
     func removeListener(_ token: UUID) {
-        queue.async {
-            self.listeners[token] = nil
+        queue.async { [weak self] in
+            self?.listeners[token] = nil
+        }
+    }
+
+    func clearListeners() {
+        queue.async { [weak self] in
+            self?.listeners.removeAll()
         }
     }
 
     // MARK: InputRouting
 
-    func route(event: InputEvent) {
-        queue.async {
-            self.listeners.values.forEach { $0(event) }
+    nonisolated func route(_ event: InputEvent) {
+        queue.async { [weak self] in
+            self?.listeners.values.forEach { $0(event) }
         }
     }
 
     func routeAnalog(x: Float, y: Float, timestamp: TimeInterval) {
-        // Map analog movements into synthetic events for downstream consumers.
         let horizontal: ControllerButton = x >= 0 ? .dpadRight : .dpadLeft
         let vertical: ControllerButton = y >= 0 ? .dpadUp : .dpadDown
 
-        let horizontalEvent = InputEvent(button: horizontal, isPressed: abs(x) > 0.3, timestamp: timestamp)
-        let verticalEvent = InputEvent(button: vertical, isPressed: abs(y) > 0.3, timestamp: timestamp)
+        let horizontalEvent = InputEvent(button: horizontal, isPressed: abs(x) > 0.3, timestamp: Date(timeIntervalSince1970: timestamp))
+        let verticalEvent = InputEvent(button: vertical, isPressed: abs(y) > 0.3, timestamp: Date(timeIntervalSince1970: timestamp))
 
-        route(event: horizontalEvent)
-        route(event: verticalEvent)
+        route(horizontalEvent)
+        route(verticalEvent)
     }
 
     // MARK: GameController Wiring
@@ -53,21 +64,27 @@ final class InputBus: InputRouting {
     private func setupControllerNotifications() {
         NotificationCenter.default.addObserver(forName: .GCControllerDidBecomeCurrent, object: nil, queue: nil) { [weak self] notification in
             guard let controller = notification.object as? GCController else { return }
-            self?.attach(controller: controller)
+            Task { @MainActor [weak self] in
+                self?.attach(controller: controller)
+            }
         }
 
-        GCController.controllers().forEach { attach(controller: $0) }
+        for controller in GCController.controllers() {
+            Task { @MainActor [weak self] in
+                self?.attach(controller: controller)
+            }
+        }
     }
 
     private func attach(controller: GCController) {
         controller.extendedGamepad?.valueChangedHandler = { [weak self] gamepad, element in
-            let timestamp = Date().timeIntervalSince1970
+            let timestamp = Date()
 
             if let button = self?.button(for: element, gamepad: gamepad) {
-                let event = InputEvent(button: button, isPressed: element.isPressed, timestamp: timestamp)
-                self?.route(event: event)
+                let event = InputEvent(button: button, isPressed: true, timestamp: timestamp)
+                self?.route(event)
             } else if element == gamepad.leftThumbstick {
-                self?.routeAnalog(x: gamepad.leftThumbstick.xAxis.value, y: gamepad.leftThumbstick.yAxis.value, timestamp: timestamp)
+                self?.routeAnalog(x: gamepad.leftThumbstick.xAxis.value, y: gamepad.leftThumbstick.yAxis.value, timestamp: timestamp.timeIntervalSince1970)
             }
         }
     }

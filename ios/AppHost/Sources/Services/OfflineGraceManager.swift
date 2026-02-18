@@ -1,8 +1,16 @@
 import Foundation
 import Network
+import SwiftUI
 import UserNotifications
 
+#if canImport(UIKit)
+import UIKit
+#endif
+
+@MainActor
 final class OfflineGraceManager: ObservableObject {
+    static let shared = OfflineGraceManager()
+    
     @Published var isOffline = false
     @Published var gracePeriodEnd: Date?
     @Published var daysRemaining: Int = 0
@@ -10,15 +18,23 @@ final class OfflineGraceManager: ObservableObject {
     @Published var warningMessage: String?
 
     private let networkMonitor = NWPathMonitor()
+    private var isTesting = false
     private let queue = DispatchQueue(label: "com.xemu.network")
     private let entitlementCache: EntitlementCache
     private let deviceProfileCache: DeviceProfileCache
-    private let notificationCenter = UNUserNotificationCenter.current()
+    private lazy var notificationCenter: UNUserNotificationCenter = {
+        UNUserNotificationCenter.current()
+    }()
 
     init(entitlementCache: EntitlementCache = .shared, deviceProfileCache: DeviceProfileCache = .shared) {
+        #if DEBUG
+        self.isTesting = ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil
+        #endif
         self.entitlementCache = entitlementCache
         self.deviceProfileCache = deviceProfileCache
-        setupNetworkMonitoring()
+        if !isTesting {
+            setupNetworkMonitoring()
+        }
         loadGracePeriod()
     }
 
@@ -68,7 +84,7 @@ final class OfflineGraceManager: ObservableObject {
 
             Task { @MainActor in
                 let wasOffline = self.isOffline
-                self.isOffline = !path.status.satisfies(.satisfied)
+                self.isOffline = path.status != .satisfied
 
                 if self.isOffline && !wasOffline {
                     self.handleOfflineTransition()
@@ -91,10 +107,7 @@ final class OfflineGraceManager: ObservableObject {
     private func handleOnlineTransition() {
         Task {
             do {
-                let azureStub = AzureApiStub.shared
-                let deviceId = deviceProfileCache.loadProfile()?.deviceId ?? UUID()
-                let profile = try await azureStub.fetchDeviceProfile(deviceId: deviceId)
-                deviceProfileCache.cache(profile)
+                _ = try await AzureApiStub.shared.fetchEntitlements()
                 loadGracePeriod()
 
                 await MainActor.run {
@@ -192,6 +205,7 @@ final class OfflineGraceManager: ObservableObject {
     }
 }
 
+@MainActor
 final class OfflineGraceAlertViewModel: ObservableObject {
     @Published var isPresented = false
     @Published var title = ""
@@ -203,7 +217,7 @@ final class OfflineGraceAlertViewModel: ObservableObject {
 
     private let offlineGraceManager: OfflineGraceManager
 
-    init(offlineGraceManager: OfflineGraceManager = .shared) {
+    init(offlineGraceManager: OfflineGraceManager) {
         self.offlineGraceManager = offlineGraceManager
     }
 
@@ -293,5 +307,9 @@ struct OfflineGraceAlert: View {
 }
 
 extension Color {
+    #if canImport(UIKit)
     static let systemBackground = Color(UIColor.systemBackground)
+    #else
+    static let systemBackground = Color.primary
+    #endif
 }
