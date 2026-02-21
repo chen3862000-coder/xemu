@@ -33,8 +33,8 @@ public:
     int getVideoWidth() const { return VIDEO_WIDTH; }
     int getVideoHeight() const { return VIDEO_HEIGHT; }
 
-    static constexpr int AUDIO_SAMPLE_RATE = 44100;
-    static constexpr int AUDIO_SAMPLES_PER_FRAME = 735;
+    static constexpr int AUDIO_SAMPLE_RATE = 65536;
+    static constexpr int AUDIO_SAMPLES_PER_FRAME = 1098;
     
     const int16_t* getAudioBuffer() const;
     int getAudioSampleCount() const;

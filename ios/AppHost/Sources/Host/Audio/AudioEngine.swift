@@ -2,11 +2,6 @@ import Foundation
 import AVFoundation
 
 public final class AudioEngine {
-#if targetEnvironment(simulator)
-    private let simulatorAudioEnabled = false
-#else
-    private let simulatorAudioEnabled = true
-#endif
     
     private let engine: AVAudioEngine
     private let playerNode: AVAudioPlayerNode
@@ -15,28 +10,30 @@ public final class AudioEngine {
     private var isPlaying = false
     private let sampleRate: Double
     private let channels: AVAudioChannelCount
+    private let outputFormat: AVAudioFormat
     
     public init(sampleRate: Double = 44100,
                 channels: AVAudioChannelCount = 2) {
         self.sampleRate = sampleRate
         self.channels = channels
         
-        engine = AVAudioEngine()
-        playerNode = AVAudioPlayerNode()
-        
-        setupEngine()
-    }
-    
-    private func setupEngine() {
         guard let format = AVAudioFormat(commonFormat: .pcmFormatInt16,
                                          sampleRate: sampleRate,
                                          channels: channels,
                                          interleaved: true) else {
-            return
+            fatalError("Failed to create AVAudioFormat")
         }
-        
+
+        outputFormat = format
+        engine = AVAudioEngine()
+        playerNode = AVAudioPlayerNode()
+
+        setupEngine()
+    }
+    
+    private func setupEngine() {
         engine.attach(playerNode)
-        engine.connect(playerNode, to: engine.mainMixerNode, format: format)
+        engine.connect(playerNode, to: engine.mainMixerNode, format: outputFormat)
     }
     
     public var isEngineRunning: Bool {
@@ -49,31 +46,26 @@ public final class AudioEngine {
     }
     
     public func updateAudioBuffer(_ samples: Data) {
-        guard simulatorAudioEnabled else { return }
-
         let bytesPerFrame = 2 * Int(channels)
         guard bytesPerFrame > 0 else { return }
         
         let frameCount = UInt32(samples.count / bytesPerFrame)
         guard frameCount > 0 else { return }
         
-        let format = AVAudioFormat(commonFormat: .pcmFormatInt16,
-                                    sampleRate: sampleRate,
-                                    channels: channels,
-                                    interleaved: true)
-        guard let validFormat = format else { return }
-        
-        guard let buffer = AVAudioPCMBuffer(pcmFormat: validFormat, frameCapacity: frameCount) else {
+        guard let buffer = AVAudioPCMBuffer(pcmFormat: outputFormat, frameCapacity: frameCount) else {
             return
         }
         buffer.frameLength = frameCount
-        
+
         let bytesToCopy = Int(frameCount) * bytesPerFrame
+
+        let audioBufferList = buffer.mutableAudioBufferList
+        let mBuffer = audioBufferList.pointee.mBuffers
+        guard let dst = mBuffer.mData else { return }
+
         samples.withUnsafeBytes { rawBufferPointer in
-            if let baseAddress = rawBufferPointer.baseAddress,
-               let int16Buffer = buffer.int16ChannelData?[0] {
-                memcpy(int16Buffer, baseAddress, min(bytesToCopy, samples.count))
-            }
+            guard let src = rawBufferPointer.baseAddress else { return }
+            memcpy(dst, src, min(bytesToCopy, samples.count))
         }
         
         playBuffer(buffer)
@@ -82,6 +74,15 @@ public final class AudioEngine {
     private func playBuffer(_ buffer: AVAudioPCMBuffer) {
         queue.async { [weak self] in
             guard let self = self else { return }
+
+            if !self.engine.isRunning {
+                do {
+                    try self.engine.start()
+                } catch {
+                    NSLog("[AudioEngine] Failed to start engine: %@", error.localizedDescription)
+                    return
+                }
+            }
             
             if !self.isPlaying {
                 self.playerNode.play()
@@ -95,6 +96,7 @@ public final class AudioEngine {
     public func stop() {
         queue.async { [weak self] in
             self?.playerNode.stop()
+            self?.engine.stop()
             self?.isPlaying = false
         }
     }
@@ -120,8 +122,6 @@ public final class AudioEngine {
     }
     
     public func configureAudioSession() {
-        guard simulatorAudioEnabled else { return }
-
         #if os(iOS)
         do {
             let session = AVAudioSession.sharedInstance()
@@ -133,8 +133,6 @@ public final class AudioEngine {
     }
     
     public func deactivateAudioSession() {
-        guard simulatorAudioEnabled else { return }
-
         #if os(iOS)
         do {
             let session = AVAudioSession.sharedInstance()

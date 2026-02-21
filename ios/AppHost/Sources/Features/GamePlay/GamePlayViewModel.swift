@@ -98,17 +98,27 @@ class GamePlayViewModel: ObservableObject {
                 )
             case .GB:
                 metalRenderer?.setColorAdjustments(
-                    brightness: 1.08,
-                    gamma: 0.95,
-                    contrast: 1.02,
-                    saturation: 1.0
+                    brightness: 0.96,
+                    gamma: 1.02,
+                    contrast: 1.04,
+                    saturation: 1.02
                 )
             default:
                 metalRenderer?.setColorAdjustments()
             }
 
-            audioEngine = AudioEngine()
+            let audioSampleRate: Double
+            switch platform {
+            case .GB, .GBC:
+                audioSampleRate = 65536
+            default:
+                audioSampleRate = 44100
+            }
+
+            audioEngine = AudioEngine(sampleRate: audioSampleRate)
             audioEngine?.configureAudioSession()
+            try? audioEngine?.start()
+            audioEngine?.setVolume(1.0)
 
             emulatorSession?.start()
 

@@ -1,5 +1,6 @@
 #include "gambatte_wrapper.h"
 #include <algorithm>
+#include <cmath>
 #include <cstring>
 #include <cstdio>
 
@@ -11,6 +12,7 @@ namespace xemu {
 
 namespace {
 constexpr unsigned RUN_SAMPLES_PER_CALL = 2064;
+constexpr unsigned DECIMATION_RATE = 32;
 }
 
 class GambatteWrapper::Impl {
@@ -84,7 +86,8 @@ public:
         if (!romLoaded_) return;
 
 #ifdef XEMU_USE_REAL_CORES
-        unsigned totalStereoFrames = 0;
+        nativeAudioInterleaved_.clear();
+        nativeAudioInterleaved_.reserve(40000 * 2);
         int runResult = -1;
 
         do {
@@ -95,20 +98,14 @@ public:
                                           audioWorkBuffer_.size(),
                                           samplesProduced);
 
-            const unsigned maxStereoFrames = static_cast<unsigned>(audioBuffer_.size() / 2);
-            const unsigned remaining = (totalStereoFrames < maxStereoFrames)
-                ? (maxStereoFrames - totalStereoFrames)
-                : 0;
-            const unsigned copyStereoFrames = std::min(samplesProduced, remaining);
+            const unsigned copyStereoFrames = samplesProduced;
 
-            for (unsigned i = 0; i < copyStereoFrames; ++i) {
-                const uint32_t sample = audioWorkBuffer_[i];
-                const unsigned dst = (totalStereoFrames + i) * 2;
-                audioBuffer_[dst] = static_cast<int16_t>(sample & 0xFFFF);
-                audioBuffer_[dst + 1] = static_cast<int16_t>((sample >> 16) & 0xFFFF);
+            if (copyStereoFrames > 0) {
+                const int16_t* chunk = reinterpret_cast<const int16_t*>(audioWorkBuffer_.data());
+                const size_t chunkSamples = static_cast<size_t>(copyStereoFrames) * 2;
+                nativeAudioInterleaved_.insert(nativeAudioInterleaved_.end(), chunk, chunk + chunkSamples);
             }
 
-            totalStereoFrames += copyStereoFrames;
         } while (runResult == -1);
         
         for (int i = 0; i < VIDEO_WIDTH * VIDEO_HEIGHT; ++i) {
@@ -120,7 +117,37 @@ public:
             out[3] = 0xFF;
         }
 
-        audioSamples_ = static_cast<int>(totalStereoFrames * 2);
+        const unsigned outputStereoCapacity = static_cast<unsigned>(audioBuffer_.size() / 2);
+        const unsigned nativeStereoFrames = static_cast<unsigned>(nativeAudioInterleaved_.size() / 2);
+
+        unsigned outputStereoFrames = std::min(nativeStereoFrames / DECIMATION_RATE, outputStereoCapacity);
+        if (nativeStereoFrames == 0 || outputStereoFrames == 0) {
+            audioSamples_ = 0;
+            return;
+        }
+
+        // 32:1 box-filter decimation (native ~2.1MHz -> ~65.5kHz)
+        for (unsigned outFrame = 0; outFrame < outputStereoFrames; ++outFrame) {
+            const unsigned srcBase = outFrame * DECIMATION_RATE;
+            int sumL = 0;
+            int sumR = 0;
+
+            for (unsigned j = 0; j < DECIMATION_RATE; ++j) {
+                const unsigned srcFrame = srcBase + j;
+                const unsigned src = srcFrame * 2;
+                sumL += static_cast<int>(nativeAudioInterleaved_[src]);
+                sumR += static_cast<int>(nativeAudioInterleaved_[src + 1]);
+            }
+
+            const int avgL = sumL / static_cast<int>(DECIMATION_RATE);
+            const int avgR = sumR / static_cast<int>(DECIMATION_RATE);
+
+            const unsigned dst = outFrame * 2;
+            audioBuffer_[dst] = static_cast<int16_t>(std::max(-32768, std::min(32767, avgL)));
+            audioBuffer_[dst + 1] = static_cast<int16_t>(std::max(-32768, std::min(32767, avgR)));
+        }
+
+        audioSamples_ = static_cast<int>(outputStereoFrames * 2);
 #else
         for (int i = 0; i < VIDEO_WIDTH * VIDEO_HEIGHT; ++i) {
             uint8_t pattern = static_cast<uint8_t>((i + frameCount_) & 0xFF);
@@ -220,6 +247,7 @@ private:
     std::vector<uint8_t> romData_;
     std::vector<uint8_t> videoBuffer_;
     std::vector<int16_t> audioBuffer_;
+    std::vector<int16_t> nativeAudioInterleaved_;
     std::array<gambatte::video_pixel_t, VIDEO_WIDTH * VIDEO_HEIGHT> videoFramePixels_{};
     std::vector<gambatte::uint_least32_t> audioWorkBuffer_;
     bool romLoaded_;

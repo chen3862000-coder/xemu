@@ -109,6 +109,9 @@ final class EmulatorSession: ObservableObject {
             guard fbInfo.data.count >= neededSize else { return }
             renderDelegate?.emulatorDidRenderFrameBufferInfo(fbInfo)
         }
+
+        let audioSamples = core.getAudioSamples()
+        renderDelegate?.emulatorDidGenerateAudio(samples: audioSamples)
         
         frameCount += 1
         
