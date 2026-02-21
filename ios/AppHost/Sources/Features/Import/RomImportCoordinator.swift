@@ -15,6 +15,7 @@ struct ImportProgress {
     }
 }
 
+@MainActor
 final class RomImportCoordinator: ObservableObject {
     enum ImportError: LocalizedError {
         case fileAccessFailed
@@ -43,17 +44,35 @@ final class RomImportCoordinator: ObservableObject {
 
     private let persistence: PersistenceController
     private let romsDirectory: URL
-
+    
     init(persistence: PersistenceController, romsDirectory: URL) {
         self.persistence = persistence
         self.romsDirectory = romsDirectory
     }
 
     #if os(iOS)
-    func presentFilePicker(on viewController: UIViewController, completion: @escaping @Sendable (URL?) -> Void) {
-        let documentPicker = UIDocumentPickerViewController(forOpeningContentTypes: [.data, .archive])
-        documentPicker.delegate = FilePickerDelegate(completion: completion)
+    private var filePickerDelegate: FilePickerDelegate?
+    
+    func presentFilePicker(on viewController: UIViewController, completion: @escaping @Sendable ([URL]) -> Void) {
+        let delegate = FilePickerDelegate { urls in
+            completion(urls)
+        }
+        filePickerDelegate = delegate
+        
+        let documentPicker = UIDocumentPickerViewController(forOpeningContentTypes: [
+            UTType(filenameExtension: "gb")!,
+            UTType(filenameExtension: "gbc")!,
+            UTType(filenameExtension: "gba")!,
+            UTType(filenameExtension: "nes")!,
+            UTType(filenameExtension: "gen")!,
+            UTType(filenameExtension: "md")!,
+            UTType(filenameExtension: "bin")!,
+            UTType(filenameExtension: "smc")!,
+            UTType(filenameExtension: "sfc")!,
+            UTType.item
+        ])
         documentPicker.allowsMultipleSelection = true
+        documentPicker.delegate = delegate
         viewController.present(documentPicker, animated: true)
     }
     #endif
@@ -61,55 +80,86 @@ final class RomImportCoordinator: ObservableObject {
     func importROM(from url: URL) async throws -> ROMLibraryEntry {
         isImporting = true
         importProgress = 0
-
+        
         defer {
             isImporting = false
             importProgress = 0
         }
-
-        let fileData = try Data(contentsOf: url)
-        importProgress = 0.2
-
-        let validation = try RomValidator.validate(at: url)
-        importProgress = 0.3
-
-        let metadata = RomMetadataExtractor.extract(from: fileData, system: validation.system)
-        importProgress = 0.4
-
-        let context = persistence.container.viewContext
-        let fetchRequest: NSFetchRequest<ROMLibraryEntry> = ROMLibraryEntry.fetchRequest()
-        fetchRequest.predicate = NSPredicate(format: "checksum == %@", validation.checksum)
-        fetchRequest.fetchLimit = 1
-
-        let existingEntries = try context.fetch(fetchRequest)
-        guard existingEntries.isEmpty else {
-            throw ImportError.duplicateROM
+        
+        do {
+            // URL is now a temp file that doesn't need security scope
+            print("[DEBUG] importROM: Step 1 - Reading file at: \(url.path)")
+            print("[DEBUG] importROM: file exists? \(FileManager.default.fileExists(atPath: url.path))")
+            let fileData = try Data(contentsOf: url)
+            print("[DEBUG] importROM: Step 1 complete - read \(fileData.count) bytes")
+            importProgress = 0.2
+            
+            print("[DEBUG] importROM: Step 2 - Validating ROM")
+            let validation = try RomValidator.validate(at: url)
+            print("[DEBUG] importROM: Step 2 complete - system: \(validation.system), checksum: \(validation.checksum.prefix(16))...")
+            importProgress = 0.3
+            
+            print("[DEBUG] importROM: Step 3 - Extracting metadata")
+            let metadata = RomMetadataExtractor.extract(from: fileData, system: validation.system)
+            print("[DEBUG] importROM: Step 3 complete - title: \(metadata.title)")
+            importProgress = 0.4
+            
+            print("[DEBUG] importROM: Step 4 - Checking for duplicates")
+            let context = persistence.container.viewContext
+            let fetchRequest: NSFetchRequest<ROMLibraryEntry> = ROMLibraryEntry.fetchRequest()
+            fetchRequest.predicate = NSPredicate(format: "checksum == %@", validation.checksum)
+            fetchRequest.fetchLimit = 1
+            
+            let existingEntries = try context.fetch(fetchRequest)
+            if let existingEntry = existingEntries.first {
+                print("[DEBUG] importROM: Step 4 - duplicate ROM found, returning existing entry: \(existingEntry.title ?? "Unknown")")
+                importProgress = 1.0
+                importedEntries.append(existingEntry)
+                return existingEntry
+            }
+            print("[DEBUG] importROM: Step 4 complete - no duplicates")
+            importProgress = 0.5
+            
+            print("[DEBUG] importROM: Step 5 - Creating Core Data entry")
+            let entry = ROMLibraryEntry(context: context)
+            entry.id = UUID()
+            entry.checksum = validation.checksum
+            entry.title = metadata.title.isEmpty ? url.deletingPathExtension().lastPathComponent : metadata.title
+            entry.system = validation.system.rawValue
+            entry.fileName = url.lastPathComponent
+            entry.fileSize = Int64(fileData.count)
+            entry.dateAdded = Date()
+            entry.lastPlayedAt = nil
+            entry.playtimeTotal = 0
+            entry.isFavorite = false
+            print("[DEBUG] importROM: Step 5 complete - entry created with ID: \(entry.id.uuidString)")
+            
+            print("[DEBUG] importROM: Step 6 - Copying ROM to storage")
+            // Create ROMs directory if it doesn't exist
+            if !FileManager.default.fileExists(atPath: romsDirectory.path) {
+                print("[DEBUG] importROM: Creating ROMs directory at: \(romsDirectory.path)")
+                try FileManager.default.createDirectory(at: romsDirectory, withIntermediateDirectories: true)
+                print("[DEBUG] importROM: ROMs directory created")
+            }
+            let romDestination = romsDirectory.appendingPathComponent("\(validation.checksum).\(url.pathExtension)")
+            print("[DEBUG] importROM: destination: \(romDestination.path)")
+            try FileManager.default.copyItem(at: url, to: romDestination)
+            print("[DEBUG] importROM: Step 6 complete - ROM copied")
+            importProgress = 0.8
+            
+            print("[DEBUG] importROM: Step 7 - Saving Core Data context")
+            try context.save()
+            print("[DEBUG] importROM: Step 7 complete - context saved")
+            importProgress = 1.0
+            
+            importedEntries.append(entry)
+            print("[DEBUG] importROM: SUCCESS - ROM imported successfully")
+            return entry
+        } catch {
+            print("[DEBUG] importROM: FAILED at step with error: \(error)")
+            print("[DEBUG] importROM: Error localized description: \(error.localizedDescription)")
+            throw error
         }
-
-        importProgress = 0.5
-
-        let entry = ROMLibraryEntry(context: context)
-        // TODO: Core Data property access - requires Xcode build to generate NSManagedObject subclasses
-        // entry.checksum = validation.checksum
-        // entry.filename = url.lastPathComponent
-        // entry.title = metadata.title
-        // entry.platformRaw = validation.system.rawValue
-        // entry.fileSize = Int64(fileData.count)
-        // entry.importedAt = Date()
-        // entry.lastPlayedAt = nil
-        // entry.saveStateCount = 0
-        // entry.artworkUri = nil
-        // entry.eligibleForLeaderboard = false
-
-        let romDestination = romsDirectory.appendingPathComponent("\(validation.checksum).\(url.pathExtension)")
-        try FileManager.default.copyItem(at: url, to: romDestination)
-
-        importProgress = 0.8
-
-        try context.save()
-        importProgress = 1.0
-        importedEntries.append(entry)
-        return entry
     }
 
     func batchImport(urls: [URL]) async throws {
@@ -144,28 +194,46 @@ final class RomImportCoordinator: ObservableObject {
 
 #if os(iOS)
 private final class FilePickerDelegate: NSObject, UIDocumentPickerDelegate {
-    private let completion: (URL?) -> Void
+    private let completion: ([URL]) -> Void
 
-    init(completion: @escaping (URL?) -> Void) {
+    init(completion: @escaping ([URL]) -> Void) {
         self.completion = completion
     }
 
     func documentPicker(_ controller: UIDocumentPickerViewController, didPickDocumentsAt urls: [URL]) {
-        guard let url = urls.first else {
-            completion(nil)
-            return
+        // Copy files to temp directory while security scope is active
+        let tempDir = FileManager.default.temporaryDirectory
+        var tempURLs: [URL] = []
+        
+        for url in urls {
+            let didStartAccessing = url.startAccessingSecurityScopedResource()
+            defer {
+                if didStartAccessing {
+                    url.stopAccessingSecurityScopedResource()
+                }
+            }
+            
+            do {
+                let tempURL = tempDir.appendingPathComponent(UUID().uuidString + "_" + url.lastPathComponent)
+                try FileManager.default.copyItem(at: url, to: tempURL)
+                
+                // Verify file exists
+                if FileManager.default.fileExists(atPath: tempURL.path) {
+                    print("[DEBUG] Copied and verified: \(url.lastPathComponent) -> \(tempURL.path)")
+                    tempURLs.append(tempURL)
+                } else {
+                    print("[ERROR] File copy succeeded but file doesn't exist: \(tempURL.path)")
+                }
+            } catch {
+                print("[DEBUG] Failed to copy file \(url.lastPathComponent): \(error)")
+            }
         }
-
-        if url.startAccessingSecurityScopedResource() {
-            defer { url.stopAccessingSecurityScopedResource() }
-            completion(url)
-        } else {
-            completion(url)
-        }
+        
+        completion(tempURLs)
     }
 
     func documentPickerWasCancelled(_ controller: UIDocumentPickerViewController) {
-        completion(nil)
+        completion([])
     }
 }
 #endif

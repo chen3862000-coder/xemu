@@ -1,5 +1,5 @@
 import XCTest
-@testable import AppHost
+@testable import Xemu
 
 @MainActor
 final class SaveStateStorageTests: XCTestCase {
@@ -32,7 +32,8 @@ final class SaveStateStorageTests: XCTestCase {
             platform: "NES",
             createdAt: Date(),
             gameTitle: "Test Game",
-            emulatorVersion: "1.0.0"
+            emulatorVersion: "1.0.0",
+            screenshotData: nil
         )
 
         XCTAssertEqual(metadata.romHash, "abc123")
@@ -47,7 +48,8 @@ final class SaveStateStorageTests: XCTestCase {
             platform: "GBA",
             createdAt: Date(),
             gameTitle: "Test Game",
-            emulatorVersion: "1.0.0"
+            emulatorVersion: "1.0.0",
+            screenshotData: nil
         )
 
         let encoder = JSONEncoder()
@@ -63,51 +65,42 @@ final class SaveStateStorageTests: XCTestCase {
         XCTAssertEqual(originalMetadata.platform, decodedMetadata.platform)
     }
 
-    func testPersistAndLoad() throws {
+    func testPersistAndLoad() async throws {
         let metadata = SaveStateMetadata(
             slot: 1,
             romHash: "test_rom_hash",
             platform: "NES",
             createdAt: Date(),
             gameTitle: "Test Game",
-            emulatorVersion: "1.0.0"
+            emulatorVersion: "1.0.0",
+            screenshotData: nil
         )
 
         let stateData = Data("save_state_data".utf8)
 
-        let expectation = XCTestExpectation(description: "Persist completes")
-        
-        storage.persist(data: stateData, metadata: metadata) { result in
-            switch result {
-            case .success(let url):
-                XCTAssertNotNil(url)
-            case .failure(let error):
-                XCTFail("Persist failed: \(error)")
-            }
-            expectation.fulfill()
-        }
+        let url = try await storage.persist(data: stateData, metadata: metadata, screenshotData: nil)
+        XCTAssertNotNil(url)
 
-        wait(for: [expectation], timeout: 5.0)
-
-        let loaded = try storage.load(slot: "1")
+        let loaded = try storage.load(slot: 1)
         XCTAssertEqual(loaded.0, stateData)
         XCTAssertEqual(loaded.1.romHash, "test_rom_hash")
     }
 
     func testLoadInvalidSlot() {
-        XCTAssertThrowsError(try storage.load(slot: "999")) { error in
+        XCTAssertThrowsError(try storage.load(slot: 999)) { error in
             XCTAssertTrue(error is SaveStateStorage.StorageError)
         }
     }
 
-    func testList() throws {
+    func testList() async throws {
         let metadata1 = SaveStateMetadata(
             slot: 1,
             romHash: "hash1",
             platform: "NES",
             createdAt: Date(),
             gameTitle: "Game 1",
-            emulatorVersion: "1.0.0"
+            emulatorVersion: "1.0.0",
+            screenshotData: nil
         )
 
         let metadata2 = SaveStateMetadata(
@@ -116,20 +109,12 @@ final class SaveStateStorageTests: XCTestCase {
             platform: "GBA",
             createdAt: Date(),
             gameTitle: "Game 2",
-            emulatorVersion: "1.0.0"
+            emulatorVersion: "1.0.0",
+            screenshotData: nil
         )
 
-        let expectation = XCTestExpectation(description: "Persist completes")
-        expectation.expectedFulfillmentCount = 2
-
-        storage.persist(data: Data("data1".utf8), metadata: metadata1) { _ in
-            expectation.fulfill()
-        }
-        storage.persist(data: Data("data2".utf8), metadata: metadata2) { _ in
-            expectation.fulfill()
-        }
-
-        wait(for: [expectation], timeout: 5.0)
+        _ = try await storage.persist(data: Data("data1".utf8), metadata: metadata1, screenshotData: nil)
+        _ = try await storage.persist(data: Data("data2".utf8), metadata: metadata2, screenshotData: nil)
 
         let list = try storage.list()
         XCTAssertEqual(list.count, 2)

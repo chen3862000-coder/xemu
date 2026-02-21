@@ -126,7 +126,7 @@ public final class NESCore: EmulatorCore, @unchecked Sendable {
         self.frameBuffer = Array(repeating: 0, count: frameBufferWidth * frameBufferHeight)
         self.audioBuffer = Array(repeating: 0, count: 735)
         
-        print("NES ROM loaded: Mapper=\(header.mapperNumber), Battery=\(header.hasBattery)")
+        // Debug log disabled: print("NES ROM loaded: Mapper=\(header.mapperNumber), Battery=\(header.hasBattery)")
     }
     
     public func start() throws {
@@ -135,19 +135,19 @@ public final class NESCore: EmulatorCore, @unchecked Sendable {
         }
         isRunning = true
         isPaused = false
-        print("NES emulation started")
+        // Debug log disabled: print("NES emulation started")
     }
     
     public func pause() throws {
         guard isRunning else { throw NESError.coreInitializationFailed }
         isPaused = true
-        print("NES emulation paused")
+        // Debug log disabled: print("NES emulation paused")
     }
     
     public func resume() throws {
         guard isRunning && isPaused else { throw NESError.coreInitializationFailed }
         isPaused = false
-        print("NES emulation resumed")
+        // Debug log disabled: print("NES emulation resumed")
     }
     
     public func frame() throws {
@@ -162,7 +162,7 @@ public final class NESCore: EmulatorCore, @unchecked Sendable {
         guard isRunning else { throw NESError.coreInitializationFailed }
         isRunning = false
         isPaused = false
-        print("NES emulation stopped")
+        // Debug log disabled: print("NES emulation stopped")
     }
     
     public func cleanup() throws {
@@ -171,7 +171,7 @@ public final class NESCore: EmulatorCore, @unchecked Sendable {
         audioBuffer.removeAll()
         isRunning = false
         isPaused = false
-        print("NES emulation cleaned up")
+        // Debug log disabled: print("NES emulation cleaned up")
     }
     
     public func saveState() throws -> Data {
@@ -199,12 +199,12 @@ public final class NESCore: EmulatorCore, @unchecked Sendable {
         frameBuffer = Array(state.prefix(frameBufferSize))
         deserializeEmulatorState(Array(state.dropFirst(frameBufferSize)))
         
-        print("NES state loaded: \(state.count) bytes")
+        // Debug log disabled: print("NES state loaded: \(state.count) bytes")
     }
     
     public func reset() throws {
         guard romData != nil else { throw NESError.coreInitializationFailed }
-        print("NES emulation reset")
+        // Debug log disabled: print("NES emulation reset")
     }
     
     private func simulateFrame() {
@@ -240,6 +240,6 @@ public final class NESCore: EmulatorCore, @unchecked Sendable {
         let mapperNumber = data[0]
         let hasTrainer = data[1] != 0
         let hasBattery = data[2] != 0
-        print("Deserialized NES state: Mapper=\(mapperNumber), Trainer=\(hasTrainer), Battery=\(hasBattery)")
+        // Debug log disabled: print("Deserialized NES state: Mapper=\(mapperNumber), Trainer=\(hasTrainer), Battery=\(hasBattery)")
     }
 }

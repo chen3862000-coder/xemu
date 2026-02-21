@@ -1,6 +1,6 @@
 import XCTest
 import MetalKit
-@testable import AppHost
+@testable import Xemu
 
 @MainActor
 final class StableSystemsCoordinatorTests: XCTestCase {

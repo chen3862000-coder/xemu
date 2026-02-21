@@ -3,6 +3,7 @@ import Foundation
 public enum Platform: String, Codable, CaseIterable, Sendable {
     case NES = "NES"
     case GB = "GB"
+    case GBC = "GBC"
     case GBA = "GBA"
     case GENESIS = "GENESIS"
     case NDS = "NDS"
@@ -47,7 +48,7 @@ public enum EntitlementStatus: String, Codable {
     case unknown = "Unknown"
 }
 
-public enum ProductCode: String, Codable {
+public enum ProductCode: String, Codable, Sendable {
     case removeAds = "REMOVE_ADS"
     case experimentalPack = "EXPERIMENTAL_PACK"
     case proBundle = "PRO_BUNDLE"

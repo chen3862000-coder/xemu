@@ -1,0 +1,10 @@
+prefix=/usr/local
+exec_prefix=${prefix}
+libdir=${prefix}/lib
+includedir=${prefix}/include
+
+Name: xemu-cores
+Description: Xemu emulation cores library
+Version: 0.1.0
+Libs: -L${libdir} -lxemu_cores
+Cflags: -I${includedir}

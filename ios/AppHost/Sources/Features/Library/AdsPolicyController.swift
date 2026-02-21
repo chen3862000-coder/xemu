@@ -117,7 +117,7 @@ import SwiftUI
     }
 
     private func shouldShowInterstitial() -> Bool {
-        guard let lastShown = preferences.lastInterstitialShown else { return true }
+        guard let lastShown = preferences.lastInterstitialShown else { return false }
 
         let timeSinceLastAd = Date().timeIntervalSince(lastShown)
         let interval = TimeInterval(preferences.interstitialAdIntervalMinutes * 60)
@@ -234,6 +234,10 @@ final class AdPreferences: ObservableObject {
         lastBannerShown = nil
         lastPreLaunchShown = nil
         lastInterstitialShown = nil
+        bannerFailureCount = 0
+        preLaunchFailureCount = 0
+        interstitialFailureCount = 0
+        UserDefaults.standard.removeObject(forKey: "adPreferences")
     }
 }
 

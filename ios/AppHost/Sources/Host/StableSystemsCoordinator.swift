@@ -1,6 +1,5 @@
 import Foundation
 import MetalKit
-import AppHost
 
 enum CoreError: Error {
     case coreNotLoaded

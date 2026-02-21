@@ -111,42 +111,22 @@ struct RomCard: View {
                     .aspectRatio(3/4, contentMode: .fit)
                     .cornerRadius(12)
 
-                if let artworkUri = entry.artworkUri,
-                   let url = URL(string: artworkUri) {
-                    AsyncImage(url: url) { image in
-                        image
-                            .resizable()
-                            .aspectRatio(contentMode: .fill)
-                    } placeholder: {
-                        PlatformPlaceholder(platform: entry.platform)
-                    }
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 150)
-                    .cornerRadius(12)
+                if let coverData = entry.coverImageData,
+                   let coverImage = Image(data: coverData) {
+                    coverImage
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 150)
+                        .cornerRadius(12)
                 } else {
-                    PlatformPlaceholder(platform: entry.platform)
+                    PlatformPlaceholder(platform: entry.system)
                         .frame(maxWidth: .infinity)
                         .frame(height: 150)
                         .cornerRadius(12)
                 }
 
-                if entry.tier == "experimental" {
-                    VStack {
-                        Spacer()
-                        HStack {
-                            Spacer()
-                            Text("EXP")
-                                .font(.caption2)
-                                .fontWeight(.bold)
-                                .padding(.horizontal, 6)
-                                .padding(.vertical, 2)
-                                .background(Color.orange)
-                                .foregroundColor(.white)
-                                .cornerRadius(4)
-                        }
-                    }
-                    .padding(8)
-                }
+
             }
 
             VStack(alignment: .leading, spacing: 4) {
@@ -155,7 +135,7 @@ struct RomCard: View {
                     .lineLimit(2)
 
                 HStack {
-                    Text(entry.platform ?? "Unknown")
+                    Text(entry.system ?? "Unknown")
                         .font(.caption)
                         .foregroundColor(.secondary)
 
@@ -169,16 +149,6 @@ struct RomCard: View {
                 }
 
                 HStack {
-                    if entry.completionState == "completed" {
-                        Label("Completed", systemImage: "checkmark.circle.fill")
-                            .font(.caption2)
-                            .foregroundColor(.green)
-                    } else if entry.completionState == "inProgress" {
-                        Label("In Progress", systemImage: "circle.fill")
-                            .font(.caption2)
-                            .foregroundColor(.orange)
-                    }
-
                     Spacer()
 
                     if entry.playtimeTotal > 0 {
@@ -263,7 +233,26 @@ struct RomDetailView: View {
             }
         }
         .sheet(isPresented: $isLaunching) {
-            GameView(rom: rom)
+            Group {
+                let _ = print("[DEBUG] Sheet presented, calling toGame()")
+                if let game = rom.toGame() {
+                    let _ = print("[DEBUG] Sheet: toGame() returned game: \(game.title)")
+                    GamePlayView(game: game) {
+                        isLaunching = false
+                    }
+                } else {
+                    let _ = print("[DEBUG] Sheet: toGame() returned nil!")
+                    VStack {
+                        Text("Failed to load game")
+                        Text("Check console for details")
+                    }
+                    .onAppear {
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+                            isLaunching = false
+                        }
+                    }
+                }
+            }
         }
         .alert(isPresented: $adShouldShow) {
             Alert(
@@ -281,19 +270,15 @@ struct RomDetailView: View {
                 .aspectRatio(3/4, contentMode: .fit)
                 .cornerRadius(16)
 
-            if let artworkUri = rom.artworkUri,
-               let url = URL(string: artworkUri) {
-                AsyncImage(url: url) { image in
-                    image
-                        .resizable()
-                        .aspectRatio(contentMode: .fill)
-                } placeholder: {
-                    PlatformPlaceholder(platform: rom.platform)
-                }
-                .frame(maxWidth: .infinity)
-                .cornerRadius(16)
+            if let coverData = rom.coverImageData,
+               let coverImage = Image(data: coverData) {
+                coverImage
+                    .resizable()
+                    .aspectRatio(contentMode: .fill)
+                    .frame(maxWidth: .infinity)
+                    .cornerRadius(16)
             } else {
-                PlatformPlaceholder(platform: rom.platform)
+                PlatformPlaceholder(platform: rom.system)
                     .frame(maxWidth: .infinity)
                     .cornerRadius(16)
             }
@@ -308,20 +293,12 @@ struct RomDetailView: View {
                 .fontWeight(.bold)
 
             HStack(spacing: 12) {
-                Text(rom.platform ?? "Unknown Platform")
+                Text(rom.system ?? "Unknown Platform")
                     .font(.subheadline)
                     .padding(.horizontal, 12)
                     .padding(.vertical, 6)
                     .background(Color.blue.opacity(0.2))
                     .foregroundColor(.blue)
-                    .cornerRadius(8)
-
-                Text(rom.tier?.capitalized ?? "Unknown")
-                    .font(.subheadline)
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 6)
-                    .background(tierColor.opacity(0.2))
-                    .foregroundColor(tierColor)
                     .cornerRadius(8)
             }
         }
@@ -332,10 +309,9 @@ struct RomDetailView: View {
             Text("Details")
                 .font(.headline)
 
-            DetailRow(label: "Platform", value: rom.platform ?? "Unknown")
-            DetailRow(label: "ROM Hash", value: String(rom.romHash?.prefix(16) ?? "Unknown"))
+            DetailRow(label: "System", value: rom.system ?? "Unknown")
+            DetailRow(label: "Checksum", value: String(rom.checksum?.prefix(16) ?? "Unknown"))
             DetailRow(label: "Last Played", value: rom.lastPlayedAt?.formatted(date: .abbreviated, time: .shortened) ?? "Never")
-            DetailRow(label: "Completion", value: formatCompletionState(rom.completionState))
         }
         .padding()
         .background(Color.gray.opacity(0.1))
@@ -348,7 +324,6 @@ struct RomDetailView: View {
                 .font(.headline)
 
             DetailRow(label: "Play Time", value: formatPlaytime(rom.playtimeTotal))
-            DetailRow(label: "Eligible for Leaderboard", value: rom.eligibleForLeaderboard ? "Yes" : "No")
         }
         .padding()
         .background(Color.gray.opacity(0.1))
@@ -370,36 +345,12 @@ struct RomDetailView: View {
                 .cornerRadius(12)
             }
             .disabled(isLaunching)
-
-            if rom.eligibleForLeaderboard {
-                Button(action: launchLegitMode) {
-                    HStack {
-                        Image(systemName: "shield.fill")
-                        Text("Legit Mode")
-                    }
-                    .font(.headline)
-                    .foregroundColor(.white)
-                    .frame(maxWidth: .infinity)
-                    .padding()
-                    .background(Color.green)
-                    .cornerRadius(12)
-                }
-                .disabled(isLaunching)
-            }
         }
     }
 
     private func launchGame() {
         isLaunching = true
         updateLastPlayed()
-    }
-
-    private func launchLegitMode() {
-        adShouldShow = true
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-            isLaunching = true
-            updateLastPlayed()
-        }
     }
 
     private func updateLastPlayed() {
@@ -410,20 +361,6 @@ struct RomDetailView: View {
         } catch {
             print("Failed to update last played: \(error)")
         }
-    }
-
-    private var tierColor: Color {
-        switch rom.tier?.lowercased() {
-        case "stable": return .green
-        case "experimental": return .orange
-        default: return .gray
-        }
-    }
-
-    private func formatCompletionState(_ state: String?) -> String {
-        guard let state = state else { return "Not Started" }
-        let result = state.replacingOccurrences(of: "([a-z])([A-Z])", with: "$1 $2", options: .regularExpression)
-        return result.capitalized
     }
 
     private func formatPlaytime(_ seconds: Int64) -> String {
@@ -455,40 +392,100 @@ struct DetailRow: View {
     }
 }
 
-struct GameView: View {
-    let rom: ROMLibraryEntry
-
-    var body: some View {
-        ZStack {
-            Color.black
-                .ignoresSafeArea()
-
-            VStack {
-                Text("Emulating: \(rom.title ?? "Unknown")")
-                    .foregroundColor(.white)
-                    .padding()
-
-                Text("Gameplay here...")
-                    .foregroundColor(.gray)
+extension ROMLibraryEntry {
+    var romPath: String? {
+        guard let checksum = checksum,
+              let fileName = fileName else { return nil }
+        
+        let fileExtension = (fileName as NSString).pathExtension
+        let documentsDir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
+        return documentsDir.appendingPathComponent("ROMs/\(checksum).\(fileExtension)").path
+    }
+    
+    func toGame() -> Game? {
+        print("[DEBUG] toGame() called for: \(title ?? "nil")")
+        
+        guard let title = title,
+              let checksum = checksum else {
+            print("[DEBUG] toGame() failed: title: \(title as Optional), checksum: \(checksum as Optional)")
+            return nil
+        }
+        
+        // Use the object's id
+        let gameUUID = id
+        print("[DEBUG] toGame() using id: \(gameUUID)")
+        print("[DEBUG] toGame() passed first guard, checksum: \(checksum), system: \(system ?? "nil")")
+        
+        // Extract file extension from fileName (the actual file extension used during import)
+        let fileExtension: String
+        if let fileName = self.fileName, let ext = fileName.split(separator: ".").last {
+            fileExtension = String(ext)
+        } else {
+            // Fallback to system-based extension if fileName is not available
+            switch system?.lowercased() {
+            case "nes": fileExtension = "nes"
+            case "gb": fileExtension = "gb"
+            case "gbc": fileExtension = "gbc"
+            case "gba": fileExtension = "gba"
+            case "genesis": fileExtension = "md"
+            case "nds": fileExtension = "nds"
+            case "ps1": fileExtension = "bin"
+            default: fileExtension = "rom"
             }
         }
+        
+        let platformString: String
+        switch system?.lowercased() {
+        case "nes": platformString = "NES"
+        case "gb": platformString = "Game Boy"
+        case "gbc": platformString = "Game Boy Color"
+        case "gba": platformString = "Game Boy Advance"
+        case "genesis": platformString = "Genesis"
+        case "nds": platformString = "Nintendo DS"
+        case "ps1": platformString = "PlayStation 1"
+        default: platformString = system ?? "Unknown"
+        }
+        
+        guard let romLocation = ROMStorage.shared.getROMLocation(checksum: checksum, fileExtension: fileExtension) else {
+            print("[DEBUG] toGame() failed: ROM location not found for checksum: \(checksum), extension: \(fileExtension)")
+            return nil
+        }
+        print("[DEBUG] toGame() ROM location: \(romLocation.url.path)")
+        print("[DEBUG] toGame() creating Game with platform: \(platformString)")
+        
+        let game = Game(
+            id: gameUUID,
+            title: title,
+            platform: platformString,
+            coverImage: nil,
+            rating: 0.0,
+            lastPlayedDate: lastPlayedAt,
+            totalPlayTime: Int(playtimeTotal),
+            isFavorite: isFavorite,
+            releaseYear: 2000,
+            genre: nil,
+            fileSize: Int64(fileSize),
+            gameDescription: nil,
+            romPath: romLocation.url.path
+        )
+        print("[DEBUG] toGame() returning game: \(game.title)")
+        return game
     }
 }
 
 @objc(ROMLibraryEntry)
 class ROMLibraryEntry: NSManagedObject {
-    @NSManaged var entryId: UUID?
-    @NSManaged var userId: UUID?
-    @NSManaged var romHash: String?
-    @NSManaged var perGameSettings: String?
+    @NSManaged var id: UUID
     @NSManaged var title: String?
-    @NSManaged var platform: String?
-    @NSManaged var tier: String?
-    @NSManaged var artworkUri: String?
+    @NSManaged var fileName: String?
+    @NSManaged var fileSize: Int64
+    @NSManaged var coverImageData: Data?
+    @NSManaged var system: String?
     @NSManaged var lastPlayedAt: Date?
-    @NSManaged var completionState: String?
-    @NSManaged var eligibleForLeaderboard: Bool
     @NSManaged var playtimeTotal: Int64
+    @NSManaged var isFavorite: Bool
+    @NSManaged var dateAdded: Date?
+    @NSManaged var checksum: String?
 }
 
 final class LibraryViewModel: ObservableObject {
@@ -544,16 +541,11 @@ final class LibraryViewModel: ObservableObject {
             }
         case .favorites:
             filteredEntries = allEntries.filter { entry in
-                entry.completionState == "Completed"
+                entry.isFavorite
             }
-        case .stable:
-            filteredEntries = allEntries.filter { entry in
-                entry.tier?.lowercased() == "stable"
-            }
-        case .experimental:
-            filteredEntries = allEntries.filter { entry in
-                entry.tier?.lowercased() == "experimental"
-            }
+        case .stable, .experimental:
+            // Tier filtering not implemented - show all games
+            filteredEntries = allEntries
         }
     }
 }
@@ -577,11 +569,27 @@ enum LibraryFilter: CaseIterable {
 }
 
 extension ROMLibraryEntry: Identifiable {
-    var id: UUID {
-        return value(forKey: "objectID") as! UUID
-    }
-
     static func fetchRequest() -> NSFetchRequest<ROMLibraryEntry> {
         return NSFetchRequest<ROMLibraryEntry>(entityName: "ROMLibraryEntry")
+    }
+}
+
+extension Image {
+    init?(data: Data) {
+        #if canImport(UIKit)
+        if let uiImage = UIImage(data: data) {
+            self.init(uiImage: uiImage)
+        } else {
+            return nil
+        }
+        #elseif canImport(AppKit)
+        if let nsImage = NSImage(data: data) {
+            self.init(nsImage: nsImage)
+        } else {
+            return nil
+        }
+        #else
+        return nil
+        #endif
     }
 }

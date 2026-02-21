@@ -1,5 +1,6 @@
 import { motion } from "motion/react";
 import { Play, Star, Clock } from "lucide-react";
+import { useNavigate, useParams } from "react-router";
 
 interface GameCardProps {
   name: string;
@@ -18,6 +19,14 @@ export function GameCard({
   playTime,
   index,
 }: GameCardProps) {
+  const navigate = useNavigate();
+  const { platform } = useParams<{ platform: string }>();
+
+  const handleClick = () => {
+    const gameIdSlug = name.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
+    navigate(`/play/${platform}/${gameIdSlug}`);
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0, scale: 0.9 }}
@@ -25,6 +34,7 @@ export function GameCard({
       transition={{ duration: 0.3, delay: index * 0.05 }}
       whileHover={{ scale: 1.02, y: -4 }}
       whileTap={{ scale: 0.98 }}
+      onClick={handleClick}
       className="relative group cursor-pointer"
     >
       <div className="relative overflow-hidden rounded-xl bg-card border border-border/50 backdrop-blur-sm">

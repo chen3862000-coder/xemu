@@ -14,7 +14,7 @@
       }
     }
   },
-  "plugin": ["@tarquinen/opencode-dcp@latest", "opencode-agent-skills", "opencode-agent-memory"],
+  "plugin": ["@tarquinen/opencode-dcp@latest", "opencode-agent-skills"],
   "mcp": {
     "context7": {
       "type": "remote",

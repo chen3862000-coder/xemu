@@ -1,0 +1,63 @@
+# Build output directories
+build/
+cmake-build-*/
+out/
+bin/
+obj/
+
+# Compiled files
+*.o
+*.obj
+*.so
+*.dylib
+*.dll
+*.a
+*.lib
+*.exe
+
+# Precompiled headers
+*.gch
+*.pch
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# CMake files
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+Makefile
+compile_commands.json
+CTestTestfile.cmake
+_deps/
+
+# Xcode
+*.xcodeproj/
+*.xcworkspace/
+DerivedData/
+
+# Frameworks
+*.framework/
+*.dSYM/
+
+# Package files
+*.tar.gz
+*.zip
+
+# Logs
+*.log
+
+# Test output
+testing/
+test-results/
+*.gcov
+*.gcda
+*.gcno
+
+# Dependencies (except git submodules)
+!third_party/.gitkeep

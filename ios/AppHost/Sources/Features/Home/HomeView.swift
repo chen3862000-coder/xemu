@@ -1,11 +1,15 @@
 import SwiftUI
 import CoreData
+#if os(iOS)
+import UIKit
+#endif
 
 struct HomeView: View {
     @Environment(\.managedObjectContext) private var viewContext
     @StateObject private var viewModel = HomeViewModel()
     @State private var showingSettings = false
     @State private var showingImport = false
+    @State private var showingGameLibrary = false
     @State private var searchText = ""
     
     var body: some View {
@@ -30,6 +34,9 @@ struct HomeView: View {
         }
         .sheet(isPresented: $showingImport) {
             RomImportView()
+        }
+        .sheet(isPresented: $showingGameLibrary) {
+            GameLibraryView()
         }
         .onAppear {
             viewModel.loadData(in: viewContext)
@@ -111,12 +118,16 @@ struct HomeView: View {
     
     private var statsGrid: some View {
         HStack(spacing: 12) {
-            StatCard(
-                title: "Total Games",
-                value: "\(viewModel.totalGames)",
-                icon: "gamecontroller.fill",
-                gradient: [Color.pink, Color.purple]
-            )
+            Button(action: {
+                showingGameLibrary = true
+            }) {
+                StatCard(
+                    title: "Total Games",
+                    value: "\(viewModel.totalGames)",
+                    icon: "gamecontroller.fill",
+                    gradient: [Color.pink, Color.purple]
+                )
+            }
             
             StatCard(
                 title: "Hours Played",
@@ -476,7 +487,17 @@ struct ImportRomsButton: View {
 
 struct RomImportView: View {
     @Environment(\.dismiss) private var dismiss
-    @State private var isImporting = false
+    @StateObject private var coordinator: RomImportCoordinator
+    @State private var isHovered = false
+    
+    init() {
+        let persistence = PersistenceController.shared
+        let romsDir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
+            .appendingPathComponent("ROMs", isDirectory: true)
+        _coordinator = StateObject(wrappedValue: RomImportCoordinator(persistence: persistence, romsDirectory: romsDir))
+    }
+    
+    // presentDocumentPicker() moved to private func with full implementation below
     
     var body: some View {
         NavigationStack {
@@ -500,7 +521,9 @@ struct RomImportView: View {
                 Spacer()
                 
                 Button(action: {
-                    isImporting = true
+                    #if os(iOS)
+                    presentDocumentPicker()
+                    #endif
                 }) {
                     Text("Select Files")
                         .font(.headline)
@@ -524,8 +547,63 @@ struct RomImportView: View {
                 }
             }
         }
+        #if os(iOS)
+        .sheet(isPresented: $coordinator.isImporting) {
+            ImportingProgressView(progress: coordinator.importProgress)
+        }
+        #endif
+    }
+    
+    #if os(iOS)
+    private func presentDocumentPicker() {
+        guard let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+              let window = windowScene.windows.first,
+              let rootVC = window.rootViewController else { return }
+        
+        var topVC = rootVC
+        while let presented = topVC.presentedViewController {
+            topVC = presented
+        }
+        
+        coordinator.presentFilePicker(on: topVC) { urls in
+            guard !urls.isEmpty else { return }
+            Task {
+                for url in urls {
+                    do {
+                        _ = try await self.coordinator.importROM(from: url)
+                        await MainActor.run {
+                            print("ROM imported successfully: \(url.lastPathComponent)")
+                        }
+                    } catch {
+                        print("Import error for \(url.lastPathComponent): \(error.localizedDescription)")
+                    }
+                }
+                await MainActor.run {
+                    self.coordinator.isImporting = false
+                    self.dismiss()
+                }
+            }
+        }
+    }
+    #endif
+}
+
+#if os(iOS)
+struct ImportingProgressView: View {
+    let progress: Double
+    
+    var body: some View {
+        VStack(spacing: 20) {
+            ProgressView(value: progress)
+                .progressViewStyle(LinearProgressViewStyle(tint: .purple))
+            
+            Text("Importing ROM... \(Int(progress * 100))%")
+                .font(.headline)
+        }
+        .padding(40)
     }
 }
+#endif
 
 final class HomeViewModel: ObservableObject {
     @Published var totalGames: Int = 0
@@ -573,11 +651,11 @@ final class HomeViewModel: ObservableObject {
             RecentGame(
                 id: entry.objectID.uriRepresentation().absoluteString,
                 title: entry.title ?? "Unknown",
-                console: entry.platform ?? "Unknown",
+                console: entry.system?.uppercased() ?? "Unknown",
                 lastPlayed: entry.lastPlayedAt,
                 progress: 0,
-                image: entry.artworkUri,
-                gameId: entry.entryId ?? UUID()
+                image: nil,
+                gameId: entry.id
             )
         }
     }

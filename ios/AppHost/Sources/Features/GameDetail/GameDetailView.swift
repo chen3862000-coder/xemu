@@ -9,6 +9,7 @@ import UIKit
 struct GameDetailView: View {
     let game: Game
     @Environment(\.dismiss) private var dismiss
+    @State private var showGamePlay = false
     
     var body: some View {
         ScrollView {
@@ -113,7 +114,7 @@ struct GameDetailView: View {
     }
     
     private var playButton: some View {
-        Button(action: {}) {
+        Button(action: { showGamePlay = true }) {
             HStack {
                 Image(systemName: "play.fill")
                 Text("Play Now")
@@ -124,6 +125,11 @@ struct GameDetailView: View {
             .padding()
             .background(LinearGradient(colors: [.purple, .blue], startPoint: .leading, endPoint: .trailing))
             .clipShape(RoundedRectangle(cornerRadius: 12))
+        }
+        .sheet(isPresented: $showGamePlay) {
+            GamePlayView(game: game, onExit: {
+                showGamePlay = false
+            })
         }
     }
     

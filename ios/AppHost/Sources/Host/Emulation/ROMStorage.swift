@@ -55,7 +55,7 @@ public class ROMStorage {
             do {
                 try fileManager.createDirectory(at: romsDirectory, withIntermediateDirectories: true, attributes: nil)
             } catch {
-                print("Failed to create ROMs directory: \(error.localizedDescription)")
+                // Debug log disabled: print("Failed to create ROMs directory: \(error.localizedDescription)")
             }
             return
         }
@@ -64,7 +64,7 @@ public class ROMStorage {
             do {
                 try fileManager.createDirectory(at: romsDirectory, withIntermediateDirectories: true, attributes: nil)
             } catch {
-                print("Failed to create ROMs directory: \(error.localizedDescription)")
+                // Debug log disabled: print("Failed to create ROMs directory: \(error.localizedDescription)")
             }
             return
         }
@@ -85,7 +85,7 @@ public class ROMStorage {
         }
     }
     
-    func getROMLocation(checksum: String, fileExtension: String) -> ROMStorageLocation? {
+    nonisolated func getROMLocation(checksum: String, fileExtension: String) -> ROMStorageLocation? {
         let filename = "\(checksum).\(fileExtension)"
         let url = romsDirectory.appendingPathComponent(filename)
         

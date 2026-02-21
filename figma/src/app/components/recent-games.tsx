@@ -40,7 +40,10 @@ export function RecentGames() {
           <Clock className="w-4 h-4 text-primary" />
           <h2 className="text-base font-semibold">Continue Playing</h2>
         </div>
-        <button className="text-xs text-primary hover:text-primary/80 transition-colors">
+        <button 
+          onClick={() => navigate("/played-games")}
+          className="text-xs text-primary hover:text-primary/80 transition-colors"
+        >
           View All
         </button>
       </div>

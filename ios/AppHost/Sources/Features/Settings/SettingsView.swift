@@ -10,6 +10,7 @@ import AppKit
 struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var showingUpgrade = false
+    @AppStorage("frameSkipEnabled") private var frameSkipEnabled = false
     
     var body: some View {
         NavigationStack {
@@ -104,6 +105,15 @@ struct SettingsView: View {
     
     private var settingsItems: some View {
         VStack(spacing: 12) {
+            SettingsToggleRow(
+                icon: "gauge.with.dots.needle.67percent",
+                iconColor: .orange,
+                iconBg: Color.orange.opacity(0.2),
+                title: "Frame Skip",
+                description: "Skip frames on weaker devices",
+                isOn: $frameSkipEnabled
+            )
+            
             SettingsItemRow(
                 icon: "star.fill",
                 iconColor: .yellow,
@@ -188,6 +198,47 @@ struct SettingsView: View {
         #elseif canImport(AppKit)
         NSWorkspace.shared.open(url)
         #endif
+    }
+}
+
+struct SettingsToggleRow: View {
+    let icon: String
+    let iconColor: Color
+    let iconBg: Color
+    let title: String
+    let description: String
+    @Binding var isOn: Bool
+    
+    var body: some View {
+        HStack(spacing: 16) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(iconBg)
+                    .frame(width: 44, height: 44)
+                
+                Image(systemName: icon)
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundColor(iconColor)
+            }
+            
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.subheadline)
+                    .fontWeight(.medium)
+                    .foregroundColor(.primary)
+                
+                Text(description)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+            
+            Spacer()
+            
+            Toggle(isOn: $isOn)
+        }
+        .padding(16)
+        .background(Color.secondary.opacity(0.1))
+        .cornerRadius(16)
     }
 }
 

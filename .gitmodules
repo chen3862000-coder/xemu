@@ -1,0 +1,6 @@
+[submodule "cores/third_party/gambatte"]
+	path = cores/third_party/gambatte
+	url = https://github.com/libretro/gambatte-libretro
+[submodule "cores/third_party/mgba"]
+	path = cores/third_party/mgba
+	url = https://github.com/mgba-emu/mgba

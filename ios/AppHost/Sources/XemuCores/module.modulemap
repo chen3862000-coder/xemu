@@ -1,0 +1,4 @@
+module XemuCores {
+    header "include/xemu_cores.h"
+    export *
+}

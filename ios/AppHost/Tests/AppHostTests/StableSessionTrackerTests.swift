@@ -1,5 +1,5 @@
 import XCTest
-@testable import AppHost
+@testable import Xemu
 
 @MainActor
 final class StableSessionTrackerTests: XCTestCase {

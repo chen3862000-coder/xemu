@@ -1,5 +1,5 @@
 import XCTest
-@testable import AppHost
+@testable import Xemu
 
 @available(macOS 13.0, *)
 final class CompatibilityDataStoreTests: XCTestCase {

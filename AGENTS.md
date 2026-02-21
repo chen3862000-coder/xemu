@@ -4,7 +4,7 @@ This document equips any autonomous coding agent working inside `/Users/spiderck
 
 ## 1. Repository Snapshot
 1. The workspace contains a Swift Package Manager project at `ios/AppHost/` for iOS multi-system emulator development.
-2. The `ios/AppHost/` directory uses Swift Package Manager (Package.swift) with a demo.sh script for build/test automation.
+2. The `ios/AppHost/` directory uses Swift Package Manager (Package.swift) with a test.sh script for build/test automation.
 3. Treat new development as incremental additions to the existing Swift Package; follow Swift/SwiftUI conventions.
 4. Build scripts use `swift build` and `swift test` for macOS, and `xcodebuild` for iOS Simulator targets.
 5. Keep all generated files deterministic; prefer checked-in configuration over ad-hoc flags.
@@ -67,17 +67,71 @@ This document equips any autonomous coding agent working inside `/Users/spiderck
 3. Keep the table sorted by workflow order: install → build → lint → test.
 4. Once real commands exist, delete placeholders and describe concrete behavior.
 
-### 3.5 Swift Package Manager (iOS/AppHost)
-1. Build and test commands are centralized in `ios/AppHost/demo.sh`.
-2. Available commands:
-   - `./demo.sh build-macos`: Build for macOS using `swift build`
-   - `./demo.sh build`: Build for iOS Simulator using `xcodebuild`
-   - `./demo.sh test-macos`: Run tests on macOS using `swift test`
-   - `./demo.sh test`: Run tests on iOS Simulator
-   - `./demo.sh test-coverage`: Run tests with coverage report
-   - `./demo.sh clean`: Clean build artifacts
-   - `./demo.sh list-sims`: List available iOS Simulators
-3. Use iOS Simulator builds for UI testing; use macOS for fast unit testing.
+### 3.5 Swift Package Manager (iOS/AppHost) - Build & Test Commands
+
+| Purpose           | Command                                                                      | Notes                                    |
+|------------------|------------------------------------------------------------------------------|------------------------------------------|
+| Generate project | `xcodegen generate`                                                           | In ios/AppHost directory                 |
+| Build (macOS)    | `swift build`                                                                | For macOS targets                        |
+| Build (iOS)      | `xcodebuild -project Xemu.xcodeproj -scheme Xemu -destination 'platform=iOS Simulator,name=iPhone 17' -configuration Debug build` | Requires XcodeGen first                  |
+| Test (all)       | `swift test` or `./test.sh test`                                            | Runs all unit tests                      |
+| Test (single)    | `swift test --filter TestName`                                              | Run specific test                        |
+| List simulators  | `xcrun simctl list devices available`                                       | Shows available iOS simulators           |
+
+**Quick Start:**
+```bash
+cd ios/AppHost
+xcodegen generate
+xcodebuild -project Xemu.xcodeproj -scheme Xemu -destination 'platform=iOS Simulator,name=iPhone 17' -configuration Debug build
+swift test
+```
+
+### 3.6 iOS Simulator Testing (Manual UI Testing)
+1. **Prerequisites**:
+   - Xcode 16+ installed
+   - XcodeGen installed: `brew install xcodegen`
+   - iOS 17+ Simulator available
+
+2. **Generate Xcode Project**:
+   ```bash
+   cd ios/AppHost
+   xcodegen generate
+   ```
+
+3. **Build for iOS Simulator**:
+   ```bash
+   xcodebuild -project Xemu.xcodeproj -scheme Xemu \
+     -destination 'platform=iOS Simulator,name=iPhone 17' \
+     -configuration Debug build
+   ```
+
+4. **Install and Run on Simulator**:
+   ```bash
+   # Find the simulator ID
+   xcrun simctl list devices available | grep "iPhone 17"
+   
+   # Boot simulator (replace with actual ID)
+   SIMULATOR_ID="<DEVICE_ID>"
+   xcrun simctl boot $SIMULATOR_ID
+   open -a Simulator
+   
+   # Install app (path from DerivedData)
+   APP_PATH="~/Library/Developer/Xcode/DerivedData/Xemu-*/Build/Products/Debug-iphonesimulator/Xemu.app"
+   xcrun simctl install $SIMULATOR_ID "$APP_PATH"
+   
+   # Launch app
+   xcrun simctl launch $SIMULATOR_ID com.xemu.Xemu
+   ```
+
+5. **Testing Checklist**:
+   - ROM import functionality (tap + button, select ROM file)
+   - Game library display (imported games list)
+   - Game playback (select game to play)
+   - Touch controls (D-pad and action buttons)
+   - Pause/Resume menu
+   - Quick save/load states
+   - Fast-forward speeds (2x, 3x, 6x)
+   - Settings page (frame skip toggle)
 
 ## 4. Code Style and Engineering Guidelines
 1. Treat this section as the living spec for formatting, naming, types, and error handling.
@@ -184,6 +238,8 @@ This document equips any autonomous coding agent working inside `/Users/spiderck
 3. When uncertain, make a best-effort assumption, implement it, and clearly state the assumption in your response.
 4. If a task requires secrets, explain the gap and provide a mock implementation or interface instead of blocking.
 5. Keep responses concise but complete; humans rely on your summaries to understand repo state.
+6. **Always run tests after each coding task** - Before considering a task complete, run `./test.sh test` (or equivalent) to ensure all tests pass with no regressions. Fix any failing tests before finishing.
+7. **Never leave broken tests** - If a test fails, investigate and fix the issue. Do not skip or ignore failing tests.
 
 ## 7. Outstanding TODOs
 1. Populate actual build/lint/test commands once the first stack is chosen.
@@ -202,4 +258,7 @@ Keep this guide synchronized with reality; outdated automation instructions harm
 
 ## Recent Changes
 - 001-ios-multi-emulator: Added Swift 5.10 (Xcode 16) plus limited C/C++ bridges for existing emulator cores + SwiftUI, Combine, MetalKit, GameController, GoogleWebRTC, StoreKit 2, URLSession, Core Data
-- Updated demo.sh to work with Swift Package Manager instead of CocoaPods; added build-macos and test-macos commands
+- Updated test.sh to work with Swift Package Manager instead of CocoaPods; added build-macos and test-macos commands
+- Phase 3.6 completed: Game playback and emulation engine with Metal rendering, AVAudioEngine audio, touch controls, input mapping, save states, fast-forward, and frame skip
+- Added 30+ new tests for Phase 3.6 features (EmulatorCoreFactory, AudioEngine, MetalRenderer, GamePlayViewModel, TouchControlPad)
+- Added iOS Simulator testing workflow with xcodegen support

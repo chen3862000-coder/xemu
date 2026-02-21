@@ -66,9 +66,27 @@ struct Game: Identifiable {
     var genre: String?
     var fileSize: Int64
     var gameDescription: String?
+    var romPath: String?
     
     var emulatorPlatform: EmulatorPlatform {
         EmulatorPlatform(rawValue: platform) ?? .gameBoyAdvance
+    }
+    
+    var gamePlatform: Platform? {
+        switch emulatorPlatform {
+        case .gameBoy:
+            return .GB
+        case .gameBoyColor:
+            return .GBC
+        case .gameBoyAdvance:
+            return .GBA
+        case .nintendoDS:
+            return .NDS
+        case .playStation1:
+            return .PS1
+        case .nintendo3DS, .psp:
+            return nil
+        }
     }
     
     init(
@@ -83,7 +101,8 @@ struct Game: Identifiable {
         releaseYear: Int = 2000,
         genre: String? = nil,
         fileSize: Int64 = 0,
-        gameDescription: String? = nil
+        gameDescription: String? = nil,
+        romPath: String? = nil
     ) {
         self.id = id
         self.title = title
@@ -97,5 +116,6 @@ struct Game: Identifiable {
         self.genre = genre
         self.fileSize = fileSize
         self.gameDescription = gameDescription
+        self.romPath = romPath
     }
 }

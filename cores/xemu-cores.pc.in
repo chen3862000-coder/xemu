@@ -1,0 +1,10 @@
+prefix=@CMAKE_INSTALL_PREFIX@
+exec_prefix=${prefix}
+libdir=${prefix}/@CMAKE_INSTALL_LIBDIR@
+includedir=${prefix}/@CMAKE_INSTALL_INCLUDEDIR@
+
+Name: xemu-cores
+Description: Xemu emulation cores library
+Version: @PROJECT_VERSION@
+Libs: -L${libdir} -lxemu_cores
+Cflags: -I${includedir}

@@ -1,5 +1,5 @@
 import XCTest
-@testable import AppHost
+@testable import Xemu
 
 final class CommonTypesTests: XCTestCase {
 

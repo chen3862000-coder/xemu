@@ -4,6 +4,7 @@ import { EmulatorCard } from "../components/emulator-card";
 import { RecentGames } from "../components/recent-games";
 import { ImportRomsButton } from "../components/import-roms-button";
 import { Gamepad2, TrendingUp } from "lucide-react";
+import { useNavigate } from "react-router";
 
 const emulators = [
   {
@@ -63,6 +64,8 @@ const stats = [
 ];
 
 export default function Home() {
+  const navigate = useNavigate();
+
   return (
     <div className="min-h-full bg-background">
       {/* Animated background effect */}
@@ -107,7 +110,14 @@ export default function Home() {
             <motion.div
               key={stat.label}
               whileHover={{ scale: 1.02, y: -2 }}
-              className="relative group overflow-hidden rounded-xl bg-card border border-border/50 p-4"
+              onClick={() => {
+                if (stat.label === "Total Games") {
+                  navigate("/all-games");
+                }
+              }}
+              className={`relative group overflow-hidden rounded-xl bg-card border border-border/50 p-4 ${
+                stat.label === "Total Games" ? "cursor-pointer" : ""
+              }`}
             >
               <motion.div
                 className="absolute inset-0 bg-gradient-to-br from-primary/10 to-accent/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300"

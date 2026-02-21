@@ -1,0 +1,5 @@
+module XemuCoresLib {
+    header "include/xemu_cores.h"
+    link "c++"
+    export *
+}

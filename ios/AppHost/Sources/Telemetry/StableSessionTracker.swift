@@ -84,6 +84,10 @@ final class StableSessionTracker {
     private let maxCrashesBeforeWarning = 5
     private let maxErrorsBeforeWarning = 10
     private var totalSessionDuration: TimeInterval = 0
+    private var inputLatencySamples: [TimeInterval] = []
+    private let maxLatencySamples = 100
+    private var averageInputLatency: TimeInterval = 0
+    private var maxInputLatency: TimeInterval = 0
 
     static let testInstance: StableSessionTracker = {
         let tracker = StableSessionTracker()
@@ -91,6 +95,41 @@ final class StableSessionTracker {
     }()
 
     internal init() {}
+
+    func recordInputLatency(_ latency: TimeInterval) {
+        inputLatencySamples.append(latency)
+        if inputLatencySamples.count > maxLatencySamples {
+            inputLatencySamples.removeFirst()
+        }
+        
+        maxInputLatency = max(maxInputLatency, latency)
+        
+        if !inputLatencySamples.isEmpty {
+            averageInputLatency = inputLatencySamples.reduce(0, +) / Double(inputLatencySamples.count)
+        }
+        
+        if latency > 0.016 {
+            logger.warning("High input latency detected: \(Int(latency * 1000))ms")
+        }
+    }
+
+    func getAverageInputLatency() -> TimeInterval {
+        return averageInputLatency
+    }
+
+    func getMaxInputLatency() -> TimeInterval {
+        return maxInputLatency
+    }
+
+    func getInputLatencyStats() -> (average: TimeInterval, max: TimeInterval, sampleCount: Int) {
+        return (averageInputLatency, maxInputLatency, inputLatencySamples.count)
+    }
+
+    func resetLatencyStats() {
+        inputLatencySamples.removeAll()
+        averageInputLatency = 0
+        maxInputLatency = 0
+    }
 
     func recordCrash() {
         crashCount += 1

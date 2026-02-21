@@ -1,6 +1,6 @@
-name: AppHost
+name: Xemu
 options:
-  bundleIdPrefix: apphost
+  bundleIdPrefix: com.xemu
   deploymentTarget:
     iOS: "17.0"
   xcodeVersion: "16.0"
@@ -12,16 +12,33 @@ settings:
     INFOPLIST_FILE: Sources/AppHost/Info.plist
 
 targets:
-  AppHost:
+  Xemu:
     type: application
     platform: iOS
     sources:
-      - Sources
+      - path: Sources
+        excludes:
+          - "**/*.md"
+      - path: Sources/XemuCoresLib/module.modulemap
+    dependencies:
+      - sdk: libc++.tbd
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: apphost.AppHost
+        PRODUCT_BUNDLE_IDENTIFIER: com.xemu.Xemu
         INFOPLIST_FILE: Sources/AppHost/Info.plist
         GENERATE_INFOPLIST_FILE: NO
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         CODE_SIGN_STYLE: Automatic
         DEVELOPMENT_TEAM: ""
+        SWIFT_INCLUDE_PATHS: 
+          - "$(SRCROOT)/Sources/XemuCoresLib/include"
+        HEADER_SEARCH_PATHS: 
+          - "$(SRCROOT)/Sources/XemuCoresLib/include"
+        LIBRARY_SEARCH_PATHS[sdk=iphoneos*]:
+          - "$(SRCROOT)/../../cores/XemuCores.xcframework/ios-arm64"
+        LIBRARY_SEARCH_PATHS[sdk=iphonesimulator*]:
+          - "$(SRCROOT)/../../cores/XemuCores.xcframework/ios-arm64_x86_64-simulator"
+        OTHER_LDFLAGS:
+          - "-lxemu_cores"
+        CLANG_ENABLE_MODULES: YES
+        SWIFT_OBJC_BRIDGING_HEADER: Sources/XemuCores/include/BridgingHeader.h

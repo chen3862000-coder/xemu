@@ -1,0 +1,920 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		00469B5B648C1B8BCF74FD39 /* SettingsHeader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9360EC40197B186BF8A999A9 /* SettingsHeader.swift */; };
+		035053A54A3D1B64E486DB50 /* ExperimentalGatingManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A2F6AE1AF2BA016009F25D8 /* ExperimentalGatingManager.swift */; };
+		055C08E8A307D8622BD26E7B /* Toggle.swift in Sources */ = {isa = PBXBuildFile; fileRef = C626FB0CA4B289019CD0CF84 /* Toggle.swift */; };
+		0979534C5C9B6D07D8100A44 /* GBCore.swift in Sources */ = {isa = PBXBuildFile; fileRef = E6C80850866DE3CBC4D7B82A /* GBCore.swift */; };
+		0C438ECB83EDFDA7E631D388 /* DefaultControllerMappings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0E15C6DFC311ECEB0CEFFCA6 /* DefaultControllerMappings.swift */; };
+		0EF3FEF30C3267D698ED705B /* StableSystemsCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 176ABDABD3CC0F966E55F6C9 /* StableSystemsCoordinator.swift */; };
+		100E90374F7039A1E8DD4EED /* EmulatorCoreFactory.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3ED8B8DBD333B44E1A7A7C21 /* EmulatorCoreFactory.swift */; };
+		19023717A1816964DAD24BA2 /* iPhoneMockup.swift in Sources */ = {isa = PBXBuildFile; fileRef = C84CCFE78029389CEFD3E97B /* iPhoneMockup.swift */; };
+		19B7BDA261F7BF91A41C2036 /* ExperimentalLaunchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5D62DC4B965230783C1FAB31 /* ExperimentalLaunchView.swift */; };
+		1BFE8C580B6A09CD9FCAD335 /* RomMetadataExtractor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97BC0CC6295F572F92C10E41 /* RomMetadataExtractor.swift */; };
+		1CAE37E11D321DFE401906F5 /* TouchControlPad.swift in Sources */ = {isa = PBXBuildFile; fileRef = 672346EA96FF9A193B231B97 /* TouchControlPad.swift */; };
+		2144EF6B095E672D5D2CE1DA /* SaveStatesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4364291217649D6912F145F5 /* SaveStatesView.swift */; };
+		250ACED17721F0EA48663E86 /* ControllerMappingEditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1B23E4D49D3B071A781925F8 /* ControllerMappingEditor.swift */; };
+		26BDEA8FF4281DA7E9E2360C /* LibraryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0CBA3662153947F4A0A92E40 /* LibraryView.swift */; };
+		287E2952BD236B32BC4C27A7 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 116AD7A4945F9AE8BE364572 /* ContentView.swift */; };
+		2BAF496DE48A814C1EE6C0D3 /* EmulatorButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = C3216A674D49C406C9C7954E /* EmulatorButton.swift */; };
+		2C2483EBEDF1562D319DB5D7 /* GenesisCore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60B84588246FDDF326A5906A /* GenesisCore.swift */; };
+		2FA0C4C780E6636C2A347303 /* PersistenceController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0D3DA034CE85C6DE2CF3193A /* PersistenceController.swift */; };
+		382072FAFD010B7BA5C59BCD /* RomValidator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 30FC9FACDF41646D250AECF7 /* RomValidator.swift */; };
+		38249D9760BBE224E8DCD36B /* iOSApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 08312D695D16BF9B8D76B549 /* iOSApp.swift */; };
+		39DFE30FF1B43900CCBEDF00 /* Checkbox.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4C48534E106FC93B669B1859 /* Checkbox.swift */; };
+		3C1C1C30461209C438218C32 /* ROMStorage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60116C1286890A6031C40E8E /* ROMStorage.swift */; };
+		3C3159AB73ABDF963A313F5A /* VirtualPadView.swift in Sources */ = {isa = PBXBuildFile; fileRef = ACFE85D5A008F2D881F62BA9 /* VirtualPadView.swift */; };
+		3CE04755EFC1A1F1E7B31F6E /* MetalRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = E34A757D05BE16111E361A97 /* MetalRenderer.swift */; };
+		4A22E39D94CA207A2B4B760F /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 21860D43DA16DB3AF18139D3 /* SettingsView.swift */; };
+		5131C250FDEFC17F026F6380 /* EntitlementStatusView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 466D0058781640285EE96634 /* EntitlementStatusView.swift */; };
+		60CC3D8F51F23131BDE11143 /* Dialog.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA7B69F5DDE2C4A434A51CB6 /* Dialog.swift */; };
+		60F896E4EFDBDD31BC068F4A /* InputBus.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9485665368CFC41E8D938D95 /* InputBus.swift */; };
+		70867E22BC48F79CF384061E /* Colors.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74BECED9B221104E4F9B3DD8 /* Colors.swift */; };
+		73B08C5F1BF0AEECADD3CD3F /* AdsPolicyController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4102CE4E593EBFCBCEEAB4D3 /* AdsPolicyController.swift */; };
+		755788A7BD8D16F285B141EC /* GameDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 04636AFBB1C5B621101AE08A /* GameDetailView.swift */; };
+		7959B081188039B1F334D8C9 /* XemuCores.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000F52E3A3CFCB55E604AE04 /* XemuCores.swift */; };
+		7BB9DA989AE3C0E0B8E95D68 /* EntitlementCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = 652880BA95C7641ACD748647 /* EntitlementCache.swift */; };
+		7F786F32B7B2D923A9CD71CF /* TouchControlsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2726843F3792F821AD447A72 /* TouchControlsView.swift */; };
+		7F97C2EEA17D481A2D9D994A /* EmulatorCore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0EC16E530DB4C49A1BD9CF73 /* EmulatorCore.swift */; };
+		7FFE5A3C56B9F453C8A4BFD8 /* CoreDataMigration.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7CD8EC90E1B08EEC7D2AE206 /* CoreDataMigration.swift */; };
+		84C8EA8C8C0FD576BBCE9084 /* CompatibilityDiagnosticsSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 15C94619A252760EF9BF7DCB /* CompatibilityDiagnosticsSheet.swift */; };
+		85226034F5C6C1F5A20A8961 /* StableSessionTracker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 343B1CDBFFD8BCEE6BA08EA4 /* StableSessionTracker.swift */; };
+		853E53F67096EEC95A90F8ED /* AzureApiStub.swift in Sources */ = {isa = PBXBuildFile; fileRef = B7590148A026C7627A4511DC /* AzureApiStub.swift */; };
+		897F892CA9E3F653E17AAB39 /* ControllerOverlayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D24F51E4490BD43AE3AE7DE1 /* ControllerOverlayView.swift */; };
+		8A942AB5E6436CC4D8394EB4 /* Input.swift in Sources */ = {isa = PBXBuildFile; fileRef = F60F2916ECBF4B4BEF92004F /* Input.swift */; };
+		8B5DAC81EFB96AC46E0AAE32 /* RomImportCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = D9B06594522E3AB0385931D9 /* RomImportCoordinator.swift */; };
+		928F0540A9B1BC37F7503C6D /* Alert.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6A31AE7D5A0BC2527894EBA9 /* Alert.swift */; };
+		939EAF27F1F84695D893335D /* GBACore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 153169A0519B5D36DA5ED8C1 /* GBACore.swift */; };
+		97664353BE2BFE6567CBE4A6 /* SaveState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3CEBD6F5C153583F9BAD9C3A /* SaveState.swift */; };
+		99C42C50A5FFA9103329348A /* NDSCore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 21C64540A3D2C00BE0D3200C /* NDSCore.swift */; };
+		9C8E274F1B14843796776B82 /* CompatibilityDataStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1E096A4EA6FE5D4FBF1FD46B /* CompatibilityDataStore.swift */; };
+		9F458B275A1D6AAF44321994 /* SettingsItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC3641DA7AB5979DD18519D7 /* SettingsItem.swift */; };
+		A454C0D96D7DA59BC7FD4E8B /* SaveStatesViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9C3AC2668DE133B8A0B8881A /* SaveStatesViewModel.swift */; };
+		A5D271408AC439164A94CA22 /* GamePlayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE7656E2B31BA17D79C6DFB5 /* GamePlayView.swift */; };
+		ADE244CA47CA49B7DE4A4969 /* libc++.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = 28A32FA35950420C5322D737 /* libc++.tbd */; };
+		B0A2A37751DCB3ED0A2E77CD /* NESCore.swift in Sources */ = {isa = PBXBuildFile; fileRef = CCE9BE4FF1D1FAAD1A852E60 /* NESCore.swift */; };
+		B2A8E7EF2A3A8AB827A295FF /* PurchaseFlowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7467A101DF9338E0F3357D42 /* PurchaseFlowController.swift */; };
+		B37543A64132C38CB17F63F5 /* Model.xcdatamodeld in Sources */ = {isa = PBXBuildFile; fileRef = 2BDBEBD2AAFD8ADB7DE59761 /* Model.xcdatamodeld */; };
+		B42C87D3E4D4B188DBDD73C9 /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D009E6F2DF5E69D7593C1965 /* HomeView.swift */; };
+		B673D4F46912E97527CEC99D /* EmulatorModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B46B7ED335E85F0798430D0 /* EmulatorModels.swift */; };
+		B698C63CA572519D87273F7D /* Progress.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6CC9E8AC6255876C10AF7518 /* Progress.swift */; };
+		B742F26DA2C470D3CB810062 /* Tabs.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA3D0A66ECED6D839076F83A /* Tabs.swift */; };
+		B87AE7B2B8E50B193C009F7D /* GameListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3DC3F048D8B029578EBC1C67 /* GameListView.swift */; };
+		B980E3B9A207E365C1B177C6 /* Misc.swift in Sources */ = {isa = PBXBuildFile; fileRef = F79E3AF9AFB00FC5BF241472 /* Misc.swift */; };
+		BBE9D390DB554E3EE8D55882 /* AudioEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 88DDD3778774BBD64E787BDF /* AudioEngine.swift */; };
+		BE0FB37ED77223F8CE78FA70 /* GameLibraryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7BC15F83843091487D6BA3FF /* GameLibraryView.swift */; };
+		BEFB7203845DF217533380A6 /* PS1Core.swift in Sources */ = {isa = PBXBuildFile; fileRef = A99371B6A5786B7EB7314F3F /* PS1Core.swift */; };
+		C046D641921D13E2DE0FFB1E /* CommonTypes.swift in Sources */ = {isa = PBXBuildFile; fileRef = D066E4CDCFE4A0792D74EFA6 /* CommonTypes.swift */; };
+		CA5BC011E541B6CBC2A2542F /* SaveStateStorage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8DEADAF875199419D6BDC89A /* SaveStateStorage.swift */; };
+		D145C7F2A45C9B0674438326 /* DeviceProfileCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3868FC066CEDAC8E3EBEB31E /* DeviceProfileCache.swift */; };
+		D1BFC76C6019BB4C747E8B61 /* Badge.swift in Sources */ = {isa = PBXBuildFile; fileRef = CACC00583F9D175AB4408A31 /* Badge.swift */; };
+		D43B8D0706CAFD98C9882F3A /* ControllerMapping.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3BAD4B60C6D8C65B56AD16E3 /* ControllerMapping.swift */; };
+		D4B1DCEDD183DC943A62F63D /* GamePlayViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 05114C577092C384F97A551D /* GamePlayViewModel.swift */; };
+		D5E4A38D3B851CFC45B3A830 /* MetalView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 87CAE0469FD01C9174AA65D6 /* MetalView.swift */; };
+		E62C630456F0C5BAC8E91B7A /* OfflineGraceManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD2BA596028329B64FC9E98D /* OfflineGraceManager.swift */; };
+		F387AD69E5395A8C7F16E93E /* AppHost.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8B36B2ACD647AC3067DC2155 /* AppHost.swift */; };
+		F51F13808938D30ABCD0C190 /* Button.swift in Sources */ = {isa = PBXBuildFile; fileRef = D7A97E34F6714D55B2ED6121 /* Button.swift */; };
+		F93E44807879255BA51E06C3 /* Header.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAF6A9A7B47722A9EEE63EDF /* Header.swift */; };
+		FB4D93CE12BDD499797A63C6 /* EmulatorSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = 867BF8EE76C4FEC72E94EBDC /* EmulatorSession.swift */; };
+		FCF665150656D5E24E64FFEA /* Card.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0E27256B3C3C7FB89F1F47DE /* Card.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		000F52E3A3CFCB55E604AE04 /* XemuCores.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = XemuCores.swift; sourceTree = "<group>"; };
+		02C868D2A7643FD7713FD40B /* xemu_cores.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = xemu_cores.h; sourceTree = "<group>"; };
+		04636AFBB1C5B621101AE08A /* GameDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameDetailView.swift; sourceTree = "<group>"; };
+		05114C577092C384F97A551D /* GamePlayViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GamePlayViewModel.swift; sourceTree = "<group>"; };
+		08312D695D16BF9B8D76B549 /* iOSApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = iOSApp.swift; sourceTree = "<group>"; };
+		0A2F6AE1AF2BA016009F25D8 /* ExperimentalGatingManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExperimentalGatingManager.swift; sourceTree = "<group>"; };
+		0CBA3662153947F4A0A92E40 /* LibraryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibraryView.swift; sourceTree = "<group>"; };
+		0D3DA034CE85C6DE2CF3193A /* PersistenceController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PersistenceController.swift; sourceTree = "<group>"; };
+		0E15C6DFC311ECEB0CEFFCA6 /* DefaultControllerMappings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DefaultControllerMappings.swift; sourceTree = "<group>"; };
+		0E27256B3C3C7FB89F1F47DE /* Card.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Card.swift; sourceTree = "<group>"; };
+		0EC16E530DB4C49A1BD9CF73 /* EmulatorCore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmulatorCore.swift; sourceTree = "<group>"; };
+		116AD7A4945F9AE8BE364572 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		153169A0519B5D36DA5ED8C1 /* GBACore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GBACore.swift; sourceTree = "<group>"; };
+		15C94619A252760EF9BF7DCB /* CompatibilityDiagnosticsSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CompatibilityDiagnosticsSheet.swift; sourceTree = "<group>"; };
+		176ABDABD3CC0F966E55F6C9 /* StableSystemsCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StableSystemsCoordinator.swift; sourceTree = "<group>"; };
+		1B23E4D49D3B071A781925F8 /* ControllerMappingEditor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ControllerMappingEditor.swift; sourceTree = "<group>"; };
+		1E096A4EA6FE5D4FBF1FD46B /* CompatibilityDataStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CompatibilityDataStore.swift; sourceTree = "<group>"; };
+		21860D43DA16DB3AF18139D3 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		21C64540A3D2C00BE0D3200C /* NDSCore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NDSCore.swift; sourceTree = "<group>"; };
+		2726843F3792F821AD447A72 /* TouchControlsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TouchControlsView.swift; sourceTree = "<group>"; };
+		28A32FA35950420C5322D737 /* libc++.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = "libc++.tbd"; path = "usr/lib/libc++.tbd"; sourceTree = SDKROOT; };
+		30FC9FACDF41646D250AECF7 /* RomValidator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RomValidator.swift; sourceTree = "<group>"; };
+		343B1CDBFFD8BCEE6BA08EA4 /* StableSessionTracker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StableSessionTracker.swift; sourceTree = "<group>"; };
+		3868FC066CEDAC8E3EBEB31E /* DeviceProfileCache.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceProfileCache.swift; sourceTree = "<group>"; };
+		3BAD4B60C6D8C65B56AD16E3 /* ControllerMapping.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ControllerMapping.swift; sourceTree = "<group>"; };
+		3BCF02C34AD6920FCABF5405 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		3CEBD6F5C153583F9BAD9C3A /* SaveState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SaveState.swift; sourceTree = "<group>"; };
+		3DC3F048D8B029578EBC1C67 /* GameListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameListView.swift; sourceTree = "<group>"; };
+		3ED8B8DBD333B44E1A7A7C21 /* EmulatorCoreFactory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmulatorCoreFactory.swift; sourceTree = "<group>"; };
+		4102CE4E593EBFCBCEEAB4D3 /* AdsPolicyController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdsPolicyController.swift; sourceTree = "<group>"; };
+		4153D5824070B31DC65B6D3A /* version.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = version.h; sourceTree = "<group>"; };
+		4364291217649D6912F145F5 /* SaveStatesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SaveStatesView.swift; sourceTree = "<group>"; };
+		466D0058781640285EE96634 /* EntitlementStatusView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EntitlementStatusView.swift; sourceTree = "<group>"; };
+		4C48534E106FC93B669B1859 /* Checkbox.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Checkbox.swift; sourceTree = "<group>"; };
+		4DE8FCC2F96A65DCDAB928F2 /* Xemu.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = Xemu.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		5B46B7ED335E85F0798430D0 /* EmulatorModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmulatorModels.swift; sourceTree = "<group>"; };
+		5D62DC4B965230783C1FAB31 /* ExperimentalLaunchView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExperimentalLaunchView.swift; sourceTree = "<group>"; };
+		60116C1286890A6031C40E8E /* ROMStorage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ROMStorage.swift; sourceTree = "<group>"; };
+		60B84588246FDDF326A5906A /* GenesisCore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GenesisCore.swift; sourceTree = "<group>"; };
+		631EBCFA1FC4A824DCEF07F5 /* BridgingHeader.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = BridgingHeader.h; sourceTree = "<group>"; };
+		652880BA95C7641ACD748647 /* EntitlementCache.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EntitlementCache.swift; sourceTree = "<group>"; };
+		672346EA96FF9A193B231B97 /* TouchControlPad.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TouchControlPad.swift; sourceTree = "<group>"; };
+		6A31AE7D5A0BC2527894EBA9 /* Alert.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Alert.swift; sourceTree = "<group>"; };
+		6CC9E8AC6255876C10AF7518 /* Progress.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Progress.swift; sourceTree = "<group>"; };
+		733D007E7466C4BA97155B6B /* module.modulemap */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.module-map"; path = module.modulemap; sourceTree = "<group>"; };
+		7467A101DF9338E0F3357D42 /* PurchaseFlowController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PurchaseFlowController.swift; sourceTree = "<group>"; };
+		74BECED9B221104E4F9B3DD8 /* Colors.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Colors.swift; sourceTree = "<group>"; };
+		76F9B895A2EADF68D6D81078 /* Model.xcdatamodel */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcdatamodel; path = Model.xcdatamodel; sourceTree = "<group>"; };
+		7BC15F83843091487D6BA3FF /* GameLibraryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameLibraryView.swift; sourceTree = "<group>"; };
+		7CD8EC90E1B08EEC7D2AE206 /* CoreDataMigration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoreDataMigration.swift; sourceTree = "<group>"; };
+		867BF8EE76C4FEC72E94EBDC /* EmulatorSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmulatorSession.swift; sourceTree = "<group>"; };
+		87CAE0469FD01C9174AA65D6 /* MetalView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MetalView.swift; sourceTree = "<group>"; };
+		88DDD3778774BBD64E787BDF /* AudioEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioEngine.swift; sourceTree = "<group>"; };
+		8B36B2ACD647AC3067DC2155 /* AppHost.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppHost.swift; sourceTree = "<group>"; };
+		8DEADAF875199419D6BDC89A /* SaveStateStorage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SaveStateStorage.swift; sourceTree = "<group>"; };
+		9360EC40197B186BF8A999A9 /* SettingsHeader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsHeader.swift; sourceTree = "<group>"; };
+		9485665368CFC41E8D938D95 /* InputBus.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InputBus.swift; sourceTree = "<group>"; };
+		97BC0CC6295F572F92C10E41 /* RomMetadataExtractor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RomMetadataExtractor.swift; sourceTree = "<group>"; };
+		9C3AC2668DE133B8A0B8881A /* SaveStatesViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SaveStatesViewModel.swift; sourceTree = "<group>"; };
+		A99371B6A5786B7EB7314F3F /* PS1Core.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PS1Core.swift; sourceTree = "<group>"; };
+		AC3641DA7AB5979DD18519D7 /* SettingsItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsItem.swift; sourceTree = "<group>"; };
+		ACFE85D5A008F2D881F62BA9 /* VirtualPadView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VirtualPadView.swift; sourceTree = "<group>"; };
+		AD2BA596028329B64FC9E98D /* OfflineGraceManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfflineGraceManager.swift; sourceTree = "<group>"; };
+		B65C2B2E7E71454EF6AA5F9B /* module.modulemap */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.module-map"; path = module.modulemap; sourceTree = "<group>"; };
+		B7590148A026C7627A4511DC /* AzureApiStub.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AzureApiStub.swift; sourceTree = "<group>"; };
+		BA7B69F5DDE2C4A434A51CB6 /* Dialog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Dialog.swift; sourceTree = "<group>"; };
+		C3216A674D49C406C9C7954E /* EmulatorButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmulatorButton.swift; sourceTree = "<group>"; };
+		C626FB0CA4B289019CD0CF84 /* Toggle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Toggle.swift; sourceTree = "<group>"; };
+		C84CCFE78029389CEFD3E97B /* iPhoneMockup.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = iPhoneMockup.swift; sourceTree = "<group>"; };
+		CACC00583F9D175AB4408A31 /* Badge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Badge.swift; sourceTree = "<group>"; };
+		CCE9BE4FF1D1FAAD1A852E60 /* NESCore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NESCore.swift; sourceTree = "<group>"; };
+		D009E6F2DF5E69D7593C1965 /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeView.swift; sourceTree = "<group>"; };
+		D066E4CDCFE4A0792D74EFA6 /* CommonTypes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommonTypes.swift; sourceTree = "<group>"; };
+		D24F51E4490BD43AE3AE7DE1 /* ControllerOverlayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ControllerOverlayView.swift; sourceTree = "<group>"; };
+		D7A97E34F6714D55B2ED6121 /* Button.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Button.swift; sourceTree = "<group>"; };
+		D9B06594522E3AB0385931D9 /* RomImportCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RomImportCoordinator.swift; sourceTree = "<group>"; };
+		E34A757D05BE16111E361A97 /* MetalRenderer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MetalRenderer.swift; sourceTree = "<group>"; };
+		E6C80850866DE3CBC4D7B82A /* GBCore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GBCore.swift; sourceTree = "<group>"; };
+		F60F2916ECBF4B4BEF92004F /* Input.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Input.swift; sourceTree = "<group>"; };
+		F79E3AF9AFB00FC5BF241472 /* Misc.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Misc.swift; sourceTree = "<group>"; };
+		FA3D0A66ECED6D839076F83A /* Tabs.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Tabs.swift; sourceTree = "<group>"; };
+		FAF6A9A7B47722A9EEE63EDF /* Header.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Header.swift; sourceTree = "<group>"; };
+		FE7656E2B31BA17D79C6DFB5 /* GamePlayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GamePlayView.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		5519E51B27D9224DD85EEABA /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				ADE244CA47CA49B7DE4A4969 /* libc++.tbd in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		056ABF2432D5E397F783385A /* Experimental */ = {
+			isa = PBXGroup;
+			children = (
+				1E096A4EA6FE5D4FBF1FD46B /* CompatibilityDataStore.swift */,
+				15C94619A252760EF9BF7DCB /* CompatibilityDiagnosticsSheet.swift */,
+				0A2F6AE1AF2BA016009F25D8 /* ExperimentalGatingManager.swift */,
+				5D62DC4B965230783C1FAB31 /* ExperimentalLaunchView.swift */,
+			);
+			path = Experimental;
+			sourceTree = "<group>";
+		};
+		0C1EC4B251E6BBE262A4AAA5 = {
+			isa = PBXGroup;
+			children = (
+				F2C973CFE469158E9C84A8B4 /* Sources */,
+				0CA761A71B7C5306B0FBB137 /* Frameworks */,
+				DADCDD25836B8A8E60F5A22C /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		0CA761A71B7C5306B0FBB137 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				28A32FA35950420C5322D737 /* libc++.tbd */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		0E3ABAF303040439628AF1A7 /* Host */ = {
+			isa = PBXGroup;
+			children = (
+				176ABDABD3CC0F966E55F6C9 /* StableSystemsCoordinator.swift */,
+				14CB065C9E33872516C0EE83 /* Audio */,
+				FDF73EED678D193E5573EE27 /* Emulation */,
+				739D0FA28A783B5672FC4567 /* Input */,
+				A45EBB7CE09697FC88190F3E /* Rendering */,
+				3C2202D62AED90807F4DF8A4 /* SaveStates */,
+			);
+			path = Host;
+			sourceTree = "<group>";
+		};
+		14CB065C9E33872516C0EE83 /* Audio */ = {
+			isa = PBXGroup;
+			children = (
+				88DDD3778774BBD64E787BDF /* AudioEngine.swift */,
+			);
+			path = Audio;
+			sourceTree = "<group>";
+		};
+		242EF002429E2844372A40F1 /* Preview */ = {
+			isa = PBXGroup;
+			children = (
+				C84CCFE78029389CEFD3E97B /* iPhoneMockup.swift */,
+			);
+			path = Preview;
+			sourceTree = "<group>";
+		};
+		2957041B76FDED93F7E4B07A /* Home */ = {
+			isa = PBXGroup;
+			children = (
+				7BC15F83843091487D6BA3FF /* GameLibraryView.swift */,
+				D009E6F2DF5E69D7593C1965 /* HomeView.swift */,
+			);
+			path = Home;
+			sourceTree = "<group>";
+		};
+		312C02F1135123BF4879D0F7 /* GameList */ = {
+			isa = PBXGroup;
+			children = (
+				3DC3F048D8B029578EBC1C67 /* GameListView.swift */,
+			);
+			path = GameList;
+			sourceTree = "<group>";
+		};
+		3C2202D62AED90807F4DF8A4 /* SaveStates */ = {
+			isa = PBXGroup;
+			children = (
+				8DEADAF875199419D6BDC89A /* SaveStateStorage.swift */,
+				9C3AC2668DE133B8A0B8881A /* SaveStatesViewModel.swift */,
+			);
+			path = SaveStates;
+			sourceTree = "<group>";
+		};
+		444E17329B050DB61DBA51AD /* Controls */ = {
+			isa = PBXGroup;
+			children = (
+				1B23E4D49D3B071A781925F8 /* ControllerMappingEditor.swift */,
+				D24F51E4490BD43AE3AE7DE1 /* ControllerOverlayView.swift */,
+				2726843F3792F821AD447A72 /* TouchControlsView.swift */,
+			);
+			path = Controls;
+			sourceTree = "<group>";
+		};
+		4995648B0969ABAEAF37BC8D /* Components */ = {
+			isa = PBXGroup;
+			children = (
+				FAF6A9A7B47722A9EEE63EDF /* Header.swift */,
+			);
+			path = Components;
+			sourceTree = "<group>";
+		};
+		4E915E3CB22B63083A6E5B80 /* GamePlay */ = {
+			isa = PBXGroup;
+			children = (
+				C3216A674D49C406C9C7954E /* EmulatorButton.swift */,
+				FE7656E2B31BA17D79C6DFB5 /* GamePlayView.swift */,
+				05114C577092C384F97A551D /* GamePlayViewModel.swift */,
+				672346EA96FF9A193B231B97 /* TouchControlPad.swift */,
+				ACFE85D5A008F2D881F62BA9 /* VirtualPadView.swift */,
+			);
+			path = GamePlay;
+			sourceTree = "<group>";
+		};
+		5A5F9BA9E88EB390AFB9398D /* Telemetry */ = {
+			isa = PBXGroup;
+			children = (
+				343B1CDBFFD8BCEE6BA08EA4 /* StableSessionTracker.swift */,
+			);
+			path = Telemetry;
+			sourceTree = "<group>";
+		};
+		5E3C1790646B782381C47F34 /* AppHost */ = {
+			isa = PBXGroup;
+			children = (
+				8B36B2ACD647AC3067DC2155 /* AppHost.swift */,
+				116AD7A4945F9AE8BE364572 /* ContentView.swift */,
+				3868FC066CEDAC8E3EBEB31E /* DeviceProfileCache.swift */,
+				652880BA95C7641ACD748647 /* EntitlementCache.swift */,
+				3BCF02C34AD6920FCABF5405 /* Info.plist */,
+				08312D695D16BF9B8D76B549 /* iOSApp.swift */,
+				2BDBEBD2AAFD8ADB7DE59761 /* Model.xcdatamodeld */,
+			);
+			path = AppHost;
+			sourceTree = "<group>";
+		};
+		730FDFD4F640A370AA5063E1 /* Services */ = {
+			isa = PBXGroup;
+			children = (
+				B7590148A026C7627A4511DC /* AzureApiStub.swift */,
+				AD2BA596028329B64FC9E98D /* OfflineGraceManager.swift */,
+			);
+			path = Services;
+			sourceTree = "<group>";
+		};
+		739D0FA28A783B5672FC4567 /* Input */ = {
+			isa = PBXGroup;
+			children = (
+				9485665368CFC41E8D938D95 /* InputBus.swift */,
+			);
+			path = Input;
+			sourceTree = "<group>";
+		};
+		876ABF168FDDDB8B90C46FC7 /* XemuCores */ = {
+			isa = PBXGroup;
+			children = (
+				B65C2B2E7E71454EF6AA5F9B /* module.modulemap */,
+				000F52E3A3CFCB55E604AE04 /* XemuCores.swift */,
+				F6640158B5A8E60FA4044AC4 /* include */,
+			);
+			path = XemuCores;
+			sourceTree = "<group>";
+		};
+		8BE58110C6C169656886202F /* Settings */ = {
+			isa = PBXGroup;
+			children = (
+				466D0058781640285EE96634 /* EntitlementStatusView.swift */,
+				9360EC40197B186BF8A999A9 /* SettingsHeader.swift */,
+				AC3641DA7AB5979DD18519D7 /* SettingsItem.swift */,
+				21860D43DA16DB3AF18139D3 /* SettingsView.swift */,
+			);
+			path = Settings;
+			sourceTree = "<group>";
+		};
+		98C6EF507520433BE415B803 /* Library */ = {
+			isa = PBXGroup;
+			children = (
+				4102CE4E593EBFCBCEEAB4D3 /* AdsPolicyController.swift */,
+				0CBA3662153947F4A0A92E40 /* LibraryView.swift */,
+			);
+			path = Library;
+			sourceTree = "<group>";
+		};
+		A1ECFF5AAEBDF01C9729C42E /* include */ = {
+			isa = PBXGroup;
+			children = (
+				4153D5824070B31DC65B6D3A /* version.h */,
+				02C868D2A7643FD7713FD40B /* xemu_cores.h */,
+			);
+			path = include;
+			sourceTree = "<group>";
+		};
+		A45EBB7CE09697FC88190F3E /* Rendering */ = {
+			isa = PBXGroup;
+			children = (
+				E34A757D05BE16111E361A97 /* MetalRenderer.swift */,
+				87CAE0469FD01C9174AA65D6 /* MetalView.swift */,
+			);
+			path = Rendering;
+			sourceTree = "<group>";
+		};
+		AA15DED010952BFB793B4041 /* Persistence */ = {
+			isa = PBXGroup;
+			children = (
+				3BAD4B60C6D8C65B56AD16E3 /* ControllerMapping.swift */,
+				0D3DA034CE85C6DE2CF3193A /* PersistenceController.swift */,
+				3CEBD6F5C153583F9BAD9C3A /* SaveState.swift */,
+				D48E6B75894DDBDF110BA572 /* Migrations */,
+			);
+			path = Persistence;
+			sourceTree = "<group>";
+		};
+		AC2FB453688257147F9D74C2 /* Import */ = {
+			isa = PBXGroup;
+			children = (
+				D9B06594522E3AB0385931D9 /* RomImportCoordinator.swift */,
+				97BC0CC6295F572F92C10E41 /* RomMetadataExtractor.swift */,
+				30FC9FACDF41646D250AECF7 /* RomValidator.swift */,
+			);
+			path = Import;
+			sourceTree = "<group>";
+		};
+		B772E71759AB5627450D3886 /* UI */ = {
+			isa = PBXGroup;
+			children = (
+				6A31AE7D5A0BC2527894EBA9 /* Alert.swift */,
+				CACC00583F9D175AB4408A31 /* Badge.swift */,
+				D7A97E34F6714D55B2ED6121 /* Button.swift */,
+				0E27256B3C3C7FB89F1F47DE /* Card.swift */,
+				4C48534E106FC93B669B1859 /* Checkbox.swift */,
+				74BECED9B221104E4F9B3DD8 /* Colors.swift */,
+				BA7B69F5DDE2C4A434A51CB6 /* Dialog.swift */,
+				F60F2916ECBF4B4BEF92004F /* Input.swift */,
+				F79E3AF9AFB00FC5BF241472 /* Misc.swift */,
+				6CC9E8AC6255876C10AF7518 /* Progress.swift */,
+				FA3D0A66ECED6D839076F83A /* Tabs.swift */,
+				C626FB0CA4B289019CD0CF84 /* Toggle.swift */,
+			);
+			path = UI;
+			sourceTree = "<group>";
+		};
+		C64A42AAA29D40AEC22BD8B3 /* SaveStates */ = {
+			isa = PBXGroup;
+			children = (
+				4364291217649D6912F145F5 /* SaveStatesView.swift */,
+			);
+			path = SaveStates;
+			sourceTree = "<group>";
+		};
+		CE9CFF84E345BB5151B7E930 /* GameDetail */ = {
+			isa = PBXGroup;
+			children = (
+				04636AFBB1C5B621101AE08A /* GameDetailView.swift */,
+			);
+			path = GameDetail;
+			sourceTree = "<group>";
+		};
+		D48E6B75894DDBDF110BA572 /* Migrations */ = {
+			isa = PBXGroup;
+			children = (
+				7CD8EC90E1B08EEC7D2AE206 /* CoreDataMigration.swift */,
+			);
+			path = Migrations;
+			sourceTree = "<group>";
+		};
+		D641C8B841B0BFD8DF4FD88A /* Store */ = {
+			isa = PBXGroup;
+			children = (
+				7467A101DF9338E0F3357D42 /* PurchaseFlowController.swift */,
+			);
+			path = Store;
+			sourceTree = "<group>";
+		};
+		D8D82C9EA2AB430801EC91AD /* Features */ = {
+			isa = PBXGroup;
+			children = (
+				4995648B0969ABAEAF37BC8D /* Components */,
+				444E17329B050DB61DBA51AD /* Controls */,
+				056ABF2432D5E397F783385A /* Experimental */,
+				CE9CFF84E345BB5151B7E930 /* GameDetail */,
+				312C02F1135123BF4879D0F7 /* GameList */,
+				4E915E3CB22B63083A6E5B80 /* GamePlay */,
+				2957041B76FDED93F7E4B07A /* Home */,
+				AC2FB453688257147F9D74C2 /* Import */,
+				98C6EF507520433BE415B803 /* Library */,
+				242EF002429E2844372A40F1 /* Preview */,
+				C64A42AAA29D40AEC22BD8B3 /* SaveStates */,
+				8BE58110C6C169656886202F /* Settings */,
+				D641C8B841B0BFD8DF4FD88A /* Store */,
+			);
+			path = Features;
+			sourceTree = "<group>";
+		};
+		DADCDD25836B8A8E60F5A22C /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				4DE8FCC2F96A65DCDAB928F2 /* Xemu.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		E2DB723043E3BB34BF08480E /* XemuCoresLib */ = {
+			isa = PBXGroup;
+			children = (
+				733D007E7466C4BA97155B6B /* module.modulemap */,
+				A1ECFF5AAEBDF01C9729C42E /* include */,
+			);
+			path = XemuCoresLib;
+			sourceTree = "<group>";
+		};
+		F2C973CFE469158E9C84A8B4 /* Sources */ = {
+			isa = PBXGroup;
+			children = (
+				5E3C1790646B782381C47F34 /* AppHost */,
+				D8D82C9EA2AB430801EC91AD /* Features */,
+				0E3ABAF303040439628AF1A7 /* Host */,
+				F411E13F24B32F111DB77AD8 /* Models */,
+				AA15DED010952BFB793B4041 /* Persistence */,
+				730FDFD4F640A370AA5063E1 /* Services */,
+				5A5F9BA9E88EB390AFB9398D /* Telemetry */,
+				B772E71759AB5627450D3886 /* UI */,
+				876ABF168FDDDB8B90C46FC7 /* XemuCores */,
+				E2DB723043E3BB34BF08480E /* XemuCoresLib */,
+			);
+			path = Sources;
+			sourceTree = "<group>";
+		};
+		F411E13F24B32F111DB77AD8 /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				D066E4CDCFE4A0792D74EFA6 /* CommonTypes.swift */,
+				0E15C6DFC311ECEB0CEFFCA6 /* DefaultControllerMappings.swift */,
+				5B46B7ED335E85F0798430D0 /* EmulatorModels.swift */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+		F6640158B5A8E60FA4044AC4 /* include */ = {
+			isa = PBXGroup;
+			children = (
+				631EBCFA1FC4A824DCEF07F5 /* BridgingHeader.h */,
+			);
+			path = include;
+			sourceTree = "<group>";
+		};
+		FDF73EED678D193E5573EE27 /* Emulation */ = {
+			isa = PBXGroup;
+			children = (
+				0EC16E530DB4C49A1BD9CF73 /* EmulatorCore.swift */,
+				3ED8B8DBD333B44E1A7A7C21 /* EmulatorCoreFactory.swift */,
+				867BF8EE76C4FEC72E94EBDC /* EmulatorSession.swift */,
+				153169A0519B5D36DA5ED8C1 /* GBACore.swift */,
+				E6C80850866DE3CBC4D7B82A /* GBCore.swift */,
+				60B84588246FDDF326A5906A /* GenesisCore.swift */,
+				21C64540A3D2C00BE0D3200C /* NDSCore.swift */,
+				CCE9BE4FF1D1FAAD1A852E60 /* NESCore.swift */,
+				A99371B6A5786B7EB7314F3F /* PS1Core.swift */,
+				60116C1286890A6031C40E8E /* ROMStorage.swift */,
+			);
+			path = Emulation;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		FC22F39D8E5DD809F0D0C14A /* Xemu */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 6C3CC2F997297CCAFB76ECC7 /* Build configuration list for PBXNativeTarget "Xemu" */;
+			buildPhases = (
+				D61FA785E53DF1D2DBACEFF5 /* Sources */,
+				5519E51B27D9224DD85EEABA /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = Xemu;
+			packageProductDependencies = (
+			);
+			productName = Xemu;
+			productReference = 4DE8FCC2F96A65DCDAB928F2 /* Xemu.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		76EC2F6D4A9D903F47CB81EF /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1600;
+				TargetAttributes = {
+					FC22F39D8E5DD809F0D0C14A = {
+						DevelopmentTeam = "";
+						ProvisioningStyle = Automatic;
+					};
+				};
+			};
+			buildConfigurationList = 95B25279BC407D99E94BC21F /* Build configuration list for PBXProject "Xemu" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = 0C1EC4B251E6BBE262A4AAA5;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				FC22F39D8E5DD809F0D0C14A /* Xemu */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXSourcesBuildPhase section */
+		D61FA785E53DF1D2DBACEFF5 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				73B08C5F1BF0AEECADD3CD3F /* AdsPolicyController.swift in Sources */,
+				928F0540A9B1BC37F7503C6D /* Alert.swift in Sources */,
+				F387AD69E5395A8C7F16E93E /* AppHost.swift in Sources */,
+				BBE9D390DB554E3EE8D55882 /* AudioEngine.swift in Sources */,
+				853E53F67096EEC95A90F8ED /* AzureApiStub.swift in Sources */,
+				D1BFC76C6019BB4C747E8B61 /* Badge.swift in Sources */,
+				F51F13808938D30ABCD0C190 /* Button.swift in Sources */,
+				FCF665150656D5E24E64FFEA /* Card.swift in Sources */,
+				39DFE30FF1B43900CCBEDF00 /* Checkbox.swift in Sources */,
+				70867E22BC48F79CF384061E /* Colors.swift in Sources */,
+				C046D641921D13E2DE0FFB1E /* CommonTypes.swift in Sources */,
+				9C8E274F1B14843796776B82 /* CompatibilityDataStore.swift in Sources */,
+				84C8EA8C8C0FD576BBCE9084 /* CompatibilityDiagnosticsSheet.swift in Sources */,
+				287E2952BD236B32BC4C27A7 /* ContentView.swift in Sources */,
+				D43B8D0706CAFD98C9882F3A /* ControllerMapping.swift in Sources */,
+				250ACED17721F0EA48663E86 /* ControllerMappingEditor.swift in Sources */,
+				897F892CA9E3F653E17AAB39 /* ControllerOverlayView.swift in Sources */,
+				7FFE5A3C56B9F453C8A4BFD8 /* CoreDataMigration.swift in Sources */,
+				0C438ECB83EDFDA7E631D388 /* DefaultControllerMappings.swift in Sources */,
+				D145C7F2A45C9B0674438326 /* DeviceProfileCache.swift in Sources */,
+				60CC3D8F51F23131BDE11143 /* Dialog.swift in Sources */,
+				2BAF496DE48A814C1EE6C0D3 /* EmulatorButton.swift in Sources */,
+				7F97C2EEA17D481A2D9D994A /* EmulatorCore.swift in Sources */,
+				100E90374F7039A1E8DD4EED /* EmulatorCoreFactory.swift in Sources */,
+				B673D4F46912E97527CEC99D /* EmulatorModels.swift in Sources */,
+				FB4D93CE12BDD499797A63C6 /* EmulatorSession.swift in Sources */,
+				7BB9DA989AE3C0E0B8E95D68 /* EntitlementCache.swift in Sources */,
+				5131C250FDEFC17F026F6380 /* EntitlementStatusView.swift in Sources */,
+				035053A54A3D1B64E486DB50 /* ExperimentalGatingManager.swift in Sources */,
+				19B7BDA261F7BF91A41C2036 /* ExperimentalLaunchView.swift in Sources */,
+				939EAF27F1F84695D893335D /* GBACore.swift in Sources */,
+				0979534C5C9B6D07D8100A44 /* GBCore.swift in Sources */,
+				755788A7BD8D16F285B141EC /* GameDetailView.swift in Sources */,
+				BE0FB37ED77223F8CE78FA70 /* GameLibraryView.swift in Sources */,
+				B87AE7B2B8E50B193C009F7D /* GameListView.swift in Sources */,
+				A5D271408AC439164A94CA22 /* GamePlayView.swift in Sources */,
+				D4B1DCEDD183DC943A62F63D /* GamePlayViewModel.swift in Sources */,
+				2C2483EBEDF1562D319DB5D7 /* GenesisCore.swift in Sources */,
+				F93E44807879255BA51E06C3 /* Header.swift in Sources */,
+				B42C87D3E4D4B188DBDD73C9 /* HomeView.swift in Sources */,
+				8A942AB5E6436CC4D8394EB4 /* Input.swift in Sources */,
+				60F896E4EFDBDD31BC068F4A /* InputBus.swift in Sources */,
+				26BDEA8FF4281DA7E9E2360C /* LibraryView.swift in Sources */,
+				3CE04755EFC1A1F1E7B31F6E /* MetalRenderer.swift in Sources */,
+				D5E4A38D3B851CFC45B3A830 /* MetalView.swift in Sources */,
+				B980E3B9A207E365C1B177C6 /* Misc.swift in Sources */,
+				B37543A64132C38CB17F63F5 /* Model.xcdatamodeld in Sources */,
+				99C42C50A5FFA9103329348A /* NDSCore.swift in Sources */,
+				B0A2A37751DCB3ED0A2E77CD /* NESCore.swift in Sources */,
+				E62C630456F0C5BAC8E91B7A /* OfflineGraceManager.swift in Sources */,
+				BEFB7203845DF217533380A6 /* PS1Core.swift in Sources */,
+				2FA0C4C780E6636C2A347303 /* PersistenceController.swift in Sources */,
+				B698C63CA572519D87273F7D /* Progress.swift in Sources */,
+				B2A8E7EF2A3A8AB827A295FF /* PurchaseFlowController.swift in Sources */,
+				3C1C1C30461209C438218C32 /* ROMStorage.swift in Sources */,
+				8B5DAC81EFB96AC46E0AAE32 /* RomImportCoordinator.swift in Sources */,
+				1BFE8C580B6A09CD9FCAD335 /* RomMetadataExtractor.swift in Sources */,
+				382072FAFD010B7BA5C59BCD /* RomValidator.swift in Sources */,
+				97664353BE2BFE6567CBE4A6 /* SaveState.swift in Sources */,
+				CA5BC011E541B6CBC2A2542F /* SaveStateStorage.swift in Sources */,
+				2144EF6B095E672D5D2CE1DA /* SaveStatesView.swift in Sources */,
+				A454C0D96D7DA59BC7FD4E8B /* SaveStatesViewModel.swift in Sources */,
+				00469B5B648C1B8BCF74FD39 /* SettingsHeader.swift in Sources */,
+				9F458B275A1D6AAF44321994 /* SettingsItem.swift in Sources */,
+				4A22E39D94CA207A2B4B760F /* SettingsView.swift in Sources */,
+				85226034F5C6C1F5A20A8961 /* StableSessionTracker.swift in Sources */,
+				0EF3FEF30C3267D698ED705B /* StableSystemsCoordinator.swift in Sources */,
+				B742F26DA2C470D3CB810062 /* Tabs.swift in Sources */,
+				055C08E8A307D8622BD26E7B /* Toggle.swift in Sources */,
+				1CAE37E11D321DFE401906F5 /* TouchControlPad.swift in Sources */,
+				7F786F32B7B2D923A9CD71CF /* TouchControlsView.swift in Sources */,
+				3C3159AB73ABDF963A313F5A /* VirtualPadView.swift in Sources */,
+				7959B081188039B1F334D8C9 /* XemuCores.swift in Sources */,
+				38249D9760BBE224E8DCD36B /* iOSApp.swift in Sources */,
+				19023717A1816964DAD24BA2 /* iPhoneMockup.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		6F7CC0DC53E3A2FECA66E53D /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = "";
+				GENERATE_INFOPLIST_FILE = NO;
+				HEADER_SEARCH_PATHS = (
+					"$(SRCROOT)/Sources/XemuCoresLib/include",
+				);
+				INFOPLIST_FILE = Sources/AppHost/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				"LIBRARY_SEARCH_PATHS[sdk=iphoneos*]" = (
+					"$(SRCROOT)/../../cores/XemuCores.xcframework/ios-arm64",
+				);
+				"LIBRARY_SEARCH_PATHS[sdk=iphonesimulator*]" = (
+					"$(SRCROOT)/../../cores/XemuCores.xcframework/ios-arm64_x86_64-simulator",
+				);
+				OTHER_LDFLAGS = (
+					"-lxemu_cores",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.xemu.Xemu;
+				SDKROOT = iphoneos;
+				SWIFT_INCLUDE_PATHS = (
+					"$(SRCROOT)/Sources/XemuCoresLib/include",
+				);
+				SWIFT_OBJC_BRIDGING_HEADER = Sources/XemuCores/include/BridgingHeader.h;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		9EE9883DBC945B2649149076 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				INFOPLIST_FILE = Sources/AppHost/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.10;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		A43B5DC39BB9FD4C8BA29A14 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				INFOPLIST_FILE = Sources/AppHost/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.10;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		E792B3F6EBDFEC7CD57674AC /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = "";
+				GENERATE_INFOPLIST_FILE = NO;
+				HEADER_SEARCH_PATHS = (
+					"$(SRCROOT)/Sources/XemuCoresLib/include",
+				);
+				INFOPLIST_FILE = Sources/AppHost/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				"LIBRARY_SEARCH_PATHS[sdk=iphoneos*]" = (
+					"$(SRCROOT)/../../cores/XemuCores.xcframework/ios-arm64",
+				);
+				"LIBRARY_SEARCH_PATHS[sdk=iphonesimulator*]" = (
+					"$(SRCROOT)/../../cores/XemuCores.xcframework/ios-arm64_x86_64-simulator",
+				);
+				OTHER_LDFLAGS = (
+					"-lxemu_cores",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.xemu.Xemu;
+				SDKROOT = iphoneos;
+				SWIFT_INCLUDE_PATHS = (
+					"$(SRCROOT)/Sources/XemuCoresLib/include",
+				);
+				SWIFT_OBJC_BRIDGING_HEADER = Sources/XemuCores/include/BridgingHeader.h;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		6C3CC2F997297CCAFB76ECC7 /* Build configuration list for PBXNativeTarget "Xemu" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				E792B3F6EBDFEC7CD57674AC /* Debug */,
+				6F7CC0DC53E3A2FECA66E53D /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		95B25279BC407D99E94BC21F /* Build configuration list for PBXProject "Xemu" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				9EE9883DBC945B2649149076 /* Debug */,
+				A43B5DC39BB9FD4C8BA29A14 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCVersionGroup section */
+		2BDBEBD2AAFD8ADB7DE59761 /* Model.xcdatamodeld */ = {
+			isa = XCVersionGroup;
+			children = (
+				76F9B895A2EADF68D6D81078 /* Model.xcdatamodel */,
+			);
+			currentVersion = 76F9B895A2EADF68D6D81078 /* Model.xcdatamodel */;
+			path = Model.xcdatamodeld;
+			sourceTree = "<group>";
+			versionGroupType = wrapper.xcdatamodel;
+		};
+/* End XCVersionGroup section */
+	};
+	rootObject = 76EC2F6D4A9D903F47CB81EF /* Project object */;
+}

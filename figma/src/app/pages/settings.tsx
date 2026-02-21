@@ -2,6 +2,7 @@ import { motion } from "motion/react";
 import { SettingsHeader } from "../components/settings-header";
 import { SettingsItem } from "../components/settings-item";
 import { Crown, Share2, MessageSquare, HelpCircle } from "lucide-react";
+import { AppIcon } from "../components/app-icon";
 
 const settingsOptions = [
   {
@@ -85,9 +86,9 @@ export default function Settings() {
                 repeat: Infinity,
                 ease: "linear",
               }}
-              className="w-20 h-20 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-primary to-accent flex items-center justify-center shadow-2xl shadow-primary/50"
+              className="w-20 h-20 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-primary to-accent flex items-center justify-center shadow-2xl shadow-primary/50 p-3"
             >
-              <span className="text-4xl">⚡</span>
+              <AppIcon />
             </motion.div>
             <h2 className="text-xl font-bold text-foreground mb-1">
               XEmu Pro

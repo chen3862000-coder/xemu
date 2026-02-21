@@ -8,7 +8,7 @@ final class EmulatorSession: ObservableObject {
     @Published private(set) var isPaused = false
     @Published private(set) var currentFrameRate: Double = 0
     
-    private var core: EmulatorCore?
+    internal var core: EmulatorCore?
     private var lastFrameTime: CFTimeInterval = 0
     private var frameCount: Int = 0
     private var lastFPSUpdate: CFTimeInterval = 0
@@ -22,8 +22,14 @@ final class EmulatorSession: ObservableObject {
     
     init() {}
     
-    func cleanup() {
-        stop()
+    func getVideoInfo() -> (width: Int, height: Int, pitch: Int)? {
+        guard let core = core else { return nil }
+        
+        if let gbCore = core as? GBCore {
+            return gbCore.getVideoInfo()
+        }
+        
+        return nil
     }
     
     func loadCore(_ core: EmulatorCore) {
@@ -71,24 +77,64 @@ final class EmulatorSession: ObservableObject {
         stopGameLoop()
     }
     
+    func cleanup() {
+        // Debug log disabled: NSLog("[EmulatorSession] Cleanup called")
+        stop()
+        core?.cleanup()
+        core = nil
+        // Debug log disabled: NSLog("[EmulatorSession] Cleanup complete")
+    }
+    
     private func startGameLoop() {
         stopGameLoop()
         
         lastFPSUpdate = CACurrentMediaTime()
         frameCount = 0
-        
-        gameLoopTimer = Timer.scheduledTimer(withTimeInterval: frameInterval, repeats: true) { [weak self] _ in
-            Task { @MainActor [weak self] in
-                self?.gameLoopTick()
-            }
-        }
-        
-        RunLoop.current.add(gameLoopTimer!, forMode: .common)
     }
     
     private func stopGameLoop() {
         gameLoopTimer?.invalidate()
         gameLoopTimer = nil
+    }
+    
+    func stepOnce() {
+        guard let core = core, isRunning, !isPaused else { return }
+        
+        // Run one frame of emulation
+        _ = core.frame()
+        
+        // Use atomic getFrameBufferInfo to prevent race conditions
+        if let fbInfo = core.getFrameBufferInfo() {
+            let neededSize = fbInfo.pitch * fbInfo.height
+            guard fbInfo.data.count >= neededSize else { return }
+            renderDelegate?.emulatorDidRenderFrameBufferInfo(fbInfo)
+        }
+        
+        frameCount += 1
+        
+        let currentTime = CACurrentMediaTime()
+        if currentTime - lastFPSUpdate >= 1.0 {
+            currentFrameRate = Double(frameCount) / (currentTime - lastFPSUpdate)
+            frameCount = 0
+            lastFPSUpdate = currentTime
+        }
+    }
+    
+    private func createTestPattern(width: Int, height: Int) -> Data {
+        var data = Data(count: width * height * 4)
+        let bpr = width * 4
+        data.withUnsafeMutableBytes { (raw: UnsafeMutableRawBufferPointer) in
+            for y in 0..<height {
+                for x in 0..<width {
+                    let i = y * bpr + x * 4
+                    raw[i+0] = UInt8(x * 255 / width)     // R
+                    raw[i+1] = UInt8(y * 255 / height)    // G
+                    raw[i+2] = 0                           // B
+                    raw[i+3] = 255                         // A
+                }
+            }
+        }
+        return data
     }
     
     private func gameLoopTick() {
@@ -97,6 +143,21 @@ final class EmulatorSession: ObservableObject {
         let currentTime = CACurrentMediaTime()
         
         _ = core.frame()
+        
+        // Use getFrameBufferInfo to atomically get data + dimensions together
+        // This prevents race condition where dimensions change between separate calls
+        if let fbInfo = core.getFrameBufferInfo() {
+            // Validate before passing to renderer
+            let neededSize = fbInfo.pitch * fbInfo.height
+            guard fbInfo.data.count >= neededSize else {
+                // Buffer too small - skip frame
+                return
+            }
+            renderDelegate?.emulatorDidRenderFrameBufferInfo(fbInfo)
+        }
+        
+        let audioSamples = core.getAudioSamples()
+        renderDelegate?.emulatorDidGenerateAudio(samples: audioSamples)
         
         frameCount += 1
         
@@ -142,6 +203,8 @@ enum EmulatorSessionError: Error {
     case loadStateFailed
 }
 
+@MainActor
 protocol EmulatorRenderDelegate: AnyObject {
-    func emulatorDidRender()
+    func emulatorDidRenderFrameBufferInfo(_ frameBufferInfo: FrameBufferInfo)
+    func emulatorDidGenerateAudio(samples: Data?)
 }

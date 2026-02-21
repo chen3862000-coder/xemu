@@ -1,5 +1,30 @@
 import Foundation
 
+/// Information about a frame buffer, returned together to avoid race conditions
+public struct FrameBufferInfo {
+    /// Raw pixel data in RGBA format
+    public let data: Data
+    /// Width in pixels
+    public let width: Int
+    /// Height in pixels
+    public let height: Int
+    /// Bytes per row (pitch) - may be larger than width * 4 due to alignment
+    public let pitch: Int
+    
+    public init(data: Data, width: Int, height: Int, pitch: Int) {
+        self.data = data
+        self.width = width
+        self.height = height
+        self.pitch = pitch
+    }
+    
+    /// Validates the frame buffer data size matches the expected size
+    public var isValid: Bool {
+        let expectedSize = pitch * height
+        return data.count >= expectedSize && width > 0 && height > 0 && pitch >= width * 4
+    }
+}
+
 /// Protocol that all emulator cores must implement
 /// Provides a unified interface for the host to control any supported system
 public protocol EmulatorCore: AnyObject {
@@ -46,6 +71,12 @@ public protocol EmulatorCore: AnyObject {
     /// - Expected size: Depends on core (e.g., NES: 256x240)
     func getFrameBuffer() -> Data?
     
+    /// Get current frame buffer with dimensions (preferred method to avoid race conditions)
+    /// - Returns: FrameBufferInfo containing data, width, height, and pitch
+    /// - Note: This method should be preferred over getFrameBuffer() to ensure
+    ///   dimensions are always consistent with the returned data
+    func getFrameBufferInfo() -> FrameBufferInfo?
+    
     /// Get audio samples for the current frame
     /// - Returns: Raw audio samples (16-bit signed, stereo)
     func getAudioSamples() -> Data?
@@ -78,6 +109,7 @@ extension EmulatorCore {
     public func stop() {}
     public func cleanup() {}
     public func getFrameBuffer() -> Data? { nil }
+    public func getFrameBufferInfo() -> FrameBufferInfo? { nil }
     public func getAudioSamples() -> Data? { nil }
     public func saveState() -> Data? { nil }
     public func loadState(_ state: Data) -> Bool { false }

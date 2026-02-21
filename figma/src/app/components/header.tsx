@@ -1,6 +1,7 @@
 import { motion } from "motion/react";
-import { Search, Settings, User, Zap } from "lucide-react";
+import { Search, Settings } from "lucide-react";
 import { useNavigate } from "react-router";
+import { AppIcon } from "./app-icon";
 
 export function Header() {
   const navigate = useNavigate();
@@ -19,9 +20,9 @@ export function Header() {
             <motion.div
               whileHover={{ rotate: 360 }}
               transition={{ duration: 0.6 }}
-              className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center shadow-lg shadow-primary/50"
+              className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center shadow-lg shadow-primary/50 p-1"
             >
-              <Zap className="w-5 h-5 text-white" />
+              <AppIcon />
             </motion.div>
             <div>
               <h1 className="text-lg font-bold bg-gradient-to-r from-primary via-accent to-primary bg-clip-text text-transparent">

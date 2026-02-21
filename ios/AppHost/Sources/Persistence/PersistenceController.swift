@@ -222,6 +222,11 @@ private func createManagedObjectModel() -> NSManagedObjectModel {
     romSystemAttr.attributeType = .stringAttributeType
     romSystemAttr.isOptional = true
 
+    let romPlatformRawAttr = NSAttributeDescription()
+    romPlatformRawAttr.name = "platformRaw"
+    romPlatformRawAttr.attributeType = .stringAttributeType
+    romPlatformRawAttr.isOptional = true
+
     let romLastPlayedAtAttr = NSAttributeDescription()
     romLastPlayedAtAttr.name = "lastPlayedAt"
     romLastPlayedAtAttr.attributeType = .dateAttributeType
@@ -251,10 +256,105 @@ private func createManagedObjectModel() -> NSManagedObjectModel {
 
     romEntryEntity.properties = [
         romIdAttr, romTitleAttr, romFileNameAttr, romFileSizeAttr, romCoverImageDataAttr,
-        romSystemAttr, romLastPlayedAtAttr, romPlaytimeTotalAttr, romIsFavoriteAttr, romDateAddedAttr, romChecksumAttr
+        romSystemAttr, romPlatformRawAttr, romLastPlayedAtAttr, romPlaytimeTotalAttr, romIsFavoriteAttr, romDateAddedAttr, romChecksumAttr
     ]
 
-    model.entities = [gameEntity, entitlementEntity, romEntryEntity]
+    let saveStateEntity = NSEntityDescription()
+    saveStateEntity.name = "SaveState"
+    saveStateEntity.managedObjectClassName = "Xemu.SaveState"
+
+    let saveStateIdAttr = NSAttributeDescription()
+    saveStateIdAttr.name = "id"
+    saveStateIdAttr.attributeType = .UUIDAttributeType
+    saveStateIdAttr.isOptional = false
+
+    let saveStateSlotIndexAttr = NSAttributeDescription()
+    saveStateSlotIndexAttr.name = "slotIndex"
+    saveStateSlotIndexAttr.attributeType = .integer16AttributeType
+    saveStateSlotIndexAttr.isOptional = false
+    saveStateSlotIndexAttr.defaultValue = 0
+
+    let saveStateCreatedAtAttr = NSAttributeDescription()
+    saveStateCreatedAtAttr.name = "createdAt"
+    saveStateCreatedAtAttr.attributeType = .dateAttributeType
+    saveStateCreatedAtAttr.isOptional = false
+
+    let saveStateTimestampAttr = NSAttributeDescription()
+    saveStateTimestampAttr.name = "timestamp"
+    saveStateTimestampAttr.attributeType = .dateAttributeType
+    saveStateTimestampAttr.isOptional = false
+
+    let saveStateTitleAttr = NSAttributeDescription()
+    saveStateTitleAttr.name = "title"
+    saveStateTitleAttr.attributeType = .stringAttributeType
+    saveStateTitleAttr.isOptional = true
+
+    let saveStateDataAttr = NSAttributeDescription()
+    saveStateDataAttr.name = "data"
+    saveStateDataAttr.attributeType = .binaryDataAttributeType
+    saveStateDataAttr.isOptional = true
+    saveStateDataAttr.allowsExternalBinaryDataStorage = true
+
+    let saveStateScreenshotDataAttr = NSAttributeDescription()
+    saveStateScreenshotDataAttr.name = "screenshotData"
+    saveStateScreenshotDataAttr.attributeType = .binaryDataAttributeType
+    saveStateScreenshotDataAttr.isOptional = true
+    saveStateScreenshotDataAttr.allowsExternalBinaryDataStorage = true
+
+    let romRelationAttr = NSRelationshipDescription()
+    romRelationAttr.name = "rom"
+    romRelationAttr.destinationEntity = romEntryEntity
+    romRelationAttr.minCount = 0
+    romRelationAttr.maxCount = 1
+    romRelationAttr.deleteRule = .nullifyDeleteRule
+
+    saveStateEntity.properties = [
+        saveStateIdAttr, saveStateSlotIndexAttr, saveStateCreatedAtAttr, saveStateTimestampAttr,
+        saveStateTitleAttr, saveStateDataAttr, saveStateScreenshotDataAttr, romRelationAttr
+    ]
+
+    let saveStatesRelationAttr = NSRelationshipDescription()
+    saveStatesRelationAttr.name = "saveStates"
+    saveStatesRelationAttr.destinationEntity = saveStateEntity
+    saveStatesRelationAttr.minCount = 0
+    saveStatesRelationAttr.maxCount = 10
+    saveStatesRelationAttr.deleteRule = .cascadeDeleteRule
+    saveStatesRelationAttr.inverseRelationship = romRelationAttr
+    romRelationAttr.inverseRelationship = saveStatesRelationAttr
+
+    var romProperties = romEntryEntity.properties ?? []
+    romProperties.append(saveStatesRelationAttr)
+    romEntryEntity.properties = romProperties
+
+    let controllerMappingEntity = NSEntityDescription()
+    controllerMappingEntity.name = "ControllerMapping"
+    controllerMappingEntity.managedObjectClassName = "Xemu.ControllerMapping"
+
+    let cmControllerTypeAttr = NSAttributeDescription()
+    cmControllerTypeAttr.name = "controllerType"
+    cmControllerTypeAttr.attributeType = .stringAttributeType
+    cmControllerTypeAttr.isOptional = false
+
+    let cmMappingDataAttr = NSAttributeDescription()
+    cmMappingDataAttr.name = "mappingData"
+    cmMappingDataAttr.attributeType = .stringAttributeType
+    cmMappingDataAttr.isOptional = false
+
+    let cmPlatformRawAttr = NSAttributeDescription()
+    cmPlatformRawAttr.name = "platformRaw"
+    cmPlatformRawAttr.attributeType = .stringAttributeType
+    cmPlatformRawAttr.isOptional = false
+
+    let cmUpdatedAtAttr = NSAttributeDescription()
+    cmUpdatedAtAttr.name = "updatedAt"
+    cmUpdatedAtAttr.attributeType = .dateAttributeType
+    cmUpdatedAtAttr.isOptional = false
+
+    controllerMappingEntity.properties = [
+        cmControllerTypeAttr, cmMappingDataAttr, cmPlatformRawAttr, cmUpdatedAtAttr
+    ]
+
+    model.entities = [gameEntity, entitlementEntity, romEntryEntity, saveStateEntity, controllerMappingEntity]
 
     return model
 }
