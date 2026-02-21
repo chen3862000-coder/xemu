@@ -393,6 +393,7 @@ struct DetailRow: View {
 }
 
 extension ROMLibraryEntry {
+    @MainActor
     var romPath: String? {
         guard let checksum = checksum,
               let fileName = fileName else { return nil }
@@ -402,6 +403,7 @@ extension ROMLibraryEntry {
         return documentsDir.appendingPathComponent("ROMs/\(checksum).\(fileExtension)").path
     }
     
+    @MainActor
     func toGame() -> Game? {
         print("[DEBUG] toGame() called for: \(title ?? "nil")")
         
@@ -416,38 +418,69 @@ extension ROMLibraryEntry {
         print("[DEBUG] toGame() using id: \(gameUUID)")
         print("[DEBUG] toGame() passed first guard, checksum: \(checksum), system: \(system ?? "nil")")
         
-        // Extract file extension from fileName (the actual file extension used during import)
-        let fileExtension: String
-        if let fileName = self.fileName, let ext = fileName.split(separator: ".").last {
-            fileExtension = String(ext)
+        let normalizedSystem = (system ?? "").trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+
+        // Extract extension from imported filename and normalize case
+        let primaryExtension: String
+        if let fileName = self.fileName {
+            let ext = (fileName as NSString).pathExtension.lowercased()
+            primaryExtension = ext.isEmpty ? "rom" : ext
         } else {
             // Fallback to system-based extension if fileName is not available
-            switch system?.lowercased() {
-            case "nes": fileExtension = "nes"
-            case "gb": fileExtension = "gb"
-            case "gbc": fileExtension = "gbc"
-            case "gba": fileExtension = "gba"
-            case "genesis": fileExtension = "md"
-            case "nds": fileExtension = "nds"
-            case "ps1": fileExtension = "bin"
-            default: fileExtension = "rom"
+            switch normalizedSystem {
+            case "nes": primaryExtension = "nes"
+            case "gb", "gameboy", "game boy": primaryExtension = "gb"
+            case "gbc", "gameboycolor", "game boy color", "cgb": primaryExtension = "gbc"
+            case "gba", "game boy advance", "gameboyadvance": primaryExtension = "gba"
+            case "genesis": primaryExtension = "md"
+            case "nds", "nintendo ds": primaryExtension = "nds"
+            case "ps1", "playstation 1": primaryExtension = "bin"
+            default: primaryExtension = "rom"
             }
         }
+
+        var extensionCandidates: [String] = [primaryExtension]
+        if normalizedSystem == "gbc" || normalizedSystem == "cgb" || normalizedSystem.contains("game boy color") {
+            extensionCandidates.append(contentsOf: ["gbc", "gb"])
+        } else if normalizedSystem == "gb" || normalizedSystem.contains("game boy") {
+            extensionCandidates.append(contentsOf: ["gb", "gbc"])
+        }
+        extensionCandidates = Array(Set(extensionCandidates.map { $0.lowercased() }))
         
         let platformString: String
-        switch system?.lowercased() {
+        switch normalizedSystem {
         case "nes": platformString = "NES"
-        case "gb": platformString = "Game Boy"
-        case "gbc": platformString = "Game Boy Color"
-        case "gba": platformString = "Game Boy Advance"
+        case "gb", "gameboy", "game boy": platformString = "Game Boy"
+        case "gbc", "gameboycolor", "game boy color", "cgb": platformString = "Game Boy Color"
+        case "gba", "gameboyadvance", "game boy advance": platformString = "Game Boy Advance"
         case "genesis": platformString = "Genesis"
-        case "nds": platformString = "Nintendo DS"
-        case "ps1": platformString = "PlayStation 1"
+        case "nds", "nintendo ds": platformString = "Nintendo DS"
+        case "ps1", "playstation 1": platformString = "PlayStation 1"
         default: platformString = system ?? "Unknown"
         }
-        
-        guard let romLocation = ROMStorage.shared.getROMLocation(checksum: checksum, fileExtension: fileExtension) else {
-            print("[DEBUG] toGame() failed: ROM location not found for checksum: \(checksum), extension: \(fileExtension)")
+
+        var romLocation: ROMStorageLocation?
+        for ext in extensionCandidates {
+            if let found = ROMStorage.shared.getROMLocation(checksum: checksum, fileExtension: ext) {
+                romLocation = found
+                break
+            }
+        }
+
+        if romLocation == nil {
+            // Last-resort fallback: scan by checksum prefix regardless of extension/casing.
+            let documentsDir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
+            let romDir = documentsDir.appendingPathComponent("ROMs")
+            if let files = try? FileManager.default.contentsOfDirectory(at: romDir, includingPropertiesForKeys: nil),
+               let match = files.first(where: { $0.lastPathComponent.lowercased().hasPrefix("\(checksum.lowercased()).") }) {
+                let attrs = try? FileManager.default.attributesOfItem(atPath: match.path)
+                let size = attrs?[.size] as? Int64 ?? 0
+                romLocation = ROMStorageLocation(url: match, fileSize: size, checksum: checksum)
+            }
+        }
+
+        guard let romLocation else {
+            print("[DEBUG] toGame() failed: ROM location not found for checksum: \(checksum), extensions: \(extensionCandidates)")
             return nil
         }
         print("[DEBUG] toGame() ROM location: \(romLocation.url.path)")

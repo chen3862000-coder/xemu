@@ -45,6 +45,7 @@ Last updated: 2026-02-21
 - [x] Added native GB input bitmask tracing in `xemu_gb_set_input` for end-to-end input verification.
 - [x] Disabled audio playback path on simulator to avoid HALC overload and improve input/frame responsiveness.
 - [x] Updated Gambatte frame stepping to loop `runFor()` until frame completion (`!= -1`) using upstream libretro-style sample cadence.
+- [x] Disabled Gambatte internal dark/color-correction filter at ROM load to improve visible brightness for GBC output.
 
 ## Remaining Risk
 - Native core internals are still opaque in this repository; if malloc checksum crashes persist after wrapper serialization, root cause is likely inside linked third-party core implementation.

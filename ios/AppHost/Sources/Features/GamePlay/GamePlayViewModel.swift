@@ -88,6 +88,24 @@ class GamePlayViewModel: ObservableObject {
                 textureSize = CGSize(width: 160, height: 144)
             }
             metalRenderer = MetalRenderer(textureSize: textureSize)
+            switch platform {
+            case .GBC:
+                metalRenderer?.setColorAdjustments(
+                    brightness: 1.58,
+                    gamma: 1.42,
+                    contrast: 1.03,
+                    saturation: 1.04
+                )
+            case .GB:
+                metalRenderer?.setColorAdjustments(
+                    brightness: 1.08,
+                    gamma: 0.95,
+                    contrast: 1.02,
+                    saturation: 1.0
+                )
+            default:
+                metalRenderer?.setColorAdjustments()
+            }
 
             audioEngine = AudioEngine()
             audioEngine?.configureAudioSession()

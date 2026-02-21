@@ -48,6 +48,11 @@ public:
             printf("[GambatteWrapper] ERROR: Failed to load ROM\n");
             return false;
         }
+
+        // Default Gambatte color correction is intentionally dark to emulate LCD characteristics.
+        // For iOS app output, prefer brighter direct palette rendering for better visibility.
+        gambatte_->setDarkFilterLevel(0);
+        gambatte_->setColorCorrection(false);
         
         romLoaded_ = true;
         printf("[GambatteWrapper] ROM loaded successfully (%zu bytes), CGB mode: %s\n", 

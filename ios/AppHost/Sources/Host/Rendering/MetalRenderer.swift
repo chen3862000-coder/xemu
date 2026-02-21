@@ -4,6 +4,12 @@ import MetalKit
 
 @MainActor
 public final class MetalRenderer {
+    private struct ColorAdjustments {
+        var brightness: Float = 1.0
+        var gamma: Float = 1.0
+        var contrast: Float = 1.0
+        var saturation: Float = 1.0
+    }
     
     public let device: MTLDevice
     private let commandQueue: MTLCommandQueue
@@ -165,6 +171,7 @@ public final class MetalRenderer {
     }
     
     private var frameCount: Int = 0
+    private var colorAdjustments = ColorAdjustments()
     
     private let commandBufferLock = NSLock()
     private var lastCommandBuffer: MTLCommandBuffer?
@@ -174,6 +181,20 @@ public final class MetalRenderer {
         autoreleasepool {
             _renderInternal(to: drawable)
         }
+    }
+
+    public func setColorAdjustments(
+        brightness: Float = 1.0,
+        gamma: Float = 1.0,
+        contrast: Float = 1.0,
+        saturation: Float = 1.0
+    ) {
+        colorAdjustments = ColorAdjustments(
+            brightness: brightness,
+            gamma: gamma,
+            contrast: contrast,
+            saturation: saturation
+        )
     }
     
     private func _renderInternal(to drawable: CAMetalDrawable) {
@@ -225,6 +246,12 @@ public final class MetalRenderer {
         renderEncoder.setRenderPipelineState(renderPipelineState)
         renderEncoder.setVertexBuffer(vertexBuffer, offset: 0, index: 0)
         renderEncoder.setFragmentTexture(tex, index: 0)
+        var adjustments = colorAdjustments
+        renderEncoder.setFragmentBytes(
+            &adjustments,
+            length: MemoryLayout<ColorAdjustments>.stride,
+            index: 1
+        )
         renderEncoder.drawPrimitives(type: .triangleStrip, vertexStart: 0, vertexCount: 4)
         renderEncoder.endEncoding()
         
@@ -265,10 +292,30 @@ vertex VertexOut vertexShader(uint vertexID [[vertex_id]],
 }
 
 fragment float4 fragmentShader(VertexOut in [[stage_in]],
-                                texture2d<float> texture [[texture(0)]]) {
-    constexpr sampler s(coord::normalized, address::clamp_to_edge, filter::linear);
+                                texture2d<float> texture [[texture(0)]],
+                                constant float4 &adjust [[buffer(1)]]) {
+    constexpr sampler s(coord::normalized, address::clamp_to_edge, filter::nearest);
     float4 c = texture.sample(s, in.texCoord);
-    // BGRA buffer → RGB output, force alpha to 1.0
-    return float4(c.b, c.g, c.r, 1.0);
+
+    // BGRA buffer -> RGB output
+    float3 color = float3(c.b, c.g, c.r);
+
+    // adjust = (brightness, gamma, contrast, saturation)
+    float brightness = adjust.x;
+    float gamma = max(adjust.y, 0.01);
+    float contrast = adjust.z;
+    float saturation = adjust.w;
+
+    // Adaptive black lift: keep GB natural, brighten darker GBC output.
+    float blackLift = max((brightness - 1.20) * 0.08, 0.0);
+    color = pow(max(color, 0.0), float3(1.0 / gamma));
+    color = ((color - 0.5) * contrast) + 0.5;
+
+    float luma = dot(color, float3(0.299, 0.587, 0.114));
+    color = mix(float3(luma), color, saturation);
+    color = color * brightness + blackLift;
+    color = clamp(color, 0.0, 1.0);
+
+    return float4(color, 1.0);
 }
 """
