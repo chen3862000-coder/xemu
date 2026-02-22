@@ -8,9 +8,11 @@ public final class AudioEngine {
     private let queue = DispatchQueue(label: "com.xemu.audio", qos: .userInteractive)
     
     private var isPlaying = false
+    private var queuedFrames: UInt32 = 0
     private let sampleRate: Double
     private let channels: AVAudioChannelCount
     private let outputFormat: AVAudioFormat
+    private let maxQueuedFrames: UInt32
     
     public init(sampleRate: Double = 44100,
                 channels: AVAudioChannelCount = 2) {
@@ -25,6 +27,7 @@ public final class AudioEngine {
         }
 
         outputFormat = format
+        maxQueuedFrames = UInt32(sampleRate * 0.30)
         engine = AVAudioEngine()
         playerNode = AVAudioPlayerNode()
 
@@ -83,21 +86,37 @@ public final class AudioEngine {
                     return
                 }
             }
+
+            if self.queuedFrames > self.maxQueuedFrames {
+                self.playerNode.stop()
+                self.playerNode.reset()
+                self.queuedFrames = 0
+                self.isPlaying = false
+            }
             
             if !self.isPlaying {
                 self.playerNode.play()
                 self.isPlaying = true
             }
-            
-            self.playerNode.scheduleBuffer(buffer, at: nil, options: [], completionHandler: nil)
+
+            let frames = buffer.frameLength
+            self.queuedFrames = self.queuedFrames &+ frames
+            self.playerNode.scheduleBuffer(buffer, at: nil, options: []) { [weak self] in
+                guard let self else { return }
+                self.queue.async {
+                    self.queuedFrames = self.queuedFrames > frames ? self.queuedFrames - frames : 0
+                }
+            }
         }
     }
     
     public func stop() {
         queue.async { [weak self] in
             self?.playerNode.stop()
+            self?.playerNode.reset()
             self?.engine.stop()
             self?.isPlaying = false
+            self?.queuedFrames = 0
         }
     }
     

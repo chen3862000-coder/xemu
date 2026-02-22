@@ -42,6 +42,20 @@ cd ..
 
 # Create XCFramework
 echo ""
+echo "Creating merged static libraries..."
+libtool -static \
+    -o build-ios-device/libxemu_cores_combined.a \
+    build-ios-device/libxemu_cores.a \
+    build-ios-device/third_party/mgba/libmgba.a
+mv build-ios-device/libxemu_cores_combined.a build-ios-device/libxemu_cores.a
+
+libtool -static \
+    -o build-ios-sim/libxemu_cores_combined.a \
+    build-ios-sim/libxemu_cores.a \
+    build-ios-sim/third_party/mgba/libmgba.a
+mv build-ios-sim/libxemu_cores_combined.a build-ios-sim/libxemu_cores.a
+
+echo ""
 echo "Creating XCFramework..."
 rm -rf XemuCores.xcframework
 xcodebuild -create-xcframework \

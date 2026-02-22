@@ -48,6 +48,7 @@ set(GB_SOURCES
 # GBA sources
 set(GBA_SOURCES
     src/gba/mgba_wrapper.cpp
+    src/gba/mgba_core_bridge.c
     src/gba/mgba_video.cpp
     src/gba/mgba_audio.cpp
     src/gba/mgba_input.cpp
@@ -131,7 +132,16 @@ if(BUILD_SHARED_LIBS)
     )
     if(USE_REAL_CORES)
         target_link_libraries(xemu_cores_shared PRIVATE mgba)
+        target_compile_definitions(xemu_cores_shared PRIVATE
+            ENABLE_VFS
+            ENABLE_DIRECTORIES
+            ENABLE_VFS_FD
+            M_CORE_GB
+            M_CORE_GBA
+            USE_PTHREADS
+        )
         target_include_directories(xemu_cores_shared PRIVATE
+            ${CMAKE_BINARY_DIR}/third_party/mgba/include
             ${CMAKE_CURRENT_SOURCE_DIR}/third_party/mgba/include
             ${CMAKE_CURRENT_SOURCE_DIR}/third_party/mgba/src
         )
@@ -151,7 +161,16 @@ if(BUILD_STATIC_LIBS)
     )
     if(USE_REAL_CORES)
         target_link_libraries(xemu_cores_static PRIVATE mgba)
+        target_compile_definitions(xemu_cores_static PRIVATE
+            ENABLE_VFS
+            ENABLE_DIRECTORIES
+            ENABLE_VFS_FD
+            M_CORE_GB
+            M_CORE_GBA
+            USE_PTHREADS
+        )
         target_include_directories(xemu_cores_static PRIVATE
+            ${CMAKE_BINARY_DIR}/third_party/mgba/include
             ${CMAKE_CURRENT_SOURCE_DIR}/third_party/mgba/include
             ${CMAKE_CURRENT_SOURCE_DIR}/third_party/mgba/src
         )

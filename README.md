@@ -186,8 +186,25 @@ public protocol EmulatorCore {
 ### Audio Engine
 
 - AVAudioEngine for low-latency output
-- 44.1kHz sample rate
+- Platform-aware sample rates (GB/GBC use native-friendly high-rate stream)
 - Stereo output support
+
+## Recent Stability Updates
+
+- Removed temporary debugging traces from Swift UI/input paths and C bridge glue.
+- Hardened GB/GBC runtime paths (frame loop, ROM lifecycle, and input state routing).
+- Tuned platform-specific video profiles so GB stays natural while GBC remains brighter.
+
+### Native Core Build Note
+
+When changing files under `cores/src/` or `cores/third_party/`, rebuild the iOS core artifacts before launching the app:
+
+```bash
+cd cores
+./build-ios.sh
+```
+
+The iOS app links `cores/XemuCores.xcframework`, so native source edits do not take effect until this rebuild step is completed.
 
 ## Requirements
 

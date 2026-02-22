@@ -1,12 +1,5 @@
 import SwiftUI
 
-private let CONTROL_DEBUG_LOGS_ENABLED = true
-
-private func controlLog(_ message: String) {
-    guard CONTROL_DEBUG_LOGS_ENABLED else { return }
-    NSLog("[VirtualPad] %@", message)
-}
-
 public struct VirtualPadView: View {
     let platform: Platform
     let onButtonPress: (EmulatorButton, Bool) -> Void
@@ -54,7 +47,6 @@ public struct VirtualPadView: View {
     }
 
     private func sendButton(_ button: EmulatorButton, pressed: Bool) {
-        controlLog("button=\(button) pressed=\(pressed)")
         onButtonPress(button, pressed)
     }
     

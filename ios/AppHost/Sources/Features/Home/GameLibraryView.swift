@@ -61,7 +61,6 @@ struct GameLibraryView: View {
                 }
             }
             .fullScreenCover(item: $selectedGame) { game in
-                print("[DEBUG] fullScreenCover triggered with game: \(game.title)")
                 return GamePlayView(game: game, onExit: {
                     selectedGame = nil
                 })
@@ -86,17 +85,11 @@ struct GameLibraryView: View {
     }
     
     private func launchGame(_ entry: ROMLibraryEntry) {
-        print("[DEBUG] GameLibraryView.launchGame() called for: \(entry.title ?? "unknown")")
         guard let game = entry.toGame() else {
-            print("[DEBUG] GameLibraryView.launchGame() - toGame() returned nil")
             return
         }
-        print("[DEBUG] GameLibraryView.launchGame() - toGame() returned game: \(game.title)")
-        print("[DEBUG] GameLibraryView.launchGame() - game.romPath: \(game.romPath ?? "nil")")
-        print("[DEBUG] GameLibraryView.launchGame() - game.gamePlatform: \(String(describing: game.gamePlatform))")
         selectedGame = game
         isPlaying = true
-        print("[DEBUG] GameLibraryView.launchGame() - selectedGame set, isPlaying = true")
     }
 }
 

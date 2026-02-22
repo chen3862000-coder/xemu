@@ -49,3 +49,16 @@ Last updated: 2026-02-21
 
 ## Remaining Risk
 - Native core internals are still opaque in this repository; if malloc checksum crashes persist after wrapper serialization, root cause is likely inside linked third-party core implementation.
+
+## GBA Integration Plan (2026-02-21)
+- [x] 1) Audit current GBA native wrapper and third-party mGBA API surface used by this repo.
+- [x] 2) Implement real mGBA-backed `mGBAWrapper` ROM load/unload and frame stepping.
+- [x] 3) Implement video/audio buffer extraction from mGBA core and wire C API (`xemu_gba_*`).
+- [x] 4) Implement GBA input mapping and save-state load/save against mGBA APIs.
+- [x] 5) Re-enable GBA in `EmulatorCoreFactory` and supported-platform documentation.
+- [x] 6) Rebuild `cores/XemuCores.xcframework` and verify GBA launch path in iOS AppHost.
+
+### GBA Integration Notes
+- `cores/src/gba/mgba_wrapper.cpp` now uses real mGBA `mCore` APIs (`GBACoreCreate`, `loadROM`, `runFrame`, `setKeys`, `saveState`, `loadState`) with VFS memory-backed ROM loading.
+- `cores/src/api/gba_api.cpp` now exports dynamic sample-rate metadata from wrapper state.
+- `cores/build-ios.sh` now merges `libmgba.a` into `libxemu_cores.a` before XCFramework creation so downstream iOS linking resolves mGBA symbols.

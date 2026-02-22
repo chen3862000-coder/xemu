@@ -111,6 +111,8 @@ class GamePlayViewModel: ObservableObject {
             switch platform {
             case .GB, .GBC:
                 audioSampleRate = 65536
+            case .GBA:
+                audioSampleRate = 32768
             default:
                 audioSampleRate = 44100
             }
@@ -288,16 +290,9 @@ class GamePlayViewModel: ObservableObject {
     }
 
     private func sendTouchInput(_ button: EmulatorButton, pressed: Bool) {
-        guard let core = activeCore else {
-            NSLog("[InputTrace] drop button=\(button) pressed=\(pressed) reason=no-active-core")
-            return
-        }
+        guard let core = activeCore else { return }
         let inputType = mapTouchButtonToInputType(button)
-        guard inputType >= 0 else {
-            NSLog("[InputTrace] drop button=\(button) pressed=\(pressed) reason=unmapped")
-            return
-        }
-        NSLog("[InputTrace] touch button=\(button) pressed=\(pressed) inputType=\(inputType) core=\(String(describing: type(of: core)))")
+        guard inputType >= 0 else { return }
         core.setInput(inputType, value: pressed ? 1.0 : 0.0)
     }
 

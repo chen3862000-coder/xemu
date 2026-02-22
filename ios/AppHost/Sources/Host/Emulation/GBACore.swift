@@ -36,6 +36,7 @@ public final class GBACore: EmulatorCore {
         // Debug log disabled: NSLog("[GBACore] Loading ROM from: %@", romPath)
         
         guard FileManager.default.fileExists(atPath: romPath) else {
+            NSLog("[GBACore] ROM file not found at path: %@", romPath)
             // Debug log disabled: NSLog("[GBACore] ROM file not found")
             return false
         }
@@ -52,6 +53,7 @@ public final class GBACore: EmulatorCore {
             isPaused = false
             return true
         } catch {
+            NSLog("[GBACore] loadROM failed path=%@ error=%@", romPath, error.localizedDescription)
             // Debug log disabled: NSLog("[GBACore] Failed to load ROM: %@", error.localizedDescription)
             return false
         }

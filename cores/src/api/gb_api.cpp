@@ -139,24 +139,6 @@ void xemu_gb_set_input(xemu_gb_handle_t handle, uint32_t buttons) {
     if (!handle) {
         return;
     }
-
-    // Debug trace for virtual control diagnostics.
-    // Bitmask follows InputGetter constants (A/B/Select/Start/Right/Left/Up/Down).
-    static uint32_t last_buttons = 0xFFFFFFFFu;
-    if (buttons != last_buttons) {
-        fprintf(stderr,
-                "[xemu_gb_set_input] mask=0x%08x A=%d B=%d Sel=%d Start=%d R=%d L=%d U=%d D=%d\n",
-                buttons,
-                (buttons & XEMU_BUTTON_A) ? 1 : 0,
-                (buttons & XEMU_BUTTON_B) ? 1 : 0,
-                (buttons & XEMU_BUTTON_SELECT) ? 1 : 0,
-                (buttons & XEMU_BUTTON_START) ? 1 : 0,
-                (buttons & XEMU_BUTTON_RIGHT) ? 1 : 0,
-                (buttons & XEMU_BUTTON_LEFT) ? 1 : 0,
-                (buttons & XEMU_BUTTON_UP) ? 1 : 0,
-                (buttons & XEMU_BUTTON_DOWN) ? 1 : 0);
-        last_buttons = buttons;
-    }
     
     handle->wrapper.setInput(buttons);
 }

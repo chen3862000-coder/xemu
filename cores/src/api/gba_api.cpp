@@ -1,5 +1,6 @@
 #include "xemu_cores/xemu_cores.h"
 #include "../src/gba/mgba_wrapper.h"
+#include <cstdio>
 #include <new>
 
 // Opaque handle implementation
@@ -26,7 +27,7 @@ xemu_gba_handle_t xemu_gba_create(void) {
         
         handle->audioBuffer.data = const_cast<int16_t*>(handle->wrapper.getAudioBuffer());
         handle->audioBuffer.sample_count = handle->wrapper.getAudioSampleCount();
-        handle->audioBuffer.sample_rate = xemu::mGBAWrapper::AUDIO_SAMPLE_RATE;
+        handle->audioBuffer.sample_rate = handle->wrapper.getAudioSampleRate();
         
         return handle;
     } catch (...) {
@@ -49,6 +50,12 @@ xemu_error_t xemu_gba_load_rom(xemu_gba_handle_t handle, const char* filename,
     }
     
     bool success = handle->wrapper.loadROM(filename, data, size);
+    if (!success) {
+        std::fprintf(stderr,
+                     "[xemu_gba_load_rom] failed filename=%s size=%zu\n",
+                     filename ? filename : "<null>",
+                     size);
+    }
     return success ? XEMU_OK : XEMU_ERROR_ROM_LOAD_FAILED;
 }
 
@@ -104,8 +111,9 @@ xemu_audio_buffer_t xemu_gba_get_audio_buffer(xemu_gba_handle_t handle) {
         return {nullptr, 0, 0};
     }
     
-    // Update sample count
+    // Update dynamic audio metadata
     handle->audioBuffer.sample_count = handle->wrapper.getAudioSampleCount();
+    handle->audioBuffer.sample_rate = handle->wrapper.getAudioSampleRate();
     return handle->audioBuffer;
 }
 

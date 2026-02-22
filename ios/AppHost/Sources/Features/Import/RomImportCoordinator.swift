@@ -88,23 +88,15 @@ final class RomImportCoordinator: ObservableObject {
         
         do {
             // URL is now a temp file that doesn't need security scope
-            print("[DEBUG] importROM: Step 1 - Reading file at: \(url.path)")
-            print("[DEBUG] importROM: file exists? \(FileManager.default.fileExists(atPath: url.path))")
             let fileData = try Data(contentsOf: url)
-            print("[DEBUG] importROM: Step 1 complete - read \(fileData.count) bytes")
             importProgress = 0.2
             
-            print("[DEBUG] importROM: Step 2 - Validating ROM")
             let validation = try RomValidator.validate(at: url)
-            print("[DEBUG] importROM: Step 2 complete - system: \(validation.system), checksum: \(validation.checksum.prefix(16))...")
             importProgress = 0.3
             
-            print("[DEBUG] importROM: Step 3 - Extracting metadata")
             let metadata = RomMetadataExtractor.extract(from: fileData, system: validation.system)
-            print("[DEBUG] importROM: Step 3 complete - title: \(metadata.title)")
             importProgress = 0.4
             
-            print("[DEBUG] importROM: Step 4 - Checking for duplicates")
             let context = persistence.container.viewContext
             let fetchRequest: NSFetchRequest<ROMLibraryEntry> = ROMLibraryEntry.fetchRequest()
             fetchRequest.predicate = NSPredicate(format: "checksum == %@", validation.checksum)
@@ -112,15 +104,12 @@ final class RomImportCoordinator: ObservableObject {
             
             let existingEntries = try context.fetch(fetchRequest)
             if let existingEntry = existingEntries.first {
-                print("[DEBUG] importROM: Step 4 - duplicate ROM found, returning existing entry: \(existingEntry.title ?? "Unknown")")
                 importProgress = 1.0
                 importedEntries.append(existingEntry)
                 return existingEntry
             }
-            print("[DEBUG] importROM: Step 4 complete - no duplicates")
             importProgress = 0.5
             
-            print("[DEBUG] importROM: Step 5 - Creating Core Data entry")
             let entry = ROMLibraryEntry(context: context)
             entry.id = UUID()
             entry.checksum = validation.checksum
@@ -132,32 +121,21 @@ final class RomImportCoordinator: ObservableObject {
             entry.lastPlayedAt = nil
             entry.playtimeTotal = 0
             entry.isFavorite = false
-            print("[DEBUG] importROM: Step 5 complete - entry created with ID: \(entry.id.uuidString)")
             
-            print("[DEBUG] importROM: Step 6 - Copying ROM to storage")
             // Create ROMs directory if it doesn't exist
             if !FileManager.default.fileExists(atPath: romsDirectory.path) {
-                print("[DEBUG] importROM: Creating ROMs directory at: \(romsDirectory.path)")
                 try FileManager.default.createDirectory(at: romsDirectory, withIntermediateDirectories: true)
-                print("[DEBUG] importROM: ROMs directory created")
             }
             let romDestination = romsDirectory.appendingPathComponent("\(validation.checksum).\(url.pathExtension)")
-            print("[DEBUG] importROM: destination: \(romDestination.path)")
             try FileManager.default.copyItem(at: url, to: romDestination)
-            print("[DEBUG] importROM: Step 6 complete - ROM copied")
             importProgress = 0.8
             
-            print("[DEBUG] importROM: Step 7 - Saving Core Data context")
             try context.save()
-            print("[DEBUG] importROM: Step 7 complete - context saved")
             importProgress = 1.0
             
             importedEntries.append(entry)
-            print("[DEBUG] importROM: SUCCESS - ROM imported successfully")
             return entry
         } catch {
-            print("[DEBUG] importROM: FAILED at step with error: \(error)")
-            print("[DEBUG] importROM: Error localized description: \(error.localizedDescription)")
             throw error
         }
     }
@@ -219,13 +197,12 @@ private final class FilePickerDelegate: NSObject, UIDocumentPickerDelegate {
                 
                 // Verify file exists
                 if FileManager.default.fileExists(atPath: tempURL.path) {
-                    print("[DEBUG] Copied and verified: \(url.lastPathComponent) -> \(tempURL.path)")
                     tempURLs.append(tempURL)
                 } else {
                     print("[ERROR] File copy succeeded but file doesn't exist: \(tempURL.path)")
                 }
             } catch {
-                print("[DEBUG] Failed to copy file \(url.lastPathComponent): \(error)")
+                print("Failed to copy file \(url.lastPathComponent): \(error)")
             }
         }
         

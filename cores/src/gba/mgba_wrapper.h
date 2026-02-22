@@ -8,9 +8,6 @@
 
 namespace xemu {
 
-// Forward declarations for mGBA types
-struct mCore;
-
 /**
  * Wrapper class for mGBA GBA emulator core
  */
@@ -43,12 +40,13 @@ public:
     int getVideoWidth() const { return VIDEO_WIDTH; }
     int getVideoHeight() const { return VIDEO_HEIGHT; }
 
-    // Audio (44100Hz stereo)
-    static constexpr int AUDIO_SAMPLE_RATE = 44100;
-    static constexpr int AUDIO_SAMPLES_PER_FRAME = 735; // ~59.73 FPS
+    // Audio (mGBA native stream, stereo interleaved)
+    static constexpr int AUDIO_SAMPLE_RATE = 32768;
+    static constexpr int AUDIO_SAMPLES_PER_FRAME = 1024;
     
     const int16_t* getAudioBuffer() const;
     int getAudioSampleCount() const;
+    int getAudioSampleRate() const;
 
     // Input (includes L/R buttons for GBA)
     void setInput(uint32_t buttons);

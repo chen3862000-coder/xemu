@@ -234,17 +234,14 @@ struct RomDetailView: View {
         }
         .sheet(isPresented: $isLaunching) {
             Group {
-                let _ = print("[DEBUG] Sheet presented, calling toGame()")
                 if let game = rom.toGame() {
-                    let _ = print("[DEBUG] Sheet: toGame() returned game: \(game.title)")
                     GamePlayView(game: game) {
                         isLaunching = false
                     }
                 } else {
-                    let _ = print("[DEBUG] Sheet: toGame() returned nil!")
                     VStack {
                         Text("Failed to load game")
-                        Text("Check console for details")
+                        Text("Please verify ROM import metadata")
                     }
                     .onAppear {
                         DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
@@ -405,18 +402,11 @@ extension ROMLibraryEntry {
     
     @MainActor
     func toGame() -> Game? {
-        print("[DEBUG] toGame() called for: \(title ?? "nil")")
-        
         guard let title = title,
-              let checksum = checksum else {
-            print("[DEBUG] toGame() failed: title: \(title as Optional), checksum: \(checksum as Optional)")
-            return nil
-        }
+              let checksum = checksum else { return nil }
         
         // Use the object's id
         let gameUUID = id
-        print("[DEBUG] toGame() using id: \(gameUUID)")
-        print("[DEBUG] toGame() passed first guard, checksum: \(checksum), system: \(system ?? "nil")")
         
         let normalizedSystem = (system ?? "").trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
 
@@ -479,14 +469,9 @@ extension ROMLibraryEntry {
             }
         }
 
-        guard let romLocation else {
-            print("[DEBUG] toGame() failed: ROM location not found for checksum: \(checksum), extensions: \(extensionCandidates)")
-            return nil
-        }
-        print("[DEBUG] toGame() ROM location: \(romLocation.url.path)")
-        print("[DEBUG] toGame() creating Game with platform: \(platformString)")
+        guard let romLocation else { return nil }
         
-        let game = Game(
+        return Game(
             id: gameUUID,
             title: title,
             platform: platformString,
@@ -501,8 +486,6 @@ extension ROMLibraryEntry {
             gameDescription: nil,
             romPath: romLocation.url.path
         )
-        print("[DEBUG] toGame() returning game: \(game.title)")
-        return game
     }
 }
 
