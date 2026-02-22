@@ -13,143 +13,173 @@ struct SettingsView: View {
     @AppStorage("frameSkipEnabled") private var frameSkipEnabled = false
     
     var body: some View {
-        NavigationStack {
-            ZStack {
-                backgroundGradients
-                
+        ZStack {
+            backgroundGradients
+
+            VStack(spacing: 0) {
+                SettingsHeader {
+                    dismiss()
+                }
+
                 ScrollView {
-                    VStack(spacing: 24) {
+                    VStack(spacing: 18) {
                         appInfoCard
                         settingsItems
                         footerSection
                     }
+                    .padding(.top, 14)
                     .padding(.horizontal, 16)
                     .padding(.bottom, 32)
                 }
             }
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Close") {
-                        dismiss()
-                    }
-                }
-            }
-            .sheet(isPresented: $showingUpgrade) {
-                UpgradeView()
-            }
+        }
+        .sheet(isPresented: $showingUpgrade) {
+            UpgradeView()
         }
     }
     
     private var backgroundGradients: some View {
         ZStack {
-            LinearGradient(
-                colors: [Color.purple.opacity(0.3), Color.blue.opacity(0.2)],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-            .ignoresSafeArea()
-            
+            AppColors.background.ignoresSafeArea()
+
             Circle()
-                .fill(LinearGradient(
-                    colors: [Color.pink.opacity(0.3), Color.purple.opacity(0.2)],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                ))
-                .blur(radius: 100)
-                .frame(width: 400, height: 400)
-                .offset(x: -100, y: -200)
+                .fill(
+                    LinearGradient(
+                        colors: [AppColors.primary.opacity(0.18), AppColors.accent.opacity(0.14)],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+                .blur(radius: 120)
+                .frame(width: 380, height: 380)
+                .offset(x: 140, y: -230)
+
+            Circle()
+                .fill(
+                    LinearGradient(
+                        colors: [AppColors.accent.opacity(0.12), AppColors.primary.opacity(0.10)],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+                .blur(radius: 140)
+                .frame(width: 420, height: 420)
+                .offset(x: -170, y: 320)
         }
     }
     
     private var appInfoCard: some View {
-        VStack(spacing: 16) {
+        VStack(spacing: 14) {
             ZStack {
-                RoundedRectangle(cornerRadius: 24)
-                    .fill(LinearGradient(
-                        colors: [Color.pink, Color.purple, Color.blue],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    ))
+                RoundedRectangle(cornerRadius: 20)
+                    .fill(
+                        LinearGradient(
+                            colors: [AppColors.primary, AppColors.accent],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
                     .frame(width: 80, height: 80)
-                
-                Image(systemName: "gamecontroller.fill")
-                    .font(.system(size: 36, weight: .bold))
-                    .foregroundColor(.white)
+                    .shadow(color: AppColors.primary.opacity(0.35), radius: 14, x: 0, y: 8)
+
+                SettingsBrandIconGlyph()
+                    .frame(width: 54, height: 54)
             }
-            .rotation3DEffect(.degrees(10), axis: (x: 0, y: 1, z: 0))
-            
+
             VStack(spacing: 4) {
-                Text("XEmu")
-                    .font(.title2)
-                    .fontWeight(.bold)
-                
-                Text("Version 1.0.0 (Build 1)")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
+                Text("XEmu Pro")
+                    .font(.system(size: 20, weight: .bold))
+                    .foregroundColor(AppColors.textPrimary)
+
+                Text(appVersionText)
+                    .font(.system(size: 12))
+                    .foregroundColor(AppColors.textMuted)
             }
-            
-            Text("Free Plan")
-                .font(.subheadline)
-                .fontWeight(.medium)
-                .padding(.horizontal, 16)
-                .padding(.vertical, 6)
-                .background(Color.pink.opacity(0.2))
-                .foregroundColor(.pink)
-                .cornerRadius(20)
+
+            HStack(spacing: 8) {
+                Circle()
+                    .fill(AppColors.success)
+                    .frame(width: 8, height: 8)
+                Text("Free Plan")
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundColor(AppColors.textPrimary)
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 8)
+            .background(AppColors.background.opacity(0.45))
+            .overlay(
+                Capsule()
+                    .stroke(AppColors.surfaceLight.opacity(0.5), lineWidth: 1)
+            )
+            .clipShape(Capsule())
         }
         .padding(24)
         .frame(maxWidth: .infinity)
-        .background(Color.secondary.opacity(0.1))
-        .cornerRadius(20)
+        .background(AppColors.surface)
+        .overlay(
+            RoundedRectangle(cornerRadius: 20)
+                .stroke(AppColors.surfaceLight.opacity(0.5), lineWidth: 1)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: 20))
+    }
+
+    private var appVersionText: String {
+        let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.0.0"
+        let build = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "1"
+        return "Version \(version) (\(build))"
     }
     
     private var settingsItems: some View {
         VStack(spacing: 12) {
-            SettingsToggleRow(
+            FigmaSettingsToggleRow(
                 icon: "gauge.with.dots.needle.67percent",
-                iconColor: .orange,
-                iconBg: Color.orange.opacity(0.2),
+                iconColor: AppColors.warning,
+                iconBg: AppColors.warning.opacity(0.2),
                 title: "Frame Skip",
                 description: "Skip frames on weaker devices",
                 isOn: $frameSkipEnabled
             )
             
-            SettingsItemRow(
+            SettingsItem(
                 icon: "star.fill",
-                iconColor: .yellow,
-                iconBg: Color.yellow.opacity(0.2),
-                title: "Upgrade to Pro",
+                title: "Upgrade",
                 description: "Unlock all features and remove ads"
+                ,
+                iconColor: AppColors.warning,
+                iconBackground: AppColors.warning.opacity(0.2)
             ) {
                 showingUpgrade = true
             }
             
-            SettingsItemRow(
+            SettingsItem(
                 icon: "square.and.arrow.up",
-                iconColor: .blue,
-                iconBg: Color.blue.opacity(0.2),
-                title: "Share XEmu",
+                title: "Share",
                 description: "Tell your friends about the app"
+                ,
+                iconColor: AppColors.info,
+                iconBackground: AppColors.info.opacity(0.2)
             ) {
                 shareApp()
             }
             
-            SettingsItemRow(
+            SettingsItem(
                 icon: "envelope",
-                iconColor: .green,
-                iconBg: Color.green.opacity(0.2),
-                title: "Send Feedback",
+                title: "Feedback",
                 description: "Help us improve the app"
+                ,
+                iconColor: AppColors.success,
+                iconBackground: AppColors.success.opacity(0.2)
             ) {
                 sendFeedback()
             }
             
-            SettingsItemRow(
+            SettingsItem(
                 icon: "questionmark.circle",
-                iconColor: .purple,
-                iconBg: Color.purple.opacity(0.2),
                 title: "Support",
                 description: "FAQ and help resources"
+                ,
+                iconColor: AppColors.primary,
+                iconBackground: AppColors.primary.opacity(0.2)
             ) {
                 openSupport()
             }
@@ -159,21 +189,21 @@ struct SettingsView: View {
     private var footerSection: some View {
         VStack(spacing: 12) {
             Text("Made with ❤️ for retro gaming")
-                .font(.caption)
-                .foregroundColor(.secondary)
+                .font(.system(size: 12))
+                .foregroundColor(AppColors.textMuted)
             
             HStack(spacing: 24) {
                 Button("Privacy Policy") {
                     openURL("https://xemu.app/privacy")
                 }
-                .font(.caption)
-                .foregroundColor(.secondary)
+                .font(.system(size: 12))
+                .foregroundColor(AppColors.textMuted)
                 
                 Button("Terms of Service") {
                     openURL("https://xemu.app/terms")
                 }
-                .font(.caption)
-                .foregroundColor(.secondary)
+                .font(.system(size: 12))
+                .foregroundColor(AppColors.textMuted)
             }
         }
         .padding(.top, 16)
@@ -201,7 +231,7 @@ struct SettingsView: View {
     }
 }
 
-struct SettingsToggleRow: View {
+struct FigmaSettingsToggleRow: View {
     let icon: String
     let iconColor: Color
     let iconBg: Color
@@ -214,77 +244,79 @@ struct SettingsToggleRow: View {
             ZStack {
                 RoundedRectangle(cornerRadius: 12)
                     .fill(iconBg)
-                    .frame(width: 44, height: 44)
+                    .frame(width: 48, height: 48)
                 
                 Image(systemName: icon)
-                    .font(.system(size: 18, weight: .semibold))
+                    .font(.system(size: 20, weight: .semibold))
                     .foregroundColor(iconColor)
             }
             
             VStack(alignment: .leading, spacing: 2) {
                 Text(title)
-                    .font(.subheadline)
-                    .fontWeight(.medium)
-                    .foregroundColor(.primary)
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundColor(AppColors.textPrimary)
                 
                 Text(description)
-                    .font(.caption)
-                    .foregroundColor(.secondary)
+                    .font(.system(size: 12))
+                    .foregroundColor(AppColors.textMuted)
             }
             
             Spacer()
             
-            Toggle(isOn: $isOn)
+            SwiftUI.Toggle(isOn: $isOn) {
+                EmptyView()
+            }
+                .labelsHidden()
+                .tint(AppColors.primary)
         }
         .padding(16)
-        .background(Color.secondary.opacity(0.1))
-        .cornerRadius(16)
+        .background(AppColors.surface)
+        .overlay(
+            RoundedRectangle(cornerRadius: 16)
+                .stroke(AppColors.surfaceLight.opacity(0.5), lineWidth: 1)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: 16))
     }
 }
 
-struct SettingsItemRow: View {
-    let icon: String
-    let iconColor: Color
-    let iconBg: Color
-    let title: String
-    let description: String
-    let action: () -> Void
-    
+private struct SettingsBrandIconGlyph: View {
     var body: some View {
-        Button(action: action) {
-            HStack(spacing: 16) {
-                ZStack {
-                RoundedRectangle(cornerRadius: 12)
-                    .fill(iconBg)
-                    .frame(width: 44, height: 44)
-                    
-                    Image(systemName: icon)
-                        .font(.system(size: 18, weight: .semibold))
-                        .foregroundColor(iconColor)
-                }
-                
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(title)
-                        .font(.subheadline)
-                        .fontWeight(.medium)
-                        .foregroundColor(.primary)
-                    
-                    Text(description)
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                }
-                
-                Spacer()
-                
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundColor(.secondary)
+        ZStack {
+            Circle()
+                .fill(Color.white.opacity(0.16))
+
+            RoundedRectangle(cornerRadius: 2)
+                .fill(Color.white.opacity(0.95))
+                .frame(width: 8, height: 20)
+                .offset(x: -14, y: 2)
+            RoundedRectangle(cornerRadius: 2)
+                .fill(Color.white.opacity(0.95))
+                .frame(width: 20, height: 8)
+                .offset(x: -14, y: 2)
+
+            Circle().fill(Color.white.opacity(0.95)).frame(width: 6, height: 6).offset(x: 10, y: -8)
+            Circle().fill(Color.white.opacity(0.95)).frame(width: 6, height: 6).offset(x: 22, y: -8)
+            Circle().fill(Color.white.opacity(0.95)).frame(width: 6, height: 6).offset(x: 10, y: 4)
+            Circle().fill(Color.white.opacity(0.95)).frame(width: 6, height: 6).offset(x: 22, y: 4)
+
+            Path { path in
+                path.move(to: CGPoint(x: 30, y: 8))
+                path.addLine(to: CGPoint(x: 24, y: 22))
+                path.addLine(to: CGPoint(x: 29, y: 22))
+                path.addLine(to: CGPoint(x: 25, y: 36))
+                path.addLine(to: CGPoint(x: 35, y: 20))
+                path.addLine(to: CGPoint(x: 29, y: 20))
+                path.closeSubpath()
             }
-            .padding(16)
-            .background(Color.secondary.opacity(0.1))
-            .cornerRadius(16)
+            .fill(
+                LinearGradient(
+                    colors: [Color(hex: "FBBF24"), Color(hex: "F59E0B")],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+            )
+            .frame(width: 54, height: 54)
         }
-        .buttonStyle(PlainButtonStyle())
     }
 }
 

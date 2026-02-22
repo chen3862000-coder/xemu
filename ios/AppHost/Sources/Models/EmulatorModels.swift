@@ -26,8 +26,8 @@ enum EmulatorPlatform: String, CaseIterable, Identifiable {
     
     var iconName: String {
         switch self {
-        case .gameBoy: return "gameboy.fill"
-        case .gameBoyColor: return "gameboy.fill"
+        case .gameBoy: return "rectangle.portrait.fill"
+        case .gameBoyColor: return "rectangle.portrait.fill"
         case .gameBoyAdvance: return "gamecontroller.fill"
         case .nintendoDS: return "laptopcomputer"
         case .playStation1: return "tv.fill"

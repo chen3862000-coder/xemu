@@ -10,22 +10,28 @@ struct HomeView: View {
     @State private var showingSettings = false
     @State private var showingImport = false
     @State private var showingGameLibrary = false
+    @State private var showingRecentlyPlayed = false
+    @State private var selectedPlatform: EmulatorPlatform?
     @State private var searchText = ""
     
     var body: some View {
         ZStack {
             backgroundGradients
-            
-            ScrollView {
-                VStack(spacing: 24) {
-                    headerSection
-                    statsGrid
-                    importSection
-                    recentGamesSection
-                    emulatorsSection
+
+            VStack(spacing: 0) {
+                headerSection
+
+                ScrollView {
+                    VStack(spacing: 24) {
+                        statsGrid
+                        importSection
+                        recentGamesSection
+                        emulatorsSection
+                    }
+                    .padding(.top, 12)
+                    .padding(.horizontal, 16)
+                    .padding(.bottom, 32)
                 }
-                .padding(.horizontal, 16)
-                .padding(.bottom, 32)
             }
         }
         .searchable(text: $searchText, prompt: "Search games...")
@@ -38,6 +44,12 @@ struct HomeView: View {
         .sheet(isPresented: $showingGameLibrary) {
             GameLibraryView()
         }
+        .sheet(isPresented: $showingRecentlyPlayed) {
+            RecentlyPlayedView()
+        }
+        .sheet(item: $selectedPlatform) { platform in
+            GameListView(platform: platform)
+        }
         .onAppear {
             viewModel.loadData(in: viewContext)
         }
@@ -45,75 +57,44 @@ struct HomeView: View {
     
     private var backgroundGradients: some View {
         ZStack {
-            LinearGradient(
-                colors: [Color.purple.opacity(0.3), Color.blue.opacity(0.2)],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
+            AppColors.background
             .ignoresSafeArea()
-            
+
             Circle()
-                .fill(LinearGradient(
-                    colors: [Color.pink.opacity(0.3), Color.purple.opacity(0.2)],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                ))
-                .blur(radius: 100)
-                .frame(width: 400, height: 400)
-                .offset(x: -100, y: -200)
-            
+                .fill(
+                    LinearGradient(
+                        colors: [AppColors.primary.opacity(0.20), AppColors.accent.opacity(0.18)],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+                .blur(radius: 120)
+                .frame(width: 380, height: 380)
+                .offset(x: 140, y: -220)
+
             Circle()
-                .fill(LinearGradient(
-                    colors: [Color.cyan.opacity(0.3), Color.blue.opacity(0.2)],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                ))
-                .blur(radius: 80)
-                .frame(width: 300, height: 300)
-                .offset(x: 150, y: 300)
+                .fill(
+                    LinearGradient(
+                        colors: [AppColors.accent.opacity(0.16), AppColors.primary.opacity(0.10)],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+                .blur(radius: 140)
+                .frame(width: 420, height: 420)
+                .offset(x: -160, y: 320)
         }
     }
     
     private var headerSection: some View {
-        HStack {
-            HStack(spacing: 12) {
-                ZStack {
-                    RoundedRectangle(cornerRadius: 12)
-                        .fill(LinearGradient(
-                            colors: [Color.pink, Color.purple],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        ))
-                        .frame(width: 44, height: 44)
-                    
-                    Image(systemName: "bolt.fill")
-                        .font(.system(size: 20, weight: .bold))
-                        .foregroundColor(.white)
-                }
-                
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("XEmu")
-                        .font(.title2)
-                        .fontWeight(.bold)
-                    
-                    Text("Classic Gaming Hub")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                }
+        Header(
+            onSearchTapped: {
+                // `.searchable` remains the active search UX for now.
+            },
+            onSettingsTapped: {
+                showingSettings = true
             }
-            
-            Spacer()
-            
-            Button(action: { showingSettings = true }) {
-                Image(systemName: "gear")
-                    .font(.system(size: 20))
-                    .foregroundColor(.primary)
-                    .padding(10)
-                    .background(Color.primary.opacity(0.1))
-                    .clipShape(Circle())
-            }
-        }
-        .padding(.top, 8)
+        )
     }
     
     private var statsGrid: some View {
@@ -125,15 +106,16 @@ struct HomeView: View {
                     title: "Total Games",
                     value: "\(viewModel.totalGames)",
                     icon: "gamecontroller.fill",
-                    gradient: [Color.pink, Color.purple]
+                    gradient: [AppColors.primary, AppColors.accent]
                 )
             }
+            .buttonStyle(PlainButtonStyle())
             
             StatCard(
                 title: "Hours Played",
                 value: viewModel.totalHours,
                 icon: "clock.fill",
-                gradient: [Color.cyan, Color.blue]
+                gradient: [AppColors.info, AppColors.primary]
             )
         }
     }
@@ -157,27 +139,39 @@ struct HomeView: View {
                 Spacer()
                 
                 Button("View All") {
-                    // Navigate to recent games
+                    showingRecentlyPlayed = true
                 }
                 .font(.subheadline)
-                .foregroundColor(.purple)
+                .foregroundColor(AppColors.primary)
             }
             
             if viewModel.recentGames.isEmpty {
-                Text("No recent games")
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
-                    .frame(maxWidth: .infinity, alignment: .center)
-                    .padding(.vertical, 20)
+                VStack(spacing: 8) {
+                    Image(systemName: "clock.arrow.circlepath")
+                        .font(.system(size: 24, weight: .medium))
+                        .foregroundColor(AppColors.textMuted)
+                    Text("No recent games")
+                        .font(.subheadline)
+                        .foregroundColor(AppColors.textSecondary)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 22)
+                .background(AppColors.surface)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16)
+                        .stroke(AppColors.surfaceLight.opacity(0.5), lineWidth: 1)
+                )
+                .clipShape(RoundedRectangle(cornerRadius: 16))
             } else {
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 12) {
                         ForEach(viewModel.recentGames) { game in
                             RecentGameCard(game: game) {
-                                viewModel.playGame(game)
+                                showingRecentlyPlayed = true
                             }
                         }
                     }
+                    .padding(.horizontal, 2)
                 }
             }
         }
@@ -185,9 +179,23 @@ struct HomeView: View {
     
     private var emulatorsSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Emulators")
-                .font(.headline)
-                .padding(.top, 8)
+            HStack {
+                HStack(spacing: 8) {
+                    Image(systemName: "gamecontroller.fill")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundColor(AppColors.primary)
+                    Text("All Emulators")
+                        .font(.headline)
+                        .foregroundColor(AppColors.textPrimary)
+                }
+
+                Spacer()
+
+                Text("\(viewModel.emulators.count) systems")
+                    .font(.caption)
+                    .foregroundColor(AppColors.textMuted)
+            }
+            .padding(.top, 8)
             
             ForEach(Array(viewModel.emulators.enumerated()), id: \.element.name) { index, emulator in
                 EmulatorCard(
@@ -198,10 +206,14 @@ struct HomeView: View {
                     icon: emulator.icon,
                     index: index
                 ) {
-                    viewModel.selectEmulator(emulator)
+                    selectedPlatform = platform(for: emulator.shortName)
                 }
             }
         }
+    }
+
+    private func platform(for shortName: String) -> EmulatorPlatform? {
+        EmulatorPlatform.allCases.first { $0.shortName == shortName }
     }
 }
 
@@ -213,11 +225,13 @@ struct StatCard: View {
     
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            HStack {
+            HStack(alignment: .top) {
                 ZStack {
-                    RoundedRectangle(cornerRadius: 8)
-                        .fill(LinearGradient(colors: gradient, startPoint: .topLeading, endPoint: .bottomTrailing))
-                        .frame(width: 36, height: 36)
+                    RoundedRectangle(cornerRadius: 10)
+                        .fill(
+                            LinearGradient(colors: gradient, startPoint: .topLeading, endPoint: .bottomTrailing)
+                        )
+                        .frame(width: 40, height: 40)
                     
                     Image(systemName: icon)
                         .font(.system(size: 16, weight: .semibold))
@@ -228,17 +242,21 @@ struct StatCard: View {
             }
             
             Text(value)
-                .font(.title2)
-                .fontWeight(.bold)
+                .font(.system(size: 28, weight: .bold))
+                .foregroundColor(AppColors.textPrimary)
             
             Text(title)
                 .font(.caption)
-                .foregroundColor(.secondary)
+                .foregroundColor(AppColors.textMuted)
         }
         .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.primary.opacity(0.05))
-        .cornerRadius(16)
+        .background(AppColors.surface)
+        .overlay(
+            RoundedRectangle(cornerRadius: 16)
+                .stroke(AppColors.surfaceLight.opacity(0.5), lineWidth: 1)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: 16))
     }
 }
 
@@ -251,8 +269,12 @@ struct RecentGameCard: View {
             VStack(alignment: .leading, spacing: 8) {
                 ZStack {
                     RoundedRectangle(cornerRadius: 12)
-                        .fill(Color.gray.opacity(0.3))
-                        .frame(width: 120, height: 160)
+                        .fill(AppColors.surface)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 12)
+                                .stroke(AppColors.surfaceLight.opacity(0.5), lineWidth: 1)
+                        )
+                        .frame(width: 160, height: 120)
                     
                     if let imageUrl = game.image, let url = URL(string: imageUrl) {
                         AsyncImage(url: url) { image in
@@ -261,49 +283,81 @@ struct RecentGameCard: View {
                                 .aspectRatio(contentMode: .fill)
                         } placeholder: {
                             Image(systemName: "gamecontroller")
-                                .font(.system(size: 40))
-                                .foregroundColor(.gray)
+                                .font(.system(size: 32))
+                                .foregroundColor(AppColors.textMuted)
                         }
-                        .frame(width: 120, height: 160)
+                        .frame(width: 160, height: 120)
                         .clipShape(RoundedRectangle(cornerRadius: 12))
                     } else {
-                        Image(systemName: "gamecontroller")
-                            .font(.system(size: 40))
-                            .foregroundColor(.gray)
+                        ZStack {
+                            LinearGradient(
+                                colors: [AppColors.surfaceLight, AppColors.surface],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                            Image(systemName: "gamecontroller.fill")
+                                .font(.system(size: 28))
+                                .foregroundColor(AppColors.textMuted)
+                        }
+                        .frame(width: 160, height: 120)
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
                     }
+
+                    LinearGradient(
+                        colors: [Color.clear, AppColors.background.opacity(0.85)],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
                     
                     VStack {
+                        HStack {
+                            if let lastPlayed = game.lastPlayed {
+                                Text(lastPlayed, style: .relative)
+                                    .font(.system(size: 10, weight: .medium))
+                                    .foregroundColor(AppColors.textPrimary)
+                                    .padding(.horizontal, 8)
+                                    .padding(.vertical, 4)
+                                    .background(AppColors.background.opacity(0.75))
+                                    .clipShape(Capsule())
+                            }
+                            Spacer()
+                        }
+                        .padding(8)
+
                         Spacer()
                         HStack {
                             Spacer()
                             Text(game.console)
-                                .font(.caption2)
-                                .fontWeight(.medium)
-                                .padding(.horizontal, 6)
-                                .padding(.vertical, 2)
-                                .background(Color.black.opacity(0.7))
+                                .font(.system(size: 10, weight: .semibold))
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 4)
+                                .background(AppColors.primary.opacity(0.9))
                                 .foregroundColor(.white)
-                                .cornerRadius(4)
+                                .clipShape(Capsule())
                         }
-                        .padding(6)
+                        .padding(8)
                     }
                 }
                 
                 VStack(alignment: .leading, spacing: 2) {
                     Text(game.title)
-                        .font(.subheadline)
-                        .fontWeight(.medium)
+                        .font(.system(size: 14, weight: .semibold))
                         .lineLimit(1)
-                        .foregroundColor(.primary)
+                        .foregroundColor(AppColors.textPrimary)
                     
                     if let lastPlayed = game.lastPlayed {
-                        Text(lastPlayed, style: .relative)
-                            .font(.caption2)
-                            .foregroundColor(.secondary)
+                        HStack(spacing: 4) {
+                            Image(systemName: "clock.fill")
+                                .font(.system(size: 9))
+                            Text(lastPlayed, style: .relative)
+                                .font(.system(size: 10))
+                        }
+                        .foregroundColor(AppColors.textMuted)
                     }
                 }
             }
-            .frame(width: 120)
+            .frame(width: 160)
         }
         .buttonStyle(PlainButtonStyle())
     }
@@ -633,7 +687,7 @@ final class HomeViewModel: ObservableObject {
             try fetchedResultsController?.performFetch()
             let entries = fetchedResultsController?.fetchedObjects ?? []
             updateStats(from: entries)
-            loadEmulators()
+            loadEmulators(from: entries)
         } catch {
             print("Failed to fetch: \(error)")
         }
@@ -660,15 +714,19 @@ final class HomeViewModel: ObservableObject {
         }
     }
     
-    private func loadEmulators() {
+    private func loadEmulators(from entries: [ROMLibraryEntry]) {
+        let countsBySystem = Dictionary(grouping: entries) {
+            ($0.system ?? "").trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        }.mapValues(\.count)
+
         emulators = [
-            EmulatorInfo(name: "Game Boy", shortName: "GB", gamesCount: 0, gradient: [Color.green, Color.mint], icon: "gameboy"),
-            EmulatorInfo(name: "Game Boy Color", shortName: "GBC", gamesCount: 0, gradient: [Color.purple, Color.pink], icon: "gameboy"),
-            EmulatorInfo(name: "Game Boy Advance", shortName: "GBA", gamesCount: 0, gradient: [Color.purple, Color.indigo], icon: "gamecontroller"),
-            EmulatorInfo(name: "Nintendo DS", shortName: "NDS", gamesCount: 0, gradient: [Color.cyan, Color.blue], icon: "hand.raised"),
-            EmulatorInfo(name: "PlayStation", shortName: "PS1", gamesCount: 0, gradient: [Color.gray, Color.blue], icon: "playstation"),
-            EmulatorInfo(name: "Nintendo 3DS", shortName: "3DS", gamesCount: 0, gradient: [Color.red, Color.orange], icon: "hand.raised"),
-            EmulatorInfo(name: "PSP", shortName: "PSP", gamesCount: 0, gradient: [Color.gray, Color.black], icon: "gamecontroller"),
+            EmulatorInfo(name: "Game Boy", shortName: "GB", gamesCount: countsBySystem["gb", default: 0], gradient: [Color.green, Color.mint], icon: "🎮"),
+            EmulatorInfo(name: "Game Boy Color", shortName: "GBC", gamesCount: countsBySystem["gbc", default: 0], gradient: [Color.blue, Color.purple], icon: "🎨"),
+            EmulatorInfo(name: "Game Boy Advance", shortName: "GBA", gamesCount: countsBySystem["gba", default: 0], gradient: [Color.purple, Color.indigo], icon: "⚡"),
+            EmulatorInfo(name: "Nintendo DS", shortName: "NDS", gamesCount: countsBySystem["nds", default: 0], gradient: [Color.cyan, Color.blue], icon: "📱"),
+            EmulatorInfo(name: "PlayStation 1", shortName: "PS1", gamesCount: countsBySystem["ps1", default: 0], gradient: [Color.gray, Color.blue], icon: "💿"),
+            EmulatorInfo(name: "Nintendo 3DS", shortName: "3DS", gamesCount: countsBySystem["3ds", default: 0], gradient: [Color.red, Color.orange], icon: "🔺"),
+            EmulatorInfo(name: "PSP", shortName: "PSP", gamesCount: countsBySystem["psp", default: 0], gradient: [Color.gray, Color.black], icon: "🎯"),
         ]
     }
     

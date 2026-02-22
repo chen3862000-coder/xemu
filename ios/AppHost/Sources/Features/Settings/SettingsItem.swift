@@ -9,6 +9,24 @@ struct SettingsItem: View {
     let index: Int
     let onTap: () -> Void
 
+    init(
+        icon: String,
+        title: String,
+        description: String,
+        iconColor: Color,
+        iconBackground: Color,
+        index: Int = 0,
+        onTap: @escaping () -> Void
+    ) {
+        self.icon = icon
+        self.title = title
+        self.description = description
+        self.iconColor = iconColor
+        self.iconBackground = iconBackground
+        self.index = index
+        self.onTap = onTap
+    }
+
     var body: some View {
         Button(action: onTap) {
             HStack(spacing: 12) {

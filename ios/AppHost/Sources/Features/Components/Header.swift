@@ -20,9 +20,8 @@ struct Header: View {
                             .frame(width: 36, height: 36)
                             .shadow(color: AppColors.primary.opacity(0.5), radius: 8, x: 0, y: 4)
 
-                        Image(systemName: "bolt.fill")
-                            .font(.system(size: 18, weight: .bold))
-                            .foregroundColor(.white)
+                        XemuBrandIconGlyph()
+                            .frame(width: 26, height: 26)
                     }
 
                     VStack(alignment: .leading, spacing: 0) {
@@ -68,6 +67,63 @@ struct Header: View {
                 .frame(height: 1),
             alignment: .bottom
         )
+    }
+}
+
+private struct XemuBrandIconGlyph: View {
+    var body: some View {
+        ZStack {
+            Circle()
+                .fill(Color.white.opacity(0.18))
+
+            // D-pad (left)
+            RoundedRectangle(cornerRadius: 1.5)
+                .fill(Color.white.opacity(0.95))
+                .frame(width: 3.5, height: 10)
+                .offset(x: -7, y: 1)
+
+            RoundedRectangle(cornerRadius: 1.5)
+                .fill(Color.white.opacity(0.95))
+                .frame(width: 10, height: 3.5)
+                .offset(x: -7, y: 1)
+
+            // Buttons (right)
+            Circle()
+                .fill(Color.white.opacity(0.95))
+                .frame(width: 3.2, height: 3.2)
+                .offset(x: -1.5, y: -4)
+            Circle()
+                .fill(Color.white.opacity(0.95))
+                .frame(width: 3.2, height: 3.2)
+                .offset(x: 4.5, y: -4)
+            Circle()
+                .fill(Color.white.opacity(0.95))
+                .frame(width: 3.2, height: 3.2)
+                .offset(x: -1.5, y: 2)
+            Circle()
+                .fill(Color.white.opacity(0.95))
+                .frame(width: 3.2, height: 3.2)
+                .offset(x: 4.5, y: 2)
+
+            // Lightning bolt
+            Path { path in
+                path.move(to: CGPoint(x: 13.8, y: 2.5))
+                path.addLine(to: CGPoint(x: 10.8, y: 9.2))
+                path.addLine(to: CGPoint(x: 13.2, y: 9.2))
+                path.addLine(to: CGPoint(x: 11.4, y: 15.8))
+                path.addLine(to: CGPoint(x: 15.6, y: 8.2))
+                path.addLine(to: CGPoint(x: 13.0, y: 8.2))
+                path.closeSubpath()
+            }
+            .fill(
+                LinearGradient(
+                    colors: [Color(hex: "FBBF24"), Color(hex: "F59E0B")],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+            )
+            .frame(width: 26, height: 26)
+        }
     }
 }
 

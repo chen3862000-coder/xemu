@@ -57,6 +57,7 @@
 		9F458B275A1D6AAF44321994 /* SettingsItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC3641DA7AB5979DD18519D7 /* SettingsItem.swift */; };
 		A454C0D96D7DA59BC7FD4E8B /* SaveStatesViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9C3AC2668DE133B8A0B8881A /* SaveStatesViewModel.swift */; };
 		A5D271408AC439164A94CA22 /* GamePlayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE7656E2B31BA17D79C6DFB5 /* GamePlayView.swift */; };
+		A97A12BD1ABD56E12653866F /* RecentlyPlayedView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 58A46770D20436EFFDBD5E98 /* RecentlyPlayedView.swift */; };
 		ADE244CA47CA49B7DE4A4969 /* libc++.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = 28A32FA35950420C5322D737 /* libc++.tbd */; };
 		B0A2A37751DCB3ED0A2E77CD /* NESCore.swift in Sources */ = {isa = PBXBuildFile; fileRef = CCE9BE4FF1D1FAAD1A852E60 /* NESCore.swift */; };
 		B2A8E7EF2A3A8AB827A295FF /* PurchaseFlowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7467A101DF9338E0F3357D42 /* PurchaseFlowController.swift */; };
@@ -80,6 +81,7 @@
 		E62C630456F0C5BAC8E91B7A /* OfflineGraceManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD2BA596028329B64FC9E98D /* OfflineGraceManager.swift */; };
 		F387AD69E5395A8C7F16E93E /* AppHost.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8B36B2ACD647AC3067DC2155 /* AppHost.swift */; };
 		F51F13808938D30ABCD0C190 /* Button.swift in Sources */ = {isa = PBXBuildFile; fileRef = D7A97E34F6714D55B2ED6121 /* Button.swift */; };
+		F6A9D719B001FB418B539549 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 51E656E584201333675159E7 /* Assets.xcassets */; };
 		F93E44807879255BA51E06C3 /* Header.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAF6A9A7B47722A9EEE63EDF /* Header.swift */; };
 		FB4D93CE12BDD499797A63C6 /* EmulatorSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = 867BF8EE76C4FEC72E94EBDC /* EmulatorSession.swift */; };
 		FCF665150656D5E24E64FFEA /* Card.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0E27256B3C3C7FB89F1F47DE /* Card.swift */; };
@@ -121,6 +123,8 @@
 		466D0058781640285EE96634 /* EntitlementStatusView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EntitlementStatusView.swift; sourceTree = "<group>"; };
 		4C48534E106FC93B669B1859 /* Checkbox.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Checkbox.swift; sourceTree = "<group>"; };
 		4DE8FCC2F96A65DCDAB928F2 /* Xemu.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = Xemu.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		51E656E584201333675159E7 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		58A46770D20436EFFDBD5E98 /* RecentlyPlayedView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecentlyPlayedView.swift; sourceTree = "<group>"; };
 		5B46B7ED335E85F0798430D0 /* EmulatorModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmulatorModels.swift; sourceTree = "<group>"; };
 		5D62DC4B965230783C1FAB31 /* ExperimentalLaunchView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExperimentalLaunchView.swift; sourceTree = "<group>"; };
 		60116C1286890A6031C40E8E /* ROMStorage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ROMStorage.swift; sourceTree = "<group>"; };
@@ -245,6 +249,7 @@
 			children = (
 				7BC15F83843091487D6BA3FF /* GameLibraryView.swift */,
 				D009E6F2DF5E69D7593C1965 /* HomeView.swift */,
+				58A46770D20436EFFDBD5E98 /* RecentlyPlayedView.swift */,
 			);
 			path = Home;
 			sourceTree = "<group>";
@@ -308,6 +313,7 @@
 			isa = PBXGroup;
 			children = (
 				8B36B2ACD647AC3067DC2155 /* AppHost.swift */,
+				51E656E584201333675159E7 /* Assets.xcassets */,
 				116AD7A4945F9AE8BE364572 /* ContentView.swift */,
 				3868FC066CEDAC8E3EBEB31E /* DeviceProfileCache.swift */,
 				652880BA95C7641ACD748647 /* EntitlementCache.swift */,
@@ -552,6 +558,7 @@
 			buildConfigurationList = 6C3CC2F997297CCAFB76ECC7 /* Build configuration list for PBXNativeTarget "Xemu" */;
 			buildPhases = (
 				D61FA785E53DF1D2DBACEFF5 /* Sources */,
+				0878D6C9E8BC265FDF0E624B /* Resources */,
 				5519E51B27D9224DD85EEABA /* Frameworks */,
 			);
 			buildRules = (
@@ -598,6 +605,17 @@
 			);
 		};
 /* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		0878D6C9E8BC265FDF0E624B /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				F6A9D719B001FB418B539549 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		D61FA785E53DF1D2DBACEFF5 /* Sources */ = {
@@ -659,6 +677,7 @@
 				B698C63CA572519D87273F7D /* Progress.swift in Sources */,
 				B2A8E7EF2A3A8AB827A295FF /* PurchaseFlowController.swift in Sources */,
 				3C1C1C30461209C438218C32 /* ROMStorage.swift in Sources */,
+				A97A12BD1ABD56E12653866F /* RecentlyPlayedView.swift in Sources */,
 				8B5DAC81EFB96AC46E0AAE32 /* RomImportCoordinator.swift in Sources */,
 				1BFE8C580B6A09CD9FCAD335 /* RomMetadataExtractor.swift in Sources */,
 				382072FAFD010B7BA5C59BCD /* RomValidator.swift in Sources */,
