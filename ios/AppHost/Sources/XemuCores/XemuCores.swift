@@ -312,18 +312,26 @@ public class GBCCoreWrapper: CEmulatorCore {
         guard useNative, let handle = handle, isROMLoaded else {
             throw XemuCoresError.saveStateFailed("No ROM loaded")
         }
-        
-        var state = xemu_save_state_t(data: nil, size: 0)
-        let result = xemu_gb_save_state(handle, &state)
-        
-        guard result == XEMU_OK, let data = state.data, state.size > 0 else {
+
+        let stateSize = xemu_gb_get_save_state_size(handle)
+        guard stateSize > 0 else {
+            throw XemuCoresError.saveStateFailed("Invalid save state size")
+        }
+
+        var buffer = Data(count: stateSize)
+        var result: xemu_error_t = XEMU_ERROR_UNKNOWN
+        buffer.withUnsafeMutableBytes { raw in
+            guard let ptr = raw.baseAddress?.assumingMemoryBound(to: UInt8.self) else { return }
+            var state = xemu_save_state_t(data: ptr, size: stateSize)
+            result = xemu_gb_save_state(handle, &state)
+        }
+
+        guard result == XEMU_OK else {
             throw XemuCoresError.saveStateFailed("Failed to save state")
         }
-        
-        let savedData = Data(bytes: data, count: state.size)
-        return savedData
+
+        return buffer
     }
-    
     public func loadSaveStateData(_ data: Data) throws {
         nativeLock.lock()
         defer { nativeLock.unlock() }
@@ -540,16 +548,25 @@ public class GBACoreWrapper: CEmulatorCore {
         guard useNative, let handle = handle, isROMLoaded else {
             throw XemuCoresError.saveStateFailed("No ROM loaded")
         }
-        
-        var state = xemu_save_state_t(data: nil, size: 0)
-        let result = xemu_gba_save_state(handle, &state)
-        
-        guard result == XEMU_OK, let data = state.data, state.size > 0 else {
+
+        let stateSize = xemu_gba_get_save_state_size(handle)
+        guard stateSize > 0 else {
+            throw XemuCoresError.saveStateFailed("Invalid save state size")
+        }
+
+        var buffer = Data(count: stateSize)
+        var result: xemu_error_t = XEMU_ERROR_UNKNOWN
+        buffer.withUnsafeMutableBytes { raw in
+            guard let ptr = raw.baseAddress?.assumingMemoryBound(to: UInt8.self) else { return }
+            var state = xemu_save_state_t(data: ptr, size: stateSize)
+            result = xemu_gba_save_state(handle, &state)
+        }
+
+        guard result == XEMU_OK else {
             throw XemuCoresError.saveStateFailed("Failed to save state")
         }
-        
-        let savedData = Data(bytes: data, count: state.size)
-        return savedData
+
+        return buffer
     }
     
     public func loadSaveStateData(_ data: Data) throws {

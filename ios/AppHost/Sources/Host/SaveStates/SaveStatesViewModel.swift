@@ -14,9 +14,9 @@ final class SaveStatesViewModel: ObservableObject {
     @Published var isCapturing = false
     @Published var showAllSlots = false
     
-    init(rom: ROMLibraryEntry, saveStateStorage: SaveStateStorage = .shared) {
+    init(rom: ROMLibraryEntry, saveStateStorage: SaveStateStorage? = nil) {
         self.rom = rom
-        self.saveStateStorage = saveStateStorage
+        self.saveStateStorage = saveStateStorage ?? .shared
         loadSaveStates()
     }
     

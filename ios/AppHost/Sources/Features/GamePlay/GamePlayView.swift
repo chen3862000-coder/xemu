@@ -57,26 +57,34 @@ struct GamePlayView: View {
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                         
                         // Status bar
-                        HStack {
-                            HStack(spacing: 4) {
-                                Circle()
-                                    .fill(viewModel.isRunning ? Color.green : Color.red)
-                                    .frame(width: 8, height: 8)
-                                Text(viewModel.isRunning ? "Running" : "Paused")
+                        VStack(spacing: 4) {
+                            HStack {
+                                HStack(spacing: 4) {
+                                    Circle()
+                                        .fill(viewModel.isRunning ? Color.green : Color.red)
+                                        .frame(width: 8, height: 8)
+                                    Text(viewModel.isRunning ? "Running" : "Paused")
+                                        .font(.caption)
+                                        .foregroundColor(.white)
+                                }
+                                
+                                Spacer()
+                                
+                                Text("FPS: \(viewModel.currentFPS)")
                                     .font(.caption)
-                                    .foregroundColor(.white)
+                                    .foregroundColor(.gray)
+                                
+                                if fastForwardSpeed > 1 {
+                                    Text("\(fastForwardSpeed)x")
+                                        .font(.caption)
+                                        .foregroundColor(.orange)
+                                }
                             }
-                            
-                            Spacer()
-                            
-                            Text("FPS: \(viewModel.currentFPS)")
-                                .font(.caption)
-                                .foregroundColor(.gray)
-                            
-                            if fastForwardSpeed > 1 {
-                                Text("\(fastForwardSpeed)x")
-                                    .font(.caption)
-                                    .foregroundColor(.orange)
+                            if !viewModel.statusMessage.isEmpty {
+                                Text(viewModel.statusMessage)
+                                    .font(.caption2)
+                                    .foregroundColor(.yellow)
+                                    .lineLimit(1)
                             }
                         }
                         .padding()
@@ -108,7 +116,12 @@ struct GamePlayView: View {
                 try? await Task.sleep(nanoseconds: 100_000_000)
                 guard !Task.isCancelled else { return }
                 if let romPath = game.romPath, let platform = game.gamePlatform {
-                    viewModel.startEmulation(romPath: romPath, platform: platform)
+                    viewModel.startEmulation(
+                        romPath: romPath,
+                        platform: platform,
+                        gameTitle: game.title,
+                        romHash: game.romPath.map { URL(fileURLWithPath: $0).deletingPathExtension().lastPathComponent }
+                    )
                 }
             }
         }
@@ -129,9 +142,17 @@ struct GamePlayView: View {
                         .foregroundColor(.white)
                     
                     if !viewModel.statusMessage.isEmpty {
-                        Text(viewModel.statusMessage)
-                            .font(.caption)
-                            .foregroundColor(.gray)
+                        VStack(spacing: 4) {
+                            Text(viewModel.statusMessage)
+                                .font(.caption)
+                                .foregroundColor(.gray)
+                            if !viewModel.saveStateDebugLine.isEmpty {
+                                Text(viewModel.saveStateDebugLine)
+                                    .font(.caption2)
+                                    .foregroundColor(.yellow)
+                                    .multilineTextAlignment(.center)
+                            }
+                        }
                     }
                     
                     Button(action: {
@@ -145,7 +166,6 @@ struct GamePlayView: View {
                     
                     Button(action: { 
                         viewModel.quickSave()
-                        showPauseMenu = false
                     }) {
                         Label("Quick Save", systemImage: "square.and.arrow.down")
                             .frame(maxWidth: 200)
@@ -155,13 +175,30 @@ struct GamePlayView: View {
                     
                     Button(action: { 
                         viewModel.quickLoad()
-                        showPauseMenu = false
                     }) {
                         Label("Quick Load", systemImage: "square.and.arrow.up")
                             .frame(maxWidth: 200)
                     }
                     .buttonStyle(.bordered)
                     .tint(.green)
+
+                    Button(action: {
+                        viewModel.saveGameProgress()
+                    }) {
+                        Label("Save Game", systemImage: "tray.and.arrow.down")
+                            .frame(maxWidth: 200)
+                    }
+                    .buttonStyle(.bordered)
+                    .tint(.teal)
+
+                    Button(action: {
+                        viewModel.loadGameProgress()
+                    }) {
+                        Label("Load Game", systemImage: "tray.and.arrow.up")
+                            .frame(maxWidth: 200)
+                    }
+                    .buttonStyle(.bordered)
+                    .tint(.mint)
                     
                     HStack(spacing: 12) {
                         ForEach([2, 3, 6], id: \.self) { speed in

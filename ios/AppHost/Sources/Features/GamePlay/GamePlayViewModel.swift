@@ -6,11 +6,13 @@ import GameController
 @MainActor
 class GamePlayViewModel: ObservableObject {
     private static let minimumTouchPressDurationNs: UInt64 = 200_000_000
+    private static let gameSaveSlot = 9
     @Published var isRunning = false
     @Published var isPaused = false
     @Published var showTouchOverlay = true
     @Published var statusMessage = ""
     @Published var currentFPS = 0
+    @Published var saveStateDebugLine = ""
 
     private var emulatorSession: EmulatorSession?
     private(set) var metalRenderer: MetalRenderer?
@@ -18,6 +20,9 @@ class GamePlayViewModel: ObservableObject {
     private var inputBus: InputBus?
     private var activeCore: EmulatorCore?
     private var pendingReleaseTasks: [EmulatorButton: Task<Void, Never>] = [:]
+    private var currentROMHash: String = ""
+    private var currentPlatform: Platform?
+    private var currentGameTitle: String = ""
     
     private var frameWidth = 160
     private var frameHeight = 144
@@ -43,7 +48,7 @@ class GamePlayViewModel: ObservableObject {
         1.0 / 60.0
     }
 
-    func startEmulation(romPath: String, platform: Platform) {
+    func startEmulation(romPath: String, platform: Platform, gameTitle: String? = nil, romHash: String? = nil) {
         if emulatorSession != nil || metalRenderer != nil || isRunning {
             stopEmulation()
         }
@@ -51,6 +56,9 @@ class GamePlayViewModel: ObservableObject {
         do {
             let core = try EmulatorCoreFactory.createCore(for: platform)
             activeCore = core
+            currentPlatform = platform
+            currentGameTitle = gameTitle ?? ""
+            currentROMHash = romHash ?? deriveROMHash(from: romPath)
             
             switch platform {
             case .GB, .GBC:
@@ -123,6 +131,8 @@ class GamePlayViewModel: ObservableObject {
             audioEngine?.setVolume(1.0)
 
             emulatorSession?.start()
+            autoLoadGameSave()
+            refreshSaveStateDebugLine()
 
             isRunning = true
             isPaused = false
@@ -145,6 +155,7 @@ class GamePlayViewModel: ObservableObject {
         defer { isStoppingEmulation = false }
 
         autoreleasepool {
+            autoSaveGameProgress()
             cancelPendingTouchReleases()
             releaseAllTouchButtons()
 
@@ -164,6 +175,9 @@ class GamePlayViewModel: ObservableObject {
             audioEngine = nil
             inputBus = nil
             activeCore = nil
+            currentPlatform = nil
+            currentROMHash = ""
+            currentGameTitle = ""
         }
         
         isRunning = false
@@ -191,23 +205,22 @@ class GamePlayViewModel: ObservableObject {
             statusMessage = "No active session"
             return
         }
+        guard !currentROMHash.isEmpty else {
+            statusMessage = "Save failed: missing ROM hash"
+            return
+        }
         
         Task {
             do {
-                let data = try await session.saveState(to: 0)
-                let metadata = SaveStateMetadata(
-                    slot: 0,
-                    romHash: "",
-                    platform: "",
-                    createdAt: Date(),
-                    gameTitle: "",
-                    emulatorVersion: "1.0",
-                    screenshotData: nil
-                )
+                let data = try session.saveState(to: 0)
+                let metadata = makeMetadata(slot: 0)
                 try await SaveStateStorage.shared.persist(data: data, metadata: metadata, screenshotData: nil)
-                statusMessage = "State saved"
+                let (verifyData, _, _) = try SaveStateStorage.shared.load(slot: 0, romHash: currentROMHash)
+                statusMessage = "State saved (\(verifyData.count) bytes)"
+                refreshSaveStateDebugLine()
             } catch {
-                statusMessage = "Save failed: \(error.localizedDescription)"
+                NSLog("[QuickSave] failed: %@", error.localizedDescription)
+                statusMessage = "Save failed: \(detailedErrorMessage(error))"
             }
         }
     }
@@ -217,14 +230,20 @@ class GamePlayViewModel: ObservableObject {
             statusMessage = "No active session"
             return
         }
+        guard !currentROMHash.isEmpty else {
+            statusMessage = "Load failed: missing ROM hash"
+            return
+        }
         
         Task {
             do {
-                let (data, _, _) = try SaveStateStorage.shared.load(slot: 0)
+                let (data, _, _) = try SaveStateStorage.shared.load(slot: 0, romHash: currentROMHash)
                 try session.loadState(from: data)
                 statusMessage = "State loaded"
+                refreshSaveStateDebugLine()
             } catch {
-                statusMessage = "Load failed: \(error.localizedDescription)"
+                NSLog("[QuickLoad] failed: %@", error.localizedDescription)
+                statusMessage = "Load failed: \(detailedErrorMessage(error))"
             }
         }
     }
@@ -237,20 +256,13 @@ class GamePlayViewModel: ObservableObject {
         
         Task {
             do {
-                let data = try await session.saveState(to: slot)
-                let metadata = SaveStateMetadata(
-                    slot: slot,
-                    romHash: "",
-                    platform: "",
-                    createdAt: Date(),
-                    gameTitle: "",
-                    emulatorVersion: "1.0",
-                    screenshotData: nil
-                )
+                let data = try session.saveState(to: slot)
+                let metadata = makeMetadata(slot: slot)
                 try await SaveStateStorage.shared.persist(data: data, metadata: metadata, screenshotData: nil)
-                self.statusMessage = "State saved to slot \(slot)"
+                self.statusMessage = "State saved to slot \(slot) (\(data.count) bytes)"
+                refreshSaveStateDebugLine()
             } catch {
-                statusMessage = "Save failed: \(error.localizedDescription)"
+                statusMessage = "Save failed: \(detailedErrorMessage(error))"
             }
         }
     }
@@ -263,13 +275,22 @@ class GamePlayViewModel: ObservableObject {
         
         Task {
             do {
-                let (data, _, _) = try SaveStateStorage.shared.load(slot: slot)
+                let (data, _, _) = try SaveStateStorage.shared.load(slot: slot, romHash: currentROMHash)
                 try session.loadState(from: data)
                 statusMessage = "State loaded from slot \(slot)"
+                refreshSaveStateDebugLine()
             } catch {
-                statusMessage = "Load failed: \(error.localizedDescription)"
+                statusMessage = "Load failed: \(detailedErrorMessage(error))"
             }
         }
+    }
+
+    func saveGameProgress() {
+        saveState(slot: Self.gameSaveSlot)
+    }
+
+    func loadGameProgress() {
+        loadState(slot: Self.gameSaveSlot)
     }
 
     func handleButtonPress(_ button: EmulatorButton, pressed: Bool) {
@@ -340,6 +361,71 @@ class GamePlayViewModel: ObservableObject {
         case .dpadRight: return 14
         case .screenshot: return -1
         }
+    }
+
+    private func deriveROMHash(from romPath: String) -> String {
+        let filename = URL(fileURLWithPath: romPath).lastPathComponent
+        let hash = filename.split(separator: ".").first.map(String.init) ?? ""
+        return hash.lowercased()
+    }
+
+    private func makeMetadata(slot: Int) -> SaveStateMetadata {
+        SaveStateMetadata(
+            slot: slot,
+            romHash: currentROMHash,
+            platform: currentPlatform?.rawValue ?? "",
+            createdAt: Date(),
+            gameTitle: currentGameTitle,
+            emulatorVersion: "1.0",
+            screenshotData: nil
+        )
+    }
+
+    private func autoLoadGameSave() {
+        guard let session = emulatorSession, !currentROMHash.isEmpty else { return }
+        do {
+            let (data, _, _) = try SaveStateStorage.shared.load(slot: Self.gameSaveSlot, romHash: currentROMHash)
+            try session.loadState(from: data)
+            statusMessage = "Game save loaded"
+            refreshSaveStateDebugLine()
+        } catch {
+            // No existing game save is expected on first launch.
+            refreshSaveStateDebugLine()
+        }
+    }
+
+    private func autoSaveGameProgress() {
+        guard let session = emulatorSession, !currentROMHash.isEmpty else { return }
+        do {
+            let data = try session.saveState(to: Self.gameSaveSlot)
+            let metadata = makeMetadata(slot: Self.gameSaveSlot)
+            Task { @MainActor in
+                try? await SaveStateStorage.shared.persist(data: data, metadata: metadata, screenshotData: nil)
+                refreshSaveStateDebugLine()
+            }
+        } catch {
+            // Best-effort autosave on exit.
+        }
+    }
+
+    private func refreshSaveStateDebugLine() {
+        guard !currentROMHash.isEmpty else {
+            saveStateDebugLine = ""
+            return
+        }
+        saveStateDebugLine = SaveStateStorage.shared.debugSummary(romHash: currentROMHash)
+    }
+
+    private func detailedErrorMessage(_ error: Error) -> String {
+        let nsError = error as NSError
+        if let reason = nsError.localizedFailureReason, !reason.isEmpty {
+            return reason
+        }
+        if !nsError.localizedDescription.isEmpty,
+           nsError.localizedDescription != "The operation couldn’t be completed." {
+            return nsError.localizedDescription
+        }
+        return "\(nsError.domain) (\(nsError.code))"
     }
 
     private func mapButtonToInputType(_ button: EmulatorButton) -> ControllerButton {

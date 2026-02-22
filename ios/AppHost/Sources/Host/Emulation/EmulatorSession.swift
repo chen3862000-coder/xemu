@@ -171,12 +171,12 @@ final class EmulatorSession: ObservableObject {
         }
     }
     
-    func saveState(to slot: Int) async throws -> Data {
+    func saveState(to slot: Int) throws -> Data {
         guard let core = core else {
             throw EmulatorSessionError.noCoreLoaded
         }
         
-        guard let data = try core.saveState() else {
+        guard let data = core.saveState() else {
             throw EmulatorSessionError.saveStateFailed
         }
         

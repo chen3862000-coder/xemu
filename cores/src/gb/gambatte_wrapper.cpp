@@ -196,8 +196,11 @@ public:
 #endif
 
     bool saveState(uint8_t* buffer, size_t size) {
-        if (!romLoaded_ || !buffer || size < SAVE_STATE_SIZE) return false;
+        if (!romLoaded_ || !buffer) return false;
 #ifdef XEMU_USE_REAL_CORES
+        if (!gambatte_) return false;
+        const size_t needed = gambatte_->stateSize();
+        if (needed == 0 || size < needed) return false;
         gambatte_->saveState(buffer);
         return true;
 #else
@@ -206,8 +209,11 @@ public:
     }
 
     bool loadState(const uint8_t* buffer, size_t size) {
-        if (!romLoaded_ || !buffer || size == 0) return false;
+        if (!romLoaded_ || !buffer) return false;
 #ifdef XEMU_USE_REAL_CORES
+        if (!gambatte_) return false;
+        const size_t needed = gambatte_->stateSize();
+        if (needed == 0 || size < needed) return false;
         gambatte_->loadState(buffer);
         return true;
 #else

@@ -62,3 +62,16 @@ Last updated: 2026-02-21
 - `cores/src/gba/mgba_wrapper.cpp` now uses real mGBA `mCore` APIs (`GBACoreCreate`, `loadROM`, `runFrame`, `setKeys`, `saveState`, `loadState`) with VFS memory-backed ROM loading.
 - `cores/src/api/gba_api.cpp` now exports dynamic sample-rate metadata from wrapper state.
 - `cores/build-ios.sh` now merges `libmgba.a` into `libxemu_cores.a` before XCFramework creation so downstream iOS linking resolves mGBA symbols.
+
+## Save System Plan (2026-02-22)
+- [x] 1) Audit current quick save/load and in-game save wiring in view model, session, storage, and core wrappers.
+- [x] 2) Fix save-state persistence to ensure both compressed payload and metadata are written/read consistently.
+- [x] 3) Associate save states with ROM checksum/platform so quick load resolves the correct state.
+- [x] 4) Validate GB/GBC/GBA core save/load state paths and normalize error handling.
+- [x] 5) Implement in-game progress save/load via dedicated game-save slot and automatic load-on-start / save-on-exit flow.
+- [x] 6) Add clear user-facing save/load status messages and run end-to-end verification.
+
+### Save System Notes
+- `SaveStateStorage.persist` now upserts by `(slot, romHash)`, writes compressed `payload.bin` + `metadata.json`, and associates CoreData `SaveState.rom` relationship.
+- `SaveStateStorage.load(slot:romHash:)` now loads ROM-scoped slot data with disk-first and CoreData fallback, then decompresses payload.
+- `GamePlayViewModel` now stores ROM hash/platform/title context and writes real metadata for quick/manual slot saves.

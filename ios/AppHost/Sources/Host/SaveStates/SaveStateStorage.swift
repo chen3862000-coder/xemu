@@ -15,6 +15,7 @@ struct SaveStateMetadata: Codable {
 
 @MainActor
 final class SaveStateStorage {
+    private static let saveLogEnabled = true
     enum StorageError: Error {
         case metadataEncodingFailed
         case metadataDecodingFailed
@@ -23,6 +24,13 @@ final class SaveStateStorage {
         case screenshotCaptureFailed
         case coreDataError(Error)
         case invalidSlot
+    }
+
+    private static func normalize(_ error: Error) -> StorageError {
+        if let storageError = error as? StorageError {
+            return storageError
+        }
+        return .coreDataError(error)
     }
 
     static let shared = SaveStateStorage()
@@ -46,38 +54,109 @@ final class SaveStateStorage {
         guard metadata.slot >= 0 && metadata.slot < Self.maxSlots else {
             throw StorageError.invalidSlot
         }
-        
+
+        let compressed = try compress(data: data)
         let context = viewContext
-        let saveState = SaveState(context: context)
+
+        let saveState = try fetchOrCreateSaveState(slot: metadata.slot, romHash: metadata.romHash, context: context)
         saveState.slotIndex = Int16(metadata.slot)
         saveState.createdAt = metadata.createdAt
         saveState.timestamp = metadata.createdAt
-        saveState.data = try compress(data: data)
+        saveState.data = compressed
         saveState.screenshotData = screenshotData
         saveState.title = metadata.gameTitle
+        saveState.rom = try fetchROM(checksum: metadata.romHash, context: context)
         
-        try context.save()
-        
-        let slotDirectory = directory.appendingPathComponent(String(metadata.slot), isDirectory: true)
+        do {
+            try context.save()
+        } catch {
+            throw Self.normalize(error)
+        }
+
+        let slotDirectory = slotDirectoryURL(slot: metadata.slot, romHash: metadata.romHash)
         try FileManager.default.createDirectory(at: slotDirectory, withIntermediateDirectories: true)
-        
+
+        let payloadURL = slotDirectory.appendingPathComponent("payload.bin")
         let metadataURL = slotDirectory.appendingPathComponent("metadata.json")
         let metadataData = try encoder.encode(metadata)
+        try compressed.write(to: payloadURL, options: .atomic)
         try metadataData.write(to: metadataURL, options: .atomic)
+
+        let screenshotURL = slotDirectory.appendingPathComponent("screenshot.jpg")
+        if let screenshotData {
+            try screenshotData.write(to: screenshotURL, options: .atomic)
+        } else if FileManager.default.fileExists(atPath: screenshotURL.path) {
+            try FileManager.default.removeItem(at: screenshotURL)
+        }
+
+        log("persist slot=\(metadata.slot) rom=\(metadata.romHash) raw=\(data.count) compressed=\(compressed.count) path=\(slotDirectory.path)")
     }
 
-    func load(slot: Int) throws -> (Data, SaveStateMetadata, Data?) {
+    func load(slot: Int, romHash: String? = nil) throws -> (Data, SaveStateMetadata, Data?) {
         guard slot >= 0 && slot < Self.maxSlots else {
             throw StorageError.invalidSlot
         }
-        
-        let slotDirectory = directory.appendingPathComponent(String(slot), isDirectory: true)
+
+        if let romHash {
+            let slotDirectory = slotDirectoryURL(slot: slot, romHash: romHash)
+            if let result = try loadFromDisk(slotDirectory: slotDirectory) {
+                log("load slot=\(slot) rom=\(romHash) source=disk payload=\(result.0.count)")
+                return result
+            }
+        }
+
+        let legacyDirectory = directory.appendingPathComponent(String(slot), isDirectory: true)
+        if let result = try loadFromDisk(slotDirectory: legacyDirectory) {
+            log("load slot=\(slot) rom=\(romHash ?? "") source=legacy-disk payload=\(result.0.count)")
+            return result
+        }
+
+        if let saveState = try fetchSaveState(slot: slot, romHash: romHash, context: viewContext),
+           let compressedData = saveState.data {
+            let decompressed = try decompress(data: compressedData)
+            let inferredHash = romHash ?? saveState.rom?.checksum ?? ""
+            let metadata = SaveStateMetadata(
+                slot: slot,
+                romHash: inferredHash,
+                platform: saveState.rom?.system ?? "",
+                createdAt: saveState.timestamp,
+                gameTitle: saveState.title ?? saveState.rom?.title ?? "Unknown Game",
+                emulatorVersion: "1.0.0",
+                screenshotData: saveState.screenshotData
+            )
+            log("load slot=\(slot) rom=\(romHash ?? "") source=coredata payload=\(decompressed.count)")
+            return (decompressed, metadata, saveState.screenshotData)
+        }
+
+        throw StorageError.dataNotFound
+    }
+
+    func debugSummary(romHash: String) -> String {
+        let quickDir = slotDirectoryURL(slot: 0, romHash: romHash)
+        let gameDir = slotDirectoryURL(slot: 9, romHash: romHash)
+        let quickExists = FileManager.default.fileExists(atPath: quickDir.appendingPathComponent("payload.bin").path)
+        let gameExists = FileManager.default.fileExists(atPath: gameDir.appendingPathComponent("payload.bin").path)
+
+        let quickTime = (try? Data(contentsOf: quickDir.appendingPathComponent("metadata.json"))).flatMap {
+            try? decoder.decode(SaveStateMetadata.self, from: $0).createdAt
+        }
+        let gameTime = (try? Data(contentsOf: gameDir.appendingPathComponent("metadata.json"))).flatMap {
+            try? decoder.decode(SaveStateMetadata.self, from: $0).createdAt
+        }
+
+        let formatter = ISO8601DateFormatter()
+        let quickText = quickTime.map { formatter.string(from: $0) } ?? "-"
+        let gameText = gameTime.map { formatter.string(from: $0) } ?? "-"
+        return "Quick[\(quickExists ? "OK" : "-")]@\(quickText)  Game[\(gameExists ? "OK" : "-")]@\(gameText)"
+    }
+
+    private func loadFromDisk(slotDirectory: URL) throws -> (Data, SaveStateMetadata, Data?)? {
         let binaryURL = slotDirectory.appendingPathComponent("payload.bin")
         let metadataURL = slotDirectory.appendingPathComponent("metadata.json")
         let screenshotURL = slotDirectory.appendingPathComponent("screenshot.jpg")
 
         guard FileManager.default.fileExists(atPath: binaryURL.path) else {
-            throw StorageError.dataNotFound
+            return nil
         }
 
         let metadataData = try Data(contentsOf: metadataURL)
@@ -100,37 +179,37 @@ final class SaveStateStorage {
     }
 
     func list(for romChecksum: String) async throws -> [SaveState] {
-        let allStates = try list()
-        return allStates.filter { $0.rom?.checksum == romChecksum }
+        let request: NSFetchRequest<SaveState> = SaveState.fetchRequest()
+        request.predicate = NSPredicate(format: "rom.checksum == %@", romChecksum)
+        request.sortDescriptors = [NSSortDescriptor(keyPath: \SaveState.timestamp, ascending: false)]
+        return try viewContext.fetch(request)
     }
 
     func delete(saveState: SaveState) async throws {
         viewContext.delete(saveState)
         try viewContext.save()
         
-        let slotDirectory = directory.appendingPathComponent(String(saveState.slotIndex), isDirectory: true)
-        if FileManager.default.fileExists(atPath: slotDirectory.path) {
-            try FileManager.default.removeItem(at: slotDirectory)
+        if let romHash = saveState.rom?.checksum {
+            let slotDirectory = slotDirectoryURL(slot: Int(saveState.slotIndex), romHash: romHash)
+            if FileManager.default.fileExists(atPath: slotDirectory.path) {
+                try FileManager.default.removeItem(at: slotDirectory)
+            }
+        } else {
+            let legacyDirectory = directory.appendingPathComponent(String(saveState.slotIndex), isDirectory: true)
+            if FileManager.default.fileExists(atPath: legacyDirectory.path) {
+                try FileManager.default.removeItem(at: legacyDirectory)
+            }
         }
     }
 
     func capture(for rom: ROMLibraryEntry, slot: Int, screenshotData: Data? = nil) async throws {
-        guard let romChecksum = rom.checksum else {
-            throw StorageError.coreDataError(NSError(domain: "SaveStateStorage", code: -1, userInfo: [NSLocalizedDescriptionKey: "ROM checksum is required"]))
-        }
-        
-        let metadata = SaveStateMetadata(
-            slot: slot,
-            romHash: romChecksum,
-            platform: rom.system ?? "",
-            createdAt: Date(),
-            gameTitle: rom.title ?? "Unknown Game",
-            emulatorVersion: "1.0.0",
-            screenshotData: screenshotData
+        throw StorageError.coreDataError(
+            NSError(
+                domain: "SaveStateStorage",
+                code: -2,
+                userInfo: [NSLocalizedDescriptionKey: "Direct capture requires active emulator session state payload"]
+            )
         )
-        
-        let emulatorState = Data()
-        try await persist(data: emulatorState, metadata: metadata, screenshotData: screenshotData)
     }
 
     func load(saveState: SaveState) async throws {
@@ -159,5 +238,52 @@ final class SaveStateStorage {
 
     private func decompress(data: Data) throws -> Data {
         return try (data as NSData).decompressed(using: .lzfse) as Data
+    }
+
+    private func slotDirectoryURL(slot: Int, romHash: String) -> URL {
+        directory
+            .appendingPathComponent(romHash, isDirectory: true)
+            .appendingPathComponent(String(slot), isDirectory: true)
+    }
+
+    private func fetchROM(checksum: String, context: NSManagedObjectContext) throws -> ROMLibraryEntry? {
+        guard !checksum.isEmpty else { return nil }
+        let request: NSFetchRequest<ROMLibraryEntry> = ROMLibraryEntry.fetchRequest()
+        request.predicate = NSPredicate(format: "checksum == %@", checksum)
+        request.fetchLimit = 1
+        return try context.fetch(request).first
+    }
+
+    private func fetchSaveState(slot: Int, romHash: String?, context: NSManagedObjectContext) throws -> SaveState? {
+        let request: NSFetchRequest<SaveState> = SaveState.fetchRequest()
+        if let romHash, !romHash.isEmpty {
+            request.predicate = NSPredicate(format: "slotIndex == %d AND rom.checksum == %@", slot, romHash)
+        } else {
+            request.predicate = NSPredicate(format: "slotIndex == %d", slot)
+        }
+        request.sortDescriptors = [NSSortDescriptor(keyPath: \SaveState.timestamp, ascending: false)]
+        request.fetchLimit = 1
+        do {
+            return try context.fetch(request).first
+        } catch {
+            throw Self.normalize(error)
+        }
+    }
+
+    private func fetchOrCreateSaveState(slot: Int, romHash: String, context: NSManagedObjectContext) throws -> SaveState {
+        if let existing = try fetchSaveState(slot: slot, romHash: romHash, context: context) {
+            if existing.value(forKey: "id") == nil {
+                existing.setValue(UUID(), forKey: "id")
+            }
+            return existing
+        }
+        let state = SaveState(context: context)
+        state.setValue(UUID(), forKey: "id")
+        return state
+    }
+
+    private func log(_ message: String) {
+        guard Self.saveLogEnabled else { return }
+        NSLog("[SaveStateStorage] %@", message)
     }
 }
