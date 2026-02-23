@@ -168,7 +168,7 @@ export default function PlayedGames() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.4, delay: index * 0.05 }}
               whileHover={{ scale: 1.03, y: -4 }}
-              onClick={() => navigate(`/game/${game.gameId}`)}
+              onClick={() => navigate(`/play/${game.console}/${game.gameId}`)}
               className="group relative cursor-pointer rounded-xl overflow-hidden bg-card border border-border/50"
             >
               {/* Game image */}

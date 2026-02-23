@@ -41,6 +41,10 @@ const char* xemu_error_string(xemu_error_t error);
 #define XEMU_BUTTON_L      0x100
 #define XEMU_BUTTON_R      0x200
 
+/* NDS extended buttons */
+#define XEMU_BUTTON_X      0x400
+#define XEMU_BUTTON_Y      0x800
+
 /* Video buffer info */
 typedef struct {
     uint8_t* data;          /* RGBA8888 format */
@@ -132,6 +136,63 @@ void xemu_gba_set_input(xemu_gba_handle_t handle, uint32_t buttons);
 size_t xemu_gba_get_save_state_size(xemu_gba_handle_t handle);
 xemu_error_t xemu_gba_save_state(xemu_gba_handle_t handle, xemu_save_state_t* state);
 xemu_error_t xemu_gba_load_state(xemu_gba_handle_t handle, const xemu_save_state_t* state);
+
+/* ============================================================================
+ * Nintendo DS API (skeleton)
+ * ============================================================================
+ *
+ * Initial implementation is a stub scaffold to establish a stable ABI for the
+ * future melonDS/libretro integration. ROM loading/execution may return
+ * XEMU_ERROR_UNSUPPORTED_FORMAT until the core backend is wired.
+ * ============================================================================ */
+
+typedef struct xemu_nds_s* xemu_nds_handle_t;
+
+typedef enum {
+    XEMU_NDS_SCREEN_LAYOUT_STACKED = 0,
+    XEMU_NDS_SCREEN_LAYOUT_SIDE_BY_SIDE = 1,
+    XEMU_NDS_SCREEN_LAYOUT_TOP_ONLY = 2,
+    XEMU_NDS_SCREEN_LAYOUT_BOTTOM_ONLY = 3
+} xemu_nds_screen_layout_t;
+
+typedef struct {
+    int x;              /* DS touchscreen X (0..255) */
+    int y;              /* DS touchscreen Y (0..191) */
+    int is_pressed;     /* 0 or 1 */
+} xemu_nds_touch_state_t;
+
+/* Create/destroy */
+xemu_nds_handle_t xemu_nds_create(void);
+void xemu_nds_destroy(xemu_nds_handle_t handle);
+
+/* ROM loading */
+xemu_error_t xemu_nds_load_rom(xemu_nds_handle_t handle, const char* filename,
+                               const uint8_t* data, size_t size);
+xemu_error_t xemu_nds_unload_rom(xemu_nds_handle_t handle);
+int xemu_nds_is_rom_loaded(xemu_nds_handle_t handle);
+
+/* Execution */
+xemu_error_t xemu_nds_run_frame(xemu_nds_handle_t handle);
+xemu_error_t xemu_nds_reset(xemu_nds_handle_t handle);
+
+/* Video (composited dual-screen output, RGBA8888) */
+xemu_video_buffer_t xemu_nds_get_video_buffer(xemu_nds_handle_t handle);
+
+/* Audio (44100Hz stereo target; may be empty in stub) */
+xemu_audio_buffer_t xemu_nds_get_audio_buffer(xemu_nds_handle_t handle);
+
+/* Input */
+void xemu_nds_set_input(xemu_nds_handle_t handle, uint32_t buttons);
+void xemu_nds_set_touch(xemu_nds_handle_t handle, xemu_nds_touch_state_t touch);
+
+/* Save states */
+size_t xemu_nds_get_save_state_size(xemu_nds_handle_t handle);
+xemu_error_t xemu_nds_save_state(xemu_nds_handle_t handle, xemu_save_state_t* state);
+xemu_error_t xemu_nds_load_state(xemu_nds_handle_t handle, const xemu_save_state_t* state);
+
+/* DS-specific options */
+xemu_error_t xemu_nds_set_screen_layout(xemu_nds_handle_t handle, xemu_nds_screen_layout_t layout);
+xemu_nds_screen_layout_t xemu_nds_get_screen_layout(xemu_nds_handle_t handle);
 
 #ifdef __cplusplus
 }

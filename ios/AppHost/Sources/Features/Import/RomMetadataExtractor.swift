@@ -114,7 +114,8 @@ struct RomMetadataExtractor {
         
         let header = Array(data.prefix(512))
         let titleBytes = Array(header[0x00..<0x0C])
-        let title = String(bytes: titleBytes, encoding: .utf16LittleEndian)?
+        let title = String(bytes: titleBytes, encoding: .ascii)?
+            .replacingOccurrences(of: "\0", with: "")
             .trimmingCharacters(in: .whitespacesAndNewlines) ?? "Unknown NDS ROM"
         
         let regionCode = header[0x1F]

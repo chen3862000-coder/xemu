@@ -46,11 +46,13 @@
 		84C8EA8C8C0FD576BBCE9084 /* CompatibilityDiagnosticsSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 15C94619A252760EF9BF7DCB /* CompatibilityDiagnosticsSheet.swift */; };
 		85226034F5C6C1F5A20A8961 /* StableSessionTracker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 343B1CDBFFD8BCEE6BA08EA4 /* StableSessionTracker.swift */; };
 		853E53F67096EEC95A90F8ED /* AzureApiStub.swift in Sources */ = {isa = PBXBuildFile; fileRef = B7590148A026C7627A4511DC /* AzureApiStub.swift */; };
+		8675EBF87782893B77722E97 /* libresolv.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = E6B83C8DF59433DEA55727D3 /* libresolv.tbd */; };
 		897F892CA9E3F653E17AAB39 /* ControllerOverlayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D24F51E4490BD43AE3AE7DE1 /* ControllerOverlayView.swift */; };
 		8A942AB5E6436CC4D8394EB4 /* Input.swift in Sources */ = {isa = PBXBuildFile; fileRef = F60F2916ECBF4B4BEF92004F /* Input.swift */; };
 		8B5DAC81EFB96AC46E0AAE32 /* RomImportCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = D9B06594522E3AB0385931D9 /* RomImportCoordinator.swift */; };
 		928F0540A9B1BC37F7503C6D /* Alert.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6A31AE7D5A0BC2527894EBA9 /* Alert.swift */; };
 		939EAF27F1F84695D893335D /* GBACore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 153169A0519B5D36DA5ED8C1 /* GBACore.swift */; };
+		96C4F6B4D6EED28E902A4FD1 /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = B77DB84F7D6B83B354E369C2 /* Theme.swift */; };
 		97664353BE2BFE6567CBE4A6 /* SaveState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3CEBD6F5C153583F9BAD9C3A /* SaveState.swift */; };
 		99C42C50A5FFA9103329348A /* NDSCore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 21C64540A3D2C00BE0D3200C /* NDSCore.swift */; };
 		9C8E274F1B14843796776B82 /* CompatibilityDataStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1E096A4EA6FE5D4FBF1FD46B /* CompatibilityDataStore.swift */; };
@@ -155,6 +157,7 @@
 		AD2BA596028329B64FC9E98D /* OfflineGraceManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfflineGraceManager.swift; sourceTree = "<group>"; };
 		B65C2B2E7E71454EF6AA5F9B /* module.modulemap */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.module-map"; path = module.modulemap; sourceTree = "<group>"; };
 		B7590148A026C7627A4511DC /* AzureApiStub.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AzureApiStub.swift; sourceTree = "<group>"; };
+		B77DB84F7D6B83B354E369C2 /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
 		BA7B69F5DDE2C4A434A51CB6 /* Dialog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Dialog.swift; sourceTree = "<group>"; };
 		C3216A674D49C406C9C7954E /* EmulatorButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmulatorButton.swift; sourceTree = "<group>"; };
 		C626FB0CA4B289019CD0CF84 /* Toggle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Toggle.swift; sourceTree = "<group>"; };
@@ -167,6 +170,7 @@
 		D7A97E34F6714D55B2ED6121 /* Button.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Button.swift; sourceTree = "<group>"; };
 		D9B06594522E3AB0385931D9 /* RomImportCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RomImportCoordinator.swift; sourceTree = "<group>"; };
 		E34A757D05BE16111E361A97 /* MetalRenderer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MetalRenderer.swift; sourceTree = "<group>"; };
+		E6B83C8DF59433DEA55727D3 /* libresolv.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = libresolv.tbd; path = usr/lib/libresolv.tbd; sourceTree = SDKROOT; };
 		E6C80850866DE3CBC4D7B82A /* GBCore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GBCore.swift; sourceTree = "<group>"; };
 		F60F2916ECBF4B4BEF92004F /* Input.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Input.swift; sourceTree = "<group>"; };
 		F79E3AF9AFB00FC5BF241472 /* Misc.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Misc.swift; sourceTree = "<group>"; };
@@ -181,6 +185,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				ADE244CA47CA49B7DE4A4969 /* libc++.tbd in Frameworks */,
+				8675EBF87782893B77722E97 /* libresolv.tbd in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -211,6 +216,7 @@
 			isa = PBXGroup;
 			children = (
 				28A32FA35950420C5322D737 /* libc++.tbd */,
+				E6B83C8DF59433DEA55727D3 /* libresolv.tbd */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";
@@ -424,6 +430,7 @@
 				F79E3AF9AFB00FC5BF241472 /* Misc.swift */,
 				6CC9E8AC6255876C10AF7518 /* Progress.swift */,
 				FA3D0A66ECED6D839076F83A /* Tabs.swift */,
+				B77DB84F7D6B83B354E369C2 /* Theme.swift */,
 				C626FB0CA4B289019CD0CF84 /* Toggle.swift */,
 			);
 			path = UI;
@@ -691,6 +698,7 @@
 				85226034F5C6C1F5A20A8961 /* StableSessionTracker.swift in Sources */,
 				0EF3FEF30C3267D698ED705B /* StableSystemsCoordinator.swift in Sources */,
 				B742F26DA2C470D3CB810062 /* Tabs.swift in Sources */,
+				96C4F6B4D6EED28E902A4FD1 /* Theme.swift in Sources */,
 				055C08E8A307D8622BD26E7B /* Toggle.swift in Sources */,
 				1CAE37E11D321DFE401906F5 /* TouchControlPad.swift in Sources */,
 				7F786F32B7B2D923A9CD71CF /* TouchControlsView.swift in Sources */,

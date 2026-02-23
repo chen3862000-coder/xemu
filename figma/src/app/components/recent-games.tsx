@@ -56,7 +56,7 @@ export function RecentGames() {
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.4, delay: index * 0.1 }}
             whileHover={{ scale: 1.03, y: -4 }}
-            onClick={() => navigate(`/game/${game.gameId}`)}
+            onClick={() => navigate(`/play/${game.console}/${game.gameId}`)}
             className="group relative cursor-pointer rounded-xl overflow-hidden bg-card border border-border/50 min-w-[160px] flex-shrink-0"
           >
             {/* Game image */}

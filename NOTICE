@@ -1,0 +1,9 @@
+Xemu
+Copyright (C) 2026 Xemu contributors
+
+This project includes and may in future distribute third-party open-source
+software components. See `THIRD_PARTY_NOTICES.md` for attribution, license
+notices, and source-code availability information.
+
+Unless otherwise noted in `THIRD_PARTY_NOTICES.md`, the project source is
+licensed under the terms in `LICENSE`.

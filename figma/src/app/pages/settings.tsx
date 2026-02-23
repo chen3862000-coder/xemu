@@ -1,8 +1,9 @@
 import { motion } from "motion/react";
 import { SettingsHeader } from "../components/settings-header";
 import { SettingsItem } from "../components/settings-item";
-import { Crown, Share2, MessageSquare, HelpCircle } from "lucide-react";
+import { Crown, Share2, MessageSquare, HelpCircle, Moon, Sun } from "lucide-react";
 import { AppIcon } from "../components/app-icon";
+import { useTheme } from "../contexts/theme-context";
 
 const settingsOptions = [
   {
@@ -36,6 +37,8 @@ const settingsOptions = [
 ];
 
 export default function Settings() {
+  const { theme, toggleTheme } = useTheme();
+
   return (
     <div className="min-h-full bg-background">
       {/* Animated background effect */}
@@ -102,6 +105,67 @@ export default function Settings() {
                 Free Plan
               </span>
             </div>
+          </div>
+        </motion.div>
+
+        {/* Theme toggle card */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.3 }}
+          className="bg-card border border-border/50 rounded-xl p-4"
+        >
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                theme === "light" 
+                  ? "bg-amber-500/20" 
+                  : "bg-indigo-500/20"
+              }`}>
+                {theme === "light" ? (
+                  <Sun className="w-5 h-5 text-amber-500" />
+                ) : (
+                  <Moon className="w-5 h-5 text-indigo-400" />
+                )}
+              </div>
+              <div>
+                <h3 className="text-sm font-semibold text-foreground">
+                  Appearance
+                </h3>
+                <p className="text-xs text-muted-foreground">
+                  {theme === "light" ? "Light Mode" : "Dark Mode"}
+                </p>
+              </div>
+            </div>
+            
+            {/* Theme toggle button */}
+            <motion.button
+              onClick={toggleTheme}
+              whileTap={{ scale: 0.95 }}
+              className={`relative w-14 h-8 rounded-full transition-colors ${
+                theme === "light"
+                  ? "bg-amber-500"
+                  : "bg-indigo-500"
+              }`}
+            >
+              <motion.div
+                animate={{
+                  x: theme === "light" ? 24 : 2,
+                }}
+                transition={{
+                  type: "spring",
+                  stiffness: 500,
+                  damping: 30,
+                }}
+                className="absolute top-1 w-6 h-6 rounded-full bg-white shadow-lg flex items-center justify-center"
+              >
+                {theme === "light" ? (
+                  <Sun className="w-3 h-3 text-amber-500" />
+                ) : (
+                  <Moon className="w-3 h-3 text-indigo-500" />
+                )}
+              </motion.div>
+            </motion.button>
           </div>
         </motion.div>
 

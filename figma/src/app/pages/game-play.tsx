@@ -9,9 +9,11 @@ import {
   Code,
   ChevronRight,
   Clock,
+  TrendingUp,
 } from "lucide-react";
 import { useNavigate, useParams } from "react-router";
 import { useState } from "react";
+import { isGamePlayed, getPlayedGameData } from "../data/played-games";
 
 interface SaveState {
   id: string;
@@ -27,8 +29,12 @@ export default function GamePlay() {
   const [selectedFps, setSelectedFps] = useState("60");
   const [selectedLanguage, setSelectedLanguage] = useState("English");
 
-  // Mock save states
-  const saveStates: SaveState[] = [
+  // Check if game has been played
+  const hasBeenPlayed = gameId ? isGamePlayed(gameId) : false;
+  const playedData = gameId && hasBeenPlayed ? getPlayedGameData(gameId) : null;
+
+  // Mock save states - only show if game has been played
+  const saveStates: SaveState[] = hasBeenPlayed ? [
     {
       id: "auto",
       name: "Auto Save",
@@ -57,7 +63,7 @@ export default function GamePlay() {
       screenshot: "https://images.unsplash.com/photo-1606144042614-b2417e99c4e3?w=300&h=200&fit=crop",
       progress: "Level 1 - Start",
     },
-  ];
+  ] : [];
 
   const fpsOptions = ["30", "60", "120", "Unlimited"];
   const languageOptions = ["English", "Japanese", "Spanish", "French", "German"];
@@ -147,6 +153,41 @@ export default function GamePlay() {
 
       {/* Main Content */}
       <main className="relative px-4 py-4 space-y-4">
+        {/* Stats Section - Only show for played games */}
+        {hasBeenPlayed && playedData && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4 }}
+            className="bg-card border border-border/50 rounded-xl p-4"
+          >
+            <div className="flex items-center gap-2 mb-3">
+              <TrendingUp className="w-4 h-4 text-primary" />
+              <h2 className="text-sm font-semibold text-foreground">Game Progress</h2>
+            </div>
+            <div className="grid grid-cols-3 gap-3">
+              <div className="text-center">
+                <div className="w-full h-1.5 bg-muted rounded-full mb-2 overflow-hidden">
+                  <div
+                    className="h-full bg-gradient-to-r from-primary to-accent rounded-full"
+                    style={{ width: `${playedData.progress}%` }}
+                  />
+                </div>
+                <p className="text-lg font-bold text-foreground">{playedData.progress}%</p>
+                <p className="text-[10px] text-muted-foreground">Progress</p>
+              </div>
+              <div className="text-center">
+                <p className="text-lg font-bold text-foreground">{playedData.totalPlayTime}</p>
+                <p className="text-[10px] text-muted-foreground">Play Time</p>
+              </div>
+              <div className="text-center">
+                <p className="text-lg font-bold text-foreground">{playedData.lastPlayed}</p>
+                <p className="text-[10px] text-muted-foreground">Last Played</p>
+              </div>
+            </div>
+          </motion.div>
+        )}
+
         {/* Quick Actions */}
         <div className="space-y-2">
           <motion.button
@@ -207,55 +248,69 @@ export default function GamePlay() {
             </span>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            {saveStates.map((state, index) => (
-              <motion.div
-                key={state.id}
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.3, delay: 0.3 + index * 0.05 }}
-                whileHover={{ scale: 1.03, y: -2 }}
-                className="relative group cursor-pointer rounded-xl overflow-hidden bg-card border border-border/50"
-              >
-                {/* State screenshot */}
-                <div className="relative h-20 overflow-hidden">
-                  <img
-                    src={state.screenshot}
-                    alt={state.name}
-                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-background via-background/60 to-transparent" />
-                  
-                  {/* Auto save badge */}
-                  {state.id === "auto" && (
-                    <div className="absolute top-1.5 left-1.5 px-2 py-0.5 rounded-full bg-primary/90 backdrop-blur-sm">
-                      <span className="text-[8px] font-semibold text-primary-foreground">
-                        AUTO
-                      </span>
-                    </div>
-                  )}
-                </div>
+          {saveStates.length > 0 ? (
+            <div className="grid grid-cols-2 gap-3">
+              {saveStates.map((state, index) => (
+                <motion.div
+                  key={state.id}
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ duration: 0.3, delay: 0.3 + index * 0.05 }}
+                  whileHover={{ scale: 1.03, y: -2 }}
+                  className="relative group cursor-pointer rounded-xl overflow-hidden bg-card border border-border/50"
+                >
+                  {/* State screenshot */}
+                  <div className="relative h-20 overflow-hidden">
+                    <img
+                      src={state.screenshot}
+                      alt={state.name}
+                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-background via-background/60 to-transparent" />
+                    
+                    {/* Auto save badge */}
+                    {state.id === "auto" && (
+                      <div className="absolute top-1.5 left-1.5 px-2 py-0.5 rounded-full bg-primary/90 backdrop-blur-sm">
+                        <span className="text-[8px] font-semibold text-primary-foreground">
+                          AUTO
+                        </span>
+                      </div>
+                    )}
+                  </div>
 
-                {/* State info */}
-                <div className="p-2">
-                  <h4 className="text-xs font-semibold text-foreground mb-0.5">
-                    {state.name}
-                  </h4>
-                  <p className="text-[9px] text-muted-foreground mb-1">
-                    {state.timestamp}
-                  </p>
-                  <p className="text-[9px] text-primary truncate">
-                    {state.progress}
-                  </p>
-                </div>
+                  {/* State info */}
+                  <div className="p-2">
+                    <h4 className="text-xs font-semibold text-foreground mb-0.5">
+                      {state.name}
+                    </h4>
+                    <p className="text-[9px] text-muted-foreground mb-1">
+                      {state.timestamp}
+                    </p>
+                    <p className="text-[9px] text-primary truncate">
+                      {state.progress}
+                    </p>
+                  </div>
 
-                {/* Hover overlay */}
-                <div className="absolute inset-0 bg-gradient-to-t from-primary/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
-                  <Play className="w-8 h-8 text-white fill-white" />
-                </div>
-              </motion.div>
-            ))}
-          </div>
+                  {/* Hover overlay */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-primary/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
+                    <Play className="w-8 h-8 text-white fill-white" />
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+          ) : (
+            <div className="bg-card border border-border/50 rounded-xl p-8 text-center">
+              <div className="w-12 h-12 rounded-full bg-muted mx-auto mb-3 flex items-center justify-center">
+                <Save className="w-6 h-6 text-muted-foreground" />
+              </div>
+              <h3 className="text-sm font-semibold text-foreground mb-1">
+                No Save States Yet
+              </h3>
+              <p className="text-xs text-muted-foreground">
+                Save states will appear here once you start playing
+              </p>
+            </div>
+          )}
         </motion.div>
 
         {/* Settings Section */}
