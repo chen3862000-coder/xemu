@@ -213,6 +213,33 @@ The iOS app links `cores/XemuCores.xcframework`, so native source edits do not t
 - Swift 5.10+
 - CMake (for building C++ cores)
 
+## Licensing And Open-Source Compliance (Planned NDS Support)
+
+This repository now includes a project `LICENSE` file with the GNU GPL v3 text in
+preparation for potential Nintendo DS support using a GPL-licensed emulator core
+(for example, `melonDS` via a libretro core integration).
+
+Important:
+- The exact release licensing/compliance approach is still pending final legal review.
+- iOS App Store distribution with GPL components may have additional compatibility risks.
+- Do not assume technical integration alone is sufficient for App Store compliance.
+
+### Project License Files
+
+- `LICENSE` - GNU GPL v3 license text (project root)
+- `COPYING` - compatibility pointer to `LICENSE`
+- `NOTICE` - project notice file
+- `THIRD_PARTY_NOTICES.md` - third-party attribution/compliance tracking
+
+### Before Shipping A Build That Includes GPL Components
+
+1. Confirm the exact upstream core license (`GPL-3.0-only` vs `GPL-3.0-or-later`).
+2. Publish corresponding source for the exact shipped binary (tagged release source).
+3. Fill out `THIRD_PARTY_NOTICES.md` with exact versions/commits and notices.
+4. Preserve upstream copyright and license notices in bundled code.
+5. Add an in-app “Open Source Licenses” / “Source Code” link in Settings/About.
+6. Complete App Store legal/compliance review before submission.
+
 ## Quick Start
 
 ### Prerequisites

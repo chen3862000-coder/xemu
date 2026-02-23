@@ -2,10 +2,14 @@ import Foundation
 import MetalKit
 import Combine
 import GameController
+#if canImport(XemuCores)
+import XemuCores
+#endif
 
 @MainActor
 class GamePlayViewModel: ObservableObject {
-    private static let minimumTouchPressDurationNs: UInt64 = 200_000_000
+    private static let minimumTouchPressDurationNs: UInt64 = 60_000_000
+    private static let minimumDirectionalPressDurationNs: UInt64 = 28_000_000
     private static let gameSaveSlot = 9
     @Published var isRunning = false
     @Published var isPaused = false
@@ -20,6 +24,7 @@ class GamePlayViewModel: ObservableObject {
     private var inputBus: InputBus?
     private var activeCore: EmulatorCore?
     private var pendingReleaseTasks: [EmulatorButton: Task<Void, Never>] = [:]
+    private var touchButtonStates: [EmulatorButton: Bool] = [:]
     private var currentROMHash: String = ""
     private var currentPlatform: Platform?
     private var currentGameTitle: String = ""
@@ -67,9 +72,16 @@ class GamePlayViewModel: ObservableObject {
             case .GBA:
                 frameWidth = 240
                 frameHeight = 160
+            case .NDS:
+                frameWidth = 256
+                frameHeight = 384
             default:
                 frameWidth = 160
                 frameHeight = 144
+            }
+
+            if platform == .NDS, let ndsCore = core as? NDSCore {
+                _ = ndsCore.setScreenLayout(.stacked)
             }
             
             let success = core.loadROM(romPath: romPath)
@@ -92,6 +104,8 @@ class GamePlayViewModel: ObservableObject {
                 textureSize = CGSize(width: 160, height: 144)
             case .GBA:
                 textureSize = CGSize(width: 240, height: 160)
+            case .NDS:
+                textureSize = CGSize(width: 256, height: 384)
             default:
                 textureSize = CGSize(width: 160, height: 144)
             }
@@ -99,10 +113,10 @@ class GamePlayViewModel: ObservableObject {
             switch platform {
             case .GBC:
                 metalRenderer?.setColorAdjustments(
-                    brightness: 1.58,
-                    gamma: 1.42,
-                    contrast: 1.03,
-                    saturation: 1.04
+                    brightness: 2.28,
+                    gamma: 1.86,
+                    contrast: 1.10,
+                    saturation: 1.22
                 )
             case .GB:
                 metalRenderer?.setColorAdjustments(
@@ -294,19 +308,36 @@ class GamePlayViewModel: ObservableObject {
     }
 
     func handleButtonPress(_ button: EmulatorButton, pressed: Bool) {
+        if touchButtonStates[button] == pressed {
+            return
+        }
+
         if pressed {
             pendingReleaseTasks[button]?.cancel()
             pendingReleaseTasks[button] = nil
+            touchButtonStates[button] = true
             sendTouchInput(button, pressed: true)
             return
         }
 
         pendingReleaseTasks[button]?.cancel()
         pendingReleaseTasks[button] = Task { @MainActor [weak self] in
-            try? await Task.sleep(nanoseconds: Self.minimumTouchPressDurationNs)
-            guard let self, !Task.isCancelled else { return }
+            guard let self else { return }
+            let delayNs = self.minimumPressDuration(for: button)
+            try? await Task.sleep(nanoseconds: delayNs)
+            guard !Task.isCancelled else { return }
+            self.touchButtonStates[button] = false
             self.sendTouchInput(button, pressed: false)
             self.pendingReleaseTasks[button] = nil
+        }
+    }
+
+    private func minimumPressDuration(for button: EmulatorButton) -> UInt64 {
+        switch button {
+        case .dpadUp, .dpadDown, .dpadLeft, .dpadRight:
+            return Self.minimumDirectionalPressDurationNs
+        default:
+            return Self.minimumTouchPressDurationNs
         }
     }
 
@@ -340,6 +371,7 @@ class GamePlayViewModel: ObservableObject {
                 core.setInput(inputType, value: 0.0)
             }
         }
+        touchButtonStates.removeAll()
     }
 
     private func mapTouchButtonToInputType(_ button: EmulatorButton) -> Int {
@@ -426,6 +458,44 @@ class GamePlayViewModel: ObservableObject {
             return nsError.localizedDescription
         }
         return "\(nsError.domain) (\(nsError.code))"
+    }
+
+    func setNDSScreenLayout(_ layout: NDSScreenLayout) {
+        guard let ndsCore = activeCore as? NDSCore else { return }
+        guard ndsCore.setScreenLayout(layout) else { return }
+
+        switch layout {
+        case .stacked:
+            frameWidth = 256
+            frameHeight = 384
+        case .sideBySide:
+            frameWidth = 512
+            frameHeight = 192
+        case .topOnly, .bottomOnly:
+            frameWidth = 256
+            frameHeight = 192
+        }
+    }
+
+    func getNDSScreenLayout() -> NDSScreenLayout {
+        guard let ndsCore = activeCore as? NDSCore else { return .stacked }
+        return ndsCore.getScreenLayout()
+    }
+
+    func setNDSTouchNormalized(x: CGFloat, y: CGFloat, pressed: Bool) {
+        guard let ndsCore = activeCore as? NDSCore else { return }
+        let clampedX = max(0, min(1, x))
+        let clampedY = max(0, min(1, y))
+        ndsCore.setStylus(
+            x: Int((clampedX * 255.0).rounded()),
+            y: Int((clampedY * 191.0).rounded()),
+            pressed: pressed
+        )
+    }
+
+    func clearNDSTouch() {
+        guard let ndsCore = activeCore as? NDSCore else { return }
+        ndsCore.clearStylus()
     }
 
     private func mapButtonToInputType(_ button: EmulatorButton) -> ControllerButton {

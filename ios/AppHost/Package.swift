@@ -22,6 +22,7 @@ let package = Package(
             publicHeadersPath: "include",
             linkerSettings: [
                 .linkedLibrary("c++"),
+                .linkedLibrary("resolv"),
             ]
         ),
         
@@ -44,7 +45,8 @@ let package = Package(
                 .define("USE_XEMU_CORES")
             ],
             linkerSettings: [
-                .linkedLibrary("c++")
+                .linkedLibrary("c++"),
+                .linkedLibrary("resolv")
             ]
         ),
         

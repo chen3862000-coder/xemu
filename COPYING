@@ -1,0 +1,4 @@
+This project stores the GNU GPL v3 license text in `LICENSE`.
+
+For convenience and compatibility with common open-source tooling, treat
+`COPYING` and `LICENSE` as referring to the same project license text.

@@ -13,6 +13,11 @@ option(BUILD_SHARED_LIBS "Build shared libraries" ON)
 option(BUILD_STATIC_LIBS "Build static libraries" ON)
 option(BUILD_IOS "Build for iOS" OFF)
 option(USE_REAL_CORES "Build with real Gambatte/mGBA cores" ON)
+option(ENABLE_NDS_LIBRETRO_BACKEND "Enable NDS libretro backend skeleton/build" OFF)
+option(ENABLE_NDS_MELONDS_LIBRETRO_SYMBOLS "Link melonDS libretro retro_* symbols for NDS backend" OFF)
+
+set(NDS_MELONDS_LIBRETRO_STATIC_LIB "" CACHE FILEPATH
+    "Optional path to a prebuilt melonDS DS libretro static library exporting retro_* symbols")
 
 # Export compile commands for IDE support
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
@@ -29,10 +34,30 @@ if(USE_REAL_CORES)
     message(STATUS "Building with REAL emulator cores (Gambatte + mGBA)")
 endif()
 
+if(ENABLE_NDS_LIBRETRO_BACKEND)
+    add_compile_definitions(XEMU_ENABLE_NDS_LIBRETRO_BACKEND)
+    message(STATUS "NDS backend: libretro skeleton ENABLED")
+else()
+    message(STATUS "NDS backend: stub fallback (libretro skeleton disabled)")
+endif()
+
+if(ENABLE_NDS_MELONDS_LIBRETRO_SYMBOLS)
+    add_compile_definitions(XEMU_ENABLE_NDS_MELONDS_LIBRETRO_SYMBOLS)
+    message(STATUS "NDS melonDS libretro symbol binding ENABLED")
+    if(NOT NDS_MELONDS_LIBRETRO_STATIC_LIB)
+        message(WARNING "ENABLE_NDS_MELONDS_LIBRETRO_SYMBOLS is ON but NDS_MELONDS_LIBRETRO_STATIC_LIB is not set. xemu_cores may contain unresolved retro_* symbols until a melonDS libretro archive is linked.")
+    elseif(NOT EXISTS "${NDS_MELONDS_LIBRETRO_STATIC_LIB}")
+        message(WARNING "NDS_MELONDS_LIBRETRO_STATIC_LIB does not exist: ${NDS_MELONDS_LIBRETRO_STATIC_LIB}")
+    else()
+        message(STATUS "NDS melonDS libretro archive: ${NDS_MELONDS_LIBRETRO_STATIC_LIB}")
+    endif()
+endif()
+
 # Source files
 set(XEMU_CORES_SOURCES
     src/api/gb_api.cpp
     src/api/gba_api.cpp
+    src/api/nds_api.cpp
     src/api/error_codes.cpp
 )
 
@@ -53,6 +78,15 @@ set(GBA_SOURCES
     src/gba/mgba_audio.cpp
     src/gba/mgba_input.cpp
     src/gba/mgba_savestate.cpp
+)
+
+# NDS sources (currently stub backend; libretro/melonDS adapter will be added here)
+set(NDS_SOURCES
+    src/nds/nds_backend_factory.cpp
+    src/nds/nds_backend_libretro.cpp
+    src/nds/nds_libretro_core_api.cpp
+    src/nds/nds_melonds_libretro_binding.cpp
+    src/nds/nds_backend_stub.cpp
 )
 
 # Gambatte (Game Boy) source files
@@ -112,7 +146,7 @@ if(USE_REAL_CORES)
 endif()
 
 # All sources
-set(ALL_SOURCES ${XEMU_CORES_SOURCES} ${GB_SOURCES} ${GBA_SOURCES})
+set(ALL_SOURCES ${XEMU_CORES_SOURCES} ${GB_SOURCES} ${GBA_SOURCES} ${NDS_SOURCES})
 if(USE_REAL_CORES)
     list(APPEND ALL_SOURCES ${GAMBATTE_SOURCES})
 endif()
@@ -146,6 +180,9 @@ if(BUILD_SHARED_LIBS)
             ${CMAKE_CURRENT_SOURCE_DIR}/third_party/mgba/src
         )
     endif()
+    if(ENABLE_NDS_MELONDS_LIBRETRO_SYMBOLS AND NDS_MELONDS_LIBRETRO_STATIC_LIB AND EXISTS "${NDS_MELONDS_LIBRETRO_STATIC_LIB}")
+        target_link_libraries(xemu_cores_shared PRIVATE "${NDS_MELONDS_LIBRETRO_STATIC_LIB}")
+    endif()
 endif()
 
 # Static library
@@ -174,6 +211,9 @@ if(BUILD_STATIC_LIBS)
             ${CMAKE_CURRENT_SOURCE_DIR}/third_party/mgba/include
             ${CMAKE_CURRENT_SOURCE_DIR}/third_party/mgba/src
         )
+    endif()
+    if(ENABLE_NDS_MELONDS_LIBRETRO_SYMBOLS AND NDS_MELONDS_LIBRETRO_STATIC_LIB AND EXISTS "${NDS_MELONDS_LIBRETRO_STATIC_LIB}")
+        target_link_libraries(xemu_cores_static PRIVATE "${NDS_MELONDS_LIBRETRO_STATIC_LIB}")
     endif()
 endif()
 

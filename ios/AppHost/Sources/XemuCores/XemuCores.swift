@@ -30,6 +30,7 @@ public enum EmulatorSystemType: Int32 {
     case gameBoy = 0
     case gameBoyColor = 1
     case gameBoyAdvance = 2
+    case nintendoDS = 3
 }
 
 public struct VideoBufferInfo {
@@ -68,6 +69,13 @@ public struct ROMInfo {
         self.title = title
         self.checksum = checksum
     }
+}
+
+public enum NDSScreenLayout: Int32, Sendable {
+    case stacked = 0
+    case sideBySide = 1
+    case topOnly = 2
+    case bottomOnly = 3
 }
 
 public protocol CEmulatorCore {
@@ -121,6 +129,8 @@ public class XemuCores {
             return GBCCoreWrapper(useNative: usingRealCores)
         case .gameBoyAdvance:
             return GBACoreWrapper(useNative: usingRealCores)
+        case .nintendoDS:
+            return NDSCoreWrapper(useNative: usingRealCores)
         }
     }
 }
@@ -605,5 +615,314 @@ public class GBACoreWrapper: CEmulatorCore {
         }
         inputStateMask = 0
         self.handle = nil
+    }
+}
+
+public final class NDSCoreWrapper: CEmulatorCore {
+    private var handle: OpaquePointer?
+    private var isROMLoaded = false
+    private let useNative: Bool
+    private var inputStateMask: UInt32 = 0
+    private let nativeLock = NSLock()
+
+    public var isInitialized: Bool { handle != nil }
+    public var currentSystem: EmulatorSystemType { .nintendoDS }
+
+    public init(useNative: Bool) {
+        self.useNative = useNative
+    }
+
+    public func initialize() throws {
+        nativeLock.lock()
+        defer { nativeLock.unlock() }
+
+        if useNative {
+            handle = xemu_nds_create()
+            guard handle != nil else {
+                throw XemuCoresError.notInitialized
+            }
+            _ = xemu_nds_set_screen_layout(handle, XEMU_NDS_SCREEN_LAYOUT_STACKED)
+        } else {
+            handle = OpaquePointer(bitPattern: 1)
+        }
+    }
+
+    public func loadROM(data: Data, filePath: String? = nil) throws -> ROMInfo {
+        nativeLock.lock()
+        defer { nativeLock.unlock() }
+
+        if useNative, let handle = handle {
+            let result: xemu_error_t
+            if let filePath {
+                result = filePath.withCString { cPath in
+                    data.withUnsafeBytes { (buffer: UnsafeRawBufferPointer) -> xemu_error_t in
+                        let ptr = buffer.bindMemory(to: UInt8.self).baseAddress!
+                        return xemu_nds_load_rom(handle, cPath, ptr, data.count)
+                    }
+                }
+            } else {
+                result = data.withUnsafeBytes { (buffer: UnsafeRawBufferPointer) -> xemu_error_t in
+                    let ptr = buffer.bindMemory(to: UInt8.self).baseAddress!
+                    return xemu_nds_load_rom(handle, nil, ptr, data.count)
+                }
+            }
+
+            guard result == XEMU_OK else {
+                throw XemuCoresError.romLoadFailed("NDS load failed with error: \(result.rawValue)")
+            }
+
+            isROMLoaded = true
+        } else {
+            // Mock/fallback path for development before native backend integration.
+            isROMLoaded = true
+        }
+
+        return ROMInfo(systemType: .nintendoDS, title: "Loaded NDS ROM", checksum: 0)
+    }
+
+    public func loadROM(data: Data) throws -> ROMInfo {
+        try loadROM(data: data, filePath: nil)
+    }
+
+    public func unloadROM() {
+        nativeLock.lock()
+        defer { nativeLock.unlock() }
+
+        if useNative, let handle = handle {
+            xemu_nds_set_input(handle, 0)
+            _ = xemu_nds_unload_rom(handle)
+        }
+        inputStateMask = 0
+        isROMLoaded = false
+    }
+
+    public func step() throws {
+        nativeLock.lock()
+        defer { nativeLock.unlock() }
+
+        if useNative, let handle = handle {
+            let result = xemu_nds_run_frame(handle)
+            // During scaffold stage, the native stub returns NOT_INITIALIZED but still
+            // emits placeholder video for host pipeline validation.
+            if result != XEMU_OK && result != XEMU_ERROR_NOT_INITIALIZED {
+                throw XemuCoresError.romLoadFailed("NDS run frame failed with error: \(result.rawValue)")
+            }
+        }
+    }
+
+    public func getVideoBuffer() -> VideoBufferInfo {
+        nativeLock.lock()
+        defer { nativeLock.unlock() }
+
+        if useNative, let handle = handle {
+            let buffer = xemu_nds_get_video_buffer(handle)
+            return VideoBufferInfo(
+                width: Int(buffer.width),
+                height: Int(buffer.height),
+                pitch: Int(buffer.pitch),
+                buffer: buffer.data.map { UnsafePointer<UInt8>($0) }
+            )
+        }
+
+        return VideoBufferInfo(width: 256, height: 384, pitch: 256 * 4, buffer: nil)
+    }
+
+    public func getVideoFrameCopy() -> (data: Data, width: Int, height: Int, pitch: Int)? {
+        nativeLock.lock()
+        defer { nativeLock.unlock() }
+
+        guard useNative, let handle = handle else { return nil }
+
+        let buffer = xemu_nds_get_video_buffer(handle)
+        let width = Int(buffer.width)
+        let height = Int(buffer.height)
+        let pitch = Int(buffer.pitch)
+
+        guard width > 0, height > 0, pitch > 0, let dataPtr = buffer.data else { return nil }
+        let size = pitch * height
+        guard size > 0 else { return nil }
+
+        return (Data(bytes: dataPtr, count: size), width, height, pitch)
+    }
+
+    public func getAudioSamples() -> AudioSampleInfo {
+        nativeLock.lock()
+        defer { nativeLock.unlock() }
+
+        if useNative, let handle = handle {
+            let buffer = xemu_nds_get_audio_buffer(handle)
+            return AudioSampleInfo(
+                sampleCount: Int(buffer.sample_count),
+                sampleRate: Int(buffer.sample_rate),
+                samples: buffer.data.map { UnsafePointer<Int16>($0) }
+            )
+        }
+
+        return AudioSampleInfo(sampleCount: 0, sampleRate: 44100, samples: nil)
+    }
+
+    public func getAudioSamplesCopy() -> Data? {
+        nativeLock.lock()
+        defer { nativeLock.unlock() }
+
+        guard useNative, let handle = handle else { return nil }
+
+        let buffer = xemu_nds_get_audio_buffer(handle)
+        guard let samples = buffer.data, buffer.sample_count > 0 else { return nil }
+        let sampleCount = Int(buffer.sample_count)
+        let size = sampleCount * MemoryLayout<Int16>.size
+        guard size > 0 else { return nil }
+        return Data(bytes: samples, count: size)
+    }
+
+    public func setInput(button: Int, pressed: Bool) {
+        nativeLock.lock()
+        defer { nativeLock.unlock() }
+
+        guard useNative, let handle = handle else { return }
+
+        let buttonMap: [Int: UInt32] = [
+            0: UInt32(XEMU_BUTTON_A),
+            1: UInt32(XEMU_BUTTON_B),
+            2: UInt32(XEMU_BUTTON_X),
+            3: UInt32(XEMU_BUTTON_Y),
+            6: UInt32(XEMU_BUTTON_SELECT),
+            7: UInt32(XEMU_BUTTON_START),
+            11: UInt32(XEMU_BUTTON_UP),
+            12: UInt32(XEMU_BUTTON_DOWN),
+            13: UInt32(XEMU_BUTTON_LEFT),
+            14: UInt32(XEMU_BUTTON_RIGHT),
+            4: UInt32(XEMU_BUTTON_L),
+            5: UInt32(XEMU_BUTTON_R),
+            9: UInt32(XEMU_BUTTON_L),
+            10: UInt32(XEMU_BUTTON_R)
+        ]
+
+        guard let mask = buttonMap[button] else { return }
+        if pressed {
+            inputStateMask |= mask
+        } else {
+            inputStateMask &= ~mask
+        }
+        xemu_nds_set_input(handle, inputStateMask)
+    }
+
+    public func setTouch(x: Int, y: Int, pressed: Bool) {
+        nativeLock.lock()
+        defer { nativeLock.unlock() }
+
+        guard useNative, let handle = handle else { return }
+        let clampedX = max(0, min(255, x))
+        let clampedY = max(0, min(191, y))
+        let touch = xemu_nds_touch_state_t(x: Int32(clampedX), y: Int32(clampedY), is_pressed: pressed ? 1 : 0)
+        xemu_nds_set_touch(handle, touch)
+    }
+
+    public func setScreenLayoutStacked() {
+        _ = setScreenLayout(.stacked)
+    }
+
+    @discardableResult
+    public func setScreenLayout(_ layout: NDSScreenLayout) -> Bool {
+        nativeLock.lock()
+        defer { nativeLock.unlock() }
+
+        guard useNative, let handle = handle else { return false }
+
+        let nativeLayout: xemu_nds_screen_layout_t
+        switch layout {
+        case .stacked:
+            nativeLayout = XEMU_NDS_SCREEN_LAYOUT_STACKED
+        case .sideBySide:
+            nativeLayout = XEMU_NDS_SCREEN_LAYOUT_SIDE_BY_SIDE
+        case .topOnly:
+            nativeLayout = XEMU_NDS_SCREEN_LAYOUT_TOP_ONLY
+        case .bottomOnly:
+            nativeLayout = XEMU_NDS_SCREEN_LAYOUT_BOTTOM_ONLY
+        }
+
+        return xemu_nds_set_screen_layout(handle, nativeLayout) == XEMU_OK
+    }
+
+    public func getScreenLayout() -> NDSScreenLayout {
+        nativeLock.lock()
+        defer { nativeLock.unlock() }
+
+        guard useNative, let handle = handle else { return .stacked }
+        let layout = xemu_nds_get_screen_layout(handle)
+        switch layout {
+        case XEMU_NDS_SCREEN_LAYOUT_SIDE_BY_SIDE:
+            return .sideBySide
+        case XEMU_NDS_SCREEN_LAYOUT_TOP_ONLY:
+            return .topOnly
+        case XEMU_NDS_SCREEN_LAYOUT_BOTTOM_ONLY:
+            return .bottomOnly
+        default:
+            return .stacked
+        }
+    }
+
+    public func getSaveStateData() throws -> Data {
+        nativeLock.lock()
+        defer { nativeLock.unlock() }
+
+        guard useNative, let handle = handle, isROMLoaded else {
+            throw XemuCoresError.saveStateFailed("No ROM loaded")
+        }
+
+        let stateSize = xemu_nds_get_save_state_size(handle)
+        guard stateSize > 0 else {
+            throw XemuCoresError.saveStateFailed("Invalid NDS save state size")
+        }
+
+        var buffer = Data(count: stateSize)
+        var result: xemu_error_t = XEMU_ERROR_UNKNOWN
+        buffer.withUnsafeMutableBytes { raw in
+            guard let ptr = raw.baseAddress?.assumingMemoryBound(to: UInt8.self) else { return }
+            var state = xemu_save_state_t(data: ptr, size: stateSize)
+            result = xemu_nds_save_state(handle, &state)
+        }
+
+        guard result == XEMU_OK else {
+            throw XemuCoresError.saveStateFailed("Failed to save NDS state")
+        }
+
+        return buffer
+    }
+
+    public func loadSaveStateData(_ data: Data) throws {
+        nativeLock.lock()
+        defer { nativeLock.unlock() }
+
+        guard useNative, let handle = handle, isROMLoaded else {
+            throw XemuCoresError.saveStateFailed("No ROM loaded")
+        }
+
+        var state = xemu_save_state_t(
+            data: UnsafeMutablePointer<UInt8>(mutating: (data as NSData).bytes.bindMemory(to: UInt8.self, capacity: data.count)),
+            size: data.count
+        )
+        let result = xemu_nds_load_state(handle, &state)
+        guard result == XEMU_OK else {
+            throw XemuCoresError.saveStateFailed("Failed to load NDS state")
+        }
+    }
+
+    public func getBatteryData() throws -> Data { Data() }
+    public func loadBatteryData(_ data: Data) throws { }
+
+    public func shutdown() {
+        nativeLock.lock()
+        defer { nativeLock.unlock() }
+
+        if useNative, let handle = handle {
+            xemu_nds_set_input(handle, 0)
+            let touch = xemu_nds_touch_state_t(x: 0, y: 0, is_pressed: 0)
+            xemu_nds_set_touch(handle, touch)
+            xemu_nds_destroy(handle)
+        }
+        inputStateMask = 0
+        handle = nil
+        isROMLoaded = false
     }
 }

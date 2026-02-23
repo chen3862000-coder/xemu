@@ -126,9 +126,31 @@ struct RomValidator {
     }
     
     private static func isNDSROM(_ data: Data) -> Bool {
-        guard data.count >= 512 else { return false }
-        let header = Array(data[0..<512])
-        return header[0x00] == 0x00 && header[0x0C] == 0x00
+        guard data.count >= 0x160 else { return false }
+
+        // NDS headers contain a fixed Nintendo logo blob at 0xC0..0x15B.
+        // This is a much more reliable signature than checking title bytes.
+        let expectedLogo: [UInt8] = [
+            0x24, 0xFF, 0xAE, 0x51, 0x69, 0x9A, 0xA2, 0x21,
+            0x3D, 0x84, 0x82, 0x0A, 0x84, 0xE4, 0x09, 0xAD,
+            0x11, 0x24, 0x8B, 0x98, 0xC0, 0x81, 0x7F, 0x21,
+            0xA3, 0x52, 0xBE, 0x19, 0x93, 0x09, 0xCE, 0x20
+        ]
+
+        for i in 0..<expectedLogo.count {
+            if data[0xC0 + i] != expectedLogo[i] {
+                return false
+            }
+        }
+
+        // Additional basic sanity check: ARM9 ROM offset is typically non-zero
+        // and inside the file.
+        guard data.count >= 0x24 else { return false }
+        let arm9Offset = Int(data[data.startIndex + 0x20]) |
+            (Int(data[data.startIndex + 0x21]) << 8) |
+            (Int(data[data.startIndex + 0x22]) << 16) |
+            (Int(data[data.startIndex + 0x23]) << 24)
+        return arm9Offset > 0 && arm9Offset < data.count
     }
     
     private static func isPS1ROM(_ data: Data) -> Bool {

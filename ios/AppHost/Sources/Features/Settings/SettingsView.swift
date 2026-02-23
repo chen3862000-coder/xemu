@@ -9,6 +9,7 @@ import AppKit
 
 struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject private var themeController: ThemeController
     @State private var showingUpgrade = false
     @AppStorage("frameSkipEnabled") private var frameSkipEnabled = false
     
@@ -24,6 +25,7 @@ struct SettingsView: View {
                 ScrollView {
                     VStack(spacing: 18) {
                         appInfoCard
+                        appearanceCard
                         settingsItems
                         footerSection
                     }
@@ -185,6 +187,45 @@ struct SettingsView: View {
             }
         }
     }
+
+    private var appearanceCard: some View {
+        let isLight = themeController.isLightMode
+
+        return HStack(spacing: 16) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 12)
+                    .fill((isLight ? AppColors.warning : AppColors.primary).opacity(0.18))
+                    .frame(width: 48, height: 48)
+
+                Image(systemName: isLight ? "sun.max.fill" : "moon.fill")
+                    .font(.system(size: 20, weight: .semibold))
+                    .foregroundColor(isLight ? AppColors.warning : AppColors.primary)
+            }
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Appearance")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundColor(AppColors.textPrimary)
+
+                Text(isLight ? "Light Mode" : "Dark Mode")
+                    .font(.system(size: 12))
+                    .foregroundColor(AppColors.textMuted)
+            }
+
+            Spacer()
+
+            ThemePillToggle(isLight: isLight) {
+                themeController.toggleMode()
+            }
+        }
+        .padding(16)
+        .background(AppColors.surface)
+        .overlay(
+            RoundedRectangle(cornerRadius: 16)
+                .stroke(AppColors.surfaceLight.opacity(0.5), lineWidth: 1)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: 16))
+    }
     
     private var footerSection: some View {
         VStack(spacing: 12) {
@@ -228,6 +269,33 @@ struct SettingsView: View {
         #elseif canImport(AppKit)
         NSWorkspace.shared.open(url)
         #endif
+    }
+}
+
+private struct ThemePillToggle: View {
+    let isLight: Bool
+    let onToggle: () -> Void
+
+    var body: some View {
+        Button(action: onToggle) {
+            ZStack(alignment: .leading) {
+                Capsule(style: .continuous)
+                    .fill((isLight ? AppColors.warning : AppColors.primary).opacity(0.9))
+                    .frame(width: 52, height: 30)
+
+                Circle()
+                    .fill(Color.white)
+                    .frame(width: 24, height: 24)
+                    .overlay(
+                        Image(systemName: isLight ? "sun.max.fill" : "moon.fill")
+                            .font(.system(size: 11, weight: .bold))
+                            .foregroundColor(isLight ? AppColors.warning : AppColors.primary)
+                    )
+                    .offset(x: isLight ? 26 : 2)
+                    .animation(.spring(response: 0.25, dampingFraction: 0.9), value: isLight)
+            }
+        }
+        .buttonStyle(.plain)
     }
 }
 

@@ -22,6 +22,7 @@ targets:
       - path: Sources/XemuCoresLib/module.modulemap
     dependencies:
       - sdk: libc++.tbd
+      - sdk: libresolv.tbd
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.xemu.Xemu

@@ -50,6 +50,22 @@ final class RomImportCoordinator: ObservableObject {
         self.romsDirectory = romsDirectory
     }
 
+    private func displayFileName(fromImportedURL url: URL) -> String {
+        let name = url.lastPathComponent
+        // Files copied from the iOS document picker temp flow are prefixed with:
+        // <UUID>_<original-name>.ext
+        // Strip that prefix so UI uses the original imported filename.
+        let pattern = #"^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}_"#
+        if let regex = try? NSRegularExpression(pattern: pattern) {
+            let range = NSRange(name.startIndex..<name.endIndex, in: name)
+            let stripped = regex.stringByReplacingMatches(in: name, options: [], range: range, withTemplate: "")
+            if !stripped.isEmpty, stripped != name {
+                return stripped
+            }
+        }
+        return name
+    }
+
     #if os(iOS)
     private var filePickerDelegate: FilePickerDelegate?
     
@@ -95,6 +111,8 @@ final class RomImportCoordinator: ObservableObject {
             importProgress = 0.3
             
             let metadata = RomMetadataExtractor.extract(from: fileData, system: validation.system)
+            let importedDisplayFileName = displayFileName(fromImportedURL: url)
+            let fileDisplayTitle = URL(fileURLWithPath: importedDisplayFileName).deletingPathExtension().lastPathComponent
             importProgress = 0.4
             
             let context = persistence.container.viewContext
@@ -104,6 +122,22 @@ final class RomImportCoordinator: ObservableObject {
             
             let existingEntries = try context.fetch(fetchRequest)
             if let existingEntry = existingEntries.first {
+                // Refresh user-visible metadata on duplicate imports so fixes to
+                // metadata extraction or display rules (e.g. NDS title handling)
+                // are applied without requiring manual deletion first.
+                if validation.system == .nds {
+                    existingEntry.title = fileDisplayTitle
+                } else if !metadata.title.isEmpty {
+                    existingEntry.title = metadata.title
+                } else {
+                    existingEntry.title = fileDisplayTitle
+                }
+                existingEntry.system = validation.system.rawValue
+                existingEntry.fileName = importedDisplayFileName
+                existingEntry.fileSize = Int64(fileData.count)
+                if context.hasChanges {
+                    try context.save()
+                }
                 importProgress = 1.0
                 importedEntries.append(existingEntry)
                 return existingEntry
@@ -113,9 +147,16 @@ final class RomImportCoordinator: ObservableObject {
             let entry = ROMLibraryEntry(context: context)
             entry.id = UUID()
             entry.checksum = validation.checksum
-            entry.title = metadata.title.isEmpty ? url.deletingPathExtension().lastPathComponent : metadata.title
+            // NDS internal header titles are short/abbreviated and can look poor in UI.
+            // Prefer the imported filename for display, while keeping metadata extraction
+            // for region detection and future use.
+            if validation.system == .nds {
+                entry.title = fileDisplayTitle
+            } else {
+                entry.title = metadata.title.isEmpty ? fileDisplayTitle : metadata.title
+            }
             entry.system = validation.system.rawValue
-            entry.fileName = url.lastPathComponent
+            entry.fileName = importedDisplayFileName
             entry.fileSize = Int64(fileData.count)
             entry.dateAdded = Date()
             entry.lastPlayedAt = nil
