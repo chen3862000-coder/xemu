@@ -181,10 +181,26 @@ struct PlatformPlaceholder: View {
     var body: some View {
         ZStack {
             Color.gray.opacity(0.3)
+            if let assetName = platformIconAssetName {
+                Image(assetName)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 72, height: 72)
+                    .opacity(0.65)
+            } else {
+                Text(platformIcon)
+                    .font(.system(size: 48))
+                    .foregroundColor(.white.opacity(0.5))
+            }
+        }
+    }
 
-            Text(platformIcon)
-                .font(.system(size: 48))
-                .foregroundColor(.white.opacity(0.5))
+    private var platformIconAssetName: String? {
+        switch platform?.lowercased() {
+        case "gb", "gbc": return "ConsoleGBGBC"
+        case "gba": return "ConsoleGBA"
+        case "nds": return "ConsoleNDS"
+        default: return nil
         }
     }
 

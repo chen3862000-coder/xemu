@@ -13,6 +13,14 @@ namespace xemu {
 namespace {
 constexpr unsigned RUN_SAMPLES_PER_CALL = 2064;
 constexpr unsigned DECIMATION_RATE = 32;
+
+static inline uint8_t expand5To8(unsigned v) {
+    return static_cast<uint8_t>((v << 3) | (v >> 2));
+}
+
+static inline uint8_t expand6To8(unsigned v) {
+    return static_cast<uint8_t>((v << 2) | (v >> 4));
+}
 }
 
 class GambatteWrapper::Impl {
@@ -51,14 +59,15 @@ public:
             return false;
         }
 
-        // Default Gambatte color correction is intentionally dark to emulate LCD characteristics.
-        // For iOS app output, prefer brighter direct palette rendering for better visibility.
-        gambatte_->setDarkFilterLevel(0);
-        gambatte_->setColorCorrection(false);
+        // Apply different defaults for DMG vs CGB:
+        // - CGB: keep bright direct rendering for current iOS look.
+        // - DMG: keep color correction enabled so the gray ramp is preserved and
+        //   doesn't collapse into harsh black/white output.
+        applyDisplayDefaults();
         
         romLoaded_ = true;
-        printf("[GambatteWrapper] ROM loaded successfully (%zu bytes), CGB mode: %s\n", 
-               size, gambatte_->isCgb() ? "yes" : "no");
+        printf("[GambatteWrapper] ROM loaded successfully (%zu bytes), CGB mode: %s, video_pixel_t=%zu bytes\n",
+               size, gambatte_->isCgb() ? "yes" : "no", sizeof(gambatte::video_pixel_t));
         return true;
 #else
         romLoaded_ = true;
@@ -109,12 +118,33 @@ public:
         } while (runResult == -1);
         
         for (int i = 0; i < VIDEO_WIDTH * VIDEO_HEIGHT; ++i) {
-            uint32_t pixel = videoFramePixels_[i];
             uint8_t* out = &videoBuffer_[i * 4];
+#if defined(VIDEO_RGB565)
+            const uint16_t pixel = videoFramePixels_[i];
+            const unsigned r5 = (pixel >> 11) & 0x1F;
+            const unsigned g6 = (pixel >> 5) & 0x3F;
+            const unsigned b5 = pixel & 0x1F;
+            out[0] = expand5To8(r5);
+            out[1] = expand6To8(g6);
+            out[2] = expand5To8(b5);
+            out[3] = 0xFF;
+#elif defined(VIDEO_ABGR1555)
+            const uint16_t pixel = videoFramePixels_[i];
+            const unsigned a1 = (pixel >> 15) & 0x01;
+            const unsigned b5 = (pixel >> 10) & 0x1F;
+            const unsigned g5 = (pixel >> 5) & 0x1F;
+            const unsigned r5 = pixel & 0x1F;
+            out[0] = expand5To8(r5);
+            out[1] = expand5To8(g5);
+            out[2] = expand5To8(b5);
+            out[3] = a1 ? 0xFF : 0xFF;
+#else
+            const uint32_t pixel = videoFramePixels_[i];
             out[0] = (pixel >> 16) & 0xFF;
             out[1] = (pixel >> 8) & 0xFF;
             out[2] = pixel & 0xFF;
             out[3] = 0xFF;
+#endif
         }
 
         const unsigned outputStereoCapacity = static_cast<unsigned>(audioBuffer_.size() / 2);
@@ -185,6 +215,33 @@ public:
     }
 
 #ifdef XEMU_USE_REAL_CORES
+    void applyDisplayDefaults() {
+        if (!gambatte_) return;
+        if (gambatte_->isCgb()) {
+            // Keep the brighter CGB path that looks good in the iOS app.
+            gambatte_->setDarkFilterLevel(0);
+            gambatte_->setColorCorrection(false);
+        } else {
+            // GB (DMG): keep a stable 4-step grayscale ramp and disable Gambatte's
+            // color correction path (which can compress/shift the gray tones on
+            // our iOS output path). Savestates can restore older palette values,
+            // so reapply these defaults after ROM load and state load.
+            gambatte_->setDarkFilterLevel(0);
+            gambatte_->setColorCorrection(false);
+            static const unsigned long dmgDefaultGray[4] = {
+                0xFFFFFF,
+                0xAAAAAA,
+                0x555555,
+                0x000000
+            };
+            for (unsigned pal = 0; pal < 3; ++pal) {
+                for (unsigned c = 0; c < 4; ++c) {
+                    gambatte_->setDmgPaletteColor(pal, c, dmgDefaultGray[c]);
+                }
+            }
+        }
+    }
+
     class InputGetter : public gambatte::InputGetter {
     public:
         unsigned operator()() override { return buttons_; }
@@ -215,6 +272,7 @@ public:
         const size_t needed = gambatte_->stateSize();
         if (needed == 0 || size < needed) return false;
         gambatte_->loadState(buffer);
+        applyDisplayDefaults();
         return true;
 #else
         return false;

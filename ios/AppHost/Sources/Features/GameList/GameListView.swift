@@ -97,8 +97,16 @@ struct GameListView: View {
 
                 Spacer()
 
-                Text(platformDisplay.emoji)
-                    .font(.system(size: 28))
+                if let assetName = platformDisplay.consoleAssetName {
+                    Image(assetName)
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 32, height: 32)
+                        .clipShape(RoundedRectangle(cornerRadius: 8))
+                } else {
+                    Text(platformDisplay.emoji)
+                        .font(.system(size: 28))
+                }
             }
 
             HStack(spacing: 8) {

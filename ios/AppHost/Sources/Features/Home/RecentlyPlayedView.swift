@@ -212,63 +212,58 @@ struct RecentlyPlayedCard: View {
     var body: some View {
         Button(action: onTap) {
             VStack(alignment: .leading, spacing: 0) {
-                ZStack(alignment: .topLeading) {
+                ZStack(alignment: .topTrailing) {
                     coverArt
-                        .frame(height: 112)
+                        .frame(maxWidth: .infinity, minHeight: 120, maxHeight: 120)
 
                     LinearGradient(
-                        colors: [Color.clear, AppColors.background.opacity(0.9)],
+                        colors: [Color.clear, AppColors.surface.opacity(0.92)],
                         startPoint: .top,
                         endPoint: .bottom
                     )
-                    .frame(height: 112)
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
 
-                    HStack {
-                        Text(playtimeBadge)
-                            .font(.system(size: 9, weight: .medium))
-                            .foregroundColor(AppColors.textPrimary)
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 4)
-                            .background(AppColors.background.opacity(0.8))
-                            .clipShape(Capsule())
-
-                        Spacer()
-
-                        Text((entry.system ?? "UNK").uppercased())
-                            .font(.system(size: 9, weight: .semibold))
-                            .foregroundColor(.white)
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 4)
-                            .background(AppColors.primary.opacity(0.9))
-                            .clipShape(Capsule())
-                    }
-                    .padding(8)
+                    Text((entry.system ?? "UNK").uppercased())
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 6)
+                        .background(AppColors.primary.opacity(0.92))
+                        .clipShape(Capsule())
+                        .padding(8)
                 }
 
-                VStack(alignment: .leading, spacing: 4) {
+                VStack(alignment: .leading, spacing: 6) {
                     Text(entry.title ?? "Unknown Game")
-                        .font(.system(size: 13, weight: .semibold))
+                        .font(.system(size: 15, weight: .bold))
                         .foregroundColor(AppColors.textPrimary)
                         .lineLimit(2)
 
-                    HStack(spacing: 4) {
-                        Image(systemName: "clock.fill")
-                            .font(.system(size: 9))
-                        Text(lastPlayedLabel)
-                            .font(.system(size: 10))
+                    HStack(spacing: 5) {
+                        Image(systemName: "clock")
+                            .font(.system(size: 10, weight: .semibold))
+                        Text(playedDateLabel)
+                            .font(.system(size: 11, weight: .medium))
+                        Text("•")
+                            .font(.system(size: 11, weight: .medium))
+                            .opacity(0.7)
+                        Text(totalHoursLabel)
+                            .font(.system(size: 11, weight: .medium))
                     }
-                    .foregroundColor(AppColors.textMuted)
+                    .foregroundColor(AppColors.primary)
                 }
-                .padding(10)
+                .padding(12)
             }
+            .frame(maxWidth: .infinity)
+            .background(AppColors.surface)
+            .overlay(
+                RoundedRectangle(cornerRadius: 16)
+                    .stroke(AppColors.surfaceLight.opacity(0.65), lineWidth: 1)
+            )
+            .shadow(color: AppColors.primary.opacity(0.05), radius: 10, x: 0, y: 4)
+            .clipShape(RoundedRectangle(cornerRadius: 16))
         }
         .buttonStyle(PlainButtonStyle())
-        .background(AppColors.surface)
-        .overlay(
-            RoundedRectangle(cornerRadius: 14)
-                .stroke(AppColors.surfaceLight.opacity(0.5), lineWidth: 1)
-        )
-        .clipShape(RoundedRectangle(cornerRadius: 14))
     }
 
     @ViewBuilder
@@ -307,21 +302,21 @@ struct RecentlyPlayedCard: View {
                 .foregroundColor(AppColors.textMuted)
 #endif
         }
-        .clipShape(RoundedRectangle(cornerRadius: 14))
+        .frame(maxWidth: .infinity, minHeight: 120, maxHeight: 120)
+        .clipShape(RoundedRectangle(cornerRadius: 12))
     }
 
-    private var playtimeBadge: String {
-        let minutes = Int(entry.playtimeTotal) / 60
-        if minutes <= 0 { return "0m" }
-        if minutes < 60 { return "\(minutes)m" }
-        return "\(minutes / 60)h"
+    private var playedDateLabel: String {
+        guard let date = entry.lastPlayedAt else { return "Never" }
+        let calendar = Calendar.current
+        if calendar.isDateInToday(date) { return "Today" }
+        if calendar.isDateInYesterday(date) { return "Yesterday" }
+        return date.formatted(.dateTime.month(.abbreviated).day())
     }
 
-    private var lastPlayedLabel: String {
-        guard let lastPlayed = entry.lastPlayedAt else { return "Never" }
-        let formatter = RelativeDateTimeFormatter()
-        formatter.unitsStyle = .abbreviated
-        return formatter.localizedString(for: lastPlayed, relativeTo: Date())
+    private var totalHoursLabel: String {
+        let hours = max(0, Int(entry.playtimeTotal) / 3600)
+        return "\(hours)h"
     }
 }
 

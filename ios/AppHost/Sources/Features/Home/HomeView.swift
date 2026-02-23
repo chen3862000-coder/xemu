@@ -13,6 +13,7 @@ struct HomeView: View {
     @State private var showingGameLibrary = false
     @State private var showingRecentlyPlayed = false
     @State private var selectedPlatform: EmulatorPlatform?
+    @State private var selectedGame: Game?
     
     var body: some View {
         ZStack {
@@ -48,6 +49,13 @@ struct HomeView: View {
         .sheet(item: $selectedPlatform) { platform in
             GameListView(platform: platform)
         }
+        #if os(iOS)
+        .fullScreenCover(item: $selectedGame) { game in
+            GamePlayView(game: game, onExit: {
+                selectedGame = nil
+            })
+        }
+        #endif
         .onAppear {
             refreshHome()
         }
@@ -139,11 +147,15 @@ struct HomeView: View {
                 Spacer()
                 
                 Button("View All") {
+                    selectedGame = nil
                     showingRecentlyPlayed = true
                 }
+                .buttonStyle(.plain)
                 .font(.subheadline)
                 .foregroundColor(AppColors.primary)
             }
+            .contentShape(Rectangle())
+            .zIndex(2)
             
             if viewModel.recentGames.isEmpty {
                 VStack(spacing: 8) {
@@ -169,10 +181,15 @@ struct HomeView: View {
                 ) {
                     ForEach(Array(viewModel.recentGames.prefix(2))) { game in
                         RecentGameCard(game: game) {
-                            showingRecentlyPlayed = true
+                            if let playable = game.playableGame {
+                                selectedGame = playable
+                            } else {
+                                showingRecentlyPlayed = true
+                            }
                         }
                     }
                 }
+                .zIndex(0)
             }
         }
     }
@@ -410,6 +427,15 @@ struct EmulatorCard: View {
     let onTap: () -> Void
     
     @State private var isHovered = false
+
+    private var consoleAssetName: String? {
+        switch shortName {
+        case "GB/GBC": return "ConsoleGBGBC"
+        case "GBA": return "ConsoleGBA"
+        case "NDS": return "ConsoleNDS"
+        default: return nil
+        }
+    }
     
     var body: some View {
         Button(action: onTap) {
@@ -437,9 +463,17 @@ struct EmulatorCard: View {
                             .fill(LinearGradient(colors: gradient, startPoint: .topLeading, endPoint: .bottomTrailing))
                             .frame(width: 48, height: 48)
 
-                        Text(icon)
-                            .font(.system(size: 20))
-                            .foregroundColor(.white)
+                        if let consoleAssetName {
+                            Image(consoleAssetName)
+                                .resizable()
+                                .scaledToFit()
+                                .frame(width: 40, height: 40)
+                                .clipShape(RoundedRectangle(cornerRadius: 8))
+                        } else {
+                            Text(icon)
+                                .font(.system(size: 20))
+                                .foregroundColor(.white)
+                        }
                     }
 
                     VStack(alignment: .leading, spacing: 2) {
@@ -749,6 +783,7 @@ final class HomeViewModel: ObservableObject {
                 image: nil,
                 screenshotData: SaveStateStorage.shared.latestScreenshot(for: entry.checksum ?? ""),
                 totalPlaySeconds: Int(entry.playtimeTotal),
+                playableGame: entry.toGame(),
                 gameId: entry.id
             )
         }
@@ -784,6 +819,7 @@ struct RecentGame: Identifiable {
     let image: String?
     let screenshotData: Data?
     let totalPlaySeconds: Int
+    let playableGame: Game?
     let gameId: UUID
 }
 

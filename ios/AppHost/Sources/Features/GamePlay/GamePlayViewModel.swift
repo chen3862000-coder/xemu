@@ -115,7 +115,20 @@ class GamePlayViewModel: ObservableObject {
                 textureSize = CGSize(width: 160, height: 144)
             }
             metalRenderer = MetalRenderer(textureSize: textureSize)
-            switch platform {
+            let effectiveDisplayPlatform: Platform = {
+                switch platform {
+                case .GB, .GBC:
+                    if let gbCore = core as? GBCore, gbCore.isCGBModeDetected {
+                        return .GBC
+                    } else {
+                        return .GB
+                    }
+                default:
+                    return platform
+                }
+            }()
+
+            switch effectiveDisplayPlatform {
             case .GBC:
                 metalRenderer?.setColorAdjustments(
                     brightness: 2.28,
@@ -124,12 +137,7 @@ class GamePlayViewModel: ObservableObject {
                     saturation: 1.22
                 )
             case .GB:
-                metalRenderer?.setColorAdjustments(
-                    brightness: 0.96,
-                    gamma: 1.02,
-                    contrast: 1.04,
-                    saturation: 1.02
-                )
+                metalRenderer?.setColorAdjustments()
             default:
                 metalRenderer?.setColorAdjustments()
             }

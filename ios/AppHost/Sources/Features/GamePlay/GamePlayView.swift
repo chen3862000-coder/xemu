@@ -1974,6 +1974,7 @@ private struct GBDPadView: View {
                 Image(systemName: arrowSymbol(for: direction))
                     .font(.system(size: 20, weight: .bold))
                     .foregroundColor(.black.opacity(0.22))
+                    .rotationEffect(arrowRotation(for: direction))
             }
             .frame(
                 width: (direction == .left || direction == .right) ? 70 : 54,
@@ -1992,6 +1993,15 @@ private struct GBDPadView: View {
         case .down: return "triangle.fill"
         case .left: return "triangle.fill"
         case .right: return "triangle.fill"
+        }
+    }
+
+    private func arrowRotation(for direction: NDSDPadDirection) -> Angle {
+        switch direction {
+        case .up: return .degrees(0)
+        case .right: return .degrees(90)
+        case .down: return .degrees(180)
+        case .left: return .degrees(270)
         }
     }
 }

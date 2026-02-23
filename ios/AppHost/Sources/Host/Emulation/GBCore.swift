@@ -5,6 +5,9 @@ import XemuCores
 
 public final class GBCore: EmulatorCore {
     public var platform: Platform { .GB }
+    public var isCGBModeDetected: Bool {
+        coreWrapper?.currentSystem == .gameBoyColor
+    }
     
     private var coreWrapper: GBCCoreWrapper?
     private var isRunning: Bool = false
