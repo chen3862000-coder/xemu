@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct Header: View {
-    let onSearchTapped: () -> Void
+    let onAddTapped: () -> Void
     let onSettingsTapped: () -> Void
 
     var body: some View {
@@ -38,8 +38,8 @@ struct Header: View {
                 Spacer()
 
                 HStack(spacing: 8) {
-                    Button(action: onSearchTapped) {
-                        Image(systemName: "magnifyingglass")
+                    Button(action: onAddTapped) {
+                        Image(systemName: "plus")
                             .font(.system(size: 16, weight: .medium))
                             .foregroundColor(AppColors.textPrimary)
                             .frame(width: 32, height: 32)
@@ -129,7 +129,7 @@ private struct XemuBrandIconGlyph: View {
 
 #Preview {
     Header(
-        onSearchTapped: {},
+        onAddTapped: {},
         onSettingsTapped: {}
     )
     .background(AppColors.background)

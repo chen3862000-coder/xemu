@@ -13,6 +13,17 @@ struct SaveStateMetadata: Codable {
     let screenshotData: Data?
 }
 
+struct SaveStateSlotSummary: Identifiable {
+    let slot: Int
+    let metadata: SaveStateMetadata?
+    let screenshotData: Data?
+
+    var id: Int { slot }
+    var isEmpty: Bool { metadata == nil }
+    var isQuickSlot: Bool { slot == 0 }
+    var displayName: String { isQuickSlot ? "Quick" : "\(slot)" }
+}
+
 @MainActor
 final class SaveStateStorage {
     private static let saveLogEnabled = true
@@ -34,7 +45,7 @@ final class SaveStateStorage {
     }
 
     static let shared = SaveStateStorage()
-    static let maxSlots = 10
+    static let maxSlots = 11
 
     private let directory: URL
     private let workQueue = DispatchQueue(label: "com.xemu.savestates", qos: .utility)
@@ -183,6 +194,45 @@ final class SaveStateStorage {
         request.predicate = NSPredicate(format: "rom.checksum == %@", romChecksum)
         request.sortDescriptors = [NSSortDescriptor(keyPath: \SaveState.timestamp, ascending: false)]
         return try viewContext.fetch(request)
+    }
+
+    func listSlotSummaries(for romHash: String) -> [SaveStateSlotSummary] {
+        (0..<Self.maxSlots).map { slot in
+            if let loaded = try? load(slot: slot, romHash: romHash) {
+                return SaveStateSlotSummary(slot: slot, metadata: loaded.1, screenshotData: loaded.2)
+            }
+            return SaveStateSlotSummary(slot: slot, metadata: nil, screenshotData: nil)
+        }
+    }
+
+    func hasAnySaveState(for romHash: String) -> Bool {
+        (0..<Self.maxSlots).contains { slot in
+            (try? load(slot: slot, romHash: romHash)) != nil
+        }
+    }
+
+    func latestScreenshot(for romHash: String) -> Data? {
+        let request: NSFetchRequest<SaveState> = SaveState.fetchRequest()
+        request.predicate = NSPredicate(format: "rom.checksum == %@ AND screenshotData != nil", romHash)
+        request.sortDescriptors = [NSSortDescriptor(keyPath: \SaveState.timestamp, ascending: false)]
+        request.fetchLimit = 1
+        if let state = try? viewContext.fetch(request).first, let data = state.screenshotData {
+            return data
+        }
+
+        // Disk fallback (best-effort)
+        var bestDate: Date?
+        var bestData: Data?
+        for slot in 0..<Self.maxSlots {
+            if let (_, metadata, screenshot) = try? load(slot: slot, romHash: romHash),
+               let screenshot {
+                if bestDate == nil || metadata.createdAt > bestDate! {
+                    bestDate = metadata.createdAt
+                    bestData = screenshot
+                }
+            }
+        }
+        return bestData
     }
 
     func delete(saveState: SaveState) async throws {

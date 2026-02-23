@@ -2,6 +2,9 @@
 // Full-screen emulator view for game playback
 
 import SwiftUI
+#if canImport(UIKit)
+import UIKit
+#endif
 
 struct GamePlayView: View {
     let game: Game
@@ -9,8 +12,11 @@ struct GamePlayView: View {
     
     @StateObject private var viewModel = GamePlayViewModel()
     @State private var showPauseMenu = false
+    @State private var showSaveSlotsPanel = false
+    @State private var showLaunchStatePicker = false
     @State private var fastForwardSpeed: Int = 1
     @State private var startTask: Task<Void, Never>?
+    @State private var saveSlotSummaries: [SaveStateSlotSummary] = []
     
     init(game: Game, onExit: @escaping () -> Void) {
         self.game = game
@@ -35,6 +41,10 @@ struct GamePlayView: View {
                 if showPauseMenu {
                     pauseMenuOverlay
                 }
+
+                if showLaunchStatePicker {
+                    launchStatePickerOverlay
+                }
             }
         }
         .onAppear {
@@ -49,6 +59,10 @@ struct GamePlayView: View {
                         gameTitle: game.title,
                         romHash: game.romPath.map { URL(fileURLWithPath: $0).deletingPathExtension().lastPathComponent }
                     )
+                    if viewModel.isRunning, viewModel.hasSavedStatesForCurrentGame() {
+                        saveSlotSummaries = viewModel.saveSlotSummaries().filter { !$0.isEmpty }
+                        showLaunchStatePicker = !saveSlotSummaries.isEmpty
+                    }
                 }
             }
         }
@@ -56,6 +70,15 @@ struct GamePlayView: View {
             startTask?.cancel()
             startTask = nil
             viewModel.stopEmulation()
+        }
+        .onChange(of: showPauseMenu) { _, isPresented in
+            if isPresented {
+                viewModel.pauseEmulation()
+                viewModel.refreshSaveStatesStatus()
+                saveSlotSummaries = viewModel.saveSlotSummaries()
+            } else {
+                showSaveSlotsPanel = false
+            }
         }
     }
 
@@ -1313,101 +1336,378 @@ struct GamePlayView: View {
     }
     
     private var pauseMenuOverlay: some View {
-        Color.black.opacity(0.8)
-            .ignoresSafeArea()
-            .overlay(
-                VStack(spacing: 20) {
-                    Text("Game Paused")
-                        .font(.title)
-                        .foregroundColor(.white)
-                    
-                    if !viewModel.statusMessage.isEmpty {
-                        VStack(spacing: 4) {
-                            Text(viewModel.statusMessage)
-                                .font(.caption)
-                                .foregroundColor(.gray)
-                            if !viewModel.saveStateDebugLine.isEmpty {
-                                Text(viewModel.saveStateDebugLine)
-                                    .font(.caption2)
-                                    .foregroundColor(.yellow)
-                                    .multilineTextAlignment(.center)
-                            }
-                        }
+        ZStack {
+            AppColors.background.opacity(0.66)
+                .ignoresSafeArea()
+                .overlay(.ultraThinMaterial.opacity(0.35))
+                .onTapGesture { }
+
+            VStack(spacing: 14) {
+                HStack {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Game Paused")
+                            .font(.system(size: 20, weight: .bold))
+                            .foregroundColor(AppColors.textPrimary)
+                        Text(game.title ?? "Current game")
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundColor(AppColors.textMuted)
+                            .lineLimit(1)
                     }
-                    
-                    Button(action: {
+                    Spacer()
+                    Button {
                         viewModel.resumeEmulation()
                         showPauseMenu = false
-                    }) {
-                        Label("Resume", systemImage: "play.fill")
-                            .frame(maxWidth: 200)
+                    } label: {
+                        Image(systemName: "xmark")
+                            .font(.system(size: 14, weight: .bold))
+                            .foregroundColor(AppColors.textPrimary)
+                            .frame(width: 34, height: 34)
+                            .background(AppColors.surfaceLight.opacity(0.65))
+                            .clipShape(Circle())
                     }
-                    .buttonStyle(.borderedProminent)
-                    
-                    Button(action: { 
-                        viewModel.quickSave()
-                    }) {
-                        Label("Quick Save", systemImage: "square.and.arrow.down")
-                            .frame(maxWidth: 200)
-                    }
-                    .buttonStyle(.bordered)
-                    .tint(.blue)
-                    
-                    Button(action: { 
-                        viewModel.quickLoad()
-                    }) {
-                        Label("Quick Load", systemImage: "square.and.arrow.up")
-                            .frame(maxWidth: 200)
-                    }
-                    .buttonStyle(.bordered)
-                    .tint(.green)
+                }
 
-                    Button(action: {
-                        viewModel.saveGameProgress()
-                    }) {
-                        Label("Save Game", systemImage: "tray.and.arrow.down")
-                            .frame(maxWidth: 200)
-                    }
-                    .buttonStyle(.bordered)
-                    .tint(.teal)
-
-                    Button(action: {
-                        viewModel.loadGameProgress()
-                    }) {
-                        Label("Load Game", systemImage: "tray.and.arrow.up")
-                            .frame(maxWidth: 200)
-                    }
-                    .buttonStyle(.bordered)
-                    .tint(.mint)
-                    
-                    HStack(spacing: 12) {
-                        ForEach([2, 3, 6], id: \.self) { speed in
-                            Button(action: {
-                                fastForwardSpeed = fastForwardSpeed == speed ? 1 : speed
-                                viewModel.setFastForward(fastForwardSpeed)
-                            }) {
-                                Text("\(speed)x")
-                                    .frame(width: 60, height: 44)
-                                    .background(fastForwardSpeed == speed ? Color.orange : Color.gray)
-                                    .foregroundColor(.white)
-                                    .cornerRadius(8)
-                            }
+                if !viewModel.statusMessage.isEmpty || !viewModel.saveStateDebugLine.isEmpty {
+                    VStack(alignment: .leading, spacing: 4) {
+                        if !viewModel.statusMessage.isEmpty {
+                            Text(viewModel.statusMessage)
+                                .font(.system(size: 12, weight: .medium))
+                                .foregroundColor(AppColors.textSecondary)
+                        }
+                        if !viewModel.saveStateDebugLine.isEmpty {
+                            Text(viewModel.saveStateDebugLine)
+                                .font(.system(size: 11))
+                                .foregroundColor(AppColors.textMuted)
+                                .lineLimit(2)
                         }
                     }
-                    
-                    Button(action: { 
-                        startTask?.cancel()
-                        startTask = nil
-                        viewModel.stopEmulation()
-                        onExit()
-                    }) {
-                        Label("Exit to Library", systemImage: "xmark")
-                            .frame(maxWidth: 200)
-                    }
-                    .buttonStyle(.bordered)
-                    .tint(.red)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(12)
+                    .background(AppColors.surface.opacity(0.85))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 14)
+                            .stroke(AppColors.surfaceLight.opacity(0.7), lineWidth: 1)
+                    )
+                    .clipShape(RoundedRectangle(cornerRadius: 14))
                 }
+
+                HStack(spacing: 10) {
+                    pauseActionButton(title: "Resume", icon: "play.fill", style: .primary) {
+                        viewModel.resumeEmulation()
+                        showPauseMenu = false
+                    }
+                    pauseActionButton(title: "Quick Save", icon: "square.and.arrow.down.fill") {
+                        viewModel.quickSave()
+                        saveSlotSummaries = viewModel.saveSlotSummaries()
+                    }
+                    pauseActionButton(title: "Quick Load", icon: "square.and.arrow.up.fill") {
+                        viewModel.quickLoad()
+                    }
+                }
+
+                HStack(spacing: 10) {
+                    pauseActionButton(title: showSaveSlotsPanel ? "Hide Slots" : "Save Slots", icon: "tray.full.fill") {
+                        saveSlotSummaries = viewModel.saveSlotSummaries()
+                        withAnimation(.easeOut(duration: 0.2)) {
+                            showSaveSlotsPanel.toggle()
+                        }
+                    }
+                    HStack(spacing: 8) {
+                        ForEach([2, 3, 6], id: \.self) { speed in
+                            Button {
+                                fastForwardSpeed = fastForwardSpeed == speed ? 1 : speed
+                                viewModel.setFastForward(fastForwardSpeed)
+                            } label: {
+                                Text("\(speed)x")
+                                    .font(.system(size: 12, weight: .semibold))
+                                    .foregroundColor(fastForwardSpeed == speed ? .white : AppColors.textPrimary)
+                                    .frame(width: 46, height: 34)
+                                    .background(
+                                        RoundedRectangle(cornerRadius: 10)
+                                            .fill(fastForwardSpeed == speed ? AppColors.primary : AppColors.surfaceLight.opacity(0.55))
+                                    )
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                    .padding(6)
+                    .background(AppColors.surface.opacity(0.8))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12)
+                            .stroke(AppColors.surfaceLight.opacity(0.65), lineWidth: 1)
+                    )
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                }
+
+                if showSaveSlotsPanel {
+                    VStack(alignment: .leading, spacing: 10) {
+                        HStack {
+                            Text("Save States")
+                                .font(.system(size: 15, weight: .semibold))
+                                .foregroundColor(AppColors.textPrimary)
+                            Spacer()
+                            Text("Quick + 10 Slots")
+                                .font(.system(size: 11))
+                                .foregroundColor(AppColors.textMuted)
+                        }
+
+                        ScrollView {
+                            LazyVGrid(columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)], spacing: 10) {
+                                ForEach(saveSlotSummaries) { summary in
+                                    saveSlotCard(summary)
+                                }
+                            }
+                            .padding(.top, 2)
+                        }
+                        .frame(maxHeight: 320)
+                    }
+                    .padding(12)
+                    .background(AppColors.surface.opacity(0.88))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 16)
+                            .stroke(AppColors.surfaceLight.opacity(0.75), lineWidth: 1)
+                    )
+                    .clipShape(RoundedRectangle(cornerRadius: 16))
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+                }
+
+                pauseActionButton(title: "Exit to Library", icon: "xmark", style: .destructive) {
+                    startTask?.cancel()
+                    startTask = nil
+                    viewModel.stopEmulation()
+                    onExit()
+                }
+            }
+            .padding(16)
+            .frame(maxWidth: 720)
+            .background(
+                RoundedRectangle(cornerRadius: 22, style: .continuous)
+                    .fill(AppColors.surface.opacity(0.9))
+                    .overlay(.ultraThinMaterial.opacity(0.25))
             )
+            .overlay(
+                RoundedRectangle(cornerRadius: 22, style: .continuous)
+                    .stroke(AppColors.surfaceLight.opacity(0.8), lineWidth: 1)
+            )
+            .shadow(color: AppColors.primary.opacity(0.18), radius: 30, x: 0, y: 12)
+            .padding(.horizontal, 16)
+        }
+    }
+
+    private var launchStatePickerOverlay: some View {
+        ZStack {
+            AppColors.background.opacity(0.72).ignoresSafeArea()
+            VStack(alignment: .leading, spacing: 12) {
+                Text("Resume From Save State?")
+                    .font(.system(size: 20, weight: .bold))
+                    .foregroundColor(AppColors.textPrimary)
+                Text("We found previous save states for this game. Choose one to continue or start fresh.")
+                    .font(.system(size: 13))
+                    .foregroundColor(AppColors.textMuted)
+
+                ScrollView {
+                    LazyVStack(spacing: 10) {
+                        ForEach(saveSlotSummaries) { summary in
+                            Button {
+                                viewModel.loadSlotSummary(summary)
+                                showLaunchStatePicker = false
+                            } label: {
+                                HStack(spacing: 12) {
+                                    saveSlotThumbnail(summary)
+                                        .frame(width: 92, height: 58)
+                                    VStack(alignment: .leading, spacing: 4) {
+                                        Text(summary.displayName == "Quick" ? "Quick Save" : "Slot \(summary.displayName)")
+                                            .font(.system(size: 14, weight: .semibold))
+                                            .foregroundColor(AppColors.textPrimary)
+                                        Text(summary.metadata?.createdAt.formatted(date: .abbreviated, time: .shortened) ?? "Unknown time")
+                                            .font(.system(size: 11))
+                                            .foregroundColor(AppColors.textMuted)
+                                    }
+                                    Spacer()
+                                    Image(systemName: "play.fill")
+                                        .foregroundColor(AppColors.primary)
+                                }
+                                .padding(10)
+                                .background(AppColors.surface.opacity(0.85))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 14)
+                                        .stroke(AppColors.surfaceLight.opacity(0.7), lineWidth: 1)
+                                )
+                                .clipShape(RoundedRectangle(cornerRadius: 14))
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                }
+                .frame(maxHeight: 280)
+
+                HStack(spacing: 10) {
+                    pauseActionButton(title: "Start Fresh", icon: "sparkles") {
+                        showLaunchStatePicker = false
+                    }
+                    pauseActionButton(title: "Open Pause Menu", icon: "line.3.horizontal") {
+                        showLaunchStatePicker = false
+                        showPauseMenu = true
+                    }
+                }
+            }
+            .padding(16)
+            .frame(maxWidth: 680)
+            .background(
+                RoundedRectangle(cornerRadius: 22, style: .continuous)
+                    .fill(AppColors.surface.opacity(0.92))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 22, style: .continuous)
+                    .stroke(AppColors.surfaceLight.opacity(0.75), lineWidth: 1)
+            )
+            .shadow(color: AppColors.primary.opacity(0.16), radius: 22, x: 0, y: 10)
+            .padding(.horizontal, 16)
+        }
+    }
+
+    private enum PauseActionStyle {
+        case primary, normal, destructive
+    }
+
+    private func pauseActionButton(title: String, icon: String, style: PauseActionStyle = .normal, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Label(title, systemImage: icon)
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundColor(foregroundColor(for: style))
+                .frame(maxWidth: .infinity, minHeight: 42)
+        }
+        .buttonStyle(.plain)
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(backgroundColor(for: style))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(borderColor(for: style), lineWidth: 1)
+        )
+    }
+
+    private func foregroundColor(for style: PauseActionStyle) -> Color {
+        switch style {
+        case .primary: return .white
+        case .normal: return AppColors.textPrimary
+        case .destructive: return .white
+        }
+    }
+
+    private func backgroundColor(for style: PauseActionStyle) -> Color {
+        switch style {
+        case .primary: return AppColors.primary
+        case .normal: return AppColors.surfaceLight.opacity(0.55)
+        case .destructive: return AppColors.error.opacity(0.85)
+        }
+    }
+
+    private func borderColor(for style: PauseActionStyle) -> Color {
+        switch style {
+        case .primary: return AppColors.primary.opacity(0.9)
+        case .normal: return AppColors.surfaceLight.opacity(0.8)
+        case .destructive: return AppColors.error.opacity(0.9)
+        }
+    }
+
+    @ViewBuilder
+    private func saveSlotCard(_ summary: SaveStateSlotSummary) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            saveSlotThumbnail(summary)
+                .frame(height: 84)
+
+            HStack {
+                Text(summary.isQuickSlot ? "Quick" : "Slot \(summary.displayName)")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundColor(AppColors.textPrimary)
+                Spacer()
+                Text(summary.isEmpty ? "Empty" : "Saved")
+                    .font(.system(size: 10, weight: .medium))
+                    .foregroundColor(summary.isEmpty ? AppColors.textMuted : AppColors.primary)
+            }
+
+            Text(summary.metadata?.createdAt.formatted(date: .abbreviated, time: .shortened) ?? "No save yet")
+                .font(.system(size: 10))
+                .foregroundColor(AppColors.textMuted)
+                .lineLimit(1)
+
+            HStack(spacing: 8) {
+                Button {
+                    if summary.isQuickSlot {
+                        viewModel.quickSave()
+                    } else {
+                        viewModel.saveState(slot: summary.slot)
+                    }
+                    saveSlotSummaries = viewModel.saveSlotSummaries()
+                } label: {
+                    Label("Save", systemImage: "square.and.arrow.down")
+                        .font(.system(size: 11, weight: .medium))
+                        .frame(maxWidth: .infinity, minHeight: 30)
+                }
+                .buttonStyle(.plain)
+                .background(RoundedRectangle(cornerRadius: 10).fill(AppColors.surfaceLight.opacity(0.6)))
+                .overlay(RoundedRectangle(cornerRadius: 10).stroke(AppColors.surfaceLight.opacity(0.8), lineWidth: 1))
+
+                Button {
+                    viewModel.loadSlotSummary(summary)
+                } label: {
+                    Label("Load", systemImage: "square.and.arrow.up")
+                        .font(.system(size: 11, weight: .medium))
+                        .frame(maxWidth: .infinity, minHeight: 30)
+                }
+                .buttonStyle(.plain)
+                .disabled(summary.isEmpty)
+                .opacity(summary.isEmpty ? 0.45 : 1)
+                .background(RoundedRectangle(cornerRadius: 10).fill(AppColors.surfaceLight.opacity(0.6)))
+                .overlay(RoundedRectangle(cornerRadius: 10).stroke(AppColors.surfaceLight.opacity(0.8), lineWidth: 1))
+            }
+            .foregroundColor(AppColors.textPrimary)
+        }
+        .padding(10)
+        .background(AppColors.background.opacity(0.55))
+        .overlay(
+            RoundedRectangle(cornerRadius: 14)
+                .stroke(AppColors.surfaceLight.opacity(0.7), lineWidth: 1)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: 14))
+    }
+
+    @ViewBuilder
+    private func saveSlotThumbnail(_ summary: SaveStateSlotSummary) -> some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 12)
+                .fill(
+                    LinearGradient(
+                        colors: [AppColors.surfaceLight.opacity(0.7), AppColors.surface.opacity(0.95)],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+            #if canImport(UIKit)
+            if let data = summary.screenshotData, let image = UIImage(data: data) {
+                Image(uiImage: image)
+                    .resizable()
+                    .aspectRatio(contentMode: .fill)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .clipped()
+            } else {
+                Image(systemName: "photo")
+                    .font(.system(size: 20, weight: .semibold))
+                    .foregroundColor(AppColors.textMuted)
+            }
+            #else
+            Image(systemName: "photo")
+                .font(.system(size: 20, weight: .semibold))
+                .foregroundColor(AppColors.textMuted)
+            #endif
+        }
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(AppColors.surfaceLight.opacity(0.7), lineWidth: 1)
+        )
     }
 }
 

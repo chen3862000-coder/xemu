@@ -104,7 +104,7 @@ struct SaveStateRow: View {
             #endif
             
             VStack(alignment: .leading, spacing: 4) {
-                Text("Slot \(saveState.slotIndex + 1)")
+                Text(slotTitle)
                     .font(.headline)
                 
                 Text(formattedTimestamp(saveState.timestamp))
@@ -148,6 +148,10 @@ struct SaveStateRow: View {
                     .foregroundColor(.gray)
                     .font(.system(size: 16, weight: .bold))
             )
+    }
+
+    private var slotTitle: String {
+        saveState.slotIndex == 0 ? "Quick Save" : "Slot \(saveState.slotIndex)"
     }
 }
 

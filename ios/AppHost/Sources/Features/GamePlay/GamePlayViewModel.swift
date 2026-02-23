@@ -2,6 +2,10 @@ import Foundation
 import MetalKit
 import Combine
 import GameController
+import CoreData
+#if canImport(UIKit)
+import UIKit
+#endif
 #if canImport(XemuCores)
 import XemuCores
 #endif
@@ -10,7 +14,6 @@ import XemuCores
 class GamePlayViewModel: ObservableObject {
     private static let minimumTouchPressDurationNs: UInt64 = 60_000_000
     private static let minimumDirectionalPressDurationNs: UInt64 = 28_000_000
-    private static let gameSaveSlot = 9
     @Published var isRunning = false
     @Published var isPaused = false
     @Published var showTouchOverlay = true
@@ -28,6 +31,8 @@ class GamePlayViewModel: ObservableObject {
     private var currentROMHash: String = ""
     private var currentPlatform: Platform?
     private var currentGameTitle: String = ""
+    private var sessionStartedAt: Date?
+    private var lastFrameSnapshot: (data: Data, width: Int, height: Int, bytesPerRow: Int)?
     
     private var frameWidth = 160
     private var frameHeight = 144
@@ -145,8 +150,8 @@ class GamePlayViewModel: ObservableObject {
             audioEngine?.setVolume(1.0)
 
             emulatorSession?.start()
-            autoLoadGameSave()
             refreshSaveStateDebugLine()
+            sessionStartedAt = Date()
 
             isRunning = true
             isPaused = false
@@ -169,7 +174,7 @@ class GamePlayViewModel: ObservableObject {
         defer { isStoppingEmulation = false }
 
         autoreleasepool {
-            autoSaveGameProgress()
+            persistPlayedTimeIfNeeded()
             cancelPendingTouchReleases()
             releaseAllTouchButtons()
 
@@ -192,6 +197,8 @@ class GamePlayViewModel: ObservableObject {
             currentPlatform = nil
             currentROMHash = ""
             currentGameTitle = ""
+            sessionStartedAt = nil
+            lastFrameSnapshot = nil
         }
         
         isRunning = false
@@ -228,7 +235,7 @@ class GamePlayViewModel: ObservableObject {
             do {
                 let data = try session.saveState(to: 0)
                 let metadata = makeMetadata(slot: 0)
-                try await SaveStateStorage.shared.persist(data: data, metadata: metadata, screenshotData: nil)
+                try await SaveStateStorage.shared.persist(data: data, metadata: metadata, screenshotData: makeSaveStateScreenshotData())
                 let (verifyData, _, _) = try SaveStateStorage.shared.load(slot: 0, romHash: currentROMHash)
                 statusMessage = "State saved (\(verifyData.count) bytes)"
                 refreshSaveStateDebugLine()
@@ -272,7 +279,7 @@ class GamePlayViewModel: ObservableObject {
             do {
                 let data = try session.saveState(to: slot)
                 let metadata = makeMetadata(slot: slot)
-                try await SaveStateStorage.shared.persist(data: data, metadata: metadata, screenshotData: nil)
+                try await SaveStateStorage.shared.persist(data: data, metadata: metadata, screenshotData: makeSaveStateScreenshotData())
                 self.statusMessage = "State saved to slot \(slot) (\(data.count) bytes)"
                 refreshSaveStateDebugLine()
             } catch {
@@ -299,13 +306,8 @@ class GamePlayViewModel: ObservableObject {
         }
     }
 
-    func saveGameProgress() {
-        saveState(slot: Self.gameSaveSlot)
-    }
-
-    func loadGameProgress() {
-        loadState(slot: Self.gameSaveSlot)
-    }
+    func saveGameProgress() { saveState(slot: 1) }
+    func loadGameProgress() { loadState(slot: 1) }
 
     func handleButtonPress(_ button: EmulatorButton, pressed: Bool) {
         if touchButtonStates[button] == pressed {
@@ -413,30 +415,18 @@ class GamePlayViewModel: ObservableObject {
         )
     }
 
-    private func autoLoadGameSave() {
-        guard let session = emulatorSession, !currentROMHash.isEmpty else { return }
-        do {
-            let (data, _, _) = try SaveStateStorage.shared.load(slot: Self.gameSaveSlot, romHash: currentROMHash)
-            try session.loadState(from: data)
-            statusMessage = "Game save loaded"
-            refreshSaveStateDebugLine()
-        } catch {
-            // No existing game save is expected on first launch.
-            refreshSaveStateDebugLine()
-        }
-    }
-
-    private func autoSaveGameProgress() {
-        guard let session = emulatorSession, !currentROMHash.isEmpty else { return }
-        do {
-            let data = try session.saveState(to: Self.gameSaveSlot)
-            let metadata = makeMetadata(slot: Self.gameSaveSlot)
-            Task { @MainActor in
-                try? await SaveStateStorage.shared.persist(data: data, metadata: metadata, screenshotData: nil)
-                refreshSaveStateDebugLine()
-            }
-        } catch {
-            // Best-effort autosave on exit.
+    private func persistPlayedTimeIfNeeded() {
+        guard let startedAt = sessionStartedAt, !currentROMHash.isEmpty else { return }
+        let elapsed = Int(Date().timeIntervalSince(startedAt))
+        guard elapsed > 0 else { return }
+        let context = PersistenceController.shared.viewContext
+        let request: NSFetchRequest<ROMLibraryEntry> = ROMLibraryEntry.fetchRequest()
+        request.predicate = NSPredicate(format: "checksum == %@", currentROMHash)
+        request.fetchLimit = 1
+        if let entry = try? context.fetch(request).first {
+            entry.lastPlayedAt = Date()
+            entry.playtimeTotal += Int64(elapsed)
+            try? context.save()
         }
     }
 
@@ -527,6 +517,58 @@ class GamePlayViewModel: ObservableObject {
     func setupRenderer(mtkView: MTKView) {
         metalRenderer?.setupWithMTKView(mtkView)
     }
+
+    func saveSlotSummaries() -> [SaveStateSlotSummary] {
+        guard !currentROMHash.isEmpty else { return [] }
+        return SaveStateStorage.shared.listSlotSummaries(for: currentROMHash)
+    }
+
+    func hasSavedStatesForCurrentGame() -> Bool {
+        guard !currentROMHash.isEmpty else { return false }
+        return SaveStateStorage.shared.hasAnySaveState(for: currentROMHash)
+    }
+
+    func loadSlotSummary(_ summary: SaveStateSlotSummary) {
+        guard !summary.isEmpty else { return }
+        loadState(slot: summary.slot)
+    }
+
+    func refreshSaveStatesStatus() {
+        refreshSaveStateDebugLine()
+    }
+
+    private func makeSaveStateScreenshotData() -> Data? {
+        #if canImport(UIKit)
+        guard let snapshot = lastFrameSnapshot else { return nil }
+        let width = snapshot.width
+        let height = snapshot.height
+        guard width > 0, height > 0, snapshot.bytesPerRow >= width * 4 else { return nil }
+
+        let data = snapshot.data as CFData
+        guard let provider = CGDataProvider(data: data) else { return nil }
+        let colorSpace = CGColorSpaceCreateDeviceRGB()
+        let bitmapInfo = CGBitmapInfo.byteOrder32Little.union(
+            CGBitmapInfo(rawValue: CGImageAlphaInfo.premultipliedFirst.rawValue)
+        )
+        guard let cgImage = CGImage(
+            width: width,
+            height: height,
+            bitsPerComponent: 8,
+            bitsPerPixel: 32,
+            bytesPerRow: snapshot.bytesPerRow,
+            space: colorSpace,
+            bitmapInfo: bitmapInfo,
+            provider: provider,
+            decode: nil,
+            shouldInterpolate: false,
+            intent: .defaultIntent
+        ) else { return nil }
+
+        return UIImage(cgImage: cgImage).jpegData(compressionQuality: 0.72)
+        #else
+        return nil
+        #endif
+    }
 }
 
 extension GamePlayViewModel: EmulatorRenderDelegate {
@@ -542,6 +584,7 @@ extension GamePlayViewModel: EmulatorRenderDelegate {
             guard data.count >= neededSize, width > 0, height > 0, pitch > 0 else {
                 return
             }
+            lastFrameSnapshot = (data: data, width: width, height: height, bytesPerRow: pitch)
             
             metalRenderer?.enqueueFrame(data, width: width, height: height, bytesPerRow: pitch)
             

@@ -283,7 +283,14 @@ struct RecentlyPlayedCard: View {
                     )
                 )
 #if os(iOS)
-            if let imageData = entry.coverImageData, let uiImage = UIImage(data: imageData) {
+            if let screenshotData = SaveStateStorage.shared.latestScreenshot(for: entry.checksum ?? ""),
+               let uiImage = UIImage(data: screenshotData) {
+                Image(uiImage: uiImage)
+                    .resizable()
+                    .aspectRatio(contentMode: .fill)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .clipped()
+            } else if let imageData = entry.coverImageData, let uiImage = UIImage(data: imageData) {
                 Image(uiImage: uiImage)
                     .resizable()
                     .aspectRatio(contentMode: .fill)

@@ -90,7 +90,7 @@ final class SaveStatesViewModel: ObservableObject {
     
     func nextAvailableSlot() -> Int? {
         let occupiedSlots = Set(saveStates.map { Int($0.slotIndex) })
-        for slot in 0...9 {
+        for slot in 0..<SaveStateStorage.maxSlots {
             if !occupiedSlots.contains(slot) {
                 return slot
             }

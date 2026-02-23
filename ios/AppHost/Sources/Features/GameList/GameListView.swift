@@ -40,7 +40,7 @@ struct GameListView: View {
             }
         }
         .onAppear {
-            viewModel.loadGames(for: platform)
+            viewModel.loadGames(for: platform, in: viewContext)
         }
     }
     
@@ -87,7 +87,7 @@ struct GameListView: View {
                 }
 
                 VStack(alignment: .leading, spacing: 1) {
-                    Text(platform.displayName)
+                    Text(platformDisplay.displayName)
                         .font(.system(size: 18, weight: .bold))
                         .foregroundColor(AppColors.textPrimary)
                     Text("\(viewModel.filteredGames(searchText: searchText).count) games available")
@@ -97,7 +97,7 @@ struct GameListView: View {
 
                 Spacer()
 
-                Text(platformEmoji)
+                Text(platformDisplay.emoji)
                     .font(.system(size: 28))
             }
 
@@ -172,7 +172,7 @@ struct GameListView: View {
                             .foregroundColor(AppColors.textPrimary)
                     }
                     Spacer()
-                    Text(platform.shortName)
+                    Text(platformDisplay.shortName)
                         .font(.system(size: 11, weight: .medium))
                         .foregroundColor(AppColors.textMuted)
                 }
@@ -181,10 +181,10 @@ struct GameListView: View {
                     platformIcon
 
                     VStack(alignment: .leading, spacing: 4) {
-                        Text("\(platform.displayName) Games")
+                        Text("\(platformDisplay.displayName) Games")
                             .font(.system(size: 16, weight: .semibold))
                             .foregroundColor(AppColors.textPrimary)
-                        Text("Browse and launch your \(platform.shortName) library")
+                        Text("Browse and launch your \(platformDisplay.shortName) library")
                             .font(.system(size: 12))
                             .foregroundColor(AppColors.textMuted)
                             .lineLimit(2)
@@ -205,15 +205,23 @@ struct GameListView: View {
         ZStack {
             RoundedRectangle(cornerRadius: 14)
                 .fill(platform.gradient)
-                .frame(width: 56, height: 56)
+                .frame(width: 64, height: 64)
                 .overlay(
                     RoundedRectangle(cornerRadius: 14)
                         .stroke(Color.white.opacity(0.15), lineWidth: 1)
                 )
-            
-            Image(systemName: platform.iconName)
-                .font(.system(size: 22, weight: .bold))
-                .foregroundColor(.white)
+
+            if let assetName = platformDisplay.consoleAssetName {
+                Image(assetName)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 54, height: 54)
+                    .clipShape(RoundedRectangle(cornerRadius: 10))
+            } else {
+                Image(systemName: platform.iconName)
+                    .font(.system(size: 22, weight: .bold))
+                    .foregroundColor(.white)
+            }
         }
     }
     
@@ -269,15 +277,54 @@ struct GameListView: View {
         }
     }
 
-    private var platformEmoji: String {
+    private var platformDisplay: PlatformDisplay {
+        PlatformDisplay(platform: platform)
+    }
+}
+
+private struct PlatformDisplay {
+    let displayName: String
+    let shortName: String
+    let emoji: String
+    let consoleAssetName: String?
+
+    init(platform: EmulatorPlatform) {
         switch platform {
-        case .gameBoy: return "🎮"
-        case .gameBoyColor: return "🎨"
-        case .gameBoyAdvance: return "⚡"
-        case .nintendoDS: return "📱"
-        case .playStation1: return "💿"
-        case .nintendo3DS: return "🔺"
-        case .psp: return "🎯"
+        case .gameBoy:
+            displayName = "Game Boy + Color"
+            shortName = "GB/GBC"
+            emoji = "🎮"
+            consoleAssetName = "ConsoleGBGBC"
+        case .gameBoyColor:
+            displayName = "Game Boy + Color"
+            shortName = "GB/GBC"
+            emoji = "🎮"
+            consoleAssetName = "ConsoleGBGBC"
+        case .gameBoyAdvance:
+            displayName = "Game Boy Advance"
+            shortName = "GBA"
+            emoji = "⚡"
+            consoleAssetName = "ConsoleGBA"
+        case .nintendoDS:
+            displayName = "Nintendo DS"
+            shortName = "NDS"
+            emoji = "📱"
+            consoleAssetName = "ConsoleNDS"
+        case .playStation1:
+            displayName = platform.displayName
+            shortName = platform.shortName
+            emoji = "💿"
+            consoleAssetName = nil
+        case .nintendo3DS:
+            displayName = platform.displayName
+            shortName = platform.shortName
+            emoji = "🔺"
+            consoleAssetName = nil
+        case .psp:
+            displayName = platform.displayName
+            shortName = platform.shortName
+            emoji = "🎯"
+            consoleAssetName = nil
         }
     }
 }
@@ -439,6 +486,7 @@ struct GameCardRow: View {
     }
 }
 
+@MainActor
 class GameListViewModel: ObservableObject {
     @Published var games: [Game] = []
     @Published var isLoading = false
@@ -447,15 +495,36 @@ class GameListViewModel: ObservableObject {
     var playedGames: Int { games.filter { $0.totalPlayTime > 0 }.count }
     var favoriteGames: Int { games.filter { $0.isFavorite }.count }
     
-    func loadGames(for platform: EmulatorPlatform) {
+    func loadGames(for platform: EmulatorPlatform, in context: NSManagedObjectContext) {
         isLoading = true
-        
-        games = [
-            Game(title: "Pokemon Emerald", platform: platform.displayName, rating: 4.5, totalPlayTime: 3600, isFavorite: true, releaseYear: 2004, genre: "RPG", fileSize: 8388608),
-            Game(title: "Mario Kart", platform: platform.displayName, rating: 4.8, totalPlayTime: 7200, isFavorite: false, releaseYear: 2003, genre: "Racing", fileSize: 4194304),
-            Game(title: "Zelda OOT", platform: platform.displayName, rating: 5.0, totalPlayTime: 14400, isFavorite: true, releaseYear: 1998, genre: "Adventure", fileSize: 16777216)
-        ].filter { $0.platform == platform.displayName }
-        
+
+        let request: NSFetchRequest<ROMLibraryEntry> = ROMLibraryEntry.fetchRequest()
+        request.sortDescriptors = [
+            NSSortDescriptor(keyPath: \ROMLibraryEntry.lastPlayedAt, ascending: false),
+            NSSortDescriptor(keyPath: \ROMLibraryEntry.dateAdded, ascending: false)
+        ]
+
+        switch platform {
+        case .gameBoy:
+            request.predicate = NSPredicate(format: "system IN %@", ["gb", "gbc"])
+        case .gameBoyColor:
+            request.predicate = NSPredicate(format: "system == %@", "gbc")
+        case .gameBoyAdvance:
+            request.predicate = NSPredicate(format: "system == %@", "gba")
+        case .nintendoDS:
+            request.predicate = NSPredicate(format: "system == %@", "nds")
+        default:
+            request.predicate = NSPredicate(format: "system == %@", platform.shortName.lowercased())
+        }
+
+        do {
+            let entries = try context.fetch(request)
+            games = entries.compactMap { $0.toGame() }
+        } catch {
+            print("Failed to load games for \(platform.displayName): \(error)")
+            games = []
+        }
+
         isLoading = false
     }
     
