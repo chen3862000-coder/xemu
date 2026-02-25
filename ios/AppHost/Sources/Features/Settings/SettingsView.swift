@@ -10,7 +10,9 @@ import AppKit
 struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var themeController: ThemeController
+    @EnvironmentObject private var shellThemeManager: ShellThemeManager
     @State private var showingUpgrade = false
+    @State private var showingShellSkins = false
     @AppStorage("frameSkipEnabled") private var frameSkipEnabled = false
     
     var body: some View {
@@ -23,7 +25,7 @@ struct SettingsView: View {
                 }
 
                 ScrollView {
-                    VStack(spacing: 18) {
+                    VStack(spacing: 16) {
                         appInfoCard
                         appearanceCard
                         settingsItems
@@ -37,6 +39,10 @@ struct SettingsView: View {
         }
         .sheet(isPresented: $showingUpgrade) {
             UpgradeView()
+        }
+        .sheet(isPresented: $showingShellSkins) {
+            ShellSkinsView()
+                .environmentObject(shellThemeManager)
         }
     }
     
@@ -71,17 +77,17 @@ struct SettingsView: View {
     }
     
     private var appInfoCard: some View {
-        VStack(spacing: 14) {
+        VStack(spacing: 16) {
             ZStack {
-                RoundedRectangle(cornerRadius: 20)
+                RoundedRectangle(cornerRadius: 22)
                     .fill(
                         LinearGradient(
-                            colors: [AppColors.primary, AppColors.accent],
+                            colors: [AppColors.primary.opacity(0.95), AppColors.accent.opacity(0.85)],
                             startPoint: .topLeading,
                             endPoint: .bottomTrailing
                         )
                     )
-                    .frame(width: 80, height: 80)
+                    .frame(width: 92, height: 92)
                     .shadow(color: AppColors.primary.opacity(0.35), radius: 14, x: 0, y: 8)
 
                 SettingsBrandIconGlyph()
@@ -89,12 +95,13 @@ struct SettingsView: View {
             }
 
             VStack(spacing: 4) {
-                Text("XEmu Pro")
-                    .font(.system(size: 20, weight: .bold))
+                Text("XEmu")
+                    .font(.system(size: 22, weight: .semibold, design: .rounded))
+                    .tracking(0.2)
                     .foregroundColor(AppColors.textPrimary)
 
                 Text(appVersionText)
-                    .font(.system(size: 12))
+                    .font(.system(size: 13, weight: .medium, design: .rounded))
                     .foregroundColor(AppColors.textMuted)
             }
 
@@ -103,11 +110,11 @@ struct SettingsView: View {
                     .fill(AppColors.success)
                     .frame(width: 8, height: 8)
                 Text("Free Plan")
-                    .font(.system(size: 12, weight: .medium))
+                    .font(.system(size: 13, weight: .semibold))
                     .foregroundColor(AppColors.textPrimary)
             }
-            .padding(.horizontal, 14)
-            .padding(.vertical, 8)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 9)
             .background(AppColors.background.opacity(0.45))
             .overlay(
                 Capsule()
@@ -115,24 +122,50 @@ struct SettingsView: View {
             )
             .clipShape(Capsule())
         }
-        .padding(24)
+        .padding(.vertical, 28)
+        .padding(.horizontal, 24)
         .frame(maxWidth: .infinity)
-        .background(AppColors.surface)
+        .background(
+            LinearGradient(
+                colors: [AppColors.primary.opacity(0.12), AppColors.surface],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+        )
         .overlay(
             RoundedRectangle(cornerRadius: 20)
                 .stroke(AppColors.surfaceLight.opacity(0.5), lineWidth: 1)
         )
         .clipShape(RoundedRectangle(cornerRadius: 20))
+        .shadow(color: AppColors.primary.opacity(0.12), radius: 16, x: 0, y: 8)
     }
 
     private var appVersionText: String {
-        let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.0.0"
-        let build = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "1"
-        return "Version \(version) (\(build))"
+        return "Version 1.0"
     }
     
     private var settingsItems: some View {
         VStack(spacing: 12) {
+            SettingsItem(
+                icon: "paintpalette",
+                title: "Shell Skins",
+                description: "Themes and shell styles",
+                iconColor: AppColors.primary,
+                iconBackground: AppColors.primary.opacity(0.18)
+            ) {
+                showingShellSkins = true
+            }
+
+            SettingsItem(
+                icon: "gamecontroller",
+                title: "Controls",
+                description: "Layout, opacity, haptics and gestures",
+                iconColor: AppColors.accent,
+                iconBackground: AppColors.accent.opacity(0.18)
+            ) {
+                // Reserved for controls settings
+            }
+
             FigmaSettingsToggleRow(
                 icon: "gauge.with.dots.needle.67percent",
                 iconColor: AppColors.warning,
@@ -145,7 +178,7 @@ struct SettingsView: View {
             SettingsItem(
                 icon: "star.fill",
                 title: "Upgrade",
-                description: "Unlock all features and remove ads"
+                description: "Cloud saves, themes and advanced controls"
                 ,
                 iconColor: AppColors.warning,
                 iconBackground: AppColors.warning.opacity(0.2)
@@ -204,12 +237,12 @@ struct SettingsView: View {
 
             VStack(alignment: .leading, spacing: 2) {
                 Text("Appearance")
-                    .font(.system(size: 16, weight: .semibold))
+                    .font(.system(size: 17, weight: .bold))
                     .foregroundColor(AppColors.textPrimary)
 
                 Text(isLight ? "Light Mode" : "Dark Mode")
-                    .font(.system(size: 12))
-                    .foregroundColor(AppColors.textMuted)
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundColor(AppColors.primary)
             }
 
             Spacer()
@@ -218,17 +251,18 @@ struct SettingsView: View {
                 themeController.toggleMode()
             }
         }
-        .padding(16)
+        .padding(18)
         .background(AppColors.surface)
         .overlay(
             RoundedRectangle(cornerRadius: 16)
                 .stroke(AppColors.surfaceLight.opacity(0.5), lineWidth: 1)
         )
         .clipShape(RoundedRectangle(cornerRadius: 16))
+        .shadow(color: AppColors.primary.opacity(0.05), radius: 8, x: 0, y: 4)
     }
     
     private var footerSection: some View {
-        VStack(spacing: 12) {
+        VStack(spacing: 14) {
             Text("Made with ❤️ for retro gaming")
                 .font(.system(size: 12))
                 .foregroundColor(AppColors.textMuted)
@@ -272,6 +306,206 @@ struct SettingsView: View {
     }
 }
 
+private struct ShellSkinsView: View {
+    @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject private var shellThemeManager: ShellThemeManager
+
+    private let consoles: [ShellConsoleKind] = [.gb, .gbc, .gba, .nds]
+    private let globalSentinel = "__global__"
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(spacing: 14) {
+                    headerCard
+
+                    settingSectionCard(title: "Global Shell Theme", subtitle: "Default skin for all supported consoles") {
+                        shellThemePickerRow(
+                            title: "Global",
+                            subtitle: shellThemeManager.activeTheme.displayName,
+                            console: nil
+                        )
+                    }
+
+                    settingSectionCard(title: "Per Emulator", subtitle: "Override shell skins for UAT and comparison") {
+                        VStack(spacing: 10) {
+                            ForEach(consoles, id: \.self) { console in
+                                shellThemePickerRow(
+                                    title: console.displayName,
+                                    subtitle: currentThemeName(for: console),
+                                    console: console
+                                )
+                                if console != consoles.last {
+                                    Divider()
+                                        .overlay(AppColors.surfaceLight.opacity(0.35))
+                                }
+                            }
+                        }
+                    }
+                }
+                .padding(.horizontal, 16)
+                .padding(.top, 14)
+                .padding(.bottom, 28)
+            }
+            .background(AppColors.background.ignoresSafeArea())
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Done") { dismiss() }
+                }
+            }
+            .navigationTitle("Appearance & Skins")
+            #if os(iOS)
+            .navigationBarTitleDisplayMode(.inline)
+            #endif
+        }
+    }
+
+    private var headerCard: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("Shell Theme Picker")
+                .font(.system(size: 22, weight: .bold, design: .rounded))
+                .foregroundColor(AppColors.textPrimary)
+
+            Text("Compare classic and minimal shells per emulator without changing gameplay behavior.")
+                .font(.system(size: 14, weight: .medium))
+                .foregroundColor(AppColors.primary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(18)
+        .background(
+            LinearGradient(
+                colors: [AppColors.primary.opacity(0.10), AppColors.surface],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 16)
+                .stroke(AppColors.surfaceLight.opacity(0.5), lineWidth: 1)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: 16))
+        .shadow(color: AppColors.primary.opacity(0.08), radius: 10, x: 0, y: 5)
+    }
+
+    @ViewBuilder
+    private func settingSectionCard<Content: View>(
+        title: String,
+        subtitle: String,
+        @ViewBuilder content: () -> Content
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.system(size: 17, weight: .bold))
+                    .foregroundColor(AppColors.textPrimary)
+                Text(subtitle)
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundColor(AppColors.primary)
+            }
+
+            content()
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(16)
+        .background(AppColors.surface)
+        .overlay(
+            RoundedRectangle(cornerRadius: 16)
+                .stroke(AppColors.surfaceLight.opacity(0.5), lineWidth: 1)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: 16))
+        .shadow(color: AppColors.primary.opacity(0.05), radius: 8, x: 0, y: 4)
+    }
+
+    private func shellThemePickerRow(title: String, subtitle: String, console: ShellConsoleKind?) -> some View {
+        let available = availableThemes(for: console)
+        return HStack(spacing: 12) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundColor(AppColors.textPrimary)
+                Text(subtitle)
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundColor(AppColors.textMuted)
+                    .lineLimit(1)
+            }
+
+            Spacer()
+
+            Picker("", selection: pickerBinding(for: console)) {
+                if console != nil {
+                    Text("Use Global").tag(globalSentinel)
+                }
+                ForEach(available) { theme in
+                    Text(theme.displayName).tag(theme.id)
+                }
+            }
+            .pickerStyle(.menu)
+            .tint(AppColors.primary)
+        }
+        .padding(.vertical, 4)
+    }
+
+    private func availableThemes(for console: ShellConsoleKind?) -> [EmulatorShellTheme] {
+        if let console {
+            return shellThemeManager.availableThemes
+                .filter { $0.supportedConsoles.contains(console) }
+                .sorted { $0.displayName < $1.displayName }
+        }
+        return shellThemeManager.availableThemes.sorted { $0.displayName < $1.displayName }
+    }
+
+    private func currentThemeName(for console: ShellConsoleKind) -> String {
+        let theme = shellThemeManager.theme(for: console.platform)
+        if shellThemeManager.perConsoleSelectedThemeIDs[console] == nil {
+            return "\(theme.displayName) (Global)"
+        }
+        return theme.displayName
+    }
+
+    private func pickerBinding(for console: ShellConsoleKind?) -> Binding<String> {
+        Binding(
+            get: {
+                if let console {
+                    return shellThemeManager.perConsoleSelectedThemeIDs[console] ?? globalSentinel
+                }
+                return shellThemeManager.selectedThemeID
+            },
+            set: { newValue in
+                if let console {
+                    if newValue == globalSentinel {
+                        shellThemeManager.clearConsoleThemeOverride(console)
+                    } else {
+                        shellThemeManager.setTheme(id: newValue, for: console)
+                    }
+                } else {
+                    shellThemeManager.setTheme(id: newValue)
+                }
+            }
+        )
+    }
+}
+
+private extension ShellConsoleKind {
+    var displayName: String {
+        switch self {
+        case .gb: return "Game Boy"
+        case .gbc: return "Game Boy Color"
+        case .gba: return "Game Boy Advance"
+        case .nds: return "Nintendo DS"
+        }
+    }
+
+    var platform: Platform {
+        switch self {
+        case .gb: return .GB
+        case .gbc: return .GBC
+        case .gba: return .GBA
+        case .nds: return .NDS
+        }
+    }
+}
+
 private struct ThemePillToggle: View {
     let isLight: Bool
     let onToggle: () -> Void
@@ -312,21 +546,21 @@ struct FigmaSettingsToggleRow: View {
             ZStack {
                 RoundedRectangle(cornerRadius: 12)
                     .fill(iconBg)
-                    .frame(width: 48, height: 48)
+                    .frame(width: 56, height: 56)
                 
                 Image(systemName: icon)
-                    .font(.system(size: 20, weight: .semibold))
+                    .font(.system(size: 22, weight: .semibold))
                     .foregroundColor(iconColor)
             }
             
             VStack(alignment: .leading, spacing: 2) {
                 Text(title)
-                    .font(.system(size: 16, weight: .semibold))
+                    .font(.system(size: 17, weight: .bold))
                     .foregroundColor(AppColors.textPrimary)
                 
                 Text(description)
-                    .font(.system(size: 12))
-                    .foregroundColor(AppColors.textMuted)
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundColor(AppColors.primary)
             }
             
             Spacer()
@@ -337,13 +571,14 @@ struct FigmaSettingsToggleRow: View {
                 .labelsHidden()
                 .tint(AppColors.primary)
         }
-        .padding(16)
+        .padding(18)
         .background(AppColors.surface)
         .overlay(
             RoundedRectangle(cornerRadius: 16)
                 .stroke(AppColors.surfaceLight.opacity(0.5), lineWidth: 1)
         )
         .clipShape(RoundedRectangle(cornerRadius: 16))
+        .shadow(color: AppColors.primary.opacity(0.05), radius: 8, x: 0, y: 4)
     }
 }
 

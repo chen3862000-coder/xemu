@@ -66,8 +66,8 @@ public:
         applyDisplayDefaults();
         
         romLoaded_ = true;
-        printf("[GambatteWrapper] ROM loaded successfully (%zu bytes), CGB mode: %s, video_pixel_t=%zu bytes\n",
-               size, gambatte_->isCgb() ? "yes" : "no", sizeof(gambatte::video_pixel_t));
+        printf("[GambatteWrapper] ROM loaded successfully (%zu bytes), CGB mode: %s\n",
+               size, gambatte_->isCgb() ? "yes" : "no");
         return true;
 #else
         romLoaded_ = true;

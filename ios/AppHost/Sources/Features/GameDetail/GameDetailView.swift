@@ -86,16 +86,8 @@ struct GameDetailView: View {
                     .padding(.vertical, 4)
                     .background(Color.purple.opacity(0.5))
                     .clipShape(RoundedRectangle(cornerRadius: 4))
-                
+
                 Spacer()
-                
-                HStack(spacing: 2) {
-                    ForEach(0..<5) { index in
-                        Image(systemName: index < Int(game.rating) ? "star.fill" : "star")
-                            .foregroundColor(.yellow)
-                            .font(.caption)
-                    }
-                }
             }
         }
     }

@@ -3,7 +3,7 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 77;
+	objectVersion = 63;
 	objects = {
 
 /* Begin PBXBuildFile section */
@@ -47,6 +47,7 @@
 		85226034F5C6C1F5A20A8961 /* StableSessionTracker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 343B1CDBFFD8BCEE6BA08EA4 /* StableSessionTracker.swift */; };
 		853E53F67096EEC95A90F8ED /* AzureApiStub.swift in Sources */ = {isa = PBXBuildFile; fileRef = B7590148A026C7627A4511DC /* AzureApiStub.swift */; };
 		8675EBF87782893B77722E97 /* libresolv.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = E6B83C8DF59433DEA55727D3 /* libresolv.tbd */; };
+		89346E79C7ECC3CA6117990B /* PlayerStatsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EA48E5CBB14313449118F633 /* PlayerStatsView.swift */; };
 		897F892CA9E3F653E17AAB39 /* ControllerOverlayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D24F51E4490BD43AE3AE7DE1 /* ControllerOverlayView.swift */; };
 		8A942AB5E6436CC4D8394EB4 /* Input.swift in Sources */ = {isa = PBXBuildFile; fileRef = F60F2916ECBF4B4BEF92004F /* Input.swift */; };
 		8B5DAC81EFB96AC46E0AAE32 /* RomImportCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = D9B06594522E3AB0385931D9 /* RomImportCoordinator.swift */; };
@@ -75,6 +76,7 @@
 		BEFB7203845DF217533380A6 /* PS1Core.swift in Sources */ = {isa = PBXBuildFile; fileRef = A99371B6A5786B7EB7314F3F /* PS1Core.swift */; };
 		C046D641921D13E2DE0FFB1E /* CommonTypes.swift in Sources */ = {isa = PBXBuildFile; fileRef = D066E4CDCFE4A0792D74EFA6 /* CommonTypes.swift */; };
 		CA5BC011E541B6CBC2A2542F /* SaveStateStorage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8DEADAF875199419D6BDC89A /* SaveStateStorage.swift */; };
+		CCEC88BCA650F440C4B73A88 /* AppUXState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A1AEC9A6F49F0A320672E48 /* AppUXState.swift */; };
 		D145C7F2A45C9B0674438326 /* DeviceProfileCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3868FC066CEDAC8E3EBEB31E /* DeviceProfileCache.swift */; };
 		D1BFC76C6019BB4C747E8B61 /* Badge.swift in Sources */ = {isa = PBXBuildFile; fileRef = CACC00583F9D175AB4408A31 /* Badge.swift */; };
 		D43B8D0706CAFD98C9882F3A /* ControllerMapping.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3BAD4B60C6D8C65B56AD16E3 /* ControllerMapping.swift */; };
@@ -84,6 +86,7 @@
 		F387AD69E5395A8C7F16E93E /* AppHost.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8B36B2ACD647AC3067DC2155 /* AppHost.swift */; };
 		F51F13808938D30ABCD0C190 /* Button.swift in Sources */ = {isa = PBXBuildFile; fileRef = D7A97E34F6714D55B2ED6121 /* Button.swift */; };
 		F6A9D719B001FB418B539549 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 51E656E584201333675159E7 /* Assets.xcassets */; };
+		F79EDB3B261ED6E9DF624801 /* ShellThemes.swift in Sources */ = {isa = PBXBuildFile; fileRef = EBFCD24F74EE4522EAE30B33 /* ShellThemes.swift */; };
 		F93E44807879255BA51E06C3 /* Header.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAF6A9A7B47722A9EEE63EDF /* Header.swift */; };
 		FB4D93CE12BDD499797A63C6 /* EmulatorSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = 867BF8EE76C4FEC72E94EBDC /* EmulatorSession.swift */; };
 		FCF665150656D5E24E64FFEA /* Card.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0E27256B3C3C7FB89F1F47DE /* Card.swift */; };
@@ -114,6 +117,7 @@
 		30FC9FACDF41646D250AECF7 /* RomValidator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RomValidator.swift; sourceTree = "<group>"; };
 		343B1CDBFFD8BCEE6BA08EA4 /* StableSessionTracker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StableSessionTracker.swift; sourceTree = "<group>"; };
 		3868FC066CEDAC8E3EBEB31E /* DeviceProfileCache.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceProfileCache.swift; sourceTree = "<group>"; };
+		3A1AEC9A6F49F0A320672E48 /* AppUXState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppUXState.swift; sourceTree = "<group>"; };
 		3BAD4B60C6D8C65B56AD16E3 /* ControllerMapping.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ControllerMapping.swift; sourceTree = "<group>"; };
 		3BCF02C34AD6920FCABF5405 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		3CEBD6F5C153583F9BAD9C3A /* SaveState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SaveState.swift; sourceTree = "<group>"; };
@@ -124,7 +128,7 @@
 		4364291217649D6912F145F5 /* SaveStatesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SaveStatesView.swift; sourceTree = "<group>"; };
 		466D0058781640285EE96634 /* EntitlementStatusView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EntitlementStatusView.swift; sourceTree = "<group>"; };
 		4C48534E106FC93B669B1859 /* Checkbox.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Checkbox.swift; sourceTree = "<group>"; };
-		4DE8FCC2F96A65DCDAB928F2 /* Xemu.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = Xemu.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		4DE8FCC2F96A65DCDAB928F2 /* Xemu.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Xemu.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		51E656E584201333675159E7 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		58A46770D20436EFFDBD5E98 /* RecentlyPlayedView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecentlyPlayedView.swift; sourceTree = "<group>"; };
 		5B46B7ED335E85F0798430D0 /* EmulatorModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmulatorModels.swift; sourceTree = "<group>"; };
@@ -172,6 +176,8 @@
 		E34A757D05BE16111E361A97 /* MetalRenderer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MetalRenderer.swift; sourceTree = "<group>"; };
 		E6B83C8DF59433DEA55727D3 /* libresolv.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = libresolv.tbd; path = usr/lib/libresolv.tbd; sourceTree = SDKROOT; };
 		E6C80850866DE3CBC4D7B82A /* GBCore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GBCore.swift; sourceTree = "<group>"; };
+		EA48E5CBB14313449118F633 /* PlayerStatsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayerStatsView.swift; sourceTree = "<group>"; };
+		EBFCD24F74EE4522EAE30B33 /* ShellThemes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShellThemes.swift; sourceTree = "<group>"; };
 		F60F2916ECBF4B4BEF92004F /* Input.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Input.swift; sourceTree = "<group>"; };
 		F79E3AF9AFB00FC5BF241472 /* Misc.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Misc.swift; sourceTree = "<group>"; };
 		FA3D0A66ECED6D839076F83A /* Tabs.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Tabs.swift; sourceTree = "<group>"; };
@@ -255,6 +261,7 @@
 			children = (
 				7BC15F83843091487D6BA3FF /* GameLibraryView.swift */,
 				D009E6F2DF5E69D7593C1965 /* HomeView.swift */,
+				EA48E5CBB14313449118F633 /* PlayerStatsView.swift */,
 				58A46770D20436EFFDBD5E98 /* RecentlyPlayedView.swift */,
 			);
 			path = Home;
@@ -420,6 +427,7 @@
 			isa = PBXGroup;
 			children = (
 				6A31AE7D5A0BC2527894EBA9 /* Alert.swift */,
+				3A1AEC9A6F49F0A320672E48 /* AppUXState.swift */,
 				CACC00583F9D175AB4408A31 /* Badge.swift */,
 				D7A97E34F6714D55B2ED6121 /* Button.swift */,
 				0E27256B3C3C7FB89F1F47DE /* Card.swift */,
@@ -429,6 +437,7 @@
 				F60F2916ECBF4B4BEF92004F /* Input.swift */,
 				F79E3AF9AFB00FC5BF241472 /* Misc.swift */,
 				6CC9E8AC6255876C10AF7518 /* Progress.swift */,
+				EBFCD24F74EE4522EAE30B33 /* ShellThemes.swift */,
 				FA3D0A66ECED6D839076F83A /* Tabs.swift */,
 				B77DB84F7D6B83B354E369C2 /* Theme.swift */,
 				C626FB0CA4B289019CD0CF84 /* Toggle.swift */,
@@ -589,7 +598,6 @@
 				LastUpgradeCheck = 1600;
 				TargetAttributes = {
 					FC22F39D8E5DD809F0D0C14A = {
-						DevelopmentTeam = "";
 						ProvisioningStyle = Automatic;
 					};
 				};
@@ -604,7 +612,6 @@
 			);
 			mainGroup = 0C1EC4B251E6BBE262A4AAA5;
 			minimizedProjectReferenceProxies = 1;
-			preferredProjectObjectVersion = 77;
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
@@ -632,6 +639,7 @@
 				73B08C5F1BF0AEECADD3CD3F /* AdsPolicyController.swift in Sources */,
 				928F0540A9B1BC37F7503C6D /* Alert.swift in Sources */,
 				F387AD69E5395A8C7F16E93E /* AppHost.swift in Sources */,
+				CCEC88BCA650F440C4B73A88 /* AppUXState.swift in Sources */,
 				BBE9D390DB554E3EE8D55882 /* AudioEngine.swift in Sources */,
 				853E53F67096EEC95A90F8ED /* AzureApiStub.swift in Sources */,
 				D1BFC76C6019BB4C747E8B61 /* Badge.swift in Sources */,
@@ -681,6 +689,7 @@
 				E62C630456F0C5BAC8E91B7A /* OfflineGraceManager.swift in Sources */,
 				BEFB7203845DF217533380A6 /* PS1Core.swift in Sources */,
 				2FA0C4C780E6636C2A347303 /* PersistenceController.swift in Sources */,
+				89346E79C7ECC3CA6117990B /* PlayerStatsView.swift in Sources */,
 				B698C63CA572519D87273F7D /* Progress.swift in Sources */,
 				B2A8E7EF2A3A8AB827A295FF /* PurchaseFlowController.swift in Sources */,
 				3C1C1C30461209C438218C32 /* ROMStorage.swift in Sources */,
@@ -695,6 +704,7 @@
 				00469B5B648C1B8BCF74FD39 /* SettingsHeader.swift in Sources */,
 				9F458B275A1D6AAF44321994 /* SettingsItem.swift in Sources */,
 				4A22E39D94CA207A2B4B760F /* SettingsView.swift in Sources */,
+				F79EDB3B261ED6E9DF624801 /* ShellThemes.swift in Sources */,
 				85226034F5C6C1F5A20A8961 /* StableSessionTracker.swift in Sources */,
 				0EF3FEF30C3267D698ED705B /* StableSystemsCoordinator.swift in Sources */,
 				B742F26DA2C470D3CB810062 /* Tabs.swift in Sources */,
@@ -721,28 +731,18 @@
 				CODE_SIGN_STYLE = Automatic;
 				DEVELOPMENT_TEAM = "";
 				GENERATE_INFOPLIST_FILE = NO;
-				HEADER_SEARCH_PATHS = (
-					"$(SRCROOT)/Sources/XemuCoresLib/include",
-				);
+				HEADER_SEARCH_PATHS = "$(SRCROOT)/Sources/XemuCoresLib/include";
 				INFOPLIST_FILE = Sources/AppHost/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				"LIBRARY_SEARCH_PATHS[sdk=iphoneos*]" = (
-					"$(SRCROOT)/../../cores/XemuCores.xcframework/ios-arm64",
-				);
-				"LIBRARY_SEARCH_PATHS[sdk=iphonesimulator*]" = (
-					"$(SRCROOT)/../../cores/XemuCores.xcframework/ios-arm64_x86_64-simulator",
-				);
-				OTHER_LDFLAGS = (
-					"-lxemu_cores",
-				);
+				"LIBRARY_SEARCH_PATHS[sdk=iphoneos*]" = "$(SRCROOT)/../../cores/XemuCores.xcframework/ios-arm64";
+				"LIBRARY_SEARCH_PATHS[sdk=iphonesimulator*]" = "$(SRCROOT)/../../cores/XemuCores.xcframework/ios-arm64_x86_64-simulator";
+				OTHER_LDFLAGS = "-lxemu_cores";
 				PRODUCT_BUNDLE_IDENTIFIER = com.xemu.Xemu;
 				SDKROOT = iphoneos;
-				SWIFT_INCLUDE_PATHS = (
-					"$(SRCROOT)/Sources/XemuCoresLib/include",
-				);
+				SWIFT_INCLUDE_PATHS = "$(SRCROOT)/Sources/XemuCoresLib/include";
 				SWIFT_OBJC_BRIDGING_HEADER = Sources/XemuCores/include/BridgingHeader.h;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
@@ -878,30 +878,20 @@
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
-				DEVELOPMENT_TEAM = "";
+				DEVELOPMENT_TEAM = SGZHXCUVBD;
 				GENERATE_INFOPLIST_FILE = NO;
-				HEADER_SEARCH_PATHS = (
-					"$(SRCROOT)/Sources/XemuCoresLib/include",
-				);
+				HEADER_SEARCH_PATHS = "$(SRCROOT)/Sources/XemuCoresLib/include";
 				INFOPLIST_FILE = Sources/AppHost/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				"LIBRARY_SEARCH_PATHS[sdk=iphoneos*]" = (
-					"$(SRCROOT)/../../cores/XemuCores.xcframework/ios-arm64",
-				);
-				"LIBRARY_SEARCH_PATHS[sdk=iphonesimulator*]" = (
-					"$(SRCROOT)/../../cores/XemuCores.xcframework/ios-arm64_x86_64-simulator",
-				);
-				OTHER_LDFLAGS = (
-					"-lxemu_cores",
-				);
+				"LIBRARY_SEARCH_PATHS[sdk=iphoneos*]" = "$(SRCROOT)/../../cores/XemuCores.xcframework/ios-arm64";
+				"LIBRARY_SEARCH_PATHS[sdk=iphonesimulator*]" = "$(SRCROOT)/../../cores/XemuCores.xcframework/ios-arm64_x86_64-simulator";
+				OTHER_LDFLAGS = "-lxemu_cores";
 				PRODUCT_BUNDLE_IDENTIFIER = com.xemu.Xemu;
 				SDKROOT = iphoneos;
-				SWIFT_INCLUDE_PATHS = (
-					"$(SRCROOT)/Sources/XemuCoresLib/include",
-				);
+				SWIFT_INCLUDE_PATHS = "$(SRCROOT)/Sources/XemuCoresLib/include";
 				SWIFT_OBJC_BRIDGING_HEADER = Sources/XemuCores/include/BridgingHeader.h;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};

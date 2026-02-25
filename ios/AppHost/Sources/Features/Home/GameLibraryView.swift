@@ -98,11 +98,11 @@ struct GameLibraryView: View {
 
                 VStack(alignment: .leading, spacing: 1) {
                     Text("All Games")
-                        .font(.system(size: 18, weight: .bold))
+                        .font(.system(size: 22, weight: .bold))
                         .foregroundColor(AppColors.textPrimary)
                     Text("\(games.count) games total")
-                        .font(.system(size: 10))
-                        .foregroundColor(AppColors.textMuted)
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundColor(AppColors.primary)
                 }
 
                 Spacer()
@@ -219,22 +219,22 @@ struct AllGamesCard: View {
             VStack(alignment: .leading, spacing: 0) {
                 ZStack(alignment: .topLeading) {
                     coverArt
-                        .frame(height: 112)
+                        .frame(height: 138)
 
                     LinearGradient(
-                        colors: [Color.clear, AppColors.background.opacity(0.9)],
+                        colors: [Color.clear, Color.black.opacity(0.28)],
                         startPoint: .top,
                         endPoint: .bottom
                     )
-                    .frame(height: 112)
+                    .frame(height: 138)
 
                     HStack {
                         if entry.playtimeTotal > 0 {
                             Text(playtimeBadge)
-                                .font(.system(size: 9, weight: .medium))
+                                .font(.system(size: 11, weight: .semibold))
                                 .foregroundColor(AppColors.textPrimary)
-                                .padding(.horizontal, 8)
-                                .padding(.vertical, 4)
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 5)
                                 .background(AppColors.background.opacity(0.8))
                                 .clipShape(Capsule())
                         }
@@ -242,45 +242,33 @@ struct AllGamesCard: View {
                         Spacer()
 
                         Text((entry.system ?? "UNK").uppercased())
-                            .font(.system(size: 9, weight: .semibold))
+                            .font(.system(size: 11, weight: .bold))
                             .foregroundColor(.white)
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 4)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 6)
                             .background(AppColors.primary.opacity(0.9))
                             .clipShape(Capsule())
                     }
                     .padding(8)
 
-                    VStack {
-                        Spacer()
-                        HStack(spacing: 2) {
-                            ForEach(0..<5) { index in
-                                Text("★")
-                                    .font(.system(size: 10))
-                                    .foregroundColor(index < ratingValue ? .yellow : AppColors.textMuted.opacity(0.35))
-                            }
-                        }
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(.horizontal, 8)
-                        .padding(.bottom, 8)
-                    }
                 }
 
-                VStack(alignment: .leading, spacing: 4) {
+                VStack(alignment: .leading, spacing: 6) {
                     Text(entry.title ?? "Unknown Game")
-                        .font(.system(size: 13, weight: .semibold))
+                        .font(.system(size: 16, weight: .bold))
                         .foregroundColor(AppColors.textPrimary)
                         .lineLimit(2)
 
                     HStack(spacing: 4) {
                         Image(systemName: "clock.fill")
-                            .font(.system(size: 9))
-                        Text(lastPlayedLabel)
                             .font(.system(size: 10))
+                        Text(lastPlayedLabel)
+                            .font(.system(size: 12, weight: .medium))
                     }
-                    .foregroundColor(AppColors.textMuted)
+                    .foregroundColor(AppColors.primary)
                 }
-                .padding(10)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 12)
             }
         }
         .buttonStyle(PlainButtonStyle())
@@ -289,6 +277,7 @@ struct AllGamesCard: View {
             RoundedRectangle(cornerRadius: 14)
                 .stroke(AppColors.surfaceLight.opacity(0.5), lineWidth: 1)
         )
+        .shadow(color: AppColors.primary.opacity(0.08), radius: 10, x: 0, y: 5)
         .clipShape(RoundedRectangle(cornerRadius: 14))
     }
 
@@ -341,14 +330,6 @@ struct AllGamesCard: View {
         }
         let hours = minutes / 60
         return "\(hours)h"
-    }
-
-    private var ratingValue: Int {
-        // Figma mock shows ratings; derive a simple deterministic placeholder from activity.
-        if entry.playtimeTotal > 4 * 3600 { return 5 }
-        if entry.playtimeTotal > 2 * 3600 { return 4 }
-        if entry.playtimeTotal > 0 { return 3 }
-        return 0
     }
 }
 

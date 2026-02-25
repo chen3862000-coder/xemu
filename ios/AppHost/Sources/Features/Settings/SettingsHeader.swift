@@ -17,18 +17,18 @@ struct SettingsHeader: View {
 
                 VStack(alignment: .leading, spacing: 0) {
                     Text("Settings")
-                        .font(.system(size: 18, weight: .bold))
-                        .foregroundColor(AppColors.textPrimary)
+                        .font(.system(size: 24, weight: .bold))
+                        .foregroundColor(AppColors.primary)
 
                     Text("Manage your preferences")
-                        .font(.system(size: 10))
-                        .foregroundColor(AppColors.textMuted)
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundColor(AppColors.primary.opacity(0.9))
                 }
 
                 Spacer()
             }
             .padding(.horizontal, 16)
-            .padding(.vertical, 12)
+            .padding(.vertical, 14)
         }
         .background(AppColors.background.opacity(0.8))
         .overlay(

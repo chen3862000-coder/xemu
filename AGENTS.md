@@ -240,6 +240,7 @@ swift test
 5. Keep responses concise but complete; humans rely on your summaries to understand repo state.
 6. **Always run tests after each coding task** - Before considering a task complete, run `./test.sh test` (or equivalent) to ensure all tests pass with no regressions. Fix any failing tests before finishing.
 7. **Never leave broken tests** - If a test fails, investigate and fix the issue. Do not skip or ignore failing tests.
+8. **Xcode buildable is a hard requirement for app changes** - For any change under `ios/AppHost/Sources/` that affects the app target, ensure the Xcode project includes new/renamed files (regenerate with `xcodegen generate` when needed) and verify the code remains buildable for the Xcode app target. `swift build` alone is not sufficient because Xcode project file inclusion can drift.
 
 ## 7. Outstanding TODOs
 1. Populate actual build/lint/test commands once the first stack is chosen.

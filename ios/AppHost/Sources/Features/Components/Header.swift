@@ -7,9 +7,9 @@ struct Header: View {
     var body: some View {
         VStack(spacing: 0) {
             HStack {
-                HStack(spacing: 8) {
+                HStack(spacing: 12) {
                     ZStack {
-                        RoundedRectangle(cornerRadius: 10)
+                        RoundedRectangle(cornerRadius: 14)
                             .fill(
                                 LinearGradient(
                                     colors: [AppColors.primary, AppColors.accent],
@@ -17,21 +17,21 @@ struct Header: View {
                                     endPoint: .bottomTrailing
                                 )
                             )
-                            .frame(width: 36, height: 36)
+                            .frame(width: 44, height: 44)
                             .shadow(color: AppColors.primary.opacity(0.5), radius: 8, x: 0, y: 4)
 
                         XemuBrandIconGlyph()
-                            .frame(width: 26, height: 26)
+                            .frame(width: 30, height: 30)
                     }
 
                     VStack(alignment: .leading, spacing: 0) {
                         Text("XEmu")
-                            .font(.system(size: 18, weight: .bold))
-                            .foregroundColor(AppColors.textPrimary)
+                            .font(.system(size: 20, weight: .bold))
+                            .foregroundColor(AppColors.primary)
 
                         Text("Classic Gaming Hub")
-                            .font(.system(size: 10))
-                            .foregroundColor(AppColors.textMuted)
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundColor(AppColors.primary.opacity(0.9))
                     }
                 }
 
@@ -42,7 +42,7 @@ struct Header: View {
                         Image(systemName: "plus")
                             .font(.system(size: 16, weight: .medium))
                             .foregroundColor(AppColors.textPrimary)
-                            .frame(width: 32, height: 32)
+                            .frame(width: 36, height: 36)
                             .background(AppColors.surfaceLight.opacity(0.5))
                             .clipShape(Circle())
                     }
@@ -51,14 +51,14 @@ struct Header: View {
                         Image(systemName: "gearshape.fill")
                             .font(.system(size: 16, weight: .medium))
                             .foregroundColor(AppColors.textPrimary)
-                            .frame(width: 32, height: 32)
+                            .frame(width: 36, height: 36)
                             .background(AppColors.surfaceLight.opacity(0.5))
                             .clipShape(Circle())
                     }
                 }
             }
             .padding(.horizontal, 16)
-            .padding(.vertical, 12)
+            .padding(.vertical, 14)
         }
         .background(AppColors.background.opacity(0.8))
         .overlay(

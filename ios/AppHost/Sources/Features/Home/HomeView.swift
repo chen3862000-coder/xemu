@@ -12,6 +12,7 @@ struct HomeView: View {
     @State private var showingImport = false
     @State private var showingGameLibrary = false
     @State private var showingRecentlyPlayed = false
+    @State private var showingPlayerStats = false
     @State private var selectedPlatform: EmulatorPlatform?
     @State private var selectedGame: Game?
     
@@ -46,6 +47,9 @@ struct HomeView: View {
         .sheet(isPresented: $showingRecentlyPlayed) {
             RecentlyPlayedView()
         }
+        .sheet(isPresented: $showingPlayerStats) {
+            PlayerStatsView()
+        }
         .sheet(item: $selectedPlatform) { platform in
             GameListView(platform: platform)
         }
@@ -65,6 +69,7 @@ struct HomeView: View {
         .onChange(of: showingImport) { _, shown in if !shown { refreshHome() } }
         .onChange(of: showingGameLibrary) { _, shown in if !shown { refreshHome() } }
         .onChange(of: showingRecentlyPlayed) { _, shown in if !shown { refreshHome() } }
+        .onChange(of: showingPlayerStats) { _, shown in if !shown { refreshHome() } }
         .onChange(of: showingSettings) { _, shown in if !shown { refreshHome() } }
         .onChange(of: selectedPlatform) { _, platform in if platform == nil { refreshHome() } }
     }
@@ -125,12 +130,17 @@ struct HomeView: View {
             }
             .buttonStyle(PlainButtonStyle())
             
-            StatCard(
-                title: "Hours Played",
-                value: viewModel.totalHours,
-                icon: "clock.fill",
-                gradient: [AppColors.info, AppColors.primary]
-            )
+            Button(action: {
+                showingPlayerStats = true
+            }) {
+                StatCard(
+                    title: "Game Stats",
+                    value: viewModel.totalHours,
+                    icon: "chart.bar.fill",
+                    gradient: [AppColors.info, AppColors.primary]
+                )
+            }
+            .buttonStyle(PlainButtonStyle())
         }
     }
     
@@ -139,9 +149,11 @@ struct HomeView: View {
             HStack {
                 HStack(spacing: 8) {
                     Image(systemName: "clock.fill")
-                        .foregroundColor(.purple)
+                        .font(.system(size: 17, weight: .semibold))
+                        .foregroundColor(AppColors.primary)
                     Text("Continue Playing")
-                        .font(.headline)
+                        .font(.system(size: 20, weight: .bold))
+                        .foregroundColor(AppColors.textPrimary)
                 }
                 
                 Spacer()
@@ -151,7 +163,7 @@ struct HomeView: View {
                     showingRecentlyPlayed = true
                 }
                 .buttonStyle(.plain)
-                .font(.subheadline)
+                .font(.system(size: 16, weight: .semibold))
                 .foregroundColor(AppColors.primary)
             }
             .contentShape(Rectangle())
@@ -199,18 +211,18 @@ struct HomeView: View {
             HStack {
                 HStack(spacing: 8) {
                     Image(systemName: "gamecontroller.fill")
-                        .font(.system(size: 14, weight: .semibold))
+                        .font(.system(size: 16, weight: .semibold))
                         .foregroundColor(AppColors.primary)
                     Text("All Emulators")
-                        .font(.headline)
+                        .font(.system(size: 20, weight: .bold))
                         .foregroundColor(AppColors.textPrimary)
                 }
 
                 Spacer()
 
                 Text("\(viewModel.emulators.count) systems")
-                    .font(.caption)
-                    .foregroundColor(AppColors.textMuted)
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundColor(AppColors.primary)
             }
             .padding(.top, 8)
             
@@ -251,13 +263,13 @@ struct StatCard: View {
         VStack(alignment: .leading, spacing: 4) {
             HStack(alignment: .top) {
                 Text(title)
-                    .font(.system(size: 14, weight: .medium))
+                    .font(.system(size: 15, weight: .medium))
                     .foregroundColor(AppColors.primary)
                 Spacer()
                 ZStack {
                     Circle()
                         .fill(AppColors.primary.opacity(0.16))
-                        .frame(width: 42, height: 42)
+                        .frame(width: 44, height: 44)
 
                     Image(systemName: icon)
                         .font(.system(size: 18, weight: .semibold))
@@ -266,21 +278,27 @@ struct StatCard: View {
             }
 
             Text(value)
-                .font(.system(size: 36, weight: .bold))
+                .font(.system(size: 40, weight: .bold))
                 .foregroundColor(AppColors.primary)
                 .lineLimit(1)
                 .minimumScaleFactor(0.8)
         }
         .padding(.horizontal, 16)
-        .padding(.vertical, 12)
+        .padding(.vertical, 10)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .frame(minHeight: 92, alignment: .topLeading)
-        .background(AppColors.surface)
+        .frame(minHeight: 88, alignment: .topLeading)
+        .background(
+            LinearGradient(
+                colors: [AppColors.primary.opacity(0.06), AppColors.surface],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+        )
         .overlay(
             RoundedRectangle(cornerRadius: 16)
                 .stroke(AppColors.surfaceLight.opacity(0.65), lineWidth: 1)
         )
-        .shadow(color: AppColors.primary.opacity(0.06), radius: 10, x: 0, y: 4)
+        .shadow(color: AppColors.primary.opacity(0.10), radius: 10, x: 0, y: 6)
         .clipShape(RoundedRectangle(cornerRadius: 16))
     }
 }
@@ -296,14 +314,14 @@ struct RecentGameCard: View {
                     recentCardArtwork
 
                     LinearGradient(
-                        colors: [Color.clear, AppColors.surface.opacity(0.92)],
+                        colors: [Color.clear, Color.black.opacity(0.38)],
                         startPoint: .top,
                         endPoint: .bottom
                     )
                     .clipShape(RoundedRectangle(cornerRadius: 12))
 
                     Text(game.console)
-                        .font(.system(size: 10, weight: .semibold))
+                        .font(.system(size: 11, weight: .bold))
                         .padding(.horizontal, 10)
                         .padding(.vertical, 6)
                         .background(AppColors.primary.opacity(0.92))
@@ -314,7 +332,7 @@ struct RecentGameCard: View {
 
                 VStack(alignment: .leading, spacing: 6) {
                     Text(game.title)
-                        .font(.system(size: 15, weight: .bold))
+                        .font(.system(size: 17, weight: .bold))
                         .lineLimit(2)
                         .foregroundColor(AppColors.textPrimary)
 
@@ -322,16 +340,20 @@ struct RecentGameCard: View {
                         Image(systemName: "clock")
                             .font(.system(size: 10, weight: .semibold))
                         Text(playedDateText)
-                            .font(.system(size: 11, weight: .medium))
-                        Text("•")
-                            .font(.system(size: 11, weight: .medium))
-                            .opacity(0.7)
-                        Text(totalHoursText)
-                            .font(.system(size: 11, weight: .medium))
+                            .font(.system(size: 12, weight: .semibold))
+                        if game.totalPlaySeconds > 0 {
+                            Text("•")
+                                .font(.system(size: 11, weight: .medium))
+                                .opacity(0.55)
+                            Text(totalHoursText)
+                                .font(.system(size: 11, weight: .medium))
+                                .foregroundColor(AppColors.textMuted)
+                        }
                     }
                     .foregroundColor(AppColors.primary)
                 }
-                .padding(12)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 13)
             }
             .frame(maxWidth: .infinity)
             .background(AppColors.surface)
@@ -339,7 +361,7 @@ struct RecentGameCard: View {
                 RoundedRectangle(cornerRadius: 16)
                     .stroke(AppColors.surfaceLight.opacity(0.65), lineWidth: 1)
             )
-            .shadow(color: AppColors.primary.opacity(0.05), radius: 10, x: 0, y: 4)
+            .shadow(color: AppColors.primary.opacity(0.06), radius: 10, x: 0, y: 5)
             .clipShape(RoundedRectangle(cornerRadius: 16))
         }
         .buttonStyle(PlainButtonStyle())
@@ -353,6 +375,7 @@ struct RecentGameCard: View {
                 .resizable()
                 .aspectRatio(contentMode: .fill)
                 .frame(maxWidth: .infinity, minHeight: 120, maxHeight: 120)
+                .overlay(Color.white.opacity(0.12))
                 .clipShape(RoundedRectangle(cornerRadius: 12))
         } else if let imageUrl = game.image, let url = URL(string: imageUrl) {
             AsyncImage(url: url) { image in
@@ -365,6 +388,7 @@ struct RecentGameCard: View {
                     .foregroundColor(AppColors.textMuted)
             }
             .frame(maxWidth: .infinity, minHeight: 120, maxHeight: 120)
+            .overlay(Color.white.opacity(0.16))
             .clipShape(RoundedRectangle(cornerRadius: 12))
         } else {
             fallbackArtwork
@@ -439,14 +463,14 @@ struct EmulatorCard: View {
     
     var body: some View {
         Button(action: onTap) {
-            ZStack {
-                RoundedRectangle(cornerRadius: 16)
-                    .fill(AppColors.surface)
+        ZStack {
+            RoundedRectangle(cornerRadius: 16)
+                .fill(AppColors.surface)
                     .overlay(
                         RoundedRectangle(cornerRadius: 16)
                             .fill(
                                 LinearGradient(
-                                    colors: gradient.map { $0.opacity(0.2) },
+                                    colors: [Color.white.opacity(0.16), Color.clear],
                                     startPoint: .topLeading,
                                     endPoint: .bottomTrailing
                                 )
@@ -456,18 +480,34 @@ struct EmulatorCard: View {
                         RoundedRectangle(cornerRadius: 16)
                             .stroke(AppColors.surfaceLight.opacity(0.5), lineWidth: 1)
                     )
+                    .overlay(alignment: .leading) {
+                        RoundedRectangle(cornerRadius: 16)
+                            .fill(
+                                LinearGradient(
+                                    colors: [gradient.first?.opacity(0.24) ?? Color.clear, Color.clear],
+                                    startPoint: .leading,
+                                    endPoint: .trailing
+                                )
+                            )
+                            .frame(width: 72)
+                    }
+                    .shadow(color: AppColors.primary.opacity(0.05), radius: 12, x: 0, y: 6)
 
                 HStack(spacing: 16) {
                     ZStack {
                         RoundedRectangle(cornerRadius: 12)
-                            .fill(LinearGradient(colors: gradient, startPoint: .topLeading, endPoint: .bottomTrailing))
-                            .frame(width: 48, height: 48)
+                            .fill(AppColors.background.opacity(0.9))
+                            .frame(width: 56, height: 56)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 12)
+                                    .stroke(LinearGradient(colors: gradient.map { $0.opacity(0.45) }, startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: 1)
+                            )
 
                         if let consoleAssetName {
                             Image(consoleAssetName)
                                 .resizable()
                                 .scaledToFit()
-                                .frame(width: 40, height: 40)
+                                .frame(width: 46, height: 46)
                                 .clipShape(RoundedRectangle(cornerRadius: 8))
                         } else {
                             Text(icon)
@@ -478,21 +518,21 @@ struct EmulatorCard: View {
 
                     VStack(alignment: .leading, spacing: 2) {
                         Text(name)
-                            .font(.system(size: 16, weight: .semibold))
+                            .font(.system(size: 17, weight: .bold))
                             .foregroundColor(AppColors.textPrimary)
 
                         HStack(spacing: 4) {
                             Text(shortName)
-                                .font(.system(size: 12))
+                                .font(.system(size: 13, weight: .medium))
                                 .foregroundColor(AppColors.textMuted)
 
                             Text("•")
-                                .font(.system(size: 12))
+                                .font(.system(size: 12, weight: .medium))
                                 .foregroundColor(AppColors.textMuted)
 
                             Text("\(gamesCount) games")
-                                .font(.system(size: 12))
-                                .foregroundColor(AppColors.primary)
+                                .font(.system(size: 13, weight: .medium))
+                                .foregroundColor(AppColors.textSecondary)
                         }
                     }
 
@@ -501,8 +541,8 @@ struct EmulatorCard: View {
                     ZStack {
                         Circle()
                             .fill(AppColors.primary)
-                            .frame(width: 40, height: 40)
-                            .shadow(color: AppColors.primary.opacity(0.5), radius: isHovered ? 12 : 8, x: 0, y: 4)
+                            .frame(width: 44, height: 44)
+                            .shadow(color: AppColors.primary.opacity(isHovered ? 0.38 : 0.22), radius: isHovered ? 16 : 10, x: 0, y: 6)
 
                         Image(systemName: "play.fill")
                             .font(.system(size: 14, weight: .bold))
@@ -512,6 +552,7 @@ struct EmulatorCard: View {
                 }
                 .padding(16)
             }
+            .frame(minHeight: 92)
         }
         .buttonStyle(PlainButtonStyle())
         .onHover { hovering in
@@ -626,44 +667,92 @@ struct RomImportView: View {
     
     var body: some View {
         NavigationStack {
-            VStack(spacing: 24) {
-                Spacer()
-                
-                Image(systemName: "arrow.down.doc.fill")
-                    .font(.system(size: 64))
-                    .foregroundColor(.purple)
-                
-                Text("Import ROMs")
-                    .font(.title)
-                    .fontWeight(.bold)
-                
-                Text("Select ROM files from your device to add them to your library.")
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal, 32)
-                
-                Spacer()
-                
-                Button(action: {
-                    #if os(iOS)
-                    presentDocumentPicker()
-                    #endif
-                }) {
-                    Text("Select Files")
-                        .font(.headline)
-                        .foregroundColor(.white)
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(
-                            LinearGradient(colors: [Color.pink, Color.purple], startPoint: .leading, endPoint: .trailing)
-                        )
-                        .cornerRadius(12)
+            ZStack {
+                AppColors.background.ignoresSafeArea()
+
+                VStack(spacing: 18) {
+                    Spacer(minLength: 8)
+
+                VStack(spacing: 16) {
+                    ZStack {
+                            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                                .fill(
+                                    LinearGradient(
+                                        colors: [AppColors.primary.opacity(0.95), AppColors.accent.opacity(0.9)],
+                                        startPoint: .topLeading,
+                                        endPoint: .bottomTrailing
+                                    )
+                                )
+                                .frame(width: 78, height: 78)
+                                .shadow(color: AppColors.primary.opacity(0.25), radius: 14, x: 0, y: 8)
+
+                            Image(systemName: "arrow.down.doc.fill")
+                                .font(.system(size: 34, weight: .semibold))
+                                .foregroundColor(.white.opacity(0.95))
+                        }
+
+                    VStack(spacing: 8) {
+                            Text("Import ROMs")
+                                .font(.system(size: 28, weight: .bold))
+                                .foregroundColor(AppColors.textPrimary)
+
+                            Text("Select ROM files from your device to add them to your library.")
+                                .font(.system(size: 15))
+                                .foregroundColor(AppColors.textMuted)
+                                .multilineTextAlignment(.center)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 26)
+                    .padding(.horizontal, 20)
+                    .background(AppColors.surface)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 22, style: .continuous)
+                            .stroke(AppColors.surfaceLight.opacity(0.55), lineWidth: 1)
+                    )
+                    .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+
+                    VStack(alignment: .leading, spacing: 8) {
+                        Label("Supports: .gb, .gbc, .gba, .nds", systemImage: "checkmark.seal")
+                            .font(.system(size: 13, weight: .medium))
+                            .foregroundColor(AppColors.textPrimary)
+                        Label("Files stay on your device", systemImage: "lock.shield")
+                            .font(.system(size: 13, weight: .medium))
+                            .foregroundColor(AppColors.textMuted)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, 4)
+
+                    Spacer(minLength: 0)
+
+                    Button(action: {
+                        #if os(iOS)
+                        presentDocumentPicker()
+                        #endif
+                    }) {
+                        Text("Select Files")
+                            .font(.system(size: 18, weight: .semibold))
+                            .foregroundColor(.white)
+                            .frame(maxWidth: .infinity, minHeight: 54)
+                            .background(
+                                LinearGradient(
+                                    colors: [Color(red: 1.0, green: 0.12, blue: 0.35), AppColors.primary],
+                                    startPoint: .leading,
+                                    endPoint: .trailing
+                                )
+                            )
+                            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                    }
+                    .buttonStyle(.plain)
+                    .padding(.bottom, 18)
                 }
-                .padding(.horizontal, 32)
-                .padding(.bottom, 32)
+                .padding(.horizontal, 16)
             }
             .navigationTitle("Import")
+            #if os(iOS)
+            .navigationBarTitleDisplayMode(.large)
+            #endif
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") {

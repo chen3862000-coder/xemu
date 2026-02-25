@@ -14,7 +14,7 @@ struct GameListView: View {
     @StateObject private var viewModel = GameListViewModel()
     @State private var searchText = ""
     @State private var selectedGame: Game?
-    @State private var showingGameDetail = false
+    @State private var launchErrorMessage: String?
     
     var body: some View {
         ZStack {
@@ -34,11 +34,25 @@ struct GameListView: View {
                 }
             }
         }
-        .sheet(isPresented: $showingGameDetail) {
-            if let game = selectedGame {
-                GameDetailView(game: game)
-            }
+        .alert("Unable to Open Game", isPresented: Binding(
+            get: { launchErrorMessage != nil },
+            set: { if !$0 { launchErrorMessage = nil } }
+        )) {
+            Button("OK", role: .cancel) { launchErrorMessage = nil }
+        } message: {
+            Text(launchErrorMessage ?? "This game cannot be launched right now.")
         }
+        #if os(iOS)
+        .fullScreenCover(item: $selectedGame) { game in
+            GamePlayView(game: game, onExit: {
+                selectedGame = nil
+            })
+        }
+        #else
+        .sheet(item: $selectedGame) { game in
+            GameDetailView(game: game)
+        }
+        #endif
         .onAppear {
             viewModel.loadGames(for: platform, in: viewContext)
         }
@@ -88,11 +102,11 @@ struct GameListView: View {
 
                 VStack(alignment: .leading, spacing: 1) {
                     Text(platformDisplay.displayName)
-                        .font(.system(size: 18, weight: .bold))
+                        .font(.system(size: 22, weight: .bold))
                         .foregroundColor(AppColors.textPrimary)
                     Text("\(viewModel.filteredGames(searchText: searchText).count) games available")
-                        .font(.system(size: 10))
-                        .foregroundColor(AppColors.textMuted)
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundColor(AppColors.primary)
                 }
 
                 Spacer()
@@ -131,18 +145,27 @@ struct GameListView: View {
                 )
                 .clipShape(RoundedRectangle(cornerRadius: 19))
 
-                Button(action: {}) {
-                    Image(systemName: "slider.horizontal.3")
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundColor(AppColors.textPrimary)
-                        .frame(width: 38, height: 38)
-                        .background(AppColors.surfaceLight.opacity(0.45))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 19)
-                                .stroke(AppColors.surfaceLight.opacity(0.7), lineWidth: 1)
-                        )
-                        .clipShape(RoundedRectangle(cornerRadius: 19))
+                Menu {
+                    Button("Recent") {}
+                    Button("A–Z") {}
+                    Button("Most Played") {}
+                } label: {
+                    HStack(spacing: 6) {
+                        Text("Recent")
+                            .font(.system(size: 12, weight: .semibold))
+                        Image(systemName: "chevron.down")
+                            .font(.system(size: 10, weight: .semibold))
+                    }
+                    .foregroundColor(AppColors.textPrimary)
+                    .padding(.horizontal, 10)
+                    .frame(height: 38)
+                    .background(AppColors.surfaceLight.opacity(0.45))
+                    .overlay(
+                        Capsule().stroke(AppColors.surfaceLight.opacity(0.7), lineWidth: 1)
+                    )
+                    .clipShape(Capsule())
                 }
+                .buttonStyle(.plain)
             }
         }
         .padding(.horizontal, 16)
@@ -162,12 +185,24 @@ struct GameListView: View {
                 .fill(AppColors.surface)
                 .overlay(
                     RoundedRectangle(cornerRadius: 20)
-                        .fill(platform.gradient.opacity(0.16))
+                        .fill(platform.gradient.opacity(0.06))
                 )
                 .overlay(
                     RoundedRectangle(cornerRadius: 20)
-                        .stroke(AppColors.surfaceLight.opacity(0.5), lineWidth: 1)
+                        .stroke(AppColors.primary.opacity(0.14), lineWidth: 1)
                 )
+                .shadow(color: AppColors.primary.opacity(0.08), radius: 14, x: 0, y: 8)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 20)
+                        .stroke(Color.white.opacity(0.10), lineWidth: 0.7)
+                )
+                .overlay(alignment: .topLeading) {
+                    Capsule()
+                        .fill(AppColors.primary.opacity(0.28))
+                        .frame(width: 52, height: 3)
+                        .padding(.leading, 16)
+                        .padding(.top, 14)
+                }
 
             VStack(alignment: .leading, spacing: 12) {
                 HStack {
@@ -176,13 +211,13 @@ struct GameListView: View {
                             .font(.system(size: 14, weight: .semibold))
                             .foregroundColor(AppColors.primary)
                         Text("Quick Stats")
-                            .font(.system(size: 14, weight: .semibold))
+                            .font(.system(size: 15, weight: .bold))
                             .foregroundColor(AppColors.textPrimary)
                     }
                     Spacer()
                     Text(platformDisplay.shortName)
-                        .font(.system(size: 11, weight: .medium))
-                        .foregroundColor(AppColors.textMuted)
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundColor(AppColors.primary)
                 }
 
                 HStack(spacing: 16) {
@@ -190,10 +225,10 @@ struct GameListView: View {
 
                     VStack(alignment: .leading, spacing: 4) {
                         Text("\(platformDisplay.displayName) Games")
-                            .font(.system(size: 16, weight: .semibold))
+                            .font(.system(size: 18, weight: .bold))
                             .foregroundColor(AppColors.textPrimary)
                         Text("Browse and launch your \(platformDisplay.shortName) library")
-                            .font(.system(size: 12))
+                            .font(.system(size: 13, weight: .medium))
                             .foregroundColor(AppColors.textMuted)
                             .lineLimit(2)
                     }
@@ -242,9 +277,13 @@ struct GameListView: View {
 
                 Spacer()
 
-                Button("Sort by: Recent") { }
-                    .font(.system(size: 12))
-                    .foregroundColor(AppColors.primary)
+                Text("Recent")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundColor(AppColors.textMuted)
+                    .padding(.horizontal, 10)
+                    .frame(height: 28)
+                    .background(AppColors.surfaceLight.opacity(0.42))
+                    .clipShape(Capsule())
             }
 
             let games = viewModel.filteredGames(searchText: searchText)
@@ -274,11 +313,12 @@ struct GameListView: View {
             } else {
                 LazyVStack(spacing: 10) {
                     ForEach(games) { game in
-                        GameCardRow(game: game)
-                            .onTapGesture {
-                                selectedGame = game
-                                showingGameDetail = true
-                            }
+                        Button {
+                            launchGame(game)
+                        } label: {
+                            GameCardRow(game: game)
+                        }
+                        .buttonStyle(.plain)
                     }
                 }
             }
@@ -287,6 +327,22 @@ struct GameListView: View {
 
     private var platformDisplay: PlatformDisplay {
         PlatformDisplay(platform: platform)
+    }
+
+    private func launchGame(_ game: Game) {
+        guard let romPath = game.romPath, !romPath.isEmpty else {
+            launchErrorMessage = "ROM file path is missing for this game."
+            return
+        }
+        guard FileManager.default.fileExists(atPath: romPath) else {
+            launchErrorMessage = "ROM file could not be found. Try re-importing the game."
+            return
+        }
+        guard game.gamePlatform != nil else {
+            launchErrorMessage = "This game platform is not supported for direct launch."
+            return
+        }
+        selectedGame = game
     }
 }
 
@@ -347,9 +403,9 @@ struct StatBadge: View {
                 .font(.system(size: 18, weight: .bold))
                 .foregroundColor(AppColors.textPrimary)
             
-            Text(label)
-                .font(.system(size: 10))
-                .foregroundColor(AppColors.textMuted)
+                Text(label)
+                .font(.system(size: 10, weight: .medium))
+                .foregroundColor(AppColors.primary.opacity(0.9))
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 10)
@@ -375,14 +431,6 @@ struct GameCardRow: View {
                     .foregroundColor(AppColors.textPrimary)
                     .lineLimit(1)
 
-                HStack(spacing: 2) {
-                    ForEach(0..<5) { index in
-                        Image(systemName: index < Int(game.rating.rounded(.down)) ? "star.fill" : "star")
-                            .font(.system(size: 10))
-                            .foregroundColor(index < Int(game.rating.rounded(.down)) ? .yellow : AppColors.textMuted.opacity(0.4))
-                    }
-                }
-
                 HStack(spacing: 8) {
                     if game.totalPlayTime > 0 {
                         HStack(spacing: 4) {
@@ -391,7 +439,7 @@ struct GameCardRow: View {
                             Text(formatPlayTime(game.totalPlayTime))
                                 .font(.system(size: 11))
                         }
-                        .foregroundColor(AppColors.textMuted)
+                        .foregroundColor(AppColors.textSecondary)
                     }
 
                     if let lastPlayed = game.lastPlayedDate {
@@ -406,14 +454,9 @@ struct GameCardRow: View {
 
             ZStack {
                 RoundedRectangle(cornerRadius: 10)
-                    .fill(
-                        LinearGradient(
-                            colors: [AppColors.primary.opacity(0.20), AppColors.accent.opacity(0.20)],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
+                    .fill(AppColors.surfaceLight.opacity(0.38))
                     .frame(width: 32, height: 32)
+                    .overlay(RoundedRectangle(cornerRadius: 10).stroke(AppColors.surfaceLight.opacity(0.7), lineWidth: 1))
                 Image(systemName: "play.fill")
                     .font(.system(size: 12, weight: .semibold))
                     .foregroundColor(AppColors.primary)
@@ -426,6 +469,7 @@ struct GameCardRow: View {
             RoundedRectangle(cornerRadius: 14)
                 .stroke(AppColors.surfaceLight.opacity(0.5), lineWidth: 1)
         )
+        .shadow(color: AppColors.primary.opacity(0.05), radius: 8, x: 0, y: 4)
         .clipShape(RoundedRectangle(cornerRadius: 14))
     }
     

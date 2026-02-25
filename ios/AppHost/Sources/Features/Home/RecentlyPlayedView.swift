@@ -84,7 +84,7 @@ struct RecentlyPlayedView: View {
     }
 
     private var headerSection: some View {
-        VStack(spacing: 10) {
+        VStack(spacing: 8) {
             HStack(spacing: 12) {
                 Button(action: { dismiss() }) {
                     Image(systemName: "arrow.left")
@@ -97,23 +97,36 @@ struct RecentlyPlayedView: View {
 
                 VStack(alignment: .leading, spacing: 1) {
                     Text("Recently Played")
-                        .font(.system(size: 18, weight: .bold))
+                        .font(.system(size: 22, weight: .bold))
                         .foregroundColor(AppColors.textPrimary)
                     Text("\(games.count) games")
-                        .font(.system(size: 10))
-                        .foregroundColor(AppColors.textMuted)
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundColor(AppColors.primary)
                 }
 
                 Spacer()
 
-                Button(action: {}) {
-                    Image(systemName: "magnifyingglass")
-                        .font(.system(size: 14, weight: .medium))
-                        .foregroundColor(AppColors.textPrimary)
-                        .frame(width: 36, height: 36)
-                        .background(AppColors.surfaceLight.opacity(0.5))
-                        .clipShape(Circle())
+                Menu {
+                    Button("Recent") {}
+                    Button("A–Z") {}
+                    Button("Most Played") {}
+                } label: {
+                    HStack(spacing: 6) {
+                        Text("Recent")
+                            .font(.system(size: 12, weight: .semibold))
+                        Image(systemName: "chevron.down")
+                            .font(.system(size: 10, weight: .semibold))
+                    }
+                    .foregroundColor(AppColors.textPrimary)
+                    .padding(.horizontal, 10)
+                    .frame(height: 34)
+                    .background(AppColors.surfaceLight.opacity(0.45))
+                    .overlay(
+                        Capsule().stroke(AppColors.surfaceLight.opacity(0.7), lineWidth: 1)
+                    )
+                    .clipShape(Capsule())
                 }
+                .buttonStyle(.plain)
             }
 
             HStack(spacing: 8) {
@@ -129,7 +142,7 @@ struct RecentlyPlayedView: View {
                     .foregroundColor(AppColors.textPrimary)
             }
             .padding(.horizontal, 12)
-            .frame(height: 38)
+                .frame(height: 36)
             .background(AppColors.surfaceLight.opacity(0.45))
             .overlay(
                 RoundedRectangle(cornerRadius: 19)
@@ -214,10 +227,10 @@ struct RecentlyPlayedCard: View {
             VStack(alignment: .leading, spacing: 0) {
                 ZStack(alignment: .topTrailing) {
                     coverArt
-                        .frame(maxWidth: .infinity, minHeight: 120, maxHeight: 120)
+                        .frame(maxWidth: .infinity, minHeight: 132, maxHeight: 132)
 
                     LinearGradient(
-                        colors: [Color.clear, AppColors.surface.opacity(0.92)],
+                        colors: [Color.clear, Color.black.opacity(0.38)],
                         startPoint: .top,
                         endPoint: .bottom
                     )
@@ -228,14 +241,14 @@ struct RecentlyPlayedCard: View {
                         .foregroundColor(.white)
                         .padding(.horizontal, 10)
                         .padding(.vertical, 6)
-                        .background(AppColors.primary.opacity(0.92))
+                        .background(AppColors.primary.opacity(0.84))
                         .clipShape(Capsule())
                         .padding(8)
                 }
 
                 VStack(alignment: .leading, spacing: 6) {
                     Text(entry.title ?? "Unknown Game")
-                        .font(.system(size: 15, weight: .bold))
+                        .font(.system(size: 17, weight: .bold))
                         .foregroundColor(AppColors.textPrimary)
                         .lineLimit(2)
 
@@ -243,16 +256,20 @@ struct RecentlyPlayedCard: View {
                         Image(systemName: "clock")
                             .font(.system(size: 10, weight: .semibold))
                         Text(playedDateLabel)
-                            .font(.system(size: 11, weight: .medium))
-                        Text("•")
-                            .font(.system(size: 11, weight: .medium))
-                            .opacity(0.7)
-                        Text(totalHoursLabel)
-                            .font(.system(size: 11, weight: .medium))
+                            .font(.system(size: 12, weight: .semibold))
+                        if Int(entry.playtimeTotal) > 0 {
+                            Text("•")
+                                .font(.system(size: 11, weight: .medium))
+                                .opacity(0.55)
+                            Text(totalHoursLabel)
+                                .font(.system(size: 11, weight: .medium))
+                                .foregroundColor(AppColors.textMuted)
+                        }
                     }
                     .foregroundColor(AppColors.primary)
                 }
-                .padding(12)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 13)
             }
             .frame(maxWidth: .infinity)
             .background(AppColors.surface)
@@ -260,7 +277,7 @@ struct RecentlyPlayedCard: View {
                 RoundedRectangle(cornerRadius: 16)
                     .stroke(AppColors.surfaceLight.opacity(0.65), lineWidth: 1)
             )
-            .shadow(color: AppColors.primary.opacity(0.05), radius: 10, x: 0, y: 4)
+            .shadow(color: AppColors.primary.opacity(0.08), radius: 10, x: 0, y: 5)
             .clipShape(RoundedRectangle(cornerRadius: 16))
         }
         .buttonStyle(PlainButtonStyle())
@@ -302,7 +319,8 @@ struct RecentlyPlayedCard: View {
                 .foregroundColor(AppColors.textMuted)
 #endif
         }
-        .frame(maxWidth: .infinity, minHeight: 120, maxHeight: 120)
+        .frame(maxWidth: .infinity, minHeight: 132, maxHeight: 132)
+        .overlay(Color.white.opacity(0.10))
         .clipShape(RoundedRectangle(cornerRadius: 12))
     }
 
