@@ -336,8 +336,7 @@ struct GamePlayView: View {
         }
     }
 
-    @ViewBuilder
-    private func gbcMinimalConsoleLayoutPortrait(in geometry: GeometryProxy) -> some View {
+    private func gbcMinimalConsoleLayoutPortrait(in geometry: GeometryProxy) -> AnyView {
         let shellWidth = safeFrameValue(max(220, min(geometry.size.width - 20, 430.0)), fallback: 220)
         let shellHeight = safeFrameValue(max(360, min(geometry.size.height - 20, 900.0)), fallback: 360)
         let displayFrameWidth = safeFrameValue(shellWidth - 28, fallback: 180)
@@ -347,6 +346,7 @@ struct GamePlayView: View {
         let dpadScale = CGFloat(shellOverride.dpadScaleMultiplier ?? 0.90)
         let faceScale = CGFloat(shellOverride.faceButtonScaleMultiplier ?? 0.90)
 
+        return AnyView(
         VStack(spacing: 0) {
             HStack {
                 Text(game.title ?? "Game Boy Color")
@@ -473,26 +473,28 @@ struct GamePlayView: View {
                 .padding(.bottom, 4)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        )
     }
 
-    @ViewBuilder
-    private func gbcMinimalConsoleLayoutLandscape(in geometry: GeometryProxy) -> some View {
+    private func gbcMinimalConsoleLayoutLandscape(in geometry: GeometryProxy) -> AnyView {
+        guard hasUsableGeometry(geometry) else { return AnyView(Color.black) }
         let safeLeading = geometry.safeAreaInsets.leading
         let safeTrailing = geometry.safeAreaInsets.trailing
-        let shellWidth = min(geometry.size.width - safeLeading - safeTrailing - 18, 920.0)
-        let shellHeight = min(geometry.size.height - 18, 430.0)
-        let innerWidth = shellWidth - 28
+        let shellWidth = safeFrameValue(max(520, min(geometry.size.width - safeLeading - safeTrailing - 18, 920.0)), fallback: 520)
+        let shellHeight = safeFrameValue(max(260, min(geometry.size.height - 18, 430.0)), fallback: 260)
+        let innerWidth = safeFrameValue(shellWidth - 28, fallback: 492)
         let columnGap: CGFloat = 14
         let dpadScale = CGFloat(shellOverride.dpadScaleMultiplier ?? 0.82)
         let faceScale = CGFloat(shellOverride.faceButtonScaleMultiplier ?? 0.82)
         let dpadSize = 182 * dpadScale
         let faceSize = 190 * faceScale
-        let sideColumnWidth = max(190, min(220, (innerWidth - 360 - columnGap * 2) / 2))
-        let centerWidth = max(340, innerWidth - sideColumnWidth * 2 - columnGap * 2)
-        let screenWidth = min(centerWidth - 28, centerWidth * 0.74)
-        let screenHeight = min(screenWidth * (144.0 / 160.0), shellHeight * 0.58)
-        let centerCardHeight = min(shellHeight * 0.70, 286)
+        let sideColumnWidth = safeFrameValue(max(190, min(220, (innerWidth - 360 - columnGap * 2) / 2)), fallback: 190)
+        let centerWidth = safeFrameValue(max(340, innerWidth - sideColumnWidth * 2 - columnGap * 2), fallback: 340)
+        let screenWidth = safeFrameValue(min(centerWidth - 28, centerWidth * 0.74), fallback: 180)
+        let screenHeight = safeFrameValue(min(screenWidth * (144.0 / 160.0), shellHeight * 0.58), fallback: 120)
+        let centerCardHeight = safeFrameValue(min(shellHeight * 0.70, 286), fallback: 220)
 
+        return AnyView(
         VStack(spacing: 0) {
             HStack {
                 Text(game.title ?? "Game Boy Color")
@@ -601,6 +603,7 @@ struct GamePlayView: View {
         .padding(.leading, safeLeading)
         .padding(.trailing, safeTrailing)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        )
     }
 
     private func standardGameLayout(in geometry: GeometryProxy) -> AnyView {
@@ -1492,26 +1495,28 @@ struct GamePlayView: View {
         .frame(width: width, height: height)
     }
 
-    private func ndsConsoleLayoutLandscapeShell(in geometry: GeometryProxy) -> some View {
+    private func ndsConsoleLayoutLandscapeShell(in geometry: GeometryProxy) -> AnyView {
+        guard hasUsableGeometry(geometry) else { return AnyView(Color.black) }
         let safeLeading = geometry.safeAreaInsets.leading
         let safeTrailing = geometry.safeAreaInsets.trailing
-        let shellWidth = min(geometry.size.width - safeLeading - safeTrailing - 12, 1180.0)
-        let shellHeight = min(geometry.size.height - 12, 600.0)
-        let innerWidth = shellWidth - 28
+        let shellWidth = safeFrameValue(max(560, min(geometry.size.width - safeLeading - safeTrailing - 12, 1180.0)), fallback: 560)
+        let shellHeight = safeFrameValue(max(300, min(geometry.size.height - 12, 600.0)), fallback: 300)
+        let innerWidth = safeFrameValue(shellWidth - 28, fallback: 532)
         let sideColumnWidth: CGFloat = 140
         let centerGap: CGFloat = 6
-        let displayPanelWidth = max(520, min(900, innerWidth - (sideColumnWidth * 2) - (centerGap * 2)))
+        let displayPanelWidth = safeFrameValue(max(520, min(900, innerWidth - (sideColumnWidth * 2) - (centerGap * 2))), fallback: 520)
         let displayAspect = 512.0 / 192.0
-        let displayWidth = min(displayPanelWidth - 8, (shellHeight * 0.70) * displayAspect)
-        let displayHeight = displayWidth / displayAspect
-        let centerModuleHeight = displayHeight + 48
-        let utilityRowWidth = min(displayPanelWidth - 12, displayWidth + 10)
+        let displayWidth = safeFrameValue(min(displayPanelWidth - 8, (shellHeight * 0.70) * displayAspect), fallback: 320)
+        let displayHeight = safeFrameValue(displayWidth / displayAspect, fallback: 120)
+        let centerModuleHeight = safeFrameValue(displayHeight + 48, fallback: 168)
+        let utilityRowWidth = safeFrameValue(min(displayPanelWidth - 12, displayWidth + 10), fallback: 200)
         let dpadScale: CGFloat = 0.60
         let faceScale: CGFloat = 0.60
         let dpadSize: CGFloat = 180 * dpadScale
         let faceClusterWidth: CGFloat = 200 * faceScale
 
-        return VStack(spacing: 0) {
+        return AnyView(
+        VStack(spacing: 0) {
             ndsTopBar
                 .padding(.horizontal, 12)
                 .padding(.top, 4)
@@ -1602,7 +1607,7 @@ struct GamePlayView: View {
                             .frame(width: displayWidth / 2, height: displayHeight)
                             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .trailing)
                         }
-                        .frame(width: displayPanelWidth, height: max(displayHeight + 10, shellHeight * 0.52))
+                            .frame(width: displayPanelWidth, height: safeFrameValue(max(displayHeight + 10, shellHeight * 0.52), fallback: 160))
                         .background(Color.black.opacity(0.10))
                         .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
 
@@ -1654,6 +1659,7 @@ struct GamePlayView: View {
         .padding(.leading, safeLeading)
         .padding(.trailing, safeTrailing)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        )
     }
 
     private func ndsConsoleLayoutPortraitShell(width shellWidth: CGFloat, height shellHeight: CGFloat) -> some View {
@@ -1929,45 +1935,38 @@ struct GamePlayView: View {
 
         if isGBCMinimalShellTheme {
             return AnyView(
-            Button(action: action) {
-                Image(systemName: systemName)
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundColor(Color.white.opacity(0.88))
-                    .frame(width: utilitySize, height: utilitySize)
-                    .background(.ultraThinMaterial, in: Circle())
-                    .overlay(Circle().stroke(Color.white.opacity(0.14), lineWidth: 1))
-            }
-            .buttonStyle(.plain)
+                ShellUtilityIconButton(
+                    systemName: systemName,
+                    action: action,
+                    style: .minimalMaterial,
+                    size: utilitySize,
+                    iconColor: Color.white.opacity(0.88),
+                    strokeColor: Color.white.opacity(0.14),
+                    tint: tint,
+                    fillStart: .clear,
+                    fillEnd: .clear,
+                    accentStroke: .clear,
+                    accentGlow: .clear,
+                    glowEnabled: false
+                )
             )
         } else {
             return AnyView(
-            Button(action: action) {
-                Image(systemName: systemName)
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundColor(iconColor)
-                    .frame(width: utilitySize, height: utilitySize)
-                    .background(
-                        Circle()
-                            .fill(
-                                RadialGradient(
-                                    colors: [
-                                        strokeColor.opacity(0.18),
-                                        fillEnd,
-                                        fillStart
-                                    ],
-                                    center: .center,
-                                    startRadius: 2,
-                                    endRadius: max(utilitySize * 0.75, 12)
-                                )
-                            )
-                    )
-                    .overlay(Circle().stroke(strokeColor, lineWidth: 1))
-                    .overlay(Circle().stroke(tint.opacity(0.12), lineWidth: 0.5))
-                    .overlay(Circle().stroke(accentStroke.opacity(0.22), lineWidth: 1))
-                    .shadow(color: shellTheme.controlStyle.glowEnabled ? accentGlow : .clear, radius: 10, x: 0, y: 0)
-            }
-            .buttonStyle(.plain)
-            .scaleEffect(0.98)
+                ShellUtilityIconButton(
+                    systemName: systemName,
+                    action: action,
+                    style: .neonCircle,
+                    size: utilitySize,
+                    iconColor: iconColor,
+                    strokeColor: strokeColor,
+                    tint: tint,
+                    fillStart: fillStart,
+                    fillEnd: fillEnd,
+                    accentStroke: accentStroke,
+                    accentGlow: accentGlow,
+                    glowEnabled: shellTheme.controlStyle.glowEnabled
+                )
+                .scaleEffect(0.98)
             )
         }
     }
@@ -2045,16 +2044,16 @@ struct GamePlayView: View {
         .frame(height: 34)
     }
 
-    @ViewBuilder
-    private func gbConsoleLayoutLandscape(in geometry: GeometryProxy) -> some View {
+    private func gbConsoleLayoutLandscape(in geometry: GeometryProxy) -> AnyView {
+        guard hasUsableGeometry(geometry) else { return AnyView(Color.black) }
         let safeLeading = geometry.safeAreaInsets.leading
         let safeTrailing = geometry.safeAreaInsets.trailing
         let gbScreenScale = (game.gamePlatform == .GBC) ? 0.66 : 0.74
         let gbDPadScale: CGFloat = (game.gamePlatform == .GBC) ? 0.72 : 0.76
         let gbFaceScale: CGFloat = (game.gamePlatform == .GBC) ? 0.70 : 0.74
-        let shellWidth = min(geometry.size.width - safeLeading - safeTrailing - 18, 900.0)
-        let shellHeight = min(geometry.size.height - 18, 430.0)
-        let innerWidth = shellWidth - 28
+        let shellWidth = safeFrameValue(max(520, min(geometry.size.width - safeLeading - safeTrailing - 18, 900.0)), fallback: 520)
+        let shellHeight = safeFrameValue(max(260, min(geometry.size.height - 18, 430.0)), fallback: 260)
+        let innerWidth = safeFrameValue(shellWidth - 28, fallback: 492)
         let columnGap: CGFloat = 12
         let dpadSize = 182 * gbDPadScale
         let faceSize = 190 * gbFaceScale
@@ -2062,16 +2061,17 @@ struct GamePlayView: View {
         let rightControlMinWidth = max(faceSize + 8, 170)
         let minDisplayPanelWidth: CGFloat = 320
         let maxDisplayPanelWidth: CGFloat = 430
-        let maxSideColumnWidth = max(220, (innerWidth - minDisplayPanelWidth - (columnGap * 2)) / 2)
-        let sideColumnWidth = min(max(leftControlMinWidth, rightControlMinWidth), maxSideColumnWidth)
-        let leftPanelWidth = min(
+        let maxSideColumnWidth = safeFrameValue(max(220, (innerWidth - minDisplayPanelWidth - (columnGap * 2)) / 2), fallback: 220)
+        let sideColumnWidth = safeFrameValue(min(max(leftControlMinWidth, rightControlMinWidth), maxSideColumnWidth), fallback: 180)
+        let leftPanelWidth = safeFrameValue(min(
             maxDisplayPanelWidth,
             max(minDisplayPanelWidth, innerWidth - (sideColumnWidth * 2) - (columnGap * 2))
-        )
-        let screenWidth = min(leftPanelWidth - 20, leftPanelWidth * gbScreenScale)
-        let screenHeight = min(screenWidth * (144.0 / 160.0), shellHeight * 0.62)
-        let centerModuleHeight = (shellHeight * 0.72) + 46
+        ), fallback: minDisplayPanelWidth)
+        let screenWidth = safeFrameValue(min(leftPanelWidth - 20, leftPanelWidth * gbScreenScale), fallback: 180)
+        let screenHeight = safeFrameValue(min(screenWidth * (144.0 / 160.0), shellHeight * 0.62), fallback: 120)
+        let centerModuleHeight = safeFrameValue((shellHeight * 0.72) + 46, fallback: 200)
 
+        return AnyView(
         VStack(spacing: 0) {
             HStack {
                 Text(game.title ?? "Game Boy")
@@ -2159,7 +2159,7 @@ struct GamePlayView: View {
                                     )
                                     .padding(.top, 14)
                         }
-                        .frame(width: leftPanelWidth, height: shellHeight * 0.72)
+                        .frame(width: leftPanelWidth, height: safeFrameValue(shellHeight * 0.72, fallback: 180))
 
                         HStack(spacing: 10) {
                             gbUtilityIcon(systemName: "square.and.arrow.down.fill", tint: .green) { viewModel.quickSave() }
@@ -2213,6 +2213,7 @@ struct GamePlayView: View {
         .padding(.leading, safeLeading)
         .padding(.trailing, safeTrailing)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        )
     }
 
     @ViewBuilder
@@ -2945,6 +2946,77 @@ struct GamePlayView: View {
     private var currentROMHashForSaveStates: String? {
         guard let romPath = game.romPath else { return nil }
         return URL(fileURLWithPath: romPath).deletingPathExtension().lastPathComponent
+    }
+}
+
+private struct ShellUtilityIconButton: View {
+    enum Style {
+        case minimalMaterial
+        case neonCircle
+    }
+
+    let systemName: String
+    let action: () -> Void
+    let style: Style
+    let size: CGFloat
+    let iconColor: Color
+    let strokeColor: Color
+    let tint: Color
+    let fillStart: Color
+    let fillEnd: Color
+    let accentStroke: Color
+    let accentGlow: Color
+    let glowEnabled: Bool
+
+    var body: some View {
+        let buttonSize = max(20, min(size.isFinite ? size : 32, 80))
+
+        return Button(action: action) {
+            Image(systemName: systemName)
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundColor(iconColor)
+                .frame(width: buttonSize, height: buttonSize)
+                .background(backgroundShape(size: buttonSize))
+                .overlay(strokeOverlays)
+                .shadow(color: glowEnabled && style == .neonCircle ? accentGlow : .clear, radius: 10, x: 0, y: 0)
+        }
+        .buttonStyle(.plain)
+    }
+
+    @ViewBuilder
+    private func backgroundShape(size: CGFloat) -> some View {
+        switch style {
+        case .minimalMaterial:
+            Circle().fill(.ultraThinMaterial)
+        case .neonCircle:
+            Circle()
+                .fill(
+                    RadialGradient(
+                        colors: [
+                            strokeColor.opacity(0.18),
+                            fillEnd,
+                            fillStart
+                        ],
+                        center: .center,
+                        startRadius: 2,
+                        endRadius: max(size * 0.75, 12)
+                    )
+                )
+        }
+    }
+
+    @ViewBuilder
+    private var strokeOverlays: some View {
+        switch style {
+        case .minimalMaterial:
+            Circle().stroke(strokeColor, lineWidth: 1)
+        case .neonCircle:
+            ZStack {
+                Circle().stroke(strokeColor, lineWidth: 1)
+                Circle().stroke(tint.opacity(0.12), lineWidth: 0.5)
+                Circle().stroke(accentStroke.opacity(0.22), lineWidth: 1)
+            }
+        }
     }
 }
 

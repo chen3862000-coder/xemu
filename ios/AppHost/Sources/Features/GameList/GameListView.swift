@@ -14,7 +14,8 @@ struct GameListView: View {
     @StateObject private var viewModel = GameListViewModel()
     @State private var searchText = ""
     @State private var selectedGame: Game?
-    @State private var launchErrorMessage: String?
+    @State private var showAllGames = false
+    @State private var activeAlert: GameListAlertState?
     
     var body: some View {
         ZStack {
@@ -25,8 +26,13 @@ struct GameListView: View {
 
                 ScrollView {
                     VStack(spacing: 16) {
-                        platformBanner
-                        gamesSection
+                        systemIdentitySection
+                        continuePlayingSection
+                        consoleStatsSection
+                        achievementsSection
+                        mostPlayedSection
+                        recentlyAddedSection
+                        allGamesExpandableSection
                     }
                     .padding(.horizontal, 16)
                     .padding(.top, 12)
@@ -34,13 +40,33 @@ struct GameListView: View {
                 }
             }
         }
-        .alert("Unable to Open Game", isPresented: Binding(
-            get: { launchErrorMessage != nil },
-            set: { if !$0 { launchErrorMessage = nil } }
-        )) {
-            Button("OK", role: .cancel) { launchErrorMessage = nil }
-        } message: {
-            Text(launchErrorMessage ?? "This game cannot be launched right now.")
+        .alert(item: $activeAlert) { state in
+            switch state.kind {
+            case .launchError(let message):
+                return Alert(
+                    title: Text("Unable to Open Game"),
+                    message: Text(message),
+                    dismissButton: .cancel(Text("OK"))
+                )
+            case .confirmDelete(let candidate):
+                return Alert(
+                    title: Text(candidate.mode.displayName),
+                    message: Text(candidate.mode.firstConfirmation),
+                    primaryButton: .default(Text("Continue")) {
+                        activeAlert = GameListAlertState(kind: .confirmFinalDelete(candidate))
+                    },
+                    secondaryButton: .cancel()
+                )
+            case .confirmFinalDelete(let candidate):
+                return Alert(
+                    title: Text("Final Confirmation"),
+                    message: Text(candidate.mode.secondConfirmation),
+                    primaryButton: .destructive(Text("Delete")) {
+                        performDeletion(candidate)
+                    },
+                    secondaryButton: .cancel()
+                )
+            }
         }
         #if os(iOS)
         .fullScreenCover(item: $selectedGame) { game in
@@ -54,6 +80,9 @@ struct GameListView: View {
         }
         #endif
         .onAppear {
+            viewModel.loadGames(for: platform, in: viewContext)
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .romLibraryDidChange)) { _ in
             viewModel.loadGames(for: platform, in: viewContext)
         }
     }
@@ -179,19 +208,19 @@ struct GameListView: View {
         )
     }
     
-    private var platformBanner: some View {
+    private var systemIdentitySection: some View {
         ZStack {
             RoundedRectangle(cornerRadius: 20)
                 .fill(AppColors.surface)
                 .overlay(
                     RoundedRectangle(cornerRadius: 20)
-                        .fill(platform.gradient.opacity(0.06))
+                        .fill(platform.gradient.opacity(0.035))
                 )
                 .overlay(
                     RoundedRectangle(cornerRadius: 20)
-                        .stroke(AppColors.primary.opacity(0.14), lineWidth: 1)
+                        .stroke(AppColors.primary.opacity(0.12), lineWidth: 1)
                 )
-                .shadow(color: AppColors.primary.opacity(0.08), radius: 14, x: 0, y: 8)
+                .shadow(color: AppColors.primary.opacity(0.12), radius: 16, x: 0, y: 10)
                 .overlay(
                     RoundedRectangle(cornerRadius: 20)
                         .stroke(Color.white.opacity(0.10), lineWidth: 0.7)
@@ -224,10 +253,10 @@ struct GameListView: View {
                     platformIcon
 
                     VStack(alignment: .leading, spacing: 4) {
-                        Text("\(platformDisplay.displayName) Games")
+                        Text(platformDisplay.displayName)
                             .font(.system(size: 18, weight: .bold))
                             .foregroundColor(AppColors.textPrimary)
-                        Text("Browse and launch your \(platformDisplay.shortName) library")
+                        Text(identitySubtitle)
                             .font(.system(size: 13, weight: .medium))
                             .foregroundColor(AppColors.textMuted)
                             .lineLimit(2)
@@ -243,7 +272,169 @@ struct GameListView: View {
             .padding(16)
         }
     }
-    
+
+    private var continuePlayingSection: some View {
+        Group {
+            if !viewModel.continueGames.isEmpty {
+                VStack(alignment: .leading, spacing: 10) {
+                    sectionHeader("Continue on \(platformDisplay.shortName)", trailing: nil)
+
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 12) {
+                            ForEach(viewModel.continueGames.prefix(3)) { game in
+                                Button {
+                                    launchGame(game)
+                                } label: {
+                                    SystemHubGameCard(
+                                        game: game,
+                                        platformText: platformDisplay.shortName,
+                                        subtitle: recentSubtitle(for: game),
+                                        launchIssue: viewModel.compatibilityIssue(for: game),
+                                        variant: .continuePlaying
+                                    )
+                                    .frame(width: 182)
+                                }
+                                .buttonStyle(.plain)
+                                .contextMenu { deletionMenu(for: game) }
+                            }
+                        }
+                        .padding(.horizontal, 1)
+                    }
+                }
+            }
+        }
+    }
+
+    private var consoleStatsSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            sectionHeader("Your Stats", trailing: nil)
+
+            VStack(spacing: 10) {
+                ConsoleStatRow(label: "Total Hours", value: formatHoursShort(viewModel.totalPlayTimeSeconds))
+                ConsoleStatRow(label: "Sessions", value: "\(viewModel.estimatedSessionCount)")
+                ConsoleStatRow(label: "Avg Session", value: formatMinutesShort(viewModel.averageSessionLengthEstimate))
+                ConsoleStatRow(
+                    label: "Most Played",
+                    value: viewModel.mostPlayedGameTitle.map { "\($0) · \(formatHoursShort(viewModel.mostPlayedGameSeconds))" } ?? "—"
+                )
+            }
+            .padding(14)
+            .background(AppColors.surface)
+            .overlay(
+                RoundedRectangle(cornerRadius: 16)
+                    .stroke(AppColors.surfaceLight.opacity(0.45), lineWidth: 1)
+            )
+            .shadow(color: AppColors.primary.opacity(0.05), radius: 10, x: 0, y: 6)
+            .clipShape(RoundedRectangle(cornerRadius: 16))
+        }
+    }
+
+    private var achievementsSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            sectionHeader("Achievements", trailing: viewModel.achievements.count > 4 ? "View All" : nil)
+
+            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 10), count: 2), spacing: 10) {
+                ForEach(Array(viewModel.achievements.prefix(4))) { achievement in
+                    AchievementBadgeCard(achievement: achievement)
+                }
+            }
+        }
+    }
+
+    private var mostPlayedSection: some View {
+        Group {
+            if !viewModel.topPlayedGames.isEmpty {
+                VStack(alignment: .leading, spacing: 10) {
+                    sectionHeader("Most Played", trailing: nil)
+
+                    VStack(spacing: 10) {
+                        ForEach(Array(viewModel.topPlayedGames.prefix(3).enumerated()), id: \.element.id) { idx, game in
+                            MostPlayedBarRow(
+                                rank: idx + 1,
+                                title: game.title ?? "Unknown",
+                                seconds: game.totalPlayTime,
+                                maxSeconds: max(viewModel.topPlayedGames.first?.totalPlayTime ?? 1, 1)
+                            )
+                        }
+                    }
+                    .padding(14)
+                    .background(AppColors.surface)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 16)
+                            .stroke(AppColors.surfaceLight.opacity(0.45), lineWidth: 1)
+                    )
+                    .clipShape(RoundedRectangle(cornerRadius: 16))
+                }
+            }
+        }
+    }
+
+    private var recentlyAddedSection: some View {
+        Group {
+            if !viewModel.recentlyAddedGames.isEmpty {
+                VStack(alignment: .leading, spacing: 10) {
+                    sectionHeader("Recently Added", trailing: nil)
+
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 12) {
+                            ForEach(viewModel.recentlyAddedGames.prefix(3)) { game in
+                                Button {
+                                    launchGame(game)
+                                } label: {
+                                    SystemHubGameCard(
+                                        game: game,
+                                        platformText: platformDisplay.shortName,
+                                        subtitle: "New import",
+                                        launchIssue: viewModel.compatibilityIssue(for: game),
+                                        variant: .recentlyAdded
+                                    )
+                                    .frame(width: 170)
+                                }
+                                .buttonStyle(.plain)
+                                .contextMenu { deletionMenu(for: game) }
+                            }
+                        }
+                        .padding(.horizontal, 1)
+                    }
+                }
+            }
+        }
+    }
+
+    private var allGamesExpandableSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Button {
+                withAnimation(.easeInOut(duration: 0.18)) {
+                    showAllGames.toggle()
+                }
+            } label: {
+                HStack {
+                    Text(showAllGames ? "Hide Games" : "View All \(viewModel.totalGames) Games")
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundColor(AppColors.textPrimary)
+                    Spacer()
+                    Image(systemName: showAllGames ? "chevron.up" : "chevron.down")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundColor(AppColors.primary)
+                }
+                .padding(.horizontal, 14)
+                .frame(height: 44)
+                .background(AppColors.surface)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 14)
+                        .stroke(AppColors.surfaceLight.opacity(0.5), lineWidth: 1)
+                )
+                .clipShape(RoundedRectangle(cornerRadius: 14))
+            }
+            .buttonStyle(.plain)
+
+            if showAllGames {
+                gamesSection
+                    .transition(.opacity.combined(with: .move(edge: .top)))
+            }
+        }
+    }
+
     private var platformIcon: some View {
         ZStack {
             RoundedRectangle(cornerRadius: 14)
@@ -316,13 +507,73 @@ struct GameListView: View {
                         Button {
                             launchGame(game)
                         } label: {
-                            GameCardRow(game: game)
+                            GameCardRow(game: game, launchIssue: viewModel.compatibilityIssue(for: game))
                         }
                         .buttonStyle(.plain)
+                        .contextMenu { deletionMenu(for: game) }
                     }
                 }
             }
         }
+    }
+
+    private var identitySubtitle: String {
+        let gameCount = viewModel.totalGames
+        let hoursText = formatHoursShort(viewModel.totalPlayTimeSeconds)
+        if let firstDate = viewModel.firstConsoleDate {
+            return "\(gameCount) games · \(hoursText) played · Since \(firstDate.formatted(date: .abbreviated, time: .omitted))"
+        }
+        return "\(gameCount) games · \(hoursText) played"
+    }
+
+    private func sectionHeader(_ title: String, trailing: String?) -> some View {
+        HStack {
+            Text(title)
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundColor(AppColors.textPrimary)
+            Spacer()
+            if let trailing {
+                Text(trailing)
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundColor(AppColors.primary)
+            }
+        }
+    }
+
+    private func recentSubtitle(for game: Game) -> String {
+        var pieces: [String] = []
+        if let lastPlayed = game.lastPlayedDate {
+            pieces.append(relativeDateString(lastPlayed))
+        }
+        if game.totalPlayTime > 0 {
+            pieces.append(formatHoursShort(game.totalPlayTime))
+        }
+        return pieces.isEmpty ? "Ready to play" : pieces.joined(separator: " • ")
+    }
+
+    private func relativeDateString(_ date: Date) -> String {
+        if Calendar.current.isDateInToday(date) { return "Today" }
+        if Calendar.current.isDateInYesterday(date) { return "Yesterday" }
+        let formatter = RelativeDateTimeFormatter()
+        formatter.unitsStyle = .short
+        return formatter.localizedString(for: date, relativeTo: Date())
+    }
+
+    private func formatHoursShort(_ seconds: Int) -> String {
+        let hours = max(0, seconds / 3600)
+        let minutes = max(0, (seconds % 3600) / 60)
+        if hours == 0 { return "\(minutes)m" }
+        return minutes > 0 ? "\(hours)h \(minutes)m" : "\(hours)h"
+    }
+
+    private func formatMinutesShort(_ seconds: Int) -> String {
+        let minutes = max(0, seconds / 60)
+        if minutes >= 60 {
+            let h = minutes / 60
+            let m = minutes % 60
+            return m > 0 ? "\(h)h \(m)m" : "\(h)h"
+        }
+        return "\(minutes)m"
     }
 
     private var platformDisplay: PlatformDisplay {
@@ -331,18 +582,55 @@ struct GameListView: View {
 
     private func launchGame(_ game: Game) {
         guard let romPath = game.romPath, !romPath.isEmpty else {
-            launchErrorMessage = "ROM file path is missing for this game."
+            presentLaunchError("ROM file path is missing for this game.")
             return
         }
         guard FileManager.default.fileExists(atPath: romPath) else {
-            launchErrorMessage = "ROM file could not be found. Try re-importing the game."
+            presentLaunchError("ROM file could not be found. Try re-importing the game.")
             return
         }
         guard game.gamePlatform != nil else {
-            launchErrorMessage = "This game platform is not supported for direct launch."
+            presentLaunchError("This game platform is not supported for direct launch.")
+            return
+        }
+        if let issue = viewModel.compatibilityIssue(for: game) {
+            presentLaunchError(issue.message)
             return
         }
         selectedGame = game
+    }
+
+    @ViewBuilder
+    private func deletionMenu(for game: Game) -> some View {
+        if let entry = viewModel.entry(for: game.id) {
+            Button(role: .destructive) {
+                activeAlert = GameListAlertState(kind: .confirmDelete(GameDeleteCandidate(entry: entry, mode: .removeROMOnly)))
+            } label: {
+                Label("Remove ROM Only", systemImage: "eject")
+            }
+
+            Button(role: .destructive) {
+                activeAlert = GameListAlertState(kind: .confirmDelete(GameDeleteCandidate(entry: entry, mode: .removeAll)))
+            } label: {
+                Label("Remove", systemImage: "trash")
+            }
+        }
+    }
+
+    private func performDeletion(_ candidate: GameDeleteCandidate) {
+        do {
+            try GameDeletionService.shared.delete(entry: candidate.entry, mode: candidate.mode, in: viewContext)
+            if selectedGame?.id == candidate.entry.id {
+                selectedGame = nil
+            }
+            viewModel.loadGames(for: platform, in: viewContext)
+        } catch {
+            presentLaunchError("Could not delete game: \(error.localizedDescription)")
+        }
+    }
+
+    private func presentLaunchError(_ message: String) {
+        activeAlert = GameListAlertState(kind: .launchError(message))
     }
 }
 
@@ -418,8 +706,242 @@ struct StatBadge: View {
     }
 }
 
+private struct ConsoleStatRow: View {
+    let label: String
+    let value: String
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Text(label)
+                .font(.system(size: 13, weight: .medium))
+                .foregroundColor(AppColors.textMuted)
+            Spacer()
+            Text(value)
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundColor(AppColors.textPrimary)
+                .multilineTextAlignment(.trailing)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+        }
+    }
+}
+
+fileprivate struct ConsoleHubAchievement: Identifiable {
+    let id: String
+    let title: String
+    let subtitle: String
+    let isUnlocked: Bool
+    let iconName: String
+}
+
+private struct AchievementBadgeCard: View {
+    let achievement: ConsoleHubAchievement
+
+    var body: some View {
+        HStack(spacing: 10) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 10)
+                    .fill((achievement.isUnlocked ? AppColors.primary : AppColors.surfaceLight).opacity(achievement.isUnlocked ? 0.16 : 0.35))
+                    .frame(width: 34, height: 34)
+                Image(systemName: achievement.iconName)
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(achievement.isUnlocked ? AppColors.primary : AppColors.textMuted.opacity(0.7))
+            }
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(achievement.title)
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundColor(AppColors.textPrimary)
+                    .lineLimit(1)
+                Text(achievement.subtitle)
+                    .font(.system(size: 10, weight: .medium))
+                    .foregroundColor(achievement.isUnlocked ? AppColors.primary : AppColors.textMuted)
+                    .lineLimit(1)
+            }
+
+            Spacer(minLength: 0)
+        }
+        .padding(10)
+        .background(AppColors.surface)
+        .overlay(
+            RoundedRectangle(cornerRadius: 14)
+                .stroke((achievement.isUnlocked ? AppColors.primary : AppColors.surfaceLight).opacity(achievement.isUnlocked ? 0.22 : 0.45), lineWidth: 1)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: 14))
+    }
+}
+
+private struct MostPlayedBarRow: View {
+    let rank: Int
+    let title: String
+    let seconds: Int
+    let maxSeconds: Int
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 5) {
+            HStack(spacing: 8) {
+                Text("\(rank).")
+                    .font(.system(size: 12, weight: .bold))
+                    .foregroundColor(AppColors.primary)
+                Text(title)
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundColor(AppColors.textPrimary)
+                    .lineLimit(1)
+                Spacer()
+                Text(Self.format(seconds: seconds))
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundColor(AppColors.textMuted)
+            }
+            GeometryReader { proxy in
+                let pct = max(0.06, min(1.0, Double(seconds) / Double(max(maxSeconds, 1))))
+                ZStack(alignment: .leading) {
+                    Capsule().fill(AppColors.surfaceLight.opacity(0.35))
+                    Capsule().fill(AppColors.primary.opacity(0.8))
+                        .frame(width: proxy.size.width * pct)
+                }
+            }
+            .frame(height: 6)
+        }
+    }
+
+    private static func format(seconds: Int) -> String {
+        let h = max(0, seconds / 3600)
+        let m = max(0, (seconds % 3600) / 60)
+        if h == 0 { return "\(m)m" }
+        return m > 0 ? "\(h)h \(m)m" : "\(h)h"
+    }
+}
+
+private enum SystemHubGameCardVariant {
+    case continuePlaying
+    case recentlyAdded
+}
+
+private struct SystemHubGameCard: View {
+    let game: Game
+    let platformText: String
+    let subtitle: String
+    let launchIssue: ROMLaunchIssue?
+    let variant: SystemHubGameCardVariant
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            ZStack(alignment: .topTrailing) {
+                coverView
+                    .frame(height: variant == .continuePlaying ? 110 : 96)
+
+                Text(platformText)
+                    .font(.system(size: 11, weight: .bold))
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 10)
+                    .frame(height: 28)
+                    .background(AppColors.primary)
+                    .clipShape(Capsule())
+                    .padding(8)
+
+                if let launchIssue {
+                    VStack {
+                        HStack {
+                            Image(systemName: launchIssue.iconName)
+                                .font(.system(size: 11, weight: .bold))
+                                .foregroundColor(.orange)
+                                .padding(6)
+                                .background(Color.black.opacity(0.55))
+                                .clipShape(Circle())
+                                .padding(8)
+                            Spacer()
+                        }
+                        Spacer()
+                    }
+                }
+            }
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(game.title ?? "Unknown")
+                    .font(.system(size: 14, weight: .bold))
+                    .foregroundColor(AppColors.textPrimary)
+                    .lineLimit(2)
+                    .multilineTextAlignment(.leading)
+
+                Text(subtitle)
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundColor(AppColors.primary)
+                    .lineLimit(1)
+            }
+            .padding(12)
+        }
+        .background(AppColors.surface)
+        .overlay(
+            RoundedRectangle(cornerRadius: 16)
+                .stroke(AppColors.surfaceLight.opacity(0.45), lineWidth: 1)
+        )
+        .shadow(color: AppColors.primary.opacity(0.06), radius: 10, x: 0, y: 5)
+        .clipShape(RoundedRectangle(cornerRadius: 16))
+    }
+
+    @ViewBuilder
+    private var coverView: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 16)
+                .fill(
+                    LinearGradient(
+                        colors: [AppColors.surfaceLight.opacity(0.55), AppColors.surface.opacity(0.6)],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+
+            #if canImport(AppKit)
+            if let data = game.coverImage, let img = NSImage(data: data) {
+                Image(nsImage: img)
+                    .resizable()
+                    .scaledToFill()
+                    .overlay(
+                        LinearGradient(
+                            colors: [Color.clear, Color.black.opacity(0.22)],
+                            startPoint: .center,
+                            endPoint: .bottom
+                        )
+                    )
+            } else {
+                placeholder
+            }
+            #elseif canImport(UIKit)
+            if let data = game.coverImage, let img = UIImage(data: data) {
+                Image(uiImage: img)
+                    .resizable()
+                    .scaledToFill()
+                    .overlay(
+                        LinearGradient(
+                            colors: [Color.clear, Color.black.opacity(0.22)],
+                            startPoint: .center,
+                            endPoint: .bottom
+                        )
+                    )
+            } else {
+                placeholder
+            }
+            #else
+            placeholder
+            #endif
+        }
+        .clipShape(RoundedRectangle(cornerRadius: 16))
+    }
+
+    private var placeholder: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 16)
+                .fill(AppColors.surfaceLight.opacity(0.25))
+            Image(systemName: "gamecontroller.fill")
+                .font(.system(size: 22, weight: .semibold))
+                .foregroundColor(AppColors.primary.opacity(0.75))
+        }
+    }
+}
+
 struct GameCardRow: View {
     let game: Game
+    let launchIssue: ROMLaunchIssue?
     
     var body: some View {
         HStack(spacing: 12) {
@@ -430,6 +952,12 @@ struct GameCardRow: View {
                     .font(.system(size: 14, weight: .semibold))
                     .foregroundColor(AppColors.textPrimary)
                     .lineLimit(1)
+
+                if launchIssue != nil {
+                    Label("Unsupported Mapper", systemImage: "exclamationmark.triangle.fill")
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundColor(.orange)
+                }
 
                 HStack(spacing: 8) {
                     if game.totalPlayTime > 0 {
@@ -542,6 +1070,19 @@ struct GameCardRow: View {
 class GameListViewModel: ObservableObject {
     @Published var games: [Game] = []
     @Published var isLoading = false
+    @Published var continueGames: [Game] = []
+    @Published var topPlayedGames: [Game] = []
+    @Published var recentlyAddedGames: [Game] = []
+    @Published var firstConsoleDate: Date?
+    @Published var totalPlayTimeSeconds: Int = 0
+    @Published var estimatedSessionCount: Int = 0
+    @Published var averageSessionLengthEstimate: Int = 0
+    @Published var longestSessionEstimate: Int = 0
+    @Published var mostPlayedGameTitle: String?
+    @Published var mostPlayedGameSeconds: Int = 0
+    @Published fileprivate var achievements: [ConsoleHubAchievement] = []
+    private var entryByGameID: [UUID: ROMLibraryEntry] = [:]
+    private var compatibilityByGameID: [UUID: ROMLaunchCompatibility] = [:]
     
     var totalGames: Int { games.count }
     var playedGames: Int { games.filter { $0.totalPlayTime > 0 }.count }
@@ -571,10 +1112,22 @@ class GameListViewModel: ObservableObject {
 
         do {
             let entries = try context.fetch(request)
-            games = entries.compactMap { $0.toGame() }
+            let mappedGames = entries.compactMap { $0.toGame() }
+            games = mappedGames
+            entryByGameID = Dictionary(uniqueKeysWithValues: entries.map { ($0.id, $0) })
+            compatibilityByGameID = Dictionary(uniqueKeysWithValues: mappedGames.map { game in
+                if let entry = entryByGameID[game.id] {
+                    return (game.id, ROMCompatibilityService.shared.compatibility(for: entry))
+                }
+                return (game.id, .compatible)
+            })
+            deriveConsoleHubState(from: entries, mappedGames: mappedGames)
         } catch {
             print("Failed to load games for \(platform.displayName): \(error)")
             games = []
+            entryByGameID = [:]
+            compatibilityByGameID = [:]
+            deriveConsoleHubState(from: [], mappedGames: [])
         }
 
         isLoading = false
@@ -586,6 +1139,95 @@ class GameListViewModel: ObservableObject {
         }
         return games.filter { ($0.title ?? "").localizedCaseInsensitiveContains(searchText) }
     }
+
+    func entry(for gameID: UUID) -> ROMLibraryEntry? {
+        entryByGameID[gameID]
+    }
+
+    func compatibilityIssue(for game: Game) -> ROMLaunchIssue? {
+        compatibilityByGameID[game.id]?.issue
+    }
+
+    private func deriveConsoleHubState(from entries: [ROMLibraryEntry], mappedGames: [Game]) {
+        let entryById: [UUID: ROMLibraryEntry] = Dictionary(uniqueKeysWithValues: entries.map { ($0.id, $0) })
+
+        firstConsoleDate = entries.compactMap(\.dateAdded).min()
+        totalPlayTimeSeconds = Int(entries.reduce(Int64(0)) { $0 + $1.playtimeTotal })
+
+        let playedEntries = entries.filter { $0.playtimeTotal > 0 || $0.lastPlayedAt != nil }
+        let uniquePlayedGames = Set(playedEntries.compactMap { $0.checksum })
+        estimatedSessionCount = max(playedEntries.filter { $0.lastPlayedAt != nil }.count, totalPlayTimeSeconds > 0 ? max(1, totalPlayTimeSeconds / (35 * 60)) : 0)
+        averageSessionLengthEstimate = estimatedSessionCount > 0 ? (totalPlayTimeSeconds / estimatedSessionCount) : 0
+        let maxGameTime = playedEntries.map { Int($0.playtimeTotal) }.max() ?? 0
+        longestSessionEstimate = max(averageSessionLengthEstimate * 2, maxGameTime / 2)
+
+        continueGames = mappedGames
+            .filter { $0.lastPlayedDate != nil || $0.totalPlayTime > 0 }
+            .sorted {
+                ($0.lastPlayedDate ?? .distantPast) > ($1.lastPlayedDate ?? .distantPast)
+            }
+
+        topPlayedGames = mappedGames
+            .filter { $0.totalPlayTime > 0 }
+            .sorted { $0.totalPlayTime > $1.totalPlayTime }
+
+        if let top = topPlayedGames.first {
+            mostPlayedGameTitle = top.title ?? "Unknown"
+            mostPlayedGameSeconds = top.totalPlayTime
+        } else {
+            mostPlayedGameTitle = nil
+            mostPlayedGameSeconds = 0
+        }
+
+        let now = Date()
+        let sevenDaysAgo = Calendar.current.date(byAdding: .day, value: -7, to: now) ?? now
+        let recentEntryIDs = Set(
+            entries
+                .filter { ($0.dateAdded ?? .distantPast) >= sevenDaysAgo }
+                .map { $0.id }
+        )
+
+        let fallbackRecent = entries
+            .sorted {
+                ($0.dateAdded ?? .distantPast) > ($1.dateAdded ?? .distantPast)
+            }
+            .prefix(3)
+            .map { $0.id }
+        let chosenRecentIDs = recentEntryIDs.isEmpty ? Set(fallbackRecent) : recentEntryIDs
+        recentlyAddedGames = mappedGames.filter { game in
+            chosenRecentIDs.contains(game.id)
+        }
+        .sorted {
+            let lhs = entryById[$0.id]
+            let rhs = entryById[$1.id]
+            return (lhs?.dateAdded ?? .distantPast) > (rhs?.dateAdded ?? .distantPast)
+        }
+
+        let saveStateCountEstimate = entries.filter { ($0.lastPlayedAt != nil) || $0.playtimeTotal > 0 }.count * 2
+        achievements = [
+            ConsoleHubAchievement(id: "first-hour", title: "First Hour", subtitle: totalPlayTimeSeconds >= 3600 ? "Unlocked" : "1h total play", isUnlocked: totalPlayTimeSeconds >= 3600, iconName: "clock.fill"),
+            ConsoleHubAchievement(id: "ten-hours", title: "10h Milestone", subtitle: totalPlayTimeSeconds >= 36_000 ? "Unlocked" : "Reach 10h", isUnlocked: totalPlayTimeSeconds >= 36_000, iconName: "timer"),
+            ConsoleHubAchievement(id: "five-games", title: "5 Games Played", subtitle: uniquePlayedGames.count >= 5 ? "Unlocked" : "\(uniquePlayedGames.count)/5", isUnlocked: uniquePlayedGames.count >= 5, iconName: "square.grid.2x2.fill"),
+            ConsoleHubAchievement(id: "save-master", title: "Save Master", subtitle: saveStateCountEstimate >= 10 ? "Unlocked" : "10 saves", isUnlocked: saveStateCountEstimate >= 10, iconName: "externaldrive.fill.badge.checkmark")
+        ]
+    }
+}
+
+private struct GameDeleteCandidate: Identifiable {
+    let id = UUID()
+    let entry: ROMLibraryEntry
+    let mode: GameDeletionMode
+}
+
+private struct GameListAlertState: Identifiable {
+    enum Kind {
+        case launchError(String)
+        case confirmDelete(GameDeleteCandidate)
+        case confirmFinalDelete(GameDeleteCandidate)
+    }
+
+    let id = UUID()
+    let kind: Kind
 }
 
 #Preview {

@@ -6,6 +6,7 @@ struct PlayerStatsView: View {
     @Environment(\.managedObjectContext) private var viewContext
     @StateObject private var viewModel = PlayerStatsViewModel()
     @State private var selectedGame: Game?
+    @State private var launchErrorMessage: String?
 
     var body: some View {
         NavigationStack {
@@ -49,12 +50,22 @@ struct PlayerStatsView: View {
                 }
                 #endif
             }
-            .sheet(item: $selectedGame) { game in
-                #if os(iOS)
+            #if os(iOS)
+            .fullScreenCover(item: $selectedGame) { game in
                 GamePlayView(game: game, onExit: { selectedGame = nil })
-                #else
+            }
+            #else
+            .sheet(item: $selectedGame) { game in
                 GameDetailView(game: game)
-                #endif
+            }
+            #endif
+            .alert("Unable to Open Game", isPresented: Binding(
+                get: { launchErrorMessage != nil },
+                set: { if !$0 { launchErrorMessage = nil } }
+            )) {
+                Button("OK", role: .cancel) { launchErrorMessage = nil }
+            } message: {
+                Text(launchErrorMessage ?? "This game cannot be launched right now.")
             }
             .onAppear { viewModel.load(in: viewContext) }
         }
@@ -194,6 +205,10 @@ struct PlayerStatsView: View {
             VStack(spacing: 10) {
                 ForEach(Array(viewModel.topGames.enumerated()), id: \.element.id) { index, item in
                     Button {
+                        if let issue = item.launchIssue {
+                            launchErrorMessage = issue.message
+                            return
+                        }
                         selectedGame = item.game
                     } label: {
                         HStack(spacing: 12) {
@@ -210,6 +225,11 @@ struct PlayerStatsView: View {
                                 Text("\(item.systemLabel) · \(item.hoursText)")
                                     .font(.system(size: 12, weight: .medium))
                                     .foregroundColor(AppColors.textSecondary)
+                                if item.launchIssue != nil {
+                                    Label("Unsupported Mapper", systemImage: "exclamationmark.triangle.fill")
+                                        .font(.system(size: 10, weight: .semibold))
+                                        .foregroundColor(.orange)
+                                }
                             }
 
                             Spacer()
@@ -516,7 +536,8 @@ final class PlayerStatsViewModel: ObservableObject {
                     title: entry.title ?? "Unknown Game",
                     systemLabel: displaySystemName(normalizedSystem(entry.system)),
                     seconds: Int(entry.playtimeTotal),
-                    game: game
+                    game: game,
+                    launchIssue: ROMCompatibilityService.shared.compatibility(for: entry).issue
                 )
             }
     }
@@ -649,6 +670,7 @@ struct TopPlayedGame: Identifiable {
     let systemLabel: String
     let seconds: Int
     let game: Game
+    let launchIssue: ROMLaunchIssue?
 
     var hoursText: String { PlayerStatsViewModel.durationText(seconds: seconds) }
 }

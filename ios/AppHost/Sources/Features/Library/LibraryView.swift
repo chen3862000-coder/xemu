@@ -134,6 +134,12 @@ struct RomCard: View {
                     .font(.headline)
                     .lineLimit(2)
 
+                if ROMCompatibilityService.shared.compatibility(for: entry).issue != nil {
+                    Label("Unsupported Mapper", systemImage: "exclamationmark.triangle.fill")
+                        .font(.caption2.weight(.semibold))
+                        .foregroundColor(.orange)
+                }
+
                 HStack {
                     Text(entry.system ?? "Unknown")
                         .font(.caption)
@@ -227,6 +233,7 @@ struct RomDetailView: View {
     @Environment(\.managedObjectContext) private var viewContext
     @State private var isLaunching = false
     @State private var adShouldShow = false
+    @State private var launchErrorMessage: String?
 
     var body: some View {
         ScrollView {
@@ -273,6 +280,14 @@ struct RomDetailView: View {
                 message: Text("Watch this ad to continue playing"),
                 dismissButton: .default(Text("OK"))
             )
+        }
+        .alert("Unable to Open Game", isPresented: Binding(
+            get: { launchErrorMessage != nil },
+            set: { if !$0 { launchErrorMessage = nil } }
+        )) {
+            Button("OK", role: .cancel) { launchErrorMessage = nil }
+        } message: {
+            Text(launchErrorMessage ?? "This game cannot be launched right now.")
         }
     }
 
@@ -362,6 +377,11 @@ struct RomDetailView: View {
     }
 
     private func launchGame() {
+        let compatibility = ROMCompatibilityService.shared.compatibility(for: rom)
+        if let issue = compatibility.issue {
+            launchErrorMessage = issue.message
+            return
+        }
         isLaunching = true
         updateLastPlayed()
     }

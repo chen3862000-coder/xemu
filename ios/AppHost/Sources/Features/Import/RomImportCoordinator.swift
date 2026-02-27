@@ -122,6 +122,15 @@ final class RomImportCoordinator: ObservableObject {
             
             let existingEntries = try context.fetch(fetchRequest)
             if let existingEntry = existingEntries.first {
+                let ext = url.pathExtension.lowercased()
+                let existingLocation = ROMStorage.shared.getROMLocation(checksum: validation.checksum, fileExtension: ext)
+                if existingLocation == nil {
+                    let romDestination = romsDirectory.appendingPathComponent("\(validation.checksum).\(ext)")
+                    if FileManager.default.fileExists(atPath: romDestination.path) {
+                        try FileManager.default.removeItem(at: romDestination)
+                    }
+                    try FileManager.default.copyItem(at: url, to: romDestination)
+                }
                 // Refresh user-visible metadata on duplicate imports so fixes to
                 // metadata extraction or display rules (e.g. NDS title handling)
                 // are applied without requiring manual deletion first.

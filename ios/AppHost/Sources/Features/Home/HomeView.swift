@@ -15,6 +15,7 @@ struct HomeView: View {
     @State private var showingPlayerStats = false
     @State private var selectedPlatform: EmulatorPlatform?
     @State private var selectedGame: Game?
+    @State private var activeAlert: HomeAlertState?
     
     var body: some View {
         ZStack {
@@ -47,9 +48,15 @@ struct HomeView: View {
         .sheet(isPresented: $showingRecentlyPlayed) {
             RecentlyPlayedView()
         }
+        #if os(iOS)
+        .fullScreenCover(isPresented: $showingPlayerStats) {
+            PlayerStatsView()
+        }
+        #else
         .sheet(isPresented: $showingPlayerStats) {
             PlayerStatsView()
         }
+        #endif
         .sheet(item: $selectedPlatform) { platform in
             GameListView(platform: platform)
         }
@@ -60,6 +67,34 @@ struct HomeView: View {
             })
         }
         #endif
+        .alert(item: $activeAlert) { state in
+            switch state.kind {
+            case .launchError(let message):
+                return Alert(
+                    title: Text("Unable to Open Game"),
+                    message: Text(message),
+                    dismissButton: .cancel(Text("OK"))
+                )
+            case .confirmDelete(let candidate):
+                return Alert(
+                    title: Text(candidate.mode.displayName),
+                    message: Text(candidate.mode.firstConfirmation),
+                    primaryButton: .default(Text("Continue")) {
+                        activeAlert = HomeAlertState(kind: .confirmFinalDelete(candidate))
+                    },
+                    secondaryButton: .cancel()
+                )
+            case .confirmFinalDelete(let candidate):
+                return Alert(
+                    title: Text("Final Confirmation"),
+                    message: Text(candidate.mode.secondConfirmation),
+                    primaryButton: .destructive(Text("Delete")) {
+                        performDeletion(candidate)
+                    },
+                    secondaryButton: .cancel()
+                )
+            }
+        }
         .onAppear {
             refreshHome()
         }
@@ -72,6 +107,9 @@ struct HomeView: View {
         .onChange(of: showingPlayerStats) { _, shown in if !shown { refreshHome() } }
         .onChange(of: showingSettings) { _, shown in if !shown { refreshHome() } }
         .onChange(of: selectedPlatform) { _, platform in if platform == nil { refreshHome() } }
+        .onReceive(NotificationCenter.default.publisher(for: .romLibraryDidChange)) { _ in
+            refreshHome()
+        }
     }
     
     private var backgroundGradients: some View {
@@ -193,12 +231,9 @@ struct HomeView: View {
                 ) {
                     ForEach(Array(viewModel.recentGames.prefix(2))) { game in
                         RecentGameCard(game: game) {
-                            if let playable = game.playableGame {
-                                selectedGame = playable
-                            } else {
-                                showingRecentlyPlayed = true
-                            }
+                            launchRecentGame(game)
                         }
+                        .contextMenu { recentGameContextMenu(game) }
                     }
                 }
                 .zIndex(0)
@@ -250,6 +285,44 @@ struct HomeView: View {
 
     private func refreshHome() {
         viewModel.loadData(in: viewContext)
+    }
+
+    @ViewBuilder
+    private func recentGameContextMenu(_ game: RecentGame) -> some View {
+        if let entry = viewModel.entry(for: game.gameId) {
+            Button(role: .destructive) {
+                activeAlert = HomeAlertState(kind: .confirmDelete(HomeDeleteCandidate(entry: entry, mode: .removeROMOnly)))
+            } label: {
+                Label("Remove ROM Only", systemImage: "eject")
+            }
+
+            Button(role: .destructive) {
+                activeAlert = HomeAlertState(kind: .confirmDelete(HomeDeleteCandidate(entry: entry, mode: .removeAll)))
+            } label: {
+                Label("Remove", systemImage: "trash")
+            }
+        }
+    }
+
+    private func launchRecentGame(_ recent: RecentGame) {
+        if let issue = recent.launchIssue {
+            activeAlert = HomeAlertState(kind: .launchError(issue.message))
+            return
+        }
+        if let playable = recent.playableGame {
+            selectedGame = playable
+        } else {
+            showingRecentlyPlayed = true
+        }
+    }
+
+    private func performDeletion(_ candidate: HomeDeleteCandidate) {
+        do {
+            try GameDeletionService.shared.delete(entry: candidate.entry, mode: candidate.mode, in: viewContext)
+            refreshHome()
+        } catch {
+            activeAlert = HomeAlertState(kind: .launchError("Could not delete game: \(error.localizedDescription)"))
+        }
     }
 }
 
@@ -320,14 +393,30 @@ struct RecentGameCard: View {
                     )
                     .clipShape(RoundedRectangle(cornerRadius: 12))
 
-                    Text(game.console)
-                        .font(.system(size: 11, weight: .bold))
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 6)
-                        .background(AppColors.primary.opacity(0.92))
-                        .foregroundColor(.white)
-                        .clipShape(Capsule())
-                        .padding(8)
+                Text(game.console)
+                    .font(.system(size: 11, weight: .bold))
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 6)
+                    .background(AppColors.primary.opacity(0.92))
+                    .foregroundColor(.white)
+                    .clipShape(Capsule())
+                    .padding(8)
+
+                    if let issue = game.launchIssue {
+                        VStack {
+                            HStack {
+                                Image(systemName: issue.iconName)
+                                    .font(.system(size: 11, weight: .bold))
+                                    .foregroundColor(.orange)
+                                    .padding(6)
+                                    .background(Color.black.opacity(0.55))
+                                    .clipShape(Circle())
+                                    .padding(8)
+                                Spacer()
+                            }
+                            Spacer()
+                        }
+                    }
                 }
 
                 VStack(alignment: .leading, spacing: 6) {
@@ -655,6 +744,7 @@ struct RomImportView: View {
     @Environment(\.dismiss) private var dismiss
     @StateObject private var coordinator: RomImportCoordinator
     @State private var isHovered = false
+    @State private var importErrorMessage: String?
     
     init() {
         let persistence = PersistenceController.shared
@@ -765,6 +855,21 @@ struct RomImportView: View {
         .sheet(isPresented: $coordinator.isImporting) {
             ImportingProgressView(progress: coordinator.importProgress)
         }
+        .alert(
+            "Import Failed",
+            isPresented: Binding(
+                get: { importErrorMessage != nil },
+                set: { if !$0 { importErrorMessage = nil } }
+            ),
+            actions: {
+                Button("OK", role: .cancel) {
+                    importErrorMessage = nil
+                }
+            },
+            message: {
+                Text(importErrorMessage ?? "The selected file could not be imported.")
+            }
+        )
         #endif
     }
     
@@ -782,19 +887,28 @@ struct RomImportView: View {
         coordinator.presentFilePicker(on: topVC) { urls in
             guard !urls.isEmpty else { return }
             Task {
+                var successCount = 0
+                var failures: [String] = []
                 for url in urls {
                     do {
                         _ = try await self.coordinator.importROM(from: url)
                         await MainActor.run {
                             print("ROM imported successfully: \(url.lastPathComponent)")
                         }
+                        successCount += 1
                     } catch {
-                        print("Import error for \(url.lastPathComponent): \(error.localizedDescription)")
+                        let detail = error.localizedDescription
+                        failures.append("\(url.lastPathComponent): \(detail)")
+                        print("Import error for \(url.lastPathComponent): \(detail)")
                     }
                 }
                 await MainActor.run {
                     self.coordinator.isImporting = false
-                    self.dismiss()
+                    if successCount > 0 {
+                        self.dismiss()
+                    } else if let firstFailure = failures.first {
+                        self.importErrorMessage = firstFailure
+                    }
                 }
             }
         }
@@ -825,6 +939,7 @@ final class HomeViewModel: ObservableObject {
     @Published var totalHours: String = "0h"
     @Published var recentGames: [RecentGame] = []
     @Published var emulators: [EmulatorInfo] = []
+    private var entriesByID: [UUID: ROMLibraryEntry] = [:]
     
     private var fetchedResultsController: NSFetchedResultsController<ROMLibraryEntry>?
     private weak var viewContext: NSManagedObjectContext?
@@ -855,6 +970,7 @@ final class HomeViewModel: ObservableObject {
     }
     
     private func updateStats(from entries: [ROMLibraryEntry]) {
+        entriesByID = Dictionary(uniqueKeysWithValues: entries.map { ($0.id, $0) })
         totalGames = entries.count
         
         let totalSeconds = entries.reduce(0) { $0 + $1.playtimeTotal }
@@ -873,7 +989,8 @@ final class HomeViewModel: ObservableObject {
                 screenshotData: SaveStateStorage.shared.latestScreenshot(for: entry.checksum ?? ""),
                 totalPlaySeconds: Int(entry.playtimeTotal),
                 playableGame: entry.toGame(),
-                gameId: entry.id
+                gameId: entry.id,
+                launchIssue: ROMCompatibilityService.shared.compatibility(for: entry).issue
             )
         }
     }
@@ -897,6 +1014,10 @@ final class HomeViewModel: ObservableObject {
     func selectEmulator(_ emulator: EmulatorInfo) {
         // Handle emulator selection
     }
+
+    func entry(for id: UUID) -> ROMLibraryEntry? {
+        entriesByID[id]
+    }
 }
 
 struct RecentGame: Identifiable {
@@ -910,6 +1031,7 @@ struct RecentGame: Identifiable {
     let totalPlaySeconds: Int
     let playableGame: Game?
     let gameId: UUID
+    let launchIssue: ROMLaunchIssue?
 }
 
 struct EmulatorInfo: Identifiable {
@@ -919,4 +1041,21 @@ struct EmulatorInfo: Identifiable {
     var gamesCount: Int
     let gradient: [Color]
     let icon: String
+}
+
+private struct HomeDeleteCandidate: Identifiable {
+    let id = UUID()
+    let entry: ROMLibraryEntry
+    let mode: GameDeletionMode
+}
+
+private struct HomeAlertState: Identifiable {
+    enum Kind {
+        case launchError(String)
+        case confirmDelete(HomeDeleteCandidate)
+        case confirmFinalDelete(HomeDeleteCandidate)
+    }
+
+    let id = UUID()
+    let kind: Kind
 }

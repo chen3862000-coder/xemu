@@ -252,6 +252,25 @@ final class SaveStateStorage {
         }
     }
 
+    func deleteAll(forROMHash romHash: String) throws {
+        guard !romHash.isEmpty else { return }
+
+        let request: NSFetchRequest<SaveState> = SaveState.fetchRequest()
+        request.predicate = NSPredicate(format: "rom.checksum == %@", romHash)
+        let states = try viewContext.fetch(request)
+        for state in states {
+            viewContext.delete(state)
+        }
+        if viewContext.hasChanges {
+            try viewContext.save()
+        }
+
+        let romDirectory = directory.appendingPathComponent(romHash, isDirectory: true)
+        if FileManager.default.fileExists(atPath: romDirectory.path) {
+            try FileManager.default.removeItem(at: romDirectory)
+        }
+    }
+
     func capture(for rom: ROMLibraryEntry, slot: Int, screenshotData: Data? = nil) async throws {
         throw StorageError.coreDataError(
             NSError(

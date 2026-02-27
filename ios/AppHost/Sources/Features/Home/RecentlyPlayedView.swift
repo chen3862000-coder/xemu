@@ -11,6 +11,7 @@ struct RecentlyPlayedView: View {
     @State private var games: [ROMLibraryEntry] = []
     @State private var searchText = ""
     @State private var selectedGame: Game?
+    @State private var activeAlert: RecentAlertState?
 
     var body: some View {
         ZStack {
@@ -40,7 +41,38 @@ struct RecentlyPlayedView: View {
             })
         }
         #endif
+        .alert(item: $activeAlert) { state in
+            switch state {
+            case .launchError(let message):
+                return Alert(
+                    title: Text("Unable to Open Game"),
+                    message: Text(message),
+                    dismissButton: .cancel(Text("OK"))
+                )
+            case .confirmDelete(let candidate):
+                return Alert(
+                    title: Text(candidate.mode.displayName),
+                    message: Text(candidate.mode.firstConfirmation),
+                    primaryButton: .default(Text("Continue")) {
+                        activeAlert = .confirmFinalDelete(candidate)
+                    },
+                    secondaryButton: .cancel()
+                )
+            case .confirmFinalDelete(let candidate):
+                return Alert(
+                    title: Text("Final Confirmation"),
+                    message: Text(candidate.mode.secondConfirmation),
+                    primaryButton: .destructive(Text("Delete")) {
+                        performDeletion(candidate)
+                    },
+                    secondaryButton: .cancel()
+                )
+            }
+        }
         .onAppear(perform: loadGames)
+        .onReceive(NotificationCenter.default.publisher(for: .romLibraryDidChange)) { _ in
+            loadGames()
+        }
     }
 
     private var filteredGames: [ROMLibraryEntry] {
@@ -170,6 +202,18 @@ struct RecentlyPlayedView: View {
                 RecentlyPlayedCard(entry: entry) {
                     launchGame(entry)
                 }
+                .contextMenu {
+                    Button(role: .destructive) {
+                        activeAlert = .confirmDelete(RecentDeleteCandidate(entry: entry, mode: .removeROMOnly))
+                    } label: {
+                        Label("Remove ROM Only", systemImage: "eject")
+                    }
+                    Button(role: .destructive) {
+                        activeAlert = .confirmDelete(RecentDeleteCandidate(entry: entry, mode: .removeAll))
+                    } label: {
+                        Label("Remove", systemImage: "trash")
+                    }
+                }
             }
         }
     }
@@ -213,8 +257,22 @@ struct RecentlyPlayedView: View {
     }
 
     private func launchGame(_ entry: ROMLibraryEntry) {
+        let compatibility = ROMCompatibilityService.shared.compatibility(for: entry)
+        if let issue = compatibility.issue {
+            activeAlert = .launchError(issue.message)
+            return
+        }
         guard let game = entry.toGame() else { return }
         selectedGame = game
+    }
+
+    private func performDeletion(_ candidate: RecentDeleteCandidate) {
+        do {
+            try GameDeletionService.shared.delete(entry: candidate.entry, mode: candidate.mode, in: viewContext)
+            loadGames()
+        } catch {
+            activeAlert = .launchError("Could not delete game: \(error.localizedDescription)")
+        }
     }
 }
 
@@ -244,6 +302,22 @@ struct RecentlyPlayedCard: View {
                         .background(AppColors.primary.opacity(0.84))
                         .clipShape(Capsule())
                         .padding(8)
+
+                    if let issue = ROMCompatibilityService.shared.compatibility(for: entry).issue {
+                        VStack {
+                            HStack {
+                                Image(systemName: issue.iconName)
+                                    .font(.system(size: 11, weight: .bold))
+                                    .foregroundColor(.orange)
+                                    .padding(6)
+                                    .background(Color.black.opacity(0.55))
+                                    .clipShape(Circle())
+                                    .padding(8)
+                                Spacer()
+                            }
+                            Spacer()
+                        }
+                    }
                 }
 
                 VStack(alignment: .leading, spacing: 6) {
@@ -251,6 +325,12 @@ struct RecentlyPlayedCard: View {
                         .font(.system(size: 17, weight: .bold))
                         .foregroundColor(AppColors.textPrimary)
                         .lineLimit(2)
+
+                    if ROMCompatibilityService.shared.compatibility(for: entry).issue != nil {
+                        Label("Unsupported Mapper", systemImage: "exclamationmark.triangle.fill")
+                            .font(.system(size: 10, weight: .semibold))
+                            .foregroundColor(.orange)
+                    }
 
                     HStack(spacing: 5) {
                         Image(systemName: "clock")
@@ -335,6 +415,29 @@ struct RecentlyPlayedCard: View {
     private var totalHoursLabel: String {
         let hours = max(0, Int(entry.playtimeTotal) / 3600)
         return "\(hours)h"
+    }
+}
+
+private struct RecentDeleteCandidate: Identifiable {
+    let id = UUID()
+    let entry: ROMLibraryEntry
+    let mode: GameDeletionMode
+}
+
+private enum RecentAlertState: Identifiable {
+    case launchError(String)
+    case confirmDelete(RecentDeleteCandidate)
+    case confirmFinalDelete(RecentDeleteCandidate)
+
+    var id: String {
+        switch self {
+        case .launchError(let message):
+            return "error-\(message)"
+        case .confirmDelete(let candidate):
+            return "confirm-delete-\(candidate.id.uuidString)"
+        case .confirmFinalDelete(let candidate):
+            return "confirm-final-delete-\(candidate.id.uuidString)"
+        }
     }
 }
 

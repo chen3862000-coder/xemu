@@ -115,6 +115,26 @@ public class ROMStorage {
             return .failure(.fileSystemError)
         }
     }
+
+    func deleteROMByChecksum(checksum: String, preferredExtension: String? = nil) -> Result<Void, ROMStorageError> {
+        if let preferredExtension, !preferredExtension.isEmpty {
+            let preferred = deleteROM(checksum: checksum, fileExtension: preferredExtension)
+            if case .success = preferred {
+                return .success(())
+            }
+        }
+
+        do {
+            let files = try fileManager.contentsOfDirectory(at: romsDirectory, includingPropertiesForKeys: nil)
+            if let match = files.first(where: { $0.lastPathComponent.lowercased().hasPrefix("\(checksum.lowercased()).") }) {
+                try fileManager.removeItem(at: match)
+                return .success(())
+            }
+            return .failure(.fileNotFound)
+        } catch {
+            return .failure(.fileSystemError)
+        }
+    }
     
     func getAllROMs() -> Result<[ROMStorageLocation], ROMStorageError> {
         guard fileManager.fileExists(atPath: romsDirectory.path) else {
