@@ -5,6 +5,12 @@ import UIKit
 #endif
 
 struct HomeView: View {
+    private enum IdleHighlightTarget {
+        case none
+        case gameStats
+        case firstContinueCard
+    }
+
     @Environment(\.managedObjectContext) private var viewContext
     @Environment(\.scenePhase) private var scenePhase
     @StateObject private var viewModel = HomeViewModel()
@@ -16,6 +22,12 @@ struct HomeView: View {
     @State private var selectedPlatform: EmulatorPlatform?
     @State private var selectedGame: Game?
     @State private var activeAlert: HomeAlertState?
+    @State private var lastInteractionAt = Date()
+    @State private var isIdle = false
+    @State private var idleBreathing = false
+    @State private var idleTarget: IdleHighlightTarget = .none
+    private let idleThreshold: TimeInterval = 10
+    private let idleTimer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
     
     var body: some View {
         ZStack {
@@ -38,15 +50,27 @@ struct HomeView: View {
         }
         .sheet(isPresented: $showingSettings) {
             SettingsView()
+                .swipeBack {
+                    showingSettings = false
+                }
         }
         .sheet(isPresented: $showingImport) {
             RomImportView()
+                .swipeBack {
+                    showingImport = false
+                }
         }
         .sheet(isPresented: $showingGameLibrary) {
             GameLibraryView()
+                .swipeBack {
+                    showingGameLibrary = false
+                }
         }
         .sheet(isPresented: $showingRecentlyPlayed) {
             RecentlyPlayedView()
+                .swipeBack {
+                    showingRecentlyPlayed = false
+                }
         }
         #if os(iOS)
         .fullScreenCover(isPresented: $showingPlayerStats) {
@@ -59,12 +83,18 @@ struct HomeView: View {
         #endif
         .sheet(item: $selectedPlatform) { platform in
             GameListView(platform: platform)
+                .swipeBack {
+                    selectedPlatform = nil
+                }
         }
         #if os(iOS)
         .fullScreenCover(item: $selectedGame) { game in
             GamePlayView(game: game, onExit: {
                 selectedGame = nil
             })
+            .swipeBack {
+                selectedGame = nil
+            }
         }
         #endif
         .alert(item: $activeAlert) { state in
@@ -97,9 +127,15 @@ struct HomeView: View {
         }
         .onAppear {
             refreshHome()
+            markInteraction()
         }
         .onChange(of: scenePhase) { _, phase in
-            if phase == .active { refreshHome() }
+            if phase == .active {
+                refreshHome()
+                markInteraction()
+            } else {
+                isIdle = false
+            }
         }
         .onChange(of: showingImport) { _, shown in if !shown { refreshHome() } }
         .onChange(of: showingGameLibrary) { _, shown in if !shown { refreshHome() } }
@@ -109,6 +145,39 @@ struct HomeView: View {
         .onChange(of: selectedPlatform) { _, platform in if platform == nil { refreshHome() } }
         .onReceive(NotificationCenter.default.publisher(for: .romLibraryDidChange)) { _ in
             refreshHome()
+        }
+        .simultaneousGesture(
+            TapGesture().onEnded {
+                markInteraction()
+            }
+        )
+        .simultaneousGesture(
+            DragGesture(minimumDistance: 0).onChanged { _ in
+                markInteraction()
+            }
+        )
+        .onReceive(idleTimer) { now in
+            guard scenePhase == .active else {
+                if isIdle { isIdle = false }
+                return
+            }
+            let shouldIdle = now.timeIntervalSince(lastInteractionAt) >= idleThreshold
+            if shouldIdle != isIdle {
+                withAnimation(.easeInOut(duration: 0.25)) {
+                    isIdle = shouldIdle
+                }
+            }
+        }
+        .onChange(of: isIdle) { _, nowIdle in
+            if nowIdle {
+                chooseIdleTarget()
+                withAnimation(.easeInOut(duration: 1.8).repeatForever(autoreverses: true)) {
+                    idleBreathing = true
+                }
+            } else {
+                idleBreathing = false
+                idleTarget = .none
+            }
         }
     }
     
@@ -179,6 +248,13 @@ struct HomeView: View {
                 )
             }
             .buttonStyle(PlainButtonStyle())
+            .scaleEffect(idleTarget == .gameStats ? (idleBreathing ? 1.03 : 0.985) : 1.0)
+            .shadow(
+                color: AppColors.primary.opacity(idleTarget == .gameStats ? (idleBreathing ? 0.24 : 0.12) : 0.08),
+                radius: idleTarget == .gameStats ? 16 : 8,
+                x: 0,
+                y: idleTarget == .gameStats ? 9 : 5
+            )
         }
     }
     
@@ -225,15 +301,11 @@ struct HomeView: View {
                 )
                 .clipShape(RoundedRectangle(cornerRadius: 16))
             } else {
-                LazyVGrid(
-                    columns: [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)],
-                    spacing: 12
-                ) {
-                    ForEach(Array(viewModel.recentGames.prefix(2))) { game in
-                        RecentGameCard(game: game) {
+                LazyVStack(spacing: 12) {
+                    ForEach(Array(viewModel.recentGames.prefix(2).enumerated()), id: \.element.id) { index, game in
+                        LandscapeGameRow(game: game) {
                             launchRecentGame(game)
                         }
-                        .contextMenu { recentGameContextMenu(game) }
                     }
                 }
                 .zIndex(0)
@@ -324,6 +396,22 @@ struct HomeView: View {
             activeAlert = HomeAlertState(kind: .launchError("Could not delete game: \(error.localizedDescription)"))
         }
     }
+
+    private func markInteraction() {
+        lastInteractionAt = Date()
+        if isIdle {
+            isIdle = false
+        }
+        idleTarget = .none
+    }
+
+    private func chooseIdleTarget() {
+        if !viewModel.recentGames.isEmpty, Bool.random() {
+            idleTarget = .firstContinueCard
+        } else {
+            idleTarget = .gameStats
+        }
+    }
 }
 
 struct StatCard: View {
@@ -373,6 +461,98 @@ struct StatCard: View {
         )
         .shadow(color: AppColors.primary.opacity(0.10), radius: 10, x: 0, y: 6)
         .clipShape(RoundedRectangle(cornerRadius: 16))
+    }
+    
+    private func isLandscape(game: RecentGame) -> Bool {
+        #if os(iOS)
+        if let screenshotData = game.screenshotData,
+           let uiImage = UIImage(data: screenshotData) {
+            return uiImage.size.width > uiImage.size.height
+        }
+        #endif
+        return false
+    }
+    
+    private func formatRecentDate(_ date: Date) -> String {
+        let calendar = Calendar.current
+        if calendar.isDateInToday(date) { return "Today" }
+        if calendar.isDateInYesterday(date) { return "Yesterday" }
+        return date.formatted(.dateTime.month(.abbreviated).day())
+    }
+}
+
+struct LandscapeGameRow: View {
+    let game: RecentGame
+    let onTap: () -> Void
+    
+    var body: some View {
+        Button(action: onTap) {
+            HStack(spacing: 12) {
+                #if os(iOS)
+                if let screenshotData = game.screenshotData, let uiImage = UIImage(data: screenshotData) {
+                    Image(uiImage: uiImage)
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                        .frame(width: 160, height: 90)
+                        .clipShape(RoundedRectangle(cornerRadius: 10))
+                } else {
+                    placeholderImage
+                }
+                #else
+                placeholderImage
+                #endif
+                
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(game.title)
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundColor(AppColors.textPrimary)
+                        .lineLimit(2)
+                    
+                    if let lastPlayed = game.lastPlayed {
+                        Text(formatRecentDate(lastPlayed))
+                            .font(.system(size: 12))
+                            .foregroundColor(AppColors.textSecondary)
+                    }
+                    
+                    Text(game.console)
+                        .font(.system(size: 11))
+                        .foregroundColor(AppColors.textMuted)
+                }
+                
+                Spacer()
+                
+                Image(systemName: "play.circle.fill")
+                    .font(.system(size: 28))
+                    .foregroundColor(AppColors.primary)
+            }
+            .padding(12)
+            .background(AppColors.surface)
+            .overlay(
+                RoundedRectangle(cornerRadius: 14)
+                    .stroke(AppColors.surfaceLight.opacity(0.5), lineWidth: 1)
+            )
+            .clipShape(RoundedRectangle(cornerRadius: 14))
+            .shadow(color: AppColors.primary.opacity(0.05), radius: 8, x: 0, y: 5)
+        }
+        .buttonStyle(PlainButtonStyle())
+    }
+    
+    private var placeholderImage: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 10)
+                .fill(AppColors.surfaceLight)
+            Image(systemName: "gamecontroller.fill")
+                .font(.system(size: 24))
+                .foregroundColor(AppColors.textMuted)
+        }
+        .frame(width: 160, height: 90)
+    }
+    
+    private func formatRecentDate(_ date: Date) -> String {
+        let calendar = Calendar.current
+        if calendar.isDateInToday(date) { return "Today" }
+        if calendar.isDateInYesterday(date) { return "Yesterday" }
+        return date.formatted(.dateTime.month(.abbreviated).day())
     }
 }
 
@@ -487,6 +667,13 @@ struct RecentGameCard: View {
                 .aspectRatio(contentMode: .fill)
                 .frame(maxWidth: .infinity, minHeight: 120, maxHeight: 120)
                 .overlay(Color.white.opacity(0.12))
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+        } else if let coverData = game.coverData, let uiImage = UIImage(data: coverData) {
+            Image(uiImage: uiImage)
+                .resizable()
+                .aspectRatio(contentMode: .fill)
+                .frame(maxWidth: .infinity, minHeight: 120, maxHeight: 120)
+                .overlay(Color.white.opacity(0.16))
                 .clipShape(RoundedRectangle(cornerRadius: 12))
         } else if let imageUrl = game.image, let url = URL(string: imageUrl) {
             AsyncImage(url: url) { image in
@@ -1022,6 +1209,7 @@ final class HomeViewModel: ObservableObject {
                 progress: 0,
                 image: nil,
                 screenshotData: SaveStateStorage.shared.latestScreenshot(for: entry.checksum ?? ""),
+                coverData: CoverArtService.shared.resolve(for: entry)?.data,
                 totalPlaySeconds: Int(entry.playtimeTotal),
                 playableGame: entry.toGame(),
                 gameId: entry.id,
@@ -1063,6 +1251,7 @@ struct RecentGame: Identifiable {
     let progress: Int
     let image: String?
     let screenshotData: Data?
+    let coverData: Data?
     let totalPlaySeconds: Int
     let playableGame: Game?
     let gameId: UUID

@@ -80,6 +80,10 @@ public protocol EmulatorCore: AnyObject {
     /// Get audio samples for the current frame
     /// - Returns: Raw audio samples (16-bit signed, stereo)
     func getAudioSamples() -> Data?
+
+    /// Get the current audio sample rate reported by the core.
+    /// - Returns: Sample rate in Hz (e.g. 32768, 44100).
+    func getAudioSampleRate() -> Int
     
     /// Get current save state data
     /// - Returns: Serialized emulator state
@@ -120,6 +124,7 @@ extension EmulatorCore {
     public func getFrameBuffer() -> Data? { nil }
     public func getFrameBufferInfo() -> FrameBufferInfo? { nil }
     public func getAudioSamples() -> Data? { nil }
+    public func getAudioSampleRate() -> Int { 44_100 }
     public func saveState() -> Data? { nil }
     public func loadState(_ state: Data) -> Bool { false }
     public func exportBatterySave() -> Data? { nil }

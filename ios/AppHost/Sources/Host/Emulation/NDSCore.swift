@@ -11,6 +11,8 @@ public final class NDSCore: EmulatorCore, @unchecked Sendable {
     private var isPaused = false
     private var loadedROMData: Data?
     private var loadedROMPath: String?
+    private var pendingBatterySaveData: Data?
+    private var lastAudioSampleRate: Int = 44_100
     private var inputState: [Int: Float] = [:]
 
     public init() {}
@@ -36,6 +38,10 @@ public final class NDSCore: EmulatorCore, @unchecked Sendable {
             let romData = try Data(contentsOf: URL(fileURLWithPath: romPath))
             loadedROMData = romData
             loadedROMPath = romPath
+            if let pending = pendingBatterySaveData {
+                _ = writeBatterySaveSidecar(pending)
+                pendingBatterySaveData = nil
+            }
 
             _ = try coreWrapper?.loadROM(data: romData, filePath: romPath)
             isRunning = true
@@ -80,6 +86,7 @@ public final class NDSCore: EmulatorCore, @unchecked Sendable {
         coreWrapper = nil
         loadedROMData = nil
         loadedROMPath = nil
+        pendingBatterySaveData = nil
         isRunning = false
         isPaused = false
         inputState = [:]
@@ -96,7 +103,21 @@ public final class NDSCore: EmulatorCore, @unchecked Sendable {
     }
 
     public func getAudioSamples() -> Data? {
-        coreWrapper?.getAudioSamplesCopy()
+        guard let info = coreWrapper?.getAudioSamples(),
+              info.sampleCount > 0,
+              let samples = info.samples else {
+            return nil
+        }
+        if info.sampleRate > 0 {
+            lastAudioSampleRate = info.sampleRate
+        }
+        let size = info.sampleCount * MemoryLayout<Int16>.size
+        guard size > 0 else { return nil }
+        return Data(bytes: samples, count: size)
+    }
+
+    public func getAudioSampleRate() -> Int {
+        max(8_000, lastAudioSampleRate)
     }
 
     public func saveState() -> Data? {
@@ -114,6 +135,25 @@ public final class NDSCore: EmulatorCore, @unchecked Sendable {
         } catch {
             return false
         }
+    }
+
+    public func exportBatterySave() -> Data? {
+        guard let url = nativeSaveSidecarURL(),
+              FileManager.default.fileExists(atPath: url.path) else {
+            return nil
+        }
+        return try? Data(contentsOf: url)
+    }
+
+    public func importBatterySave(_ data: Data) -> Bool {
+        guard !data.isEmpty else {
+            return false
+        }
+        guard nativeSaveSidecarURL() != nil else {
+            pendingBatterySaveData = data
+            return true
+        }
+        return writeBatterySaveSidecar(data)
     }
 
     public func setInput(_ inputType: Int, value: Float) {
@@ -174,5 +214,26 @@ public final class NDSCore: EmulatorCore, @unchecked Sendable {
 
     public func getScreenLayout() -> NDSScreenLayout {
         coreWrapper?.getScreenLayout() ?? .stacked
+    }
+
+    private func nativeSaveSidecarURL() -> URL? {
+        guard let loadedROMPath else { return nil }
+        let romURL = URL(fileURLWithPath: loadedROMPath)
+        return romURL.deletingPathExtension().appendingPathExtension("sav")
+    }
+
+    private func writeBatterySaveSidecar(_ data: Data) -> Bool {
+        guard let url = nativeSaveSidecarURL() else { return false }
+        do {
+            try FileManager.default.createDirectory(
+                at: url.deletingLastPathComponent(),
+                withIntermediateDirectories: true
+            )
+            try data.write(to: url, options: [.atomic])
+            return true
+        } catch {
+            NSLog("[NDSCore] Failed to write save sidecar path=%@ error=%@", url.path, error.localizedDescription)
+            return false
+        }
     }
 }

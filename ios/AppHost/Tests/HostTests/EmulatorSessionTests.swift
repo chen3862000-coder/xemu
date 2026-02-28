@@ -155,7 +155,7 @@ final class EmulatorSessionTests: XCTestCase {
             func emulatorDidRender(frameBuffer: Data?) {
                 frameCount += 1
             }
-            func emulatorDidGenerateAudio(samples: Data) {}
+            func emulatorDidGenerateAudio(samples: Data?, sampleRate: Int) {}
         }
         
         let delegate = MockRenderDelegate()

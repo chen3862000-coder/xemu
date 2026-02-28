@@ -111,7 +111,7 @@ final class EmulatorSession: ObservableObject {
         }
 
         let audioSamples = core.getAudioSamples()
-        renderDelegate?.emulatorDidGenerateAudio(samples: audioSamples)
+        renderDelegate?.emulatorDidGenerateAudio(samples: audioSamples, sampleRate: core.getAudioSampleRate())
         
         frameCount += 1
         
@@ -160,7 +160,7 @@ final class EmulatorSession: ObservableObject {
         }
         
         let audioSamples = core.getAudioSamples()
-        renderDelegate?.emulatorDidGenerateAudio(samples: audioSamples)
+        renderDelegate?.emulatorDidGenerateAudio(samples: audioSamples, sampleRate: core.getAudioSampleRate())
         
         frameCount += 1
         
@@ -209,5 +209,5 @@ enum EmulatorSessionError: Error {
 @MainActor
 protocol EmulatorRenderDelegate: AnyObject {
     func emulatorDidRenderFrameBufferInfo(_ frameBufferInfo: FrameBufferInfo)
-    func emulatorDidGenerateAudio(samples: Data?)
+    func emulatorDidGenerateAudio(samples: Data?, sampleRate: Int)
 }

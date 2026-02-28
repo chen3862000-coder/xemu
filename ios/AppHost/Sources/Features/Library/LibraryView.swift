@@ -111,7 +111,7 @@ struct RomCard: View {
                     .aspectRatio(3/4, contentMode: .fit)
                     .cornerRadius(12)
 
-                if let coverData = entry.coverImageData,
+                if let coverData = CoverArtService.shared.resolve(for: entry)?.data,
                    let coverImage = Image(data: coverData) {
                     coverImage
                         .resizable()
@@ -298,7 +298,7 @@ struct RomDetailView: View {
                 .aspectRatio(3/4, contentMode: .fit)
                 .cornerRadius(16)
 
-            if let coverData = rom.coverImageData,
+            if let coverData = CoverArtService.shared.resolve(for: rom)?.data,
                let coverImage = Image(data: coverData) {
                 coverImage
                     .resizable()
@@ -511,7 +511,7 @@ extension ROMLibraryEntry {
             id: gameUUID,
             title: title,
             platform: platformString,
-            coverImage: nil,
+            coverImage: CoverArtService.shared.resolve(for: self)?.data,
             rating: 0.0,
             lastPlayedDate: lastPlayedAt,
             totalPlayTime: Int(playtimeTotal),

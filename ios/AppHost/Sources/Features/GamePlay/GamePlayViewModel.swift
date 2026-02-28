@@ -1,8 +1,10 @@
 import Foundation
+import SwiftUI
 import MetalKit
 import Combine
 import GameController
 import CoreData
+import AVFoundation
 #if canImport(UIKit)
 import UIKit
 #endif
@@ -20,12 +22,15 @@ class GamePlayViewModel: ObservableObject {
     @Published var statusMessage = ""
     @Published var currentFPS = 0
     @Published var saveStateDebugLine = ""
+    @AppStorage("audioQuality") private var audioQuality = 1
 
     private var emulatorSession: EmulatorSession?
     private(set) var metalRenderer: MetalRenderer?
     private var audioEngine: AudioEngine?
     private var inputBus: InputBus?
     private var activeCore: EmulatorCore?
+    private let performanceProfiler = PerformanceProfiler.shared
+    private var activeAudioSampleRate: Double = 48_000
     private var pendingReleaseTasks: [EmulatorButton: Task<Void, Never>] = [:]
     private var touchButtonStates: [EmulatorButton: Bool] = [:]
     private var currentROMHash: String = ""
@@ -38,6 +43,7 @@ class GamePlayViewModel: ObservableObject {
     private var frameHeight = 144
     private var lastFPSTime: Double = 0
     private var lastNativeSavePersistTime: Double = 0
+    private var adaptiveRenderFrameCounter: Int = 0
     private var isStoppingEmulation = false
     #if canImport(UIKit)
     private var lifecycleObservers: [NSObjectProtocol] = []
@@ -126,12 +132,20 @@ class GamePlayViewModel: ObservableObject {
                 _ = ndsCore.setScreenLayout(.stacked)
             }
             
+            // NDS native saves are file-backed sidecars and must be materialized
+            // before ROM load so the core can pick them up during initialization.
+            if platform == .NDS {
+                restoreNativeSaveIfAvailable(for: core)
+            }
+
             let success = core.loadROM(romPath: romPath)
             guard success else {
                 statusMessage = "Failed to load ROM"
                 return
             }
-            restoreNativeSaveIfAvailable(for: core)
+            if platform != .NDS {
+                restoreNativeSaveIfAvailable(for: core)
+            }
 
             emulatorSession = EmulatorSession()
             emulatorSession?.loadCore(core)
@@ -180,17 +194,17 @@ class GamePlayViewModel: ObservableObject {
                 metalRenderer?.setColorAdjustments()
             }
 
-            let audioSampleRate: Double
-            switch platform {
-            case .GB, .GBC:
-                audioSampleRate = 65536
-            case .GBA:
-                audioSampleRate = 32768
-            default:
-                audioSampleRate = 44100
+            let audioEngineRate: Double
+            switch audioQuality {
+            case 0:  // Sound First - 48kHz for best quality
+                audioEngineRate = 48_000
+            case 1:  // Balanced - 44.1kHz native
+                audioEngineRate = 44_100
+            default:  // Frame First - 44.1kHz
+                audioEngineRate = 44_100
             }
-
-            audioEngine = AudioEngine(sampleRate: audioSampleRate)
+            activeAudioSampleRate = audioEngineRate
+            audioEngine = AudioEngine(sampleRate: audioEngineRate)
             audioEngine?.configureAudioSession()
             try? audioEngine?.start()
             audioEngine?.setVolume(1.0)
@@ -202,6 +216,7 @@ class GamePlayViewModel: ObservableObject {
             isRunning = true
             isPaused = false
             statusMessage = ""
+            performanceProfiler.startSession(platform: platform)
         } catch {
             statusMessage = "Error: \(error.localizedDescription)"
         }
@@ -241,15 +256,18 @@ class GamePlayViewModel: ObservableObject {
             audioEngine = nil
             inputBus = nil
             activeCore = nil
+            activeAudioSampleRate = 44_100
             currentPlatform = nil
             currentROMHash = ""
             currentGameTitle = ""
             sessionStartedAt = nil
             lastFrameSnapshot = nil
+            adaptiveRenderFrameCounter = 0
         }
         
         isRunning = false
         isPaused = false
+        performanceProfiler.stopSession()
     }
 
     func pauseEmulation() {
@@ -269,6 +287,20 @@ class GamePlayViewModel: ObservableObject {
         statusMessage = ""
     }
 
+    func restartEmulation() {
+        guard let core = activeCore else {
+            statusMessage = "No active session"
+            return
+        }
+        persistNativeSaveIfNeeded(force: true)
+        core.reset()
+        emulatorSession?.resume()
+        audioEngine?.resume()
+        isRunning = true
+        isPaused = false
+        statusMessage = "Game restarted"
+    }
+
     func quickSave() {
         guard let session = emulatorSession else {
             statusMessage = "No active session"
@@ -280,6 +312,8 @@ class GamePlayViewModel: ObservableObject {
         }
         
         Task {
+            let op = performanceProfiler.beginOperation("quick_save", metadata: ["slot": "0"])
+            defer { performanceProfiler.endOperation(op) }
             do {
                 let data = try session.saveState(to: 0)
                 let metadata = makeMetadata(slot: 0)
@@ -305,6 +339,8 @@ class GamePlayViewModel: ObservableObject {
         }
         
         Task {
+            let op = performanceProfiler.beginOperation("quick_load", metadata: ["slot": "0"])
+            defer { performanceProfiler.endOperation(op) }
             do {
                 let (data, _, _) = try SaveStateStorage.shared.load(slot: 0, romHash: currentROMHash)
                 try session.loadState(from: data)
@@ -324,6 +360,8 @@ class GamePlayViewModel: ObservableObject {
         }
         
         Task {
+            let op = performanceProfiler.beginOperation("save_state", metadata: ["slot": String(slot)])
+            defer { performanceProfiler.endOperation(op) }
             do {
                 let data = try session.saveState(to: slot)
                 let metadata = makeMetadata(slot: slot)
@@ -343,6 +381,8 @@ class GamePlayViewModel: ObservableObject {
         }
         
         Task {
+            let op = performanceProfiler.beginOperation("load_state", metadata: ["slot": String(slot)])
+            defer { performanceProfiler.endOperation(op) }
             do {
                 let (data, _, _) = try SaveStateStorage.shared.load(slot: slot, romHash: currentROMHash)
                 try session.loadState(from: data)
@@ -500,7 +540,7 @@ class GamePlayViewModel: ObservableObject {
 
     private func supportsNativeBatterySave(_ platform: Platform?) -> Bool {
         guard let platform else { return false }
-        return platform == .GB || platform == .GBC || platform == .GBA
+        return platform == .GB || platform == .GBC || platform == .GBA || platform == .NDS
     }
 
     private func nativeSaveDirectoryURL() -> URL? {
@@ -531,6 +571,11 @@ class GamePlayViewModel: ObservableObject {
     private func restoreNativeSaveIfAvailable(for core: EmulatorCore) {
         guard supportsNativeBatterySave(currentPlatform), let url = nativeSaveURL() else { return }
         guard FileManager.default.fileExists(atPath: url.path) else { return }
+        let op = performanceProfiler.beginOperation(
+            "battery_restore",
+            metadata: ["platform": currentPlatform?.rawValue ?? "unknown"]
+        )
+        defer { performanceProfiler.endOperation(op) }
 
         do {
             let data = try Data(contentsOf: url)
@@ -557,6 +602,11 @@ class GamePlayViewModel: ObservableObject {
         lastNativeSavePersistTime = now
 
         guard let data = core.exportBatterySave(), !data.isEmpty else { return }
+        let op = performanceProfiler.beginOperation(
+            "battery_persist",
+            metadata: ["platform": currentPlatform?.rawValue ?? "unknown", "forced": force ? "1" : "0"]
+        )
+        defer { performanceProfiler.endOperation(op) }
 
         do {
             if let existing = try? Data(contentsOf: url), existing == data {
@@ -704,7 +754,17 @@ extension GamePlayViewModel: EmulatorRenderDelegate {
             }
             lastFrameSnapshot = (data: data, width: width, height: height, bytesPerRow: pitch)
             
-            metalRenderer?.enqueueFrame(data, width: width, height: height, bytesPerRow: pitch)
+            let adaptiveFrameSkip = max(0, performanceProfiler.hudSnapshot.qualityProfile.frameSkip)
+            if adaptiveFrameSkip <= 0 {
+                metalRenderer?.enqueueFrame(data, width: width, height: height, bytesPerRow: pitch)
+            } else {
+                adaptiveRenderFrameCounter += 1
+                if adaptiveRenderFrameCounter >= (adaptiveFrameSkip + 1) {
+                    adaptiveRenderFrameCounter = 0
+                    metalRenderer?.enqueueFrame(data, width: width, height: height, bytesPerRow: pitch)
+                }
+            }
+            performanceProfiler.recordFrame()
             
             let now = CACurrentMediaTime()
             if now - lastFPSTime > 0.5 {
@@ -716,10 +776,75 @@ extension GamePlayViewModel: EmulatorRenderDelegate {
         }
     }
     
-    func emulatorDidGenerateAudio(samples: Data?) {
+    func emulatorDidGenerateAudio(samples: Data?, sampleRate: Int) {
         autoreleasepool {
             guard let samples = samples, !samples.isEmpty else { return }
-            audioEngine?.updateAudioBuffer(samples)
+            
+            switch audioQuality {
+            case 0:  // Sound First - resample to 48kHz for best quality
+                let targetRate = 48_000
+                if sampleRate != targetRate {
+                    if let resampled = resampleAudioLinear(samples: samples, fromRate: sampleRate, toRate: targetRate) {
+                        audioEngine?.updateAudioBuffer(resampled)
+                    } else {
+                        audioEngine?.updateAudioBuffer(samples)
+                    }
+                } else {
+                    audioEngine?.updateAudioBuffer(samples)
+                }
+                
+            case 1:  // Balanced - resample to 44.1kHz
+                let targetRate = 44_100
+                if sampleRate != targetRate {
+                    if let resampled = resampleAudioLinear(samples: samples, fromRate: sampleRate, toRate: targetRate) {
+                        audioEngine?.updateAudioBuffer(resampled)
+                    } else {
+                        audioEngine?.updateAudioBuffer(samples)
+                    }
+                } else {
+                    audioEngine?.updateAudioBuffer(samples)
+                }
+                
+            case 2:  // Frame First - no resampling, direct pass
+                audioEngine?.updateAudioBuffer(samples)
+                
+            default:
+                audioEngine?.updateAudioBuffer(samples)
+            }
         }
+    }
+    
+    private func resampleAudioLinear(samples: Data, fromRate: Int, toRate: Int) -> Data? {
+        guard fromRate != toRate, fromRate > 0, toRate > 0 else { return samples }
+        
+        let ratio = Double(toRate) / Double(fromRate)
+        let channelCount = 2
+        let sourceFrames = samples.count / (2 * channelCount)
+        let targetFrames = Int(Double(sourceFrames) * ratio)
+        
+        guard targetFrames > 0, sourceFrames > 4 else { return samples }
+        
+        let sourcePtr = samples.withUnsafeBytes { $0.baseAddress!.assumingMemoryBound(to: Int16.self) }
+        
+        var result = Data(capacity: targetFrames * 2 * channelCount)
+        
+        for i in 0..<targetFrames {
+            let srcPos = Double(i) / ratio
+            let srcIndex = Int(srcPos)
+            let frac = srcPos - Double(srcIndex)
+            
+            for ch in 0..<channelCount {
+                let srcIdx = srcIndex * channelCount + ch
+                let srcIdx1 = min(srcIdx + channelCount, sourceFrames * channelCount - channelCount)
+                
+                let s0 = Int(sourcePtr[srcIdx])
+                let s1 = Int(sourcePtr[srcIdx1])
+                let interpolated = s0 + Int(Double(s1 - s0) * frac)
+                
+                result.append(contentsOf: withUnsafeBytes(of: Int16(clamping: interpolated)) { Data($0) })
+            }
+        }
+        
+        return result
     }
 }

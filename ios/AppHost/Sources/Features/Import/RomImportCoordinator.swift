@@ -144,6 +144,7 @@ final class RomImportCoordinator: ObservableObject {
                 existingEntry.system = validation.system.rawValue
                 existingEntry.fileName = importedDisplayFileName
                 existingEntry.fileSize = Int64(fileData.count)
+                CoverArtService.shared.assignDeterministicPlaceholderIfNeeded(to: existingEntry)
                 if context.hasChanges {
                     try context.save()
                 }
@@ -171,6 +172,7 @@ final class RomImportCoordinator: ObservableObject {
             entry.lastPlayedAt = nil
             entry.playtimeTotal = 0
             entry.isFavorite = false
+            CoverArtService.shared.assignDeterministicPlaceholderIfNeeded(to: entry)
             
             // Create ROMs directory if it doesn't exist
             if !FileManager.default.fileExists(atPath: romsDirectory.path) {

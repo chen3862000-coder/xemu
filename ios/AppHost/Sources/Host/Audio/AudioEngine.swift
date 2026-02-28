@@ -16,33 +16,35 @@ public final class AudioEngine {
     private let maxQueuedFrames: UInt32
     private let minStartQueuedFrames: UInt32
     private let hardResetQueuedFrames: UInt32
+    private let softLatencyCapFrames: UInt32
     private let preferredScheduleFrames: UInt32
     private let minPartialScheduleFrames: UInt32
-    private let softLatencyCapFrames: UInt32
-    
-    public init(sampleRate: Double = 44100,
-                channels: AVAudioChannelCount = 2) {
+
+    public init(sampleRate: Double = 48_000.0, channels: Int = 2, volume: Float = 1.0) {
         self.sampleRate = sampleRate
-        self.channels = channels
+        self.channels = AVAudioChannelCount(channels)
+        self.engine = AVAudioEngine()
+        self.playerNode = AVAudioPlayerNode()
         
-        guard let format = AVAudioFormat(commonFormat: .pcmFormatInt16,
-                                         sampleRate: sampleRate,
-                                         channels: channels,
-                                         interleaved: true) else {
-            fatalError("Failed to create AVAudioFormat")
-        }
-
-        outputFormat = format
-        maxQueuedFrames = UInt32(sampleRate * 0.22)
-        minStartQueuedFrames = UInt32(sampleRate * 0.035)
-        hardResetQueuedFrames = UInt32(sampleRate * 0.55)
-        preferredScheduleFrames = max(768, UInt32(sampleRate / 30.0))
-        minPartialScheduleFrames = 256
-        softLatencyCapFrames = UInt32(sampleRate * 0.14)
-        engine = AVAudioEngine()
-        playerNode = AVAudioPlayerNode()
-
+        let targetFPS: Double = 60.0
+        let secondsPerFrame = 1.0 / targetFPS
+        maxQueuedFrames = UInt32(sampleRate * 0.35)  // Increased buffer capacity
+        minStartQueuedFrames = UInt32(sampleRate * secondsPerFrame)
+        hardResetQueuedFrames = UInt32(sampleRate * 0.90)
+        softLatencyCapFrames = UInt32(sampleRate * 0.20)  // Increased from 0.18
+        // Match actual frame sizes (803-1000 frames from resampling)
+        preferredScheduleFrames = max(800, UInt32(sampleRate / 60.0))
+        minPartialScheduleFrames = max(600, UInt32(sampleRate / 80.0))  // Increased from 512
+        
+        outputFormat = AVAudioFormat(commonFormat: .pcmFormatInt16,
+                                     sampleRate: sampleRate,
+                                     channels: self.channels,
+                                     interleaved: true)!
+        
+        NSLog("[AudioEngine] Initialized: sampleRate=\(sampleRate), preferredScheduleFrames=\(preferredScheduleFrames), minPartialScheduleFrames=\(minPartialScheduleFrames)")
+        
         setupEngine()
+        setVolume(volume)
     }
     
     private func setupEngine() {
@@ -69,28 +71,16 @@ public final class AudioEngine {
         queue.async { [weak self] in
             guard let self else { return }
 
+            // Accumulate buffers and schedule in larger chunks to smooth timing
             self.pendingPCM.append(samples)
-
-            let chunkBytes = Int(self.preferredScheduleFrames) * bytesPerFrame
-            while self.pendingPCM.count >= chunkBytes {
-                let chunk = self.pendingPCM.prefix(chunkBytes)
-                if let buffer = self.makePCMBuffer(from: chunk, bytesPerFrame: bytesPerFrame) {
+            
+            // Schedule when we have accumulated enough frames
+            let minBatchBytes = Int(self.preferredScheduleFrames / 2) * bytesPerFrame
+            if self.pendingPCM.count >= minBatchBytes {
+                if let buffer = self.makePCMBuffer(from: self.pendingPCM, bytesPerFrame: bytesPerFrame) {
                     self.playBufferOnQueue(buffer)
+                    self.pendingPCM.removeAll(keepingCapacity: true)
                 }
-                self.pendingPCM.removeFirst(chunkBytes)
-            }
-
-            // If audio is starving, schedule a partial chunk, but avoid very tiny buffers
-            // because they increase scheduling jitter and can produce audible crackle.
-            let minPartialBytes = Int(self.minPartialScheduleFrames) * bytesPerFrame
-            let shouldDrainPartial =
-                self.pendingPCM.count >= minPartialBytes &&
-                (self.queuedFrames == 0 || (!self.isPlaying && self.queuedFrames < self.minStartQueuedFrames))
-
-            if shouldDrainPartial,
-               let buffer = self.makePCMBuffer(from: self.pendingPCM, bytesPerFrame: bytesPerFrame) {
-                self.pendingPCM.removeAll(keepingCapacity: true)
-                self.playBufferOnQueue(buffer)
             }
         }
     }
@@ -198,9 +188,13 @@ public final class AudioEngine {
             try session.setCategory(.playback, mode: .default, options: [])
             // Prefer the core's native sample rate when possible to reduce resampling.
             try session.setPreferredSampleRate(sampleRate)
-            try session.setPreferredIOBufferDuration(0.008)
+            // Use larger buffer duration to reduce crackle (was 0.008 = 8ms)
+            // Increased to ~42.7ms at 48kHz = 2048 frames for better stability
+            try session.setPreferredIOBufferDuration(0.0427)
             try session.setActive(true)
+            NSLog("[AudioEngine] Configured session: sampleRate=\(sampleRate), actualRate=\(session.sampleRate), bufferDuration=\(session.ioBufferDuration)")
         } catch {
+            NSLog("[AudioEngine] Failed to configure audio session: %@", error.localizedDescription)
         }
         #endif
     }

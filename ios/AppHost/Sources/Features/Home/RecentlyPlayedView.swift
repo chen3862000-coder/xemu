@@ -12,6 +12,8 @@ struct RecentlyPlayedView: View {
     @State private var searchText = ""
     @State private var selectedGame: Game?
     @State private var activeAlert: RecentAlertState?
+    @State private var showEarlier = false
+    @State private var sortMode: RecentSortMode = .recent
 
     var body: some View {
         ZStack {
@@ -21,16 +23,18 @@ struct RecentlyPlayedView: View {
                 headerSection
 
                 ScrollView {
-                    VStack(spacing: 14) {
-                        if filteredGames.isEmpty {
+                    VStack(alignment: .leading, spacing: 28) {
+                        if filteredAndSortedGames.isEmpty {
                             emptyState
                         } else {
-                            gamesGrid
+                            continuePlayingSection
+                            recentlyPlayedSection
+                            earlierSection
                         }
                     }
-                    .padding(.horizontal, 16)
-                    .padding(.top, 12)
-                    .padding(.bottom, 24)
+                    .padding(.horizontal, 20)
+                    .padding(.top, 20)
+                    .padding(.bottom, 28)
                 }
             }
         }
@@ -75,14 +79,38 @@ struct RecentlyPlayedView: View {
         }
     }
 
-    private var filteredGames: [ROMLibraryEntry] {
-        guard !searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-            return games
+    private var sortedGames: [ROMLibraryEntry] {
+        switch sortMode {
+        case .recent:
+            return games.sorted { ($0.lastPlayedAt ?? .distantPast) > ($1.lastPlayedAt ?? .distantPast) }
+        case .mostPlayed:
+            return games.sorted { $0.playtimeTotal > $1.playtimeTotal }
+        case .alphabetical:
+            return games.sorted {
+                ($0.title ?? "").localizedCaseInsensitiveCompare($1.title ?? "") == .orderedAscending
+            }
         }
-        return games.filter { entry in
-            (entry.title ?? "").localizedCaseInsensitiveContains(searchText) ||
-            (entry.system ?? "").localizedCaseInsensitiveContains(searchText)
+    }
+
+    private var filteredAndSortedGames: [ROMLibraryEntry] {
+        let q = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !q.isEmpty else { return sortedGames }
+        return sortedGames.filter { entry in
+            (entry.title ?? "").localizedCaseInsensitiveContains(q) ||
+            (entry.system ?? "").localizedCaseInsensitiveContains(q)
         }
+    }
+
+    private var resumeGames: [ROMLibraryEntry] {
+        Array(filteredAndSortedGames.prefix(4))
+    }
+
+    private var activeListGames: [ROMLibraryEntry] {
+        Array(filteredAndSortedGames.dropFirst(resumeGames.count).prefix(5))
+    }
+
+    private var earlierGames: [ROMLibraryEntry] {
+        Array(filteredAndSortedGames.dropFirst(resumeGames.count + activeListGames.count))
     }
 
     private var backgroundLayer: some View {
@@ -92,66 +120,66 @@ struct RecentlyPlayedView: View {
             Circle()
                 .fill(
                     LinearGradient(
-                        colors: [AppColors.primary.opacity(0.16), AppColors.accent.opacity(0.12)],
+                        colors: [AppColors.primary.opacity(0.12), AppColors.accent.opacity(0.08)],
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing
                     )
                 )
                 .blur(radius: 120)
-                .frame(width: 360, height: 360)
-                .offset(x: 150, y: -230)
-
-            Circle()
-                .fill(
-                    LinearGradient(
-                        colors: [AppColors.accent.opacity(0.10), AppColors.primary.opacity(0.10)],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                )
-                .blur(radius: 140)
-                .frame(width: 430, height: 430)
-                .offset(x: -190, y: 320)
+                .frame(width: 380, height: 380)
+                .offset(x: 170, y: -240)
         }
     }
 
     private var headerSection: some View {
-        VStack(spacing: 8) {
+        VStack(spacing: 12) {
             HStack(spacing: 12) {
                 Button(action: { dismiss() }) {
                     Image(systemName: "arrow.left")
-                        .font(.system(size: 16, weight: .semibold))
+                        .font(.system(size: 17, weight: .semibold))
                         .foregroundColor(AppColors.textPrimary)
-                        .frame(width: 36, height: 36)
-                        .background(AppColors.surfaceLight.opacity(0.5))
+                        .frame(width: 40, height: 40)
+                        .background(AppColors.surfaceLight.opacity(0.50))
                         .clipShape(Circle())
                 }
 
-                VStack(alignment: .leading, spacing: 1) {
+                VStack(alignment: .leading, spacing: 2) {
                     Text("Recently Played")
-                        .font(.system(size: 22, weight: .bold))
+                        .font(SubpageUI.Font.heroTitle)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
+                        .allowsTightening(true)
+                        .layoutPriority(1)
                         .foregroundColor(AppColors.textPrimary)
                     Text("\(games.count) games")
-                        .font(.system(size: 13, weight: .medium))
+                        .font(SubpageUI.Font.subtitle)
                         .foregroundColor(AppColors.primary)
                 }
 
                 Spacer()
 
                 Menu {
-                    Button("Recent") {}
-                    Button("A–Z") {}
-                    Button("Most Played") {}
+                    ForEach(RecentSortMode.allCases, id: \.self) { mode in
+                        Button {
+                            sortMode = mode
+                        } label: {
+                            if mode == sortMode {
+                                Label(mode.title, systemImage: "checkmark")
+                            } else {
+                                Text(mode.title)
+                            }
+                        }
+                    }
                 } label: {
                     HStack(spacing: 6) {
-                        Text("Recent")
-                            .font(.system(size: 12, weight: .semibold))
+                        Text(sortMode.shortTitle)
+                            .font(.system(size: 13, weight: .semibold))
                         Image(systemName: "chevron.down")
-                            .font(.system(size: 10, weight: .semibold))
+                            .font(.system(size: 11, weight: .semibold))
                     }
                     .foregroundColor(AppColors.textPrimary)
-                    .padding(.horizontal, 10)
-                    .frame(height: 34)
+                    .padding(.horizontal, 12)
+                    .frame(height: 36)
                     .background(AppColors.surfaceLight.opacity(0.45))
                     .overlay(
                         Capsule().stroke(AppColors.surfaceLight.opacity(0.7), lineWidth: 1)
@@ -163,7 +191,7 @@ struct RecentlyPlayedView: View {
 
             HStack(spacing: 8) {
                 Image(systemName: "magnifyingglass")
-                    .font(.system(size: 13))
+                    .font(.system(size: 14, weight: .medium))
                     .foregroundColor(AppColors.textMuted)
 
                 TextField("Search recently played...", text: $searchText)
@@ -172,46 +200,93 @@ struct RecentlyPlayedView: View {
                     .autocorrectionDisabled()
 #endif
                     .foregroundColor(AppColors.textPrimary)
+                    .font(.system(size: 17))
             }
-            .padding(.horizontal, 12)
-                .frame(height: 36)
-            .background(AppColors.surfaceLight.opacity(0.45))
-            .overlay(
-                RoundedRectangle(cornerRadius: 19)
-                    .stroke(AppColors.surfaceLight.opacity(0.7), lineWidth: 1)
-            )
-            .clipShape(RoundedRectangle(cornerRadius: 19))
+            .subpageSearchField(cornerRadius: 22, height: 44)
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
-        .background(AppColors.background.opacity(0.85))
+        .padding(.horizontal, 20)
+        .padding(.top, 18)
+        .padding(.bottom, 14)
+        .background(AppColors.background.opacity(0.88))
         .overlay(
             Rectangle()
-                .fill(AppColors.surfaceLight.opacity(0.5))
+                .fill(AppColors.surfaceLight.opacity(0.55))
                 .frame(height: 1),
             alignment: .bottom
         )
     }
 
-    private var gamesGrid: some View {
-        LazyVGrid(
-            columns: [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)],
-            spacing: 12
-        ) {
-            ForEach(filteredGames) { entry in
-                RecentlyPlayedCard(entry: entry) {
-                    launchGame(entry)
-                }
-                .contextMenu {
-                    Button(role: .destructive) {
-                        activeAlert = .confirmDelete(RecentDeleteCandidate(entry: entry, mode: .removeROMOnly))
-                    } label: {
-                        Label("Remove ROM Only", systemImage: "eject")
+    private var continuePlayingSection: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            Text("Continue Playing")
+                .font(SubpageUI.Font.sectionTitle)
+                .foregroundColor(AppColors.textPrimary)
+
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 16) {
+                    ForEach(resumeGames) { entry in
+                        RecentResumeCard(entry: entry) {
+                            launchGame(entry)
+                        }
+                        .contextMenu {
+                            recentContextMenu(entry)
+                        }
                     }
-                    Button(role: .destructive) {
-                        activeAlert = .confirmDelete(RecentDeleteCandidate(entry: entry, mode: .removeAll))
-                    } label: {
-                        Label("Remove", systemImage: "trash")
+                }
+            }
+            .contentMargins(.horizontal, 0, for: .scrollContent)
+        }
+    }
+
+    private var recentlyPlayedSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Recently Played")
+                .font(SubpageUI.Font.sectionTitle)
+                .foregroundColor(AppColors.textPrimary)
+
+            VStack(spacing: 12) {
+                ForEach(activeListGames) { entry in
+                    RecentRow(entry: entry) {
+                        launchGame(entry)
+                    }
+                    .contextMenu {
+                        recentContextMenu(entry)
+                    }
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var earlierSection: some View {
+        if !earlierGames.isEmpty {
+            VStack(alignment: .leading, spacing: 12) {
+                Button {
+                    withAnimation(.spring(response: 0.26, dampingFraction: 0.9)) {
+                        showEarlier.toggle()
+                    }
+                } label: {
+                    HStack {
+                        Text("Earlier")
+                            .font(SubpageUI.Font.sectionTitle)
+                        Spacer()
+                        Image(systemName: showEarlier ? "chevron.up" : "chevron.down")
+                            .font(.system(size: 12, weight: .semibold))
+                    }
+                    .foregroundColor(AppColors.textPrimary)
+                }
+                .buttonStyle(.plain)
+
+                if showEarlier {
+                    VStack(spacing: 12) {
+                        ForEach(earlierGames) { entry in
+                            RecentRow(entry: entry) {
+                                launchGame(entry)
+                            }
+                            .contextMenu {
+                                recentContextMenu(entry)
+                            }
+                        }
                     }
                 }
             }
@@ -219,39 +294,46 @@ struct RecentlyPlayedView: View {
     }
 
     private var emptyState: some View {
-        VStack(spacing: 10) {
-            Image(systemName: "clock")
-                .font(.system(size: 28, weight: .medium))
+        VStack(spacing: 12) {
+            Image(systemName: "clock.arrow.trianglehead.counterclockwise.rotate.90")
+                .font(.system(size: 30, weight: .medium))
                 .foregroundColor(AppColors.textMuted)
 
             Text(searchText.isEmpty ? "No Recently Played Games" : "No Matching Games")
-                .font(.system(size: 16, weight: .semibold))
+                .font(.system(size: 17, weight: .semibold))
                 .foregroundColor(AppColors.textPrimary)
 
-            Text(searchText.isEmpty ? "Start playing games to see them here." : "Try a different search term.")
-                .font(.system(size: 12))
+            Text(searchText.isEmpty ? "Start playing to build your resume queue." : "Try another search term.")
+                .font(.system(size: 13))
                 .foregroundColor(AppColors.textMuted)
                 .multilineTextAlignment(.center)
         }
         .frame(maxWidth: .infinity)
-        .padding(.vertical, 40)
-        .background(AppColors.surface)
-        .overlay(
-            RoundedRectangle(cornerRadius: 16)
-                .stroke(AppColors.surfaceLight.opacity(0.5), lineWidth: 1)
-        )
-        .clipShape(RoundedRectangle(cornerRadius: 16))
+        .padding(.vertical, 44)
+        .subpageCard(cornerRadius: 18)
+    }
+
+    @ViewBuilder
+    private func recentContextMenu(_ entry: ROMLibraryEntry) -> some View {
+        Button(role: .destructive) {
+            activeAlert = .confirmDelete(RecentDeleteCandidate(entry: entry, mode: .removeROMOnly))
+        } label: {
+            Label("Remove ROM Only", systemImage: "eject")
+        }
+        Button(role: .destructive) {
+            activeAlert = .confirmDelete(RecentDeleteCandidate(entry: entry, mode: .removeAll))
+        } label: {
+            Label("Remove", systemImage: "trash")
+        }
     }
 
     private func loadGames() {
         let request = NSFetchRequest<ROMLibraryEntry>(entityName: "ROMLibraryEntry")
         request.sortDescriptors = [NSSortDescriptor(key: "lastPlayedAt", ascending: false)]
         request.predicate = NSPredicate(format: "lastPlayedAt != nil")
-
         do {
             games = try viewContext.fetch(request)
         } catch {
-            print("Failed to fetch recent games: \(error)")
             games = []
         }
     }
@@ -276,95 +358,166 @@ struct RecentlyPlayedView: View {
     }
 }
 
-struct RecentlyPlayedCard: View {
+private struct RecentResumeCard: View {
     let entry: ROMLibraryEntry
     let onTap: () -> Void
 
     var body: some View {
         Button(action: onTap) {
-            VStack(alignment: .leading, spacing: 0) {
-                ZStack(alignment: .topTrailing) {
-                    coverArt
-                        .frame(maxWidth: .infinity, minHeight: 132, maxHeight: 132)
-
-                    LinearGradient(
-                        colors: [Color.clear, Color.black.opacity(0.38)],
-                        startPoint: .top,
-                        endPoint: .bottom
+            ZStack(alignment: .bottomLeading) {
+                coverArt
+                    .frame(width: 280, height: 160)
+                    .overlay(
+                        LinearGradient(
+                            colors: [Color.clear, Color.black.opacity(0.58)],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
                     )
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                    .clipShape(RoundedRectangle(cornerRadius: 20))
 
-                    Text((entry.system ?? "UNK").uppercased())
-                        .font(.system(size: 10, weight: .semibold))
-                        .foregroundColor(.white)
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 6)
-                        .background(AppColors.primary.opacity(0.84))
-                        .clipShape(Capsule())
-                        .padding(8)
-
-                    if let issue = ROMCompatibilityService.shared.compatibility(for: entry).issue {
-                        VStack {
-                            HStack {
-                                Image(systemName: issue.iconName)
-                                    .font(.system(size: 11, weight: .bold))
-                                    .foregroundColor(.orange)
-                                    .padding(6)
-                                    .background(Color.black.opacity(0.55))
-                                    .clipShape(Circle())
-                                    .padding(8)
-                                Spacer()
-                            }
-                            Spacer()
-                        }
-                    }
-                }
-
-                VStack(alignment: .leading, spacing: 6) {
+                VStack(alignment: .leading, spacing: 7) {
                     Text(entry.title ?? "Unknown Game")
-                        .font(.system(size: 17, weight: .bold))
-                        .foregroundColor(AppColors.textPrimary)
+                        .font(.system(size: 17, weight: .semibold))
+                        .foregroundColor(.white)
                         .lineLimit(2)
+                        .shadow(color: .black.opacity(0.25), radius: 4, x: 0, y: 1)
 
-                    if ROMCompatibilityService.shared.compatibility(for: entry).issue != nil {
-                        Label("Unsupported Mapper", systemImage: "exclamationmark.triangle.fill")
-                            .font(.system(size: 10, weight: .semibold))
-                            .foregroundColor(.orange)
-                    }
+                    Text(lastPlayedLabel)
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundColor(.white.opacity(0.88))
 
-                    HStack(spacing: 5) {
-                        Image(systemName: "clock")
-                            .font(.system(size: 10, weight: .semibold))
-                        Text(playedDateLabel)
-                            .font(.system(size: 12, weight: .semibold))
-                        if Int(entry.playtimeTotal) > 0 {
-                            Text("•")
-                                .font(.system(size: 11, weight: .medium))
-                                .opacity(0.55)
-                            Text(totalHoursLabel)
-                                .font(.system(size: 11, weight: .medium))
-                                .foregroundColor(AppColors.textMuted)
-                        }
+                    GeometryReader { geo in
+                        Capsule()
+                            .fill(Color.white.opacity(0.26))
+                            .overlay(alignment: .leading) {
+                                Capsule()
+                                    .fill(Color.white.opacity(0.84))
+                                    .frame(width: max(14, geo.size.width * progress))
+                            }
                     }
-                    .foregroundColor(AppColors.primary)
+                    .frame(height: 5)
                 }
-                .padding(.horizontal, 14)
-                .padding(.vertical, 13)
+                .padding(14)
+
+                VStack {
+                    HStack {
+                        Spacer()
+                        Text((entry.system ?? "UNK").uppercased())
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundColor(.white.opacity(0.94))
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 6)
+                            .background(AppColors.primary.opacity(0.70))
+                            .clipShape(Capsule())
+                    }
+                    Spacer()
+                }
+                .padding(10)
             }
-            .frame(maxWidth: .infinity)
-            .background(AppColors.surface)
-            .overlay(
-                RoundedRectangle(cornerRadius: 16)
-                    .stroke(AppColors.surfaceLight.opacity(0.65), lineWidth: 1)
-            )
-            .shadow(color: AppColors.primary.opacity(0.08), radius: 10, x: 0, y: 5)
-            .clipShape(RoundedRectangle(cornerRadius: 16))
+            .frame(width: 280, height: 160)
+            .subpageCard(cornerRadius: 20, shadowOpacity: 0.10)
         }
-        .buttonStyle(PlainButtonStyle())
+        .buttonStyle(RecentCardPressStyle())
+    }
+
+    private var progress: CGFloat {
+        let capped = min(max(Int(entry.playtimeTotal), 0), 14_400)
+        return CGFloat(capped) / 14_400.0
+    }
+
+    private var lastPlayedLabel: String {
+        guard let date = entry.lastPlayedAt else { return "Never played" }
+        let now = Date()
+        let delta = max(0, Int(now.timeIntervalSince(date)))
+        if delta < 60 { return "Just now" }
+        if delta < 3600 { return "\(delta / 60)m ago" }
+        if delta < 86_400 { return "\(delta / 3600)h ago" }
+        return date.formatted(.dateTime.month(.abbreviated).day())
     }
 
     @ViewBuilder
     private var coverArt: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 20)
+                .fill(
+                    LinearGradient(
+                        colors: [AppColors.surfaceLight, AppColors.surface],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+#if os(iOS)
+            if let screenshotData = SaveStateStorage.shared.latestScreenshot(for: entry.checksum ?? ""),
+               let uiImage = UIImage(data: screenshotData) {
+                Image(uiImage: uiImage)
+                    .resizable()
+                    .scaledToFill()
+            } else if let resolved = CoverArtService.shared.resolve(for: entry),
+                      let uiImage = UIImage(data: resolved.data) {
+                Image(uiImage: uiImage)
+                    .resizable()
+                    .scaledToFill()
+            } else {
+                Image(systemName: "gamecontroller.fill")
+                    .font(.system(size: 32))
+                    .foregroundColor(AppColors.textMuted)
+            }
+#else
+            Image(systemName: "gamecontroller.fill")
+                .font(.system(size: 32))
+                .foregroundColor(AppColors.textMuted)
+#endif
+        }
+        .clipped()
+    }
+}
+
+private struct RecentCardPressStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed ? 1.02 : 1.0)
+            .animation(.easeOut(duration: 0.16), value: configuration.isPressed)
+    }
+}
+
+private struct RecentRow: View {
+    let entry: ROMLibraryEntry
+    let onTap: () -> Void
+
+    var body: some View {
+        Button(action: onTap) {
+            HStack(spacing: 12) {
+                thumbnail
+                    .frame(width: 120, height: 68)
+                    .clipShape(RoundedRectangle(cornerRadius: 14))
+
+                VStack(alignment: .leading, spacing: 5) {
+                    Text(entry.title ?? "Unknown Game")
+                        .font(.system(size: 17, weight: .semibold))
+                        .foregroundColor(AppColors.textPrimary)
+                        .lineLimit(2)
+
+                    Text(metaLine)
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundColor(AppColors.primary)
+                }
+
+                Spacer(minLength: 8)
+
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundColor(AppColors.textMuted)
+            }
+            .padding(14)
+            .frame(maxWidth: .infinity, minHeight: 96)
+            .subpageCard(cornerRadius: 18, shadowOpacity: 0.04)
+        }
+        .buttonStyle(.plain)
+    }
+
+    @ViewBuilder
+    private var thumbnail: some View {
         ZStack {
             RoundedRectangle(cornerRadius: 14)
                 .fill(
@@ -379,42 +532,48 @@ struct RecentlyPlayedCard: View {
                let uiImage = UIImage(data: screenshotData) {
                 Image(uiImage: uiImage)
                     .resizable()
-                    .aspectRatio(contentMode: .fill)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .clipped()
-            } else if let imageData = entry.coverImageData, let uiImage = UIImage(data: imageData) {
+                    .scaledToFill()
+            } else if let resolved = CoverArtService.shared.resolve(for: entry),
+                      let uiImage = UIImage(data: resolved.data) {
                 Image(uiImage: uiImage)
                     .resizable()
-                    .aspectRatio(contentMode: .fill)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .clipped()
+                    .scaledToFill()
             } else {
                 Image(systemName: "gamecontroller.fill")
-                    .font(.system(size: 28))
+                    .font(.system(size: 24))
                     .foregroundColor(AppColors.textMuted)
             }
 #else
             Image(systemName: "gamecontroller.fill")
-                .font(.system(size: 28))
+                .font(.system(size: 24))
                 .foregroundColor(AppColors.textMuted)
 #endif
         }
-        .frame(maxWidth: .infinity, minHeight: 132, maxHeight: 132)
-        .overlay(Color.white.opacity(0.10))
-        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .clipped()
     }
 
-    private var playedDateLabel: String {
-        guard let date = entry.lastPlayedAt else { return "Never" }
-        let calendar = Calendar.current
-        if calendar.isDateInToday(date) { return "Today" }
-        if calendar.isDateInYesterday(date) { return "Yesterday" }
-        return date.formatted(.dateTime.month(.abbreviated).day())
-    }
+    private var metaLine: String {
+        let timePart: String = {
+            guard let date = entry.lastPlayedAt else { return "Never" }
+            let now = Date()
+            let delta = max(0, Int(now.timeIntervalSince(date)))
+            if delta < 60 { return "Just now" }
+            if delta < 3600 { return "\(delta / 60)m ago" }
+            if delta < 86_400 { return "\(delta / 3600)h ago" }
+            if Calendar.current.isDateInToday(date) { return "Today" }
+            if Calendar.current.isDateInYesterday(date) { return "Yesterday" }
+            return date.formatted(.dateTime.month(.abbreviated).day())
+        }()
 
-    private var totalHoursLabel: String {
+        if entry.playtimeTotal <= 0 {
+            return "Opened \(timePart.lowercased())"
+        }
         let hours = max(0, Int(entry.playtimeTotal) / 3600)
-        return "\(hours)h"
+        if hours > 0 {
+            return "\(timePart) • \(hours)h total"
+        }
+        let mins = max(1, Int(entry.playtimeTotal) / 60)
+        return "\(timePart) • \(mins)m total"
     }
 }
 
@@ -437,6 +596,28 @@ private enum RecentAlertState: Identifiable {
             return "confirm-delete-\(candidate.id.uuidString)"
         case .confirmFinalDelete(let candidate):
             return "confirm-final-delete-\(candidate.id.uuidString)"
+        }
+    }
+}
+
+private enum RecentSortMode: CaseIterable {
+    case recent
+    case mostPlayed
+    case alphabetical
+
+    var title: String {
+        switch self {
+        case .recent: return "Recent"
+        case .mostPlayed: return "Most Played"
+        case .alphabetical: return "Alphabetical"
+        }
+    }
+
+    var shortTitle: String {
+        switch self {
+        case .recent: return "Recent"
+        case .mostPlayed: return "Played"
+        case .alphabetical: return "A–Z"
         }
     }
 }

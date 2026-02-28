@@ -13,7 +13,15 @@ struct SettingsView: View {
     @EnvironmentObject private var shellThemeManager: ShellThemeManager
     @State private var showingUpgrade = false
     @State private var showingShellSkins = false
+    @State private var showingAudioQuality = false
     @AppStorage("frameSkipEnabled") private var frameSkipEnabled = false
+    @AppStorage("audioQuality") private var audioQuality = 1  // 0=sound, 1=balanced, 2=frame
+    @AppStorage("showFPSMeter") private var showFPSMeter = false
+    @AppStorage("respectLowPowerMode") private var respectLowPowerMode = true
+    @AppStorage("performanceMode") private var performanceModeRaw = PerformanceMode.auto.rawValue
+    #if DEBUG
+    @AppStorage("showPerformanceHUD") private var showPerformanceHUD = false
+    #endif
     
     var body: some View {
         ZStack {
@@ -43,6 +51,9 @@ struct SettingsView: View {
         .sheet(isPresented: $showingShellSkins) {
             ShellSkinsView()
                 .environmentObject(shellThemeManager)
+        }
+        .sheet(isPresented: $showingAudioQuality) {
+            AudioQualityView(audioQuality: $audioQuality)
         }
     }
     
@@ -144,6 +155,15 @@ struct SettingsView: View {
         return "Version 1.0"
     }
     
+    private var audioQualityDescription: String {
+        switch audioQuality {
+        case 0: return "Best sound quality"
+        case 1: return "Balanced"
+        case 2: return "Prioritize frame rate"
+        default: return "Balanced"
+        }
+    }
+    
     private var settingsItems: some View {
         VStack(spacing: 12) {
             SettingsItem(
@@ -174,6 +194,48 @@ struct SettingsView: View {
                 description: "Skip frames on weaker devices",
                 isOn: $frameSkipEnabled
             )
+
+            FigmaSettingsToggleRow(
+                icon: "speedometer",
+                iconColor: AppColors.primary,
+                iconBg: AppColors.primary.opacity(0.2),
+                title: "Show FPS Meter",
+                description: "Display FPS in game status bar",
+                isOn: $showFPSMeter
+            )
+
+            FigmaSettingsToggleRow(
+                icon: "battery.50",
+                iconColor: AppColors.success,
+                iconBg: AppColors.success.opacity(0.2),
+                title: "Respect Low Power Mode",
+                description: "Reduce heavy effects when battery saver is on",
+                isOn: $respectLowPowerMode
+            )
+
+            performanceModeRow
+
+            #if DEBUG
+            FigmaSettingsToggleRow(
+                icon: "waveform.path.ecg",
+                iconColor: AppColors.info,
+                iconBg: AppColors.info.opacity(0.2),
+                title: "Performance HUD",
+                description: "Debug overlay for FPS, memory and thermal state",
+                isOn: $showPerformanceHUD
+            )
+            #endif
+            
+            SettingsItem(
+                icon: "speaker.wave.3",
+                title: "Audio Quality",
+                description: audioQualityDescription,
+                iconColor: AppColors.success,
+                iconBackground: AppColors.success.opacity(0.2),
+                index: 0
+            ) {
+                showingAudioQuality = true
+            }
             
             SettingsItem(
                 icon: "star.fill",
@@ -282,6 +344,64 @@ struct SettingsView: View {
             }
         }
         .padding(.top, 16)
+    }
+
+    private var performanceMode: PerformanceMode {
+        get { PerformanceMode(rawValue: performanceModeRaw) ?? .auto }
+        set { performanceModeRaw = newValue.rawValue }
+    }
+
+    private var performanceModeRow: some View {
+        HStack(spacing: 16) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(AppColors.info.opacity(0.2))
+                    .frame(width: 48, height: 48)
+
+                Image(systemName: "dial.high")
+                    .font(.system(size: 20, weight: .semibold))
+                    .foregroundColor(AppColors.info)
+            }
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Performance Mode")
+                    .font(.system(size: 17, weight: .bold))
+                    .foregroundColor(AppColors.textPrimary)
+                Text("Auto balances quality and battery")
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundColor(AppColors.textMuted)
+            }
+
+            Spacer(minLength: 10)
+
+            Menu {
+                ForEach(PerformanceMode.allCases, id: \.rawValue) { mode in
+                    Button(mode.title) {
+                        performanceModeRaw = mode.rawValue
+                    }
+                }
+            } label: {
+                HStack(spacing: 6) {
+                    Text(performanceMode.title)
+                        .font(.system(size: 13, weight: .semibold))
+                    Image(systemName: "chevron.down")
+                        .font(.system(size: 10, weight: .semibold))
+                }
+                .foregroundColor(AppColors.primary)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
+                .background(AppColors.primary.opacity(0.1))
+                .clipShape(Capsule())
+            }
+        }
+        .padding(18)
+        .background(AppColors.surface)
+        .overlay(
+            RoundedRectangle(cornerRadius: 16)
+                .stroke(AppColors.surfaceLight.opacity(0.5), lineWidth: 1)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: 16))
+        .shadow(color: AppColors.primary.opacity(0.05), radius: 8, x: 0, y: 4)
     }
     
     private func shareApp() {

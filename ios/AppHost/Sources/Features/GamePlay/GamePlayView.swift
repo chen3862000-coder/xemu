@@ -26,6 +26,11 @@ struct GamePlayView: View {
     @State private var startTask: Task<Void, Never>?
     @State private var saveSlotSummaries: [SaveStateSlotSummary] = []
     @AppStorage("resumeLaunchPolicy") private var resumeLaunchPolicyRaw = ResumeLaunchPolicy.autoResumeLatest.rawValue
+    @AppStorage("showFPSMeter") private var showFPSMeter = false
+    #if DEBUG
+    @AppStorage("showPerformanceHUD") private var showPerformanceHUD = false
+    @StateObject private var performanceProfiler = PerformanceProfiler.shared
+    #endif
     
     init(game: Game, onExit: @escaping () -> Void) {
         self.game = game
@@ -66,6 +71,22 @@ struct GamePlayView: View {
                    !showLaunchStatePicker {
                     launchFailureOverlay
                 }
+
+                if showFPSMeter && viewModel.isRunning {
+                    fpsOverlayChip
+                        .padding(.top, 12)
+                        .padding(.trailing, 12)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
+                }
+
+                #if DEBUG
+                if showPerformanceHUD {
+                    performanceHUDOverlay
+                        .padding(.top, 10)
+                        .padding(.leading, 10)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                }
+                #endif
             }
         }
         .onAppear {
@@ -73,18 +94,7 @@ struct GamePlayView: View {
             startTask = Task { @MainActor in
                 try? await Task.sleep(nanoseconds: 100_000_000)
                 guard !Task.isCancelled else { return }
-                if let romPath = game.romPath, let platform = game.gamePlatform {
-                    viewModel.startEmulation(
-                        romPath: romPath,
-                        platform: platform,
-                        gameTitle: game.title,
-                        romHash: game.romPath.map { URL(fileURLWithPath: $0).deletingPathExtension().lastPathComponent }
-                    )
-                    if viewModel.isRunning, viewModel.hasSavedStatesForCurrentGame() {
-                        saveSlotSummaries = viewModel.saveSlotSummaries().filter { !$0.isEmpty }
-                        handleLaunchResumeFlowIfNeeded()
-                    }
-                }
+                launchGame(allowResumeFlow: true)
             }
         }
         .onDisappear {
@@ -125,6 +135,33 @@ struct GamePlayView: View {
         case .askEveryTime:
             showLaunchStatePicker = true
         }
+    }
+
+    private func launchGame(allowResumeFlow: Bool) {
+        guard let romPath = game.romPath, let platform = game.gamePlatform else { return }
+        viewModel.startEmulation(
+            romPath: romPath,
+            platform: platform,
+            gameTitle: game.title,
+            romHash: game.romPath.map { URL(fileURLWithPath: $0).deletingPathExtension().lastPathComponent }
+        )
+
+        guard viewModel.isRunning else { return }
+        if allowResumeFlow, viewModel.hasSavedStatesForCurrentGame() {
+            saveSlotSummaries = viewModel.saveSlotSummaries().filter { !$0.isEmpty }
+            handleLaunchResumeFlowIfNeeded()
+        } else {
+            showLaunchStatePicker = false
+        }
+    }
+
+    private func restartGameFromPause() {
+        triggerHaptic(.medium)
+        showLaunchStatePicker = false
+        showPauseMenu = false
+        showSaveSlotsPanel = false
+        pauseSheetMode = .quick
+        viewModel.restartEmulation()
     }
 
     private var resolvedShellTheme: EmulatorShellTheme {
@@ -2536,10 +2573,12 @@ struct GamePlayView: View {
                 }
                 
                 Spacer()
-                
-                Text("FPS: \(viewModel.currentFPS)")
-                    .font(.caption)
-                    .foregroundColor(.gray)
+
+                if showFPSMeter {
+                    Text("FPS: \(viewModel.currentFPS)")
+                        .font(.caption)
+                        .foregroundColor(.gray)
+                }
                 
                 if fastForwardSpeed > 1 {
                     Text("\(fastForwardSpeed)x")
@@ -2557,6 +2596,75 @@ struct GamePlayView: View {
         .padding()
         .background(Color.black.opacity(0.7))
     }
+
+    private var fpsOverlayChip: some View {
+        HStack(spacing: 6) {
+            Image(systemName: "speedometer")
+                .font(.system(size: 10, weight: .semibold))
+            Text("FPS \(max(0, viewModel.currentFPS))")
+                .font(.system(size: 11, weight: .semibold, design: .monospaced))
+        }
+        .foregroundColor(.white.opacity(0.95))
+        .padding(.horizontal, 10)
+        .padding(.vertical, 6)
+        .background(.black.opacity(0.72), in: Capsule())
+        .overlay(
+            Capsule()
+                .stroke(.white.opacity(0.2), lineWidth: 1)
+        )
+        .shadow(color: .black.opacity(0.3), radius: 6, x: 0, y: 2)
+    }
+
+    #if DEBUG
+    private var performanceHUDOverlay: some View {
+        let snapshot = performanceProfiler.hudSnapshot
+        return VStack(alignment: .leading, spacing: 4) {
+            Text(
+                String(
+                    format: "FPS %.1f  P95 %.1fms  Jank %d/m",
+                    snapshot.fps,
+                    snapshot.p95FrameMs,
+                    snapshot.jankPerMinute
+                )
+            )
+            Text(
+                String(
+                    format: "Mem %.0fMB  Peak %.0fMB  Warn %d",
+                    snapshot.memoryMB,
+                    snapshot.peakMemoryMB,
+                    snapshot.memoryWarnings
+                )
+            )
+            Text("Thermal \(thermalLabel(snapshot.thermalState))  LPM \(snapshot.lowPowerModeEnabled ? "ON" : "OFF")")
+            Text(
+                String(
+                    format: "Scale %.2f  Skip %d",
+                    snapshot.qualityProfile.renderScale,
+                    snapshot.qualityProfile.frameSkip
+                )
+            )
+        }
+        .font(.system(size: 11, weight: .semibold, design: .monospaced))
+        .foregroundColor(.white.opacity(0.95))
+        .padding(.horizontal, 10)
+        .padding(.vertical, 8)
+        .background(.black.opacity(0.72), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .stroke(.white.opacity(0.16), lineWidth: 1)
+        )
+    }
+
+    private func thermalLabel(_ state: ProcessInfo.ThermalState) -> String {
+        switch state {
+        case .nominal: return "Nominal"
+        case .fair: return "Fair"
+        case .serious: return "Serious"
+        case .critical: return "Critical"
+        @unknown default: return "Unknown"
+        }
+    }
+    #endif
     
     private var pauseMenuOverlay: some View {
         ZStack {
@@ -2569,10 +2677,10 @@ struct GamePlayView: View {
                 HStack {
                     VStack(alignment: .leading, spacing: 4) {
                         Text("Game Paused")
-                            .font(.system(size: 22, weight: .bold))
+                            .font(SubpageUI.Font.title)
                             .foregroundColor(AppColors.textPrimary)
                         Text(game.title ?? "Current game")
-                            .font(.system(size: 13, weight: .medium))
+                            .font(SubpageUI.Font.subtitle)
                             .foregroundColor(AppColors.textMuted)
                             .lineLimit(1)
                     }
@@ -2614,6 +2722,10 @@ struct GamePlayView: View {
                         triggerHaptic(.medium)
                         viewModel.quickLoad()
                     }
+                }
+
+                pauseActionButton(title: "Restart Game", icon: "arrow.counterclockwise") {
+                    restartGameFromPause()
                 }
 
                 HStack(spacing: 10) {
@@ -2712,16 +2824,7 @@ struct GamePlayView: View {
             }
             .padding(16)
             .frame(maxWidth: 720)
-            .background(
-                RoundedRectangle(cornerRadius: 22, style: .continuous)
-                    .fill(AppColors.surface.opacity(0.95))
-                    .overlay(.ultraThinMaterial.opacity(0.12))
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 22, style: .continuous)
-                    .stroke(AppColors.surfaceLight.opacity(0.8), lineWidth: 1)
-            )
-            .shadow(color: AppColors.primary.opacity(0.10), radius: 22, x: 0, y: 10)
+            .subpagePopup(cornerRadius: 22)
             .padding(.horizontal, 16)
         }
     }
@@ -2734,10 +2837,10 @@ struct GamePlayView: View {
             VStack(alignment: .leading, spacing: 16) {
                 VStack(alignment: .leading, spacing: 6) {
                     Text("Resume From Save State?")
-                        .font(.system(size: 22, weight: .bold))
+                        .font(SubpageUI.Font.title)
                         .foregroundColor(AppColors.textPrimary)
                     Text("Choose a save to continue, or start fresh.")
-                        .font(.system(size: 14))
+                        .font(SubpageUI.Font.body)
                         .foregroundColor(AppColors.textMuted)
                 }
 
@@ -2768,16 +2871,7 @@ struct GamePlayView: View {
             }
             .padding(18)
             .frame(maxWidth: 620)
-            .background(
-                RoundedRectangle(cornerRadius: 24, style: .continuous)
-                    .fill(AppColors.surface.opacity(0.96))
-                    .overlay(.ultraThinMaterial.opacity(0.10))
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 24, style: .continuous)
-                    .stroke(AppColors.surfaceLight.opacity(0.7), lineWidth: 1)
-            )
-            .shadow(color: AppColors.primary.opacity(0.08), radius: 18, x: 0, y: 8)
+            .subpagePopup(cornerRadius: 24)
             .padding(.horizontal, 18)
         }
     }
@@ -2793,10 +2887,10 @@ struct GamePlayView: View {
                     .font(.system(size: 24, weight: .semibold))
                     .foregroundColor(AppColors.warning)
                 Text("Unable to Start Game")
-                    .font(.system(size: 20, weight: .bold))
+                    .font(SubpageUI.Font.title)
                     .foregroundColor(AppColors.textPrimary)
                 Text(viewModel.statusMessage)
-                    .font(.system(size: 14))
+                    .font(SubpageUI.Font.body)
                     .foregroundColor(AppColors.textMuted)
                     .multilineTextAlignment(.center)
                     .lineLimit(3)
@@ -2805,18 +2899,7 @@ struct GamePlayView: View {
                     pauseActionButton(title: "Retry", icon: "arrow.clockwise", style: .primary) {
                         startTask?.cancel()
                         startTask = nil
-                        if let romPath = game.romPath, let platform = game.gamePlatform {
-                            viewModel.startEmulation(
-                                romPath: romPath,
-                                platform: platform,
-                                gameTitle: game.title,
-                                romHash: game.romPath.map { URL(fileURLWithPath: $0).deletingPathExtension().lastPathComponent }
-                            )
-                            if viewModel.isRunning, viewModel.hasSavedStatesForCurrentGame() {
-                                saveSlotSummaries = viewModel.saveSlotSummaries().filter { !$0.isEmpty }
-                                handleLaunchResumeFlowIfNeeded()
-                            }
-                        }
+                        launchGame(allowResumeFlow: true)
                     }
                     pauseActionButton(title: "Back", icon: "xmark") {
                         onExit()
@@ -2825,16 +2908,7 @@ struct GamePlayView: View {
             }
             .padding(20)
             .frame(maxWidth: 420)
-            .background(
-                RoundedRectangle(cornerRadius: 22, style: .continuous)
-                    .fill(AppColors.surface.opacity(0.96))
-                    .overlay(.ultraThinMaterial.opacity(0.08))
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 22, style: .continuous)
-                    .stroke(AppColors.surfaceLight.opacity(0.7), lineWidth: 1)
-            )
-            .shadow(color: AppColors.primary.opacity(0.10), radius: 16, x: 0, y: 8)
+            .subpagePopup(cornerRadius: 22)
             .padding(.horizontal, 18)
         }
     }

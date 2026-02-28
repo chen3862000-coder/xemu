@@ -73,6 +73,9 @@ struct GameListView: View {
             GamePlayView(game: game, onExit: {
                 selectedGame = nil
             })
+            .swipeBack {
+                selectedGame = nil
+            }
         }
         #else
         .sheet(item: $selectedGame) { game in
@@ -131,10 +134,10 @@ struct GameListView: View {
 
                 VStack(alignment: .leading, spacing: 1) {
                     Text(platformDisplay.displayName)
-                        .font(.system(size: 22, weight: .bold))
+                        .font(SubpageUI.Font.title)
                         .foregroundColor(AppColors.textPrimary)
                     Text("\(viewModel.filteredGames(searchText: searchText).count) games available")
-                        .font(.system(size: 13, weight: .medium))
+                        .font(SubpageUI.Font.subtitle)
                         .foregroundColor(AppColors.primary)
                 }
 
@@ -165,14 +168,7 @@ struct GameListView: View {
 #endif
                         .foregroundColor(AppColors.textPrimary)
                 }
-                .padding(.horizontal, 12)
-                .frame(height: 38)
-                .background(AppColors.surfaceLight.opacity(0.45))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 19)
-                        .stroke(AppColors.surfaceLight.opacity(0.7), lineWidth: 1)
-                )
-                .clipShape(RoundedRectangle(cornerRadius: 19))
+                .subpageSearchField(cornerRadius: 19, height: 38)
 
                 Menu {
                     Button("Recent") {}
@@ -319,13 +315,7 @@ struct GameListView: View {
                 )
             }
             .padding(14)
-            .background(AppColors.surface)
-            .overlay(
-                RoundedRectangle(cornerRadius: 16)
-                    .stroke(AppColors.surfaceLight.opacity(0.45), lineWidth: 1)
-            )
-            .shadow(color: AppColors.primary.opacity(0.05), radius: 10, x: 0, y: 6)
-            .clipShape(RoundedRectangle(cornerRadius: 16))
+            .subpageCard(cornerRadius: 16, shadowOpacity: 0.05)
         }
     }
 
@@ -495,12 +485,7 @@ struct GameListView: View {
                 }
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 28)
-                .background(AppColors.surface)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 16)
-                        .stroke(AppColors.surfaceLight.opacity(0.5), lineWidth: 1)
-                )
-                .clipShape(RoundedRectangle(cornerRadius: 16))
+                .subpageCard(cornerRadius: 16, shadowOpacity: 0.04)
             } else {
                 LazyVStack(spacing: 10) {
                     ForEach(games) { game in
@@ -527,17 +512,7 @@ struct GameListView: View {
     }
 
     private func sectionHeader(_ title: String, trailing: String?) -> some View {
-        HStack {
-            Text(title)
-                .font(.system(size: 16, weight: .semibold))
-                .foregroundColor(AppColors.textPrimary)
-            Spacer()
-            if let trailing {
-                Text(trailing)
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundColor(AppColors.primary)
-            }
-        }
+        SubpageSectionHeader(title, trailing: trailing)
     }
 
     private func recentSubtitle(for game: Game) -> String {
@@ -1045,9 +1020,51 @@ struct GameCardRow: View {
     }
 
     private var placeholderGlyph: some View {
-        Image(systemName: "gamecontroller.fill")
-            .font(.system(size: 22))
-            .foregroundColor(AppColors.textMuted)
+        ZStack {
+            // Console-based background
+            RoundedRectangle(cornerRadius: 14)
+                .fill(consolePlaceholderColor)
+            
+            // Subtle pattern
+            consolePlaceholderPattern
+                .opacity(0.08)
+            
+            // Monogram letter
+            Text(String(game.title?.prefix(1) ?? "?").uppercased())
+                .font(.system(size: 48, weight: .heavy))
+                .foregroundColor(.white.opacity(0.22))
+            
+            // Inner border
+            RoundedRectangle(cornerRadius: 14)
+                .strokeBorder(.white.opacity(0.12), lineWidth: 1)
+        }
+    }
+    
+    private var consolePlaceholderColor: some ShapeStyle {
+        switch game.emulatorPlatform {
+        case .gameBoy, .gameBoyColor:
+            return Color(hue: 0.45, saturation: 0.18, brightness: 0.88)  // Mint/teal
+        case .gameBoyAdvance:
+            return Color(hue: 0.72, saturation: 0.25, brightness: 0.75)  // Purple-blue
+        case .nintendoDS:
+            return Color(hue: 0.58, saturation: 0.12, brightness: 0.82)  // Gray-blue
+        default:
+            return Color(hue: 0.75, saturation: 0.20, brightness: 0.80)  // Soft purple
+        }
+    }
+    
+    @ViewBuilder
+    private var consolePlaceholderPattern: some View {
+        switch game.emulatorPlatform {
+        case .gameBoy, .gameBoyColor:
+            PixelGridPattern()
+        case .gameBoyAdvance:
+            DiagonalPattern()
+        case .nintendoDS:
+            RectangleOutlinePattern()
+        default:
+            EmptyView()
+        }
     }
     
     private func formatPlayTime(_ seconds: Int) -> String {
