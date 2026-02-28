@@ -397,7 +397,7 @@ struct RecentGameCard: View {
                     .font(.system(size: 11, weight: .bold))
                     .padding(.horizontal, 10)
                     .padding(.vertical, 6)
-                    .background(AppColors.primary.opacity(0.92))
+                    .background(AppColors.primary.opacity(0.76))
                     .foregroundColor(.white)
                     .clipShape(Capsule())
                     .padding(8)
@@ -439,7 +439,29 @@ struct RecentGameCard: View {
                                 .foregroundColor(AppColors.textMuted)
                         }
                     }
-                    .foregroundColor(AppColors.primary)
+                    .foregroundColor(AppColors.textSecondary)
+
+                    VStack(alignment: .leading, spacing: 4) {
+                        HStack(spacing: 6) {
+                            Text("Session")
+                                .font(.system(size: 10, weight: .medium))
+                                .foregroundColor(AppColors.textMuted)
+                            Text(sessionDescriptor)
+                                .font(.system(size: 10, weight: .semibold))
+                                .foregroundColor(AppColors.textSecondary)
+                        }
+
+                        GeometryReader { geo in
+                            ZStack(alignment: .leading) {
+                                Capsule()
+                                    .fill(AppColors.surfaceLight.opacity(0.65))
+                                Capsule()
+                                    .fill(AppColors.primary.opacity(0.75))
+                                    .frame(width: max(8, geo.size.width * sessionProgress))
+                            }
+                        }
+                        .frame(height: 6)
+                    }
                 }
                 .padding(.horizontal, 14)
                 .padding(.vertical, 13)
@@ -527,6 +549,19 @@ struct RecentGameCard: View {
     private var totalHoursText: String {
         let hours = max(0, game.totalPlaySeconds / 3600)
         return "\(hours)h"
+    }
+
+    private var sessionDescriptor: String {
+        if game.totalPlaySeconds <= 0 { return "New" }
+        if game.totalPlaySeconds < 1800 { return "Early run" }
+        if game.totalPlaySeconds < 7200 { return "In progress" }
+        return "Veteran"
+    }
+
+    private var sessionProgress: CGFloat {
+        guard game.totalPlaySeconds > 0 else { return 0.08 }
+        let capped = min(1.0, CGFloat(game.totalPlaySeconds) / CGFloat(4 * 3600))
+        return max(0.08, capped)
     }
 }
 

@@ -99,6 +99,9 @@ void xemu_gb_set_input(xemu_gb_handle_t handle, uint32_t buttons);
 size_t xemu_gb_get_save_state_size(xemu_gb_handle_t handle);
 xemu_error_t xemu_gb_save_state(xemu_gb_handle_t handle, xemu_save_state_t* state);
 xemu_error_t xemu_gb_load_state(xemu_gb_handle_t handle, const xemu_save_state_t* state);
+size_t xemu_gb_get_battery_save_size(xemu_gb_handle_t handle);
+xemu_error_t xemu_gb_save_battery(xemu_gb_handle_t handle, xemu_save_state_t* battery);
+xemu_error_t xemu_gb_load_battery(xemu_gb_handle_t handle, const xemu_save_state_t* battery);
 
 /* System type detection */
 int xemu_gb_is_cgb_mode(xemu_gb_handle_t handle);
@@ -136,6 +139,9 @@ void xemu_gba_set_input(xemu_gba_handle_t handle, uint32_t buttons);
 size_t xemu_gba_get_save_state_size(xemu_gba_handle_t handle);
 xemu_error_t xemu_gba_save_state(xemu_gba_handle_t handle, xemu_save_state_t* state);
 xemu_error_t xemu_gba_load_state(xemu_gba_handle_t handle, const xemu_save_state_t* state);
+size_t xemu_gba_get_battery_save_size(xemu_gba_handle_t handle);
+xemu_error_t xemu_gba_save_battery(xemu_gba_handle_t handle, xemu_save_state_t* battery);
+xemu_error_t xemu_gba_load_battery(xemu_gba_handle_t handle, const xemu_save_state_t* battery);
 
 /* ============================================================================
  * Nintendo DS API (skeleton)

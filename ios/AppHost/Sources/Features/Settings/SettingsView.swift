@@ -95,7 +95,7 @@ struct SettingsView: View {
             }
 
             VStack(spacing: 4) {
-                Text("XEmu")
+                Text("RetroMind")
                     .font(.system(size: 22, weight: .semibold, design: .rounded))
                     .tracking(0.2)
                     .foregroundColor(AppColors.textPrimary)

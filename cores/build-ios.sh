@@ -6,8 +6,8 @@ cd "$SCRIPT_DIR"
 
 echo "Building Xemu Cores Library for iOS..."
 
-ENABLE_NDS_LIBRETRO_BACKEND="${ENABLE_NDS_LIBRETRO_BACKEND:-OFF}"
-ENABLE_NDS_MELONDS_LIBRETRO_SYMBOLS="${ENABLE_NDS_MELONDS_LIBRETRO_SYMBOLS:-OFF}"
+ENABLE_NDS_LIBRETRO_BACKEND="${ENABLE_NDS_LIBRETRO_BACKEND:-ON}"
+ENABLE_NDS_MELONDS_LIBRETRO_SYMBOLS="${ENABLE_NDS_MELONDS_LIBRETRO_SYMBOLS:-ON}"
 NDS_MELONDS_LIBRETRO_STATIC_LIB="${NDS_MELONDS_LIBRETRO_STATIC_LIB:-}"
 NDS_MELONDS_LIBRETRO_STATIC_LIB_DEVICE="${NDS_MELONDS_LIBRETRO_STATIC_LIB_DEVICE:-}"
 NDS_MELONDS_LIBRETRO_STATIC_LIB_SIM="${NDS_MELONDS_LIBRETRO_STATIC_LIB_SIM:-}"
@@ -16,6 +16,26 @@ NDS_MELONDS_LIBRETRO_STATIC_LIB_SIM="${NDS_MELONDS_LIBRETRO_STATIC_LIB_SIM:-}"
 if [ -n "$NDS_MELONDS_LIBRETRO_STATIC_LIB" ]; then
   [ -z "$NDS_MELONDS_LIBRETRO_STATIC_LIB_DEVICE" ] && NDS_MELONDS_LIBRETRO_STATIC_LIB_DEVICE="$NDS_MELONDS_LIBRETRO_STATIC_LIB"
   [ -z "$NDS_MELONDS_LIBRETRO_STATIC_LIB_SIM" ] && NDS_MELONDS_LIBRETRO_STATIC_LIB_SIM="$NDS_MELONDS_LIBRETRO_STATIC_LIB"
+fi
+
+# Auto-discover melonDS libretro archives for a safe default build.
+if [ -z "$NDS_MELONDS_LIBRETRO_STATIC_LIB_DEVICE" ]; then
+  AUTO_DEVICE_LIB="$SCRIPT_DIR/third_party/melonds-ds/build-xemu-ios-device/src/libretro/libmelondsds_libretro_xemu_bundle.a"
+  [ -f "$AUTO_DEVICE_LIB" ] && NDS_MELONDS_LIBRETRO_STATIC_LIB_DEVICE="$AUTO_DEVICE_LIB"
+fi
+if [ -z "$NDS_MELONDS_LIBRETRO_STATIC_LIB_SIM" ]; then
+  AUTO_SIM_LIB="$SCRIPT_DIR/third_party/melonds-ds/build-xemu-ios-sim/src/libretro/libmelondsds_libretro_xemu_bundle.a"
+  [ -f "$AUTO_SIM_LIB" ] && NDS_MELONDS_LIBRETRO_STATIC_LIB_SIM="$AUTO_SIM_LIB"
+fi
+
+# If we cannot bind melonDS symbols, disable symbol mode explicitly to avoid
+# a false "enabled" state that results in runtime NDS load failures.
+if [ "$ENABLE_NDS_MELONDS_LIBRETRO_SYMBOLS" = "ON" ]; then
+  if [ -z "$NDS_MELONDS_LIBRETRO_STATIC_LIB_DEVICE" ] || [ -z "$NDS_MELONDS_LIBRETRO_STATIC_LIB_SIM" ]; then
+    echo "Warning: melonDS static archives were not found for both device/simulator."
+    echo "         NDS symbol binding is being disabled for this build."
+    ENABLE_NDS_MELONDS_LIBRETRO_SYMBOLS="OFF"
+  fi
 fi
 
 echo "NDS libretro backend: $ENABLE_NDS_LIBRETRO_BACKEND"

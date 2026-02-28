@@ -25,7 +25,7 @@ struct Header: View {
                     }
 
                     VStack(alignment: .leading, spacing: 0) {
-                        Text("XEmu")
+                        Text("RetroMind")
                             .font(.system(size: 20, weight: .bold))
                             .foregroundColor(AppColors.primary)
 

@@ -93,3 +93,19 @@ bool xemu_mgba_core_save_state(struct mCore* core, void* state) {
 bool xemu_mgba_core_load_state(struct mCore* core, const void* state) {
     return core && state && core->loadState && core->loadState(core, state);
 }
+
+size_t xemu_mgba_core_savedata_clone(struct mCore* core, void** out_savedata) {
+    if (!out_savedata) {
+        return 0;
+    }
+    *out_savedata = 0;
+    if (core && core->savedataClone) {
+        return core->savedataClone(core, out_savedata);
+    }
+    return 0;
+}
+
+bool xemu_mgba_core_savedata_restore(struct mCore* core, const void* savedata, size_t size, bool writeback) {
+    return core && savedata && size > 0 && core->savedataRestore &&
+           core->savedataRestore(core, savedata, size, writeback);
+}

@@ -287,6 +287,44 @@ public:
 #endif
     }
 
+    bool saveBattery(uint8_t* buffer, size_t size) {
+        if (!romLoaded_ || !buffer) return false;
+#ifdef XEMU_USE_REAL_CORES
+        if (!gambatte_) return false;
+        const unsigned needed = gambatte_->savedata_size();
+        if (needed == 0 || size < needed) return false;
+        const void* src = gambatte_->savedata_ptr();
+        if (!src) return false;
+        std::memcpy(buffer, src, needed);
+        return true;
+#else
+        return false;
+#endif
+    }
+
+    bool loadBattery(const uint8_t* buffer, size_t size) {
+        if (!romLoaded_ || !buffer) return false;
+#ifdef XEMU_USE_REAL_CORES
+        if (!gambatte_) return false;
+        const unsigned needed = gambatte_->savedata_size();
+        if (needed == 0 || size < needed) return false;
+        void* dst = gambatte_->savedata_ptr();
+        if (!dst) return false;
+        std::memcpy(dst, buffer, needed);
+        return true;
+#else
+        return false;
+#endif
+    }
+
+    size_t getBatterySaveSize() const {
+#ifdef XEMU_USE_REAL_CORES
+        return gambatte_ ? gambatte_->savedata_size() : 0;
+#else
+        return 0;
+#endif
+    }
+
     bool isCGBMode() const {
 #ifdef XEMU_USE_REAL_CORES
         return gambatte_ ? gambatte_->isCgb() : false;
@@ -339,6 +377,9 @@ void GambatteWrapper::setInput(uint32_t buttons) { impl_->setInput(buttons); }
 bool GambatteWrapper::saveState(uint8_t* buffer, size_t size) { return impl_->saveState(buffer, size); }
 bool GambatteWrapper::loadState(const uint8_t* buffer, size_t size) { return impl_->loadState(buffer, size); }
 size_t GambatteWrapper::getSaveStateSize() const { return impl_->getSaveStateSize(); }
+bool GambatteWrapper::saveBattery(uint8_t* buffer, size_t size) { return impl_->saveBattery(buffer, size); }
+bool GambatteWrapper::loadBattery(const uint8_t* buffer, size_t size) { return impl_->loadBattery(buffer, size); }
+size_t GambatteWrapper::getBatterySaveSize() const { return impl_->getBatterySaveSize(); }
 bool GambatteWrapper::isCGBMode() const { return impl_->isCGBMode(); }
 const char* GambatteWrapper::getROMTitle() const { return impl_->getROMTitle(); }
 

@@ -7,6 +7,11 @@ import UIKit
 #endif
 
 struct GamePlayView: View {
+    private enum HapticStyle {
+        case light
+        case medium
+    }
+
     let game: Game
     let onExit: () -> Void
     
@@ -2395,14 +2400,126 @@ struct GamePlayView: View {
             if let renderer = viewModel.renderer {
                 MetalView(metalRenderer: renderer, tick: viewModel.tick)
             } else {
-                Rectangle()
-                    .fill(Color.gray)
-                    .overlay(
-                        Text("Emulator Display\n(Core: \(viewModel.statusMessage.isEmpty ? "Ready" : viewModel.statusMessage))")
-                            .foregroundColor(.white)
-                            .multilineTextAlignment(.center)
-                    )
+                retroMindPlaceholderView
             }
+        }
+    }
+
+    private var retroMindPlaceholderView: some View {
+        TimelineView(.animation(minimumInterval: 1.0 / 30.0, paused: false)) { timeline in
+            let time = timeline.date.timeIntervalSinceReferenceDate
+            let pulse = 0.5 + 0.5 * sin(time * 1.8)
+            let pulseSecondary = 0.5 + 0.5 * sin(time * 2.4 + 1.1)
+
+            ZStack {
+                LinearGradient(
+                    colors: [
+                        Color(red: 0.03, green: 0.04, blue: 0.09),
+                        Color(red: 0.06, green: 0.03, blue: 0.12),
+                        Color(red: 0.02, green: 0.09, blue: 0.14)
+                    ],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+
+                Rectangle()
+                    .fill(
+                        LinearGradient(
+                            colors: [
+                                Color.white.opacity(0.06),
+                                .clear,
+                                Color.white.opacity(0.04),
+                                .clear
+                            ],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
+                    )
+                    .mask(
+                        VStack(spacing: 4) {
+                            ForEach(0..<72, id: \.self) { _ in
+                                Rectangle()
+                                    .frame(height: 1)
+                            }
+                        }
+                    )
+                    .opacity(0.10)
+
+                RoundedRectangle(cornerRadius: 38, style: .continuous)
+                    .stroke(Color.purple.opacity(0.26 + pulse * 0.22), lineWidth: 1.2)
+                    .blur(radius: 0.3)
+                    .padding(12)
+
+                Circle()
+                    .fill(Color.purple.opacity(0.16 + pulseSecondary * 0.08))
+                    .blur(radius: 36)
+                    .scaleEffect(0.72 + pulseSecondary * 0.18)
+
+                VStack(spacing: 12) {
+                    Image(systemName: "sparkles.rectangle.stack.fill")
+                        .font(.system(size: 32, weight: .semibold))
+                        .foregroundStyle(
+                            LinearGradient(
+                                colors: [.white.opacity(0.9), Color(red: 0.72, green: 0.56, blue: 1.0)],
+                                startPoint: .top,
+                                endPoint: .bottom
+                            )
+                        )
+                    Text("RetroMind")
+                        .font(.system(size: 24, weight: .bold, design: .rounded))
+                        .foregroundColor(.white)
+                    Text(loadingPlatformName.uppercased())
+                        .font(.system(size: 11, weight: .semibold, design: .rounded))
+                        .kerning(1.2)
+                        .foregroundColor(Color.white.opacity(0.72))
+                    Text("Initializing Core")
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundColor(Color.white.opacity(0.82))
+
+                    HStack(spacing: 8) {
+                        ForEach(0..<3, id: \.self) { index in
+                            Circle()
+                                .fill(Color.white.opacity(0.35 + 0.5 * max(0, sin(time * 3.0 - Double(index) * 0.6))))
+                                .frame(width: 6, height: 6)
+                        }
+                    }
+                    .padding(.top, 2)
+
+                    Text(viewModel.statusMessage.isEmpty ? "Core Ready" : viewModel.statusMessage)
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundColor(Color.white.opacity(0.66))
+                        .lineLimit(1)
+                        .padding(.top, 1)
+                }
+                .padding(24)
+                .multilineTextAlignment(.center)
+            }
+            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        }
+    }
+
+    private var loadingPlatformName: String {
+        switch game.gamePlatform {
+        case .GB:
+            return "Game Boy"
+        case .GBC:
+            return "Game Boy Color"
+        case .GBA:
+            return "Game Boy Advance"
+        case .NDS:
+            return "Nintendo DS"
+        case .NES:
+            return "Nintendo Entertainment System"
+        case .GENESIS:
+            return "Genesis"
+        case .PS1:
+            return "PlayStation"
+        case .PS2:
+            return "PlayStation 2"
+        case ._3DS:
+            return "Nintendo 3DS"
+        case .none:
+            return "Emulator"
         }
     }
 
@@ -2482,22 +2599,25 @@ struct GamePlayView: View {
                 }
 
                 pauseActionButton(title: "Resume", icon: "play.fill", style: .primary) {
+                    triggerHaptic(.light)
                     viewModel.resumeEmulation()
                     showPauseMenu = false
                 }
 
                 HStack(spacing: 10) {
                     pauseActionButton(title: "Quick Save", icon: "square.and.arrow.down.fill") {
+                        triggerHaptic(.medium)
                         viewModel.quickSave()
                         saveSlotSummaries = viewModel.saveSlotSummaries()
                     }
                     pauseActionButton(title: "Quick Load", icon: "square.and.arrow.up.fill") {
+                        triggerHaptic(.medium)
                         viewModel.quickLoad()
                     }
                 }
 
                 HStack(spacing: 10) {
-                    pauseActionButton(title: pauseSheetMode == .advanced ? "Back" : "More…", icon: pauseSheetMode == .advanced ? "chevron.left" : "ellipsis.circle") {
+                    pauseActionButton(title: pauseSheetMode == .advanced ? "Back" : "Save States", icon: pauseSheetMode == .advanced ? "chevron.left" : "tray.full.fill") {
                         withAnimation(.easeOut(duration: 0.2)) {
                             if pauseSheetMode == .advanced {
                                 pauseSheetMode = .quick
@@ -2510,6 +2630,7 @@ struct GamePlayView: View {
                     HStack(spacing: 8) {
                         ForEach([1, 2, 3, 6], id: \.self) { speed in
                             Button {
+                                triggerHaptic(.light)
                                 fastForwardSpeed = speed
                                 viewModel.setFastForward(fastForwardSpeed)
                             } label: {
@@ -2744,7 +2865,7 @@ struct GamePlayView: View {
         switch style {
         case .primary: return .white
         case .normal: return AppColors.textPrimary
-        case .destructive: return .white
+        case .destructive: return AppColors.error
         }
     }
 
@@ -2752,7 +2873,7 @@ struct GamePlayView: View {
         switch style {
         case .primary: return AppColors.primary
         case .normal: return AppColors.surfaceLight.opacity(0.55)
-        case .destructive: return AppColors.error.opacity(0.85)
+        case .destructive: return AppColors.error.opacity(0.10)
         }
     }
 
@@ -2760,8 +2881,23 @@ struct GamePlayView: View {
         switch style {
         case .primary: return AppColors.primary.opacity(0.9)
         case .normal: return AppColors.surfaceLight.opacity(0.8)
-        case .destructive: return AppColors.error.opacity(0.9)
+        case .destructive: return AppColors.error.opacity(0.35)
         }
+    }
+
+    private func triggerHaptic(_ style: HapticStyle) {
+        #if canImport(UIKit)
+        let generatorStyle: UIImpactFeedbackGenerator.FeedbackStyle
+        switch style {
+        case .light:
+            generatorStyle = .light
+        case .medium:
+            generatorStyle = .medium
+        }
+        let generator = UIImpactFeedbackGenerator(style: generatorStyle)
+        generator.prepare()
+        generator.impactOccurred()
+        #endif
     }
 
     private enum SaveSlotRowMode {

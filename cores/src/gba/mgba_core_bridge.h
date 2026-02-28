@@ -30,6 +30,8 @@ void xemu_mgba_core_unload_rom(struct mCore* core);
 size_t xemu_mgba_core_state_size(struct mCore* core);
 bool xemu_mgba_core_save_state(struct mCore* core, void* state);
 bool xemu_mgba_core_load_state(struct mCore* core, const void* state);
+size_t xemu_mgba_core_savedata_clone(struct mCore* core, void** out_savedata);
+bool xemu_mgba_core_savedata_restore(struct mCore* core, const void* savedata, size_t size, bool writeback);
 
 #ifdef __cplusplus
 }

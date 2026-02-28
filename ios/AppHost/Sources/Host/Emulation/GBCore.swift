@@ -121,6 +121,23 @@ public final class GBCore: EmulatorCore {
             return false
         }
     }
+
+    public func exportBatterySave() -> Data? {
+        do {
+            return try coreWrapper?.getBatteryData()
+        } catch {
+            return nil
+        }
+    }
+
+    public func importBatterySave(_ data: Data) -> Bool {
+        do {
+            try coreWrapper?.loadBatteryData(data)
+            return true
+        } catch {
+            return false
+        }
+    }
     
     public func setInput(_ inputType: Int, value: Float) {
         inputState[inputType] = value

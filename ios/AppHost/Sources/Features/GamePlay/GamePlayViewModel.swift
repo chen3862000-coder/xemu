@@ -37,7 +37,44 @@ class GamePlayViewModel: ObservableObject {
     private var frameWidth = 160
     private var frameHeight = 144
     private var lastFPSTime: Double = 0
+    private var lastNativeSavePersistTime: Double = 0
     private var isStoppingEmulation = false
+    #if canImport(UIKit)
+    private var lifecycleObservers: [NSObjectProtocol] = []
+    #endif
+
+    init() {
+        #if canImport(UIKit)
+        let center = NotificationCenter.default
+        lifecycleObservers.append(
+            center.addObserver(
+                forName: UIApplication.willResignActiveNotification,
+                object: nil,
+                queue: .main
+            ) { [weak self] _ in
+                self?.persistNativeSaveIfNeeded(force: true)
+            }
+        )
+        lifecycleObservers.append(
+            center.addObserver(
+                forName: UIApplication.didEnterBackgroundNotification,
+                object: nil,
+                queue: .main
+            ) { [weak self] _ in
+                self?.persistNativeSaveIfNeeded(force: true)
+            }
+        )
+        #endif
+    }
+
+    deinit {
+        #if canImport(UIKit)
+        let center = NotificationCenter.default
+        for observer in lifecycleObservers {
+            center.removeObserver(observer)
+        }
+        #endif
+    }
     
     var tick: (() -> Void)? {
         { [weak self] in
@@ -94,6 +131,7 @@ class GamePlayViewModel: ObservableObject {
                 statusMessage = "Failed to load ROM"
                 return
             }
+            restoreNativeSaveIfAvailable(for: core)
 
             emulatorSession = EmulatorSession()
             emulatorSession?.loadCore(core)
@@ -183,6 +221,7 @@ class GamePlayViewModel: ObservableObject {
 
         autoreleasepool {
             persistPlayedTimeIfNeeded()
+            persistNativeSaveIfNeeded(force: true)
             cancelPendingTouchReleases()
             releaseAllTouchButtons()
 
@@ -217,6 +256,7 @@ class GamePlayViewModel: ObservableObject {
         guard !isPaused else { return }
         emulatorSession?.pause()
         audioEngine?.pause()
+        persistNativeSaveIfNeeded(force: true)
         isPaused = true
         statusMessage = "Paused"
     }
@@ -458,6 +498,76 @@ class GamePlayViewModel: ObservableObject {
         return "\(nsError.domain) (\(nsError.code))"
     }
 
+    private func supportsNativeBatterySave(_ platform: Platform?) -> Bool {
+        guard let platform else { return false }
+        return platform == .GB || platform == .GBC || platform == .GBA
+    }
+
+    private func nativeSaveDirectoryURL() -> URL? {
+        guard let documents = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first else {
+            return nil
+        }
+        let dir = documents.appendingPathComponent("NativeSaves", isDirectory: true)
+        do {
+            try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+            return dir
+        } catch {
+            NSLog("[NativeSave] Failed to create NativeSaves directory: %@", error.localizedDescription)
+            return nil
+        }
+    }
+
+    private func nativeSaveURL() -> URL? {
+        guard supportsNativeBatterySave(currentPlatform),
+              !currentROMHash.isEmpty,
+              let platform = currentPlatform,
+              let baseDir = nativeSaveDirectoryURL() else {
+            return nil
+        }
+        let filename = "\(currentROMHash).\(platform.rawValue.lowercased()).sav"
+        return baseDir.appendingPathComponent(filename, isDirectory: false)
+    }
+
+    private func restoreNativeSaveIfAvailable(for core: EmulatorCore) {
+        guard supportsNativeBatterySave(currentPlatform), let url = nativeSaveURL() else { return }
+        guard FileManager.default.fileExists(atPath: url.path) else { return }
+
+        do {
+            let data = try Data(contentsOf: url)
+            guard !data.isEmpty else { return }
+            if core.importBatterySave(data) {
+                NSLog("[NativeSave] Loaded battery save bytes=%d rom=%@", data.count, currentROMHash)
+            } else {
+                NSLog("[NativeSave] Failed to restore battery save rom=%@", currentROMHash)
+            }
+        } catch {
+            NSLog("[NativeSave] Read failed path=%@ error=%@", url.path, error.localizedDescription)
+        }
+    }
+
+    private func persistNativeSaveIfNeeded(force: Bool) {
+        guard supportsNativeBatterySave(currentPlatform),
+              let core = activeCore,
+              let url = nativeSaveURL() else { return }
+
+        let now = CACurrentMediaTime()
+        if !force, now - lastNativeSavePersistTime < 8.0 {
+            return
+        }
+        lastNativeSavePersistTime = now
+
+        guard let data = core.exportBatterySave(), !data.isEmpty else { return }
+
+        do {
+            if let existing = try? Data(contentsOf: url), existing == data {
+                return
+            }
+            try data.write(to: url, options: [.atomic])
+        } catch {
+            NSLog("[NativeSave] Persist failed path=%@ error=%@", url.path, error.localizedDescription)
+        }
+    }
+
     func setNDSScreenLayout(_ layout: NDSScreenLayout) {
         guard let ndsCore = activeCore as? NDSCore else { return }
         guard ndsCore.setScreenLayout(layout) else { return }
@@ -602,6 +712,7 @@ extension GamePlayViewModel: EmulatorRenderDelegate {
                 self.currentFPS = fps
                 lastFPSTime = now
             }
+            persistNativeSaveIfNeeded(force: false)
         }
     }
     

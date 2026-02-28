@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <array>
 #include <cctype>
+#include <cstdlib>
 #include <cstdio>
 #include <cstring>
 
@@ -342,6 +343,46 @@ size_t mGBAWrapper::getSaveStateSize() const {
 
 const char* mGBAWrapper::getROMTitle() const {
     return impl_->romTitle.data();
+}
+
+bool mGBAWrapper::saveBattery(uint8_t* buffer, size_t size) {
+    if (!impl_->core || !impl_->romLoaded || !buffer) {
+        return false;
+    }
+
+    void* savedata = nullptr;
+    const size_t savedataSize = xemu_mgba_core_savedata_clone(impl_->core, &savedata);
+    if (savedataSize == 0 || !savedata || size < savedataSize) {
+        if (savedata) {
+            std::free(savedata);
+        }
+        return false;
+    }
+
+    std::memcpy(buffer, savedata, savedataSize);
+    std::free(savedata);
+    return true;
+}
+
+bool mGBAWrapper::loadBattery(const uint8_t* buffer, size_t size) {
+    if (!impl_->core || !impl_->romLoaded || !buffer || size == 0) {
+        return false;
+    }
+
+    return xemu_mgba_core_savedata_restore(impl_->core, buffer, size, true);
+}
+
+size_t mGBAWrapper::getBatterySaveSize() const {
+    if (!impl_->core || !impl_->romLoaded) {
+        return 0;
+    }
+
+    void* savedata = nullptr;
+    const size_t savedataSize = xemu_mgba_core_savedata_clone(impl_->core, &savedata);
+    if (savedata) {
+        std::free(savedata);
+    }
+    return savedataSize;
 }
 
 } // namespace xemu

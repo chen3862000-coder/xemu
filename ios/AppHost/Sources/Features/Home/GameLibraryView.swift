@@ -5,11 +5,36 @@ import UIKit
 #endif
 
 struct GameLibraryView: View {
+    private enum LibrarySortOption: String, CaseIterable, Identifiable {
+        case recent = "Recent"
+        case alphabetical = "A-Z"
+        case mostPlayed = "Most Played"
+
+        var id: String { rawValue }
+    }
+
+    private enum LibrarySystemFilter: String, CaseIterable, Identifiable {
+        case all = "All"
+        case gbc = "GB/GBC"
+        case gba = "GBA"
+        case nds = "NDS"
+
+        var id: String { rawValue }
+    }
+
+    private enum LibraryViewMode: String {
+        case grid
+        case list
+    }
+
     @Environment(\.managedObjectContext) private var viewContext
     @Environment(\.dismiss) private var dismiss
     @State private var games: [ROMLibraryEntry] = []
     @State private var selectedGame: Game?
     @State private var searchText = ""
+    @State private var selectedSort: LibrarySortOption = .recent
+    @State private var selectedSystemFilter: LibrarySystemFilter = .all
+    @State private var viewMode: LibraryViewMode = .grid
     @State private var activeAlert: LibraryAlertState?
     
     var body: some View {
@@ -24,7 +49,11 @@ struct GameLibraryView: View {
                         if filteredGames.isEmpty {
                             emptyState
                         } else {
-                            gamesGrid
+                            if viewMode == .grid {
+                                gamesGrid
+                            } else {
+                                gamesList
+                            }
                         }
                     }
                     .padding(.horizontal, 16)
@@ -77,12 +106,42 @@ struct GameLibraryView: View {
     }
 
     private var filteredGames: [ROMLibraryEntry] {
-        guard !searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-            return games
+        let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        let filteredBySystem = games.filter { entry in
+            guard selectedSystemFilter != .all else { return true }
+            let system = (entry.system ?? "").uppercased()
+            switch selectedSystemFilter {
+            case .all:
+                return true
+            case .gbc:
+                return system == "GB" || system == "GBC" || system == "GB/GBC"
+            case .gba:
+                return system == "GBA"
+            case .nds:
+                return system == "NDS"
+            }
         }
-        return games.filter { entry in
-            (entry.title ?? "").localizedCaseInsensitiveContains(searchText) ||
-            (entry.system ?? "").localizedCaseInsensitiveContains(searchText)
+
+        let filteredBySearch = filteredBySystem.filter { entry in
+            guard !query.isEmpty else { return true }
+            return (entry.title ?? "").localizedCaseInsensitiveContains(query) ||
+            (entry.system ?? "").localizedCaseInsensitiveContains(query)
+        }
+
+        switch selectedSort {
+        case .recent:
+            return filteredBySearch.sorted(by: { lhs, rhs in
+                let leftDate = lhs.lastPlayedAt ?? lhs.dateAdded ?? Date.distantPast
+                let rightDate = rhs.lastPlayedAt ?? rhs.dateAdded ?? Date.distantPast
+                return leftDate > rightDate
+            })
+        case .alphabetical:
+            return filteredBySearch.sorted(by: {
+                ($0.title ?? "").localizedCaseInsensitiveCompare($1.title ?? "") == .orderedAscending
+            })
+        case .mostPlayed:
+            return filteredBySearch.sorted(by: { $0.playtimeTotal > $1.playtimeTotal })
         }
     }
 
@@ -139,14 +198,28 @@ struct GameLibraryView: View {
 
                 Spacer()
 
-                Button(action: {}) {
-                    Image(systemName: "magnifyingglass")
+                Menu {
+                    ForEach(LibrarySortOption.allCases) { option in
+                        Button {
+                            selectedSort = option
+                        } label: {
+                            HStack {
+                                Text(option.rawValue)
+                                if selectedSort == option {
+                                    Image(systemName: "checkmark")
+                                }
+                            }
+                        }
+                    }
+                } label: {
+                    Image(systemName: "line.3.horizontal.decrease")
                         .font(.system(size: 14, weight: .medium))
                         .foregroundColor(AppColors.textPrimary)
                         .frame(width: 36, height: 36)
                         .background(AppColors.surfaceLight.opacity(0.5))
                         .clipShape(Circle())
                 }
+                .buttonStyle(.plain)
             }
 
             HStack(spacing: 8) {
@@ -169,6 +242,98 @@ struct GameLibraryView: View {
                     .stroke(AppColors.surfaceLight.opacity(0.7), lineWidth: 1)
             )
             .clipShape(RoundedRectangle(cornerRadius: 19))
+
+            HStack(spacing: 8) {
+                Menu {
+                    ForEach(LibrarySortOption.allCases) { option in
+                        Button {
+                            selectedSort = option
+                        } label: {
+                            HStack {
+                                Text(option.rawValue)
+                                if selectedSort == option {
+                                    Image(systemName: "checkmark")
+                                }
+                            }
+                        }
+                    }
+                } label: {
+                    HStack(spacing: 5) {
+                        Image(systemName: "arrow.up.arrow.down")
+                            .font(.system(size: 12, weight: .semibold))
+                        Text(selectedSort.rawValue)
+                            .font(.system(size: 12, weight: .semibold))
+                    }
+                    .foregroundColor(AppColors.textPrimary)
+                    .padding(.horizontal, 11)
+                    .frame(height: 34)
+                    .background(AppColors.surfaceLight.opacity(0.55))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 17)
+                            .stroke(AppColors.surfaceLight.opacity(0.85), lineWidth: 1)
+                    )
+                    .clipShape(Capsule())
+                }
+                .buttonStyle(.plain)
+
+                Spacer()
+
+                HStack(spacing: 0) {
+                    Button {
+                        withAnimation(.easeOut(duration: 0.18)) {
+                            viewMode = .grid
+                        }
+                    } label: {
+                        Image(systemName: "square.grid.2x2")
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundColor(viewMode == .grid ? .white : AppColors.textMuted)
+                            .frame(width: 34, height: 30)
+                            .background(viewMode == .grid ? AppColors.primary : Color.clear)
+                    }
+                    .buttonStyle(.plain)
+
+                    Button {
+                        withAnimation(.easeOut(duration: 0.18)) {
+                            viewMode = .list
+                        }
+                    } label: {
+                        Image(systemName: "list.bullet")
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundColor(viewMode == .list ? .white : AppColors.textMuted)
+                            .frame(width: 34, height: 30)
+                            .background(viewMode == .list ? AppColors.primary : Color.clear)
+                    }
+                    .buttonStyle(.plain)
+                }
+                .background(AppColors.surfaceLight.opacity(0.55))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 15)
+                        .stroke(AppColors.surfaceLight.opacity(0.85), lineWidth: 1)
+                )
+                .clipShape(RoundedRectangle(cornerRadius: 15))
+            }
+
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 8) {
+                    ForEach(LibrarySystemFilter.allCases) { filter in
+                        Button {
+                            withAnimation(.easeOut(duration: 0.18)) {
+                                selectedSystemFilter = filter
+                            }
+                        } label: {
+                            Text(filter.rawValue)
+                                .font(.system(size: 12, weight: .semibold))
+                                .foregroundColor(selectedSystemFilter == filter ? .white : AppColors.textSecondary)
+                                .padding(.horizontal, 12)
+                                .frame(height: 30)
+                                .background(selectedSystemFilter == filter ? AppColors.primary : AppColors.surfaceLight.opacity(0.5))
+                                .clipShape(Capsule())
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+                .padding(.horizontal, 1)
+            }
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
@@ -193,6 +358,30 @@ struct GameLibraryView: View {
                 AllGamesCard(entry: entry) {
                     launchGame(entry)
                 }
+                .buttonStyle(PressScaleButtonStyle())
+                .contextMenu {
+                    Button(role: .destructive) {
+                        activeAlert = LibraryAlertState(kind: .confirmDelete(LibraryDeleteCandidate(entry: entry, mode: .removeROMOnly)))
+                    } label: {
+                        Label("Remove ROM Only", systemImage: "eject")
+                    }
+                    Button(role: .destructive) {
+                        activeAlert = LibraryAlertState(kind: .confirmDelete(LibraryDeleteCandidate(entry: entry, mode: .removeAll)))
+                    } label: {
+                        Label("Remove", systemImage: "trash")
+                    }
+                }
+            }
+        }
+    }
+
+    private var gamesList: some View {
+        LazyVStack(spacing: 10) {
+            ForEach(filteredGames) { entry in
+                AllGamesListRow(entry: entry) {
+                    launchGame(entry)
+                }
+                .buttonStyle(PressScaleButtonStyle())
                 .contextMenu {
                     Button(role: .destructive) {
                         activeAlert = LibraryAlertState(kind: .confirmDelete(LibraryDeleteCandidate(entry: entry, mode: .removeROMOnly)))
@@ -302,10 +491,10 @@ struct AllGamesCard: View {
 
                         Text((entry.system ?? "UNK").uppercased())
                             .font(.system(size: 11, weight: .bold))
-                            .foregroundColor(.white)
+                            .foregroundColor(.white.opacity(0.95))
                             .padding(.horizontal, 10)
                             .padding(.vertical, 6)
-                            .background(AppColors.primary.opacity(0.9))
+                            .background(AppColors.primary.opacity(0.78))
                             .clipShape(Capsule())
                     }
                     .padding(8)
@@ -411,6 +600,85 @@ struct AllGamesCard: View {
         }
         let hours = minutes / 60
         return "\(hours)h"
+    }
+}
+
+private struct AllGamesListRow: View {
+    let entry: ROMLibraryEntry
+    let onTap: () -> Void
+
+    var body: some View {
+        Button(action: onTap) {
+            HStack(spacing: 10) {
+                RoundedRectangle(cornerRadius: 10)
+                    .fill(AppColors.surfaceLight.opacity(0.5))
+                    .frame(width: 52, height: 52)
+                    .overlay(
+                        Image(systemName: "gamecontroller.fill")
+                            .font(.system(size: 18))
+                            .foregroundColor(AppColors.textMuted)
+                    )
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(entry.title ?? "Unknown Game")
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundColor(AppColors.textPrimary)
+                        .lineLimit(1)
+
+                    HStack(spacing: 6) {
+                        Text((entry.system ?? "UNK").uppercased())
+                            .font(.system(size: 10, weight: .bold))
+                            .foregroundColor(AppColors.primary.opacity(0.88))
+                            .padding(.horizontal, 7)
+                            .padding(.vertical, 4)
+                            .background(AppColors.primary.opacity(0.12))
+                            .clipShape(Capsule())
+
+                        Text(lastPlayedLabel)
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundColor(AppColors.textMuted)
+                    }
+                }
+
+                Spacer()
+
+                if let issue = ROMCompatibilityService.shared.compatibility(for: entry).issue {
+                    Image(systemName: issue.iconName)
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundColor(.orange)
+                }
+
+                Image(systemName: "play.fill")
+                    .font(.system(size: 12, weight: .bold))
+                    .foregroundColor(AppColors.primary)
+                    .frame(width: 28, height: 28)
+                    .background(AppColors.primary.opacity(0.12))
+                    .clipShape(Circle())
+            }
+            .padding(10)
+            .background(AppColors.surface)
+            .overlay(
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke(AppColors.surfaceLight.opacity(0.5), lineWidth: 1)
+            )
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var lastPlayedLabel: String {
+        guard let lastPlayed = entry.lastPlayedAt else { return "Never played" }
+        let formatter = RelativeDateTimeFormatter()
+        formatter.unitsStyle = .short
+        return formatter.localizedString(for: lastPlayed, relativeTo: Date())
+    }
+}
+
+private struct PressScaleButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed ? 0.98 : 1.0)
+            .animation(.easeOut(duration: 0.14), value: configuration.isPressed)
     }
 }
 

@@ -89,6 +89,15 @@ public protocol EmulatorCore: AnyObject {
     /// - Parameter state: Serialized emulator state to restore
     /// - Returns: true if state loaded successfully
     func loadState(_ state: Data) -> Bool
+
+    /// Export native in-game battery save RAM.
+    /// - Returns: Raw battery save payload (.sav-style), or nil when unsupported.
+    func exportBatterySave() -> Data?
+
+    /// Restore native in-game battery save RAM.
+    /// - Parameter data: Raw battery save payload.
+    /// - Returns: true when applied successfully.
+    func importBatterySave(_ data: Data) -> Bool
     
     /// Set input state for the current frame
     /// - Parameter inputType: Type of input (button, axis, etc.)
@@ -113,6 +122,8 @@ extension EmulatorCore {
     public func getAudioSamples() -> Data? { nil }
     public func saveState() -> Data? { nil }
     public func loadState(_ state: Data) -> Bool { false }
+    public func exportBatterySave() -> Data? { nil }
+    public func importBatterySave(_ data: Data) -> Bool { false }
     public func setInput(_ inputType: Int, value: Float) {}
     public func reset() {}
 }
