@@ -49,38 +49,14 @@
 
 // ENABLE flags
 
-#ifndef ENABLE_DEBUGGERS
-/* #undef ENABLE_DEBUGGERS */
-#endif
-
-#ifndef ENABLE_DIRECTORIES
-/* #undef ENABLE_DIRECTORIES */
-#endif
-
-#ifndef ENABLE_GDB_STUB
-/* #undef ENABLE_GDB_STUB */
-#endif
-
 #ifndef ENABLE_SCRIPTING
 /* #undef ENABLE_SCRIPTING */
 #endif
 
-#ifndef ENABLE_VFS
-#define ENABLE_VFS
-#endif
-
-#ifndef ENABLE_VFS_FD
-/* #undef ENABLE_VFS_FD */
-#endif
-
-#ifndef ENABLE_VFS_FILE
-/* #undef ENABLE_VFS_FILE */
-#endif
-
 // USE flags
 
-#ifndef USE_DISCORD_RPC
-/* #undef USE_DISCORD_RPC */
+#ifndef USE_DEBUGGERS
+/* #undef USE_DEBUGGERS */
 #endif
 
 #ifndef USE_EDITLINE
@@ -99,12 +75,8 @@
 /* #undef USE_FFMPEG */
 #endif
 
-#ifndef USE_FREETYPE
-/* #undef USE_FREETYPE */
-#endif
-
-#ifndef USE_JSON_C
-/* #undef USE_JSON_C */
+#ifndef USE_GDB_STUB
+/* #undef USE_GDB_STUB */
 #endif
 
 #ifndef USE_LIBAV
@@ -157,10 +129,6 @@
 /* #undef HAVE_CRC32 */
 #endif
 
-#ifndef HAVE_LOCALE
-/* #undef HAVE_LOCALE */
-#endif
-
 #ifndef HAVE_LOCALTIME_R
 #define HAVE_LOCALTIME_R
 #endif
@@ -175,10 +143,6 @@
 
 #ifndef HAVE_PTHREAD_SETNAME_NP
 #define HAVE_PTHREAD_SETNAME_NP
-#endif
-
-#ifndef HAVE_SNPRINTF_L
-#define HAVE_SNPRINTF_L
 #endif
 
 #ifndef HAVE_STRDUP
