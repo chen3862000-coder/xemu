@@ -1,4 +1,8 @@
 #include "mgba_core_bridge.h"
+#include <stdio.h>
+
+static int g_audio_rate_change_count = 0;
+static int g_audio_lr_mismatch_count = 0;
 
 uintptr_t xemu_mgba_core_init_ptr(struct mCore* core) {
     return core && core->init ? (uintptr_t) core->init : 0;
@@ -14,7 +18,7 @@ void xemu_mgba_core_deinit(struct mCore* core) {
     }
 }
 
-void xemu_mgba_core_set_video_buffer(struct mCore* core, mColor* buffer, size_t stride) {
+void xemu_mgba_core_set_video_buffer(struct mCore* core, color_t* buffer, size_t stride) {
     if (core && core->setVideoBuffer) {
         core->setVideoBuffer(core, buffer, stride);
     }
@@ -26,11 +30,70 @@ void xemu_mgba_core_set_audio_buffer_size(struct mCore* core, size_t samples) {
     }
 }
 
-unsigned xemu_mgba_core_audio_sample_rate(struct mCore* core) {
-    if (core && core->audioSampleRate) {
-        return core->audioSampleRate(core);
+void xemu_mgba_core_set_audio_sample_rate(struct mCore* core, unsigned sample_rate) {
+    if (!core || !core->getAudioChannel || !core->frequency || sample_rate == 0) {
+        return;
     }
-    return 0;
+
+    blip_t* left = core->getAudioChannel(core, 0);
+    blip_t* right = core->getAudioChannel(core, 1);
+    if (!left || !right) {
+        return;
+    }
+    const int32_t freq = core->frequency(core);
+    if (freq <= 0) {
+        return;
+    }
+    blip_set_rates(left, (double)freq, (double)sample_rate);
+    blip_set_rates(right, (double)freq, (double)sample_rate);
+    ++g_audio_rate_change_count;
+    if (g_audio_rate_change_count <= 8 || (g_audio_rate_change_count % 64) == 0) {
+        fprintf(stderr,
+                "[BridgeDiag] audio-rate-config count=%d coreFreq=%d targetRate=%u\n",
+                g_audio_rate_change_count,
+                (int)freq,
+                sample_rate);
+    }
+}
+
+int xemu_mgba_core_audio_samples_avail(struct mCore* core) {
+    if (!core || !core->getAudioChannel) {
+        return 0;
+    }
+    const blip_t* left = core->getAudioChannel(core, 0);
+    if (!left) {
+        return 0;
+    }
+    return blip_samples_avail(left);
+}
+
+int xemu_mgba_core_audio_read_interleaved(struct mCore* core, int16_t* out, int frames) {
+    if (!core || !core->getAudioChannel || !out || frames <= 0) {
+        return 0;
+    }
+    blip_t* left = core->getAudioChannel(core, 0);
+    blip_t* right = core->getAudioChannel(core, 1);
+    if (!left || !right) {
+        return 0;
+    }
+
+    const int producedLeft = blip_read_samples(left, out, frames, 1);
+    const int producedRight = blip_read_samples(right, out + 1, frames, 1);
+    if (producedLeft != producedRight) {
+        ++g_audio_lr_mismatch_count;
+        if (g_audio_lr_mismatch_count <= 10 || (g_audio_lr_mismatch_count % 100) == 0) {
+            fprintf(stderr,
+                    "[BridgeDiag] audio-lr-mismatch count=%d left=%d right=%d req=%d\n",
+                    g_audio_lr_mismatch_count,
+                    producedLeft,
+                    producedRight,
+                    frames);
+        }
+    }
+    if (producedLeft <= 0 || producedRight <= 0) {
+        return 0;
+    }
+    return producedLeft < producedRight ? producedLeft : producedRight;
 }
 
 bool xemu_mgba_core_preload_vf(struct mCore* core, struct VFile* vf) {
@@ -64,13 +127,6 @@ bool xemu_mgba_core_get_pixels(struct mCore* core, const void** buffer, size_t* 
         return true;
     }
     return false;
-}
-
-struct mAudioBuffer* xemu_mgba_core_get_audio_buffer(struct mCore* core) {
-    if (core && core->getAudioBuffer) {
-        return core->getAudioBuffer(core);
-    }
-    return 0;
 }
 
 void xemu_mgba_core_unload_rom(struct mCore* core) {

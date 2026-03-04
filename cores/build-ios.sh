@@ -77,6 +77,7 @@ rm -rf build-ios-device
 mkdir -p build-ios-device
 cd build-ios-device
 cmake .. \
+    -DCMAKE_POLICY_VERSION_MINIMUM=3.5 \
     -DCMAKE_OSX_ARCHITECTURES=arm64 \
     -DCMAKE_OSX_SYSROOT=$IOS_SDK \
     -DCMAKE_OSX_DEPLOYMENT_TARGET=14.0 \
@@ -101,6 +102,7 @@ rm -rf build-ios-sim
 mkdir -p build-ios-sim
 cd build-ios-sim
 cmake .. \
+    -DCMAKE_POLICY_VERSION_MINIMUM=3.5 \
     -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64" \
     -DCMAKE_OSX_SYSROOT=$SIM_SDK \
     -DCMAKE_OSX_DEPLOYMENT_TARGET=14.0 \

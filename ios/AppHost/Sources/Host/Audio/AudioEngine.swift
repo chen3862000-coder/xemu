@@ -19,6 +19,12 @@ public final class AudioEngine {
     private let softLatencyCapFrames: UInt32
     private let preferredScheduleFrames: UInt32
     private let minPartialScheduleFrames: UInt32
+    private var debugUpdateCounter: UInt64 = 0
+    private var debugQueueCapHits: UInt64 = 0
+    private var postLoadSilenceUntil: CFTimeInterval = 0
+    private var postLoadFadeStart: CFTimeInterval = 0
+    private var postLoadFadeUntil: CFTimeInterval = 0
+    private var postLoadSilenceLogCounter: UInt64 = 0
 
     public init(sampleRate: Double = 48_000.0, channels: Int = 2, volume: Float = 1.0) {
         self.sampleRate = sampleRate
@@ -70,18 +76,62 @@ public final class AudioEngine {
 
         queue.async { [weak self] in
             guard let self else { return }
+            let now = CACurrentMediaTime()
 
-            // Accumulate buffers and schedule in larger chunks to smooth timing
-            self.pendingPCM.append(samples)
-            
-            // Schedule when we have accumulated enough frames
-            let minBatchBytes = Int(self.preferredScheduleFrames / 2) * bytesPerFrame
-            if self.pendingPCM.count >= minBatchBytes {
-                if let buffer = self.makePCMBuffer(from: self.pendingPCM, bytesPerFrame: bytesPerFrame) {
-                    self.playBufferOnQueue(buffer)
-                    self.pendingPCM.removeAll(keepingCapacity: true)
+            if now < self.postLoadSilenceUntil {
+                self.postLoadSilenceLogCounter &+= 1
+                if self.postLoadSilenceLogCounter <= 4 || (self.postLoadSilenceLogCounter % 30) == 0 {
+                    NSLog("[AudioEngine] post-load silence drop frames=%u until=%.3f now=%.3f",
+                          frameCount,
+                          self.postLoadSilenceUntil,
+                          now)
                 }
+                return
             }
+
+            var workingSamples = samples
+            if now < self.postLoadFadeUntil {
+                workingSamples = self.applyPostLoadFade(to: samples, atTime: now, bytesPerFrame: bytesPerFrame)
+            }
+
+            // Accumulate incoming PCM and drain in bounded chunks to avoid
+            // dropping whole packets when queue pressure is transient.
+            self.pendingPCM.append(workingSamples)
+            self.drainPendingPCM(bytesPerFrame: bytesPerFrame)
+            self.debugLogQueueStateIfNeeded(bytesPerFrame: bytesPerFrame)
+        }
+    }
+
+    private func drainPendingPCM(bytesPerFrame: Int) {
+        guard bytesPerFrame > 0 else { return }
+        while queuedFrames < maxQueuedFrames {
+            let availableFrames = pendingPCM.count / bytesPerFrame
+            if availableFrames == 0 { return }
+
+            let chunkFrames: Int
+            if availableFrames >= Int(preferredScheduleFrames) {
+                chunkFrames = Int(preferredScheduleFrames)
+            } else if !isPlaying && availableFrames >= Int(minPartialScheduleFrames) {
+                chunkFrames = availableFrames
+            } else if !isPlaying && queuedFrames == 0 {
+                // Kickstart playback with whatever we have.
+                chunkFrames = availableFrames
+            } else {
+                return
+            }
+
+            let chunkBytes = chunkFrames * bytesPerFrame
+            let chunk = pendingPCM.prefix(chunkBytes)
+            pendingPCM.removeFirst(chunkBytes)
+
+            if let buffer = makePCMBuffer(from: Data(chunk), bytesPerFrame: bytesPerFrame) {
+                playBufferOnQueue(buffer)
+            } else {
+                return
+            }
+        }
+        if queuedFrames >= maxQueuedFrames {
+            debugQueueCapHits &+= 1
         }
     }
 
@@ -121,16 +171,6 @@ public final class AudioEngine {
             queuedFrames = 0
             isPlaying = false
             pendingPCM.removeAll(keepingCapacity: true)
-        }
-
-        if queuedFrames > maxQueuedFrames {
-            return
-        }
-
-        // Keep latency bounded: if playback is already comfortably ahead, drop new chunks
-        // rather than extending audible delay.
-        if isPlaying && queuedFrames > softLatencyCapFrames {
-            return
         }
 
         let frames = buffer.frameLength
@@ -177,6 +217,82 @@ public final class AudioEngine {
     
     public func setVolume(_ volume: Float) {
         engine.mainMixerNode.outputVolume = max(0.0, min(1.0, volume))
+    }
+
+    /// Flush queued audio and quarantine output briefly after state restore,
+    /// then fade-in to avoid audible glitches from transient bad core samples.
+    public func quarantineAfterStateLoad(silenceMs: Int = 220, fadeInMs: Int = 120) {
+        queue.async { [weak self] in
+            guard let self else { return }
+            let now = CACurrentMediaTime()
+            self.playerNode.stop()
+            self.playerNode.reset()
+            self.queuedFrames = 0
+            self.pendingPCM.removeAll(keepingCapacity: true)
+            self.isPlaying = false
+
+            let silenceSeconds = max(0.0, Double(silenceMs) / 1000.0)
+            let fadeSeconds = max(0.0, Double(fadeInMs) / 1000.0)
+            self.postLoadSilenceUntil = now + silenceSeconds
+            self.postLoadFadeStart = self.postLoadSilenceUntil
+            self.postLoadFadeUntil = self.postLoadFadeStart + fadeSeconds
+            self.postLoadSilenceLogCounter = 0
+
+            NSLog("[AudioEngine] post-load quarantine silenceMs=%d fadeInMs=%d", silenceMs, fadeInMs)
+        }
+    }
+
+    private func applyPostLoadFade(to samples: Data, atTime now: CFTimeInterval, bytesPerFrame: Int) -> Data {
+        guard bytesPerFrame > 0 else { return samples }
+        let fadeDuration = max(postLoadFadeUntil - postLoadFadeStart, 0.001)
+        let startProgress = max(0.0, min(1.0, (now - postLoadFadeStart) / fadeDuration))
+        if startProgress >= 0.999 {
+            return samples
+        }
+
+        var output = samples
+        let frameCount = max(0, output.count / bytesPerFrame)
+        if frameCount == 0 {
+            return output
+        }
+        let endTime = now + (Double(frameCount) / sampleRate)
+        let endProgress = max(0.0, min(1.0, (min(endTime, postLoadFadeUntil) - postLoadFadeStart) / fadeDuration))
+
+        output.withUnsafeMutableBytes { raw in
+            let pcm = raw.bindMemory(to: Int16.self)
+            guard !pcm.isEmpty else { return }
+
+            let channelsPerFrame = max(1, Int(channels))
+            let frameTotal = pcm.count / channelsPerFrame
+            guard frameTotal > 0 else { return }
+
+            for frame in 0..<frameTotal {
+                let t = frameTotal > 1 ? Double(frame) / Double(frameTotal - 1) : 0.0
+                let gain = Float(startProgress + (endProgress - startProgress) * t)
+                for ch in 0..<channelsPerFrame {
+                    let idx = frame * channelsPerFrame + ch
+                    let scaled = Float(pcm[idx]) * gain
+                    let clipped = max(Float(Int16.min), min(Float(Int16.max), scaled))
+                    pcm[idx] = Int16(clipped.rounded())
+                }
+            }
+        }
+
+        return output
+    }
+
+    private func debugLogQueueStateIfNeeded(bytesPerFrame: Int) {
+        guard UserDefaults.standard.bool(forKey: "dev.audio.debugAB") else { return }
+        debugUpdateCounter &+= 1
+        guard debugUpdateCounter % 120 == 0 else { return }
+        let pendingFrames = pendingPCM.count / max(1, bytesPerFrame)
+        NSLog("[AudioAB] queue updates=%llu queuedFrames=%u pendingFrames=%d maxQueued=%u capHits=%llu isPlaying=%d",
+              debugUpdateCounter,
+              queuedFrames,
+              pendingFrames,
+              maxQueuedFrames,
+              debugQueueCapHits,
+              isPlaying ? 1 : 0)
     }
     
     public func configureAudioSession() {

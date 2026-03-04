@@ -127,7 +127,7 @@ struct GamePlayView: View {
                 .filter({ !$0.isEmpty })
                 .sorted(by: { ($0.metadata?.createdAt ?? .distantPast) > ($1.metadata?.createdAt ?? .distantPast) })
                 .first {
-                viewModel.loadSlotSummary(latest)
+                viewModel.autoResumeLaunchState(latest)
             }
             showLaunchStatePicker = false
         case .startFresh:
@@ -147,8 +147,12 @@ struct GamePlayView: View {
         )
 
         guard viewModel.isRunning else { return }
-        if allowResumeFlow, viewModel.hasSavedStatesForCurrentGame() {
+        if allowResumeFlow {
             saveSlotSummaries = viewModel.saveSlotSummaries().filter { !$0.isEmpty }
+            guard !saveSlotSummaries.isEmpty else {
+                showLaunchStatePicker = false
+                return
+            }
             handleLaunchResumeFlowIfNeeded()
         } else {
             showLaunchStatePicker = false

@@ -38,6 +38,7 @@ class GamePlayViewModel: ObservableObject {
     private var currentGameTitle: String = ""
     private var sessionStartedAt: Date?
     private var lastFrameSnapshot: (data: Data, width: Int, height: Int, bytesPerRow: Int)?
+    private var audioDebugChunkCount: Int = 0
     
     private var frameWidth = 160
     private var frameHeight = 144
@@ -45,6 +46,8 @@ class GamePlayViewModel: ObservableObject {
     private var lastNativeSavePersistTime: Double = 0
     private var adaptiveRenderFrameCounter: Int = 0
     private var isStoppingEmulation = false
+    private var hasAutoResumedStateThisSession = false
+    private var isStateLoadInProgress = false
     #if canImport(UIKit)
     private var lifecycleObservers: [NSObjectProtocol] = []
     #endif
@@ -212,6 +215,8 @@ class GamePlayViewModel: ObservableObject {
             emulatorSession?.start()
             refreshSaveStateDebugLine()
             sessionStartedAt = Date()
+            hasAutoResumedStateThisSession = false
+            isStateLoadInProgress = false
 
             isRunning = true
             isPaused = false
@@ -263,6 +268,8 @@ class GamePlayViewModel: ObservableObject {
             sessionStartedAt = nil
             lastFrameSnapshot = nil
             adaptiveRenderFrameCounter = 0
+            hasAutoResumedStateThisSession = false
+            isStateLoadInProgress = false
         }
         
         isRunning = false
@@ -329,7 +336,7 @@ class GamePlayViewModel: ObservableObject {
     }
 
     func quickLoad() {
-        guard let session = emulatorSession else {
+        guard emulatorSession != nil else {
             statusMessage = "No active session"
             return
         }
@@ -337,20 +344,7 @@ class GamePlayViewModel: ObservableObject {
             statusMessage = "Load failed: missing ROM hash"
             return
         }
-        
-        Task {
-            let op = performanceProfiler.beginOperation("quick_load", metadata: ["slot": "0"])
-            defer { performanceProfiler.endOperation(op) }
-            do {
-                let (data, _, _) = try SaveStateStorage.shared.load(slot: 0, romHash: currentROMHash)
-                try session.loadState(from: data)
-                statusMessage = "State loaded"
-                refreshSaveStateDebugLine()
-            } catch {
-                NSLog("[QuickLoad] failed: %@", error.localizedDescription)
-                statusMessage = "Load failed: \(detailedErrorMessage(error))"
-            }
-        }
+        loadStateInternal(slot: 0, source: "quick_load", markAutoResume: false)
     }
 
     func saveState(slot: Int) {
@@ -375,23 +369,11 @@ class GamePlayViewModel: ObservableObject {
     }
 
     func loadState(slot: Int) {
-        guard let session = emulatorSession else {
+        guard emulatorSession != nil else {
             statusMessage = "No active session"
             return
         }
-        
-        Task {
-            let op = performanceProfiler.beginOperation("load_state", metadata: ["slot": String(slot)])
-            defer { performanceProfiler.endOperation(op) }
-            do {
-                let (data, _, _) = try SaveStateStorage.shared.load(slot: slot, romHash: currentROMHash)
-                try session.loadState(from: data)
-                statusMessage = "State loaded from slot \(slot)"
-                refreshSaveStateDebugLine()
-            } catch {
-                statusMessage = "Load failed: \(detailedErrorMessage(error))"
-            }
-        }
+        loadStateInternal(slot: slot, source: "manual_slot", markAutoResume: false)
     }
 
     func saveGameProgress() { saveState(slot: 1) }
@@ -701,6 +683,69 @@ class GamePlayViewModel: ObservableObject {
         loadState(slot: summary.slot)
     }
 
+    func autoResumeLaunchState(_ summary: SaveStateSlotSummary) {
+        guard !summary.isEmpty else { return }
+        guard !hasAutoResumedStateThisSession else {
+            NSLog("[StateLoadGuard] auto-resume skipped reason=already_loaded slot=%d rom=%@", summary.slot, currentROMHash)
+            return
+        }
+        loadStateInternal(slot: summary.slot, source: "launch_auto_resume", markAutoResume: true)
+    }
+
+    private func loadStateInternal(slot: Int, source: String, markAutoResume: Bool) {
+        guard !isStoppingEmulation else {
+            NSLog("[StateLoadGuard] load skipped source=%@ reason=stopping slot=%d rom=%@", source, slot, currentROMHash)
+            return
+        }
+        guard !isStateLoadInProgress else {
+            NSLog("[StateLoadGuard] load skipped source=%@ reason=in_progress slot=%d rom=%@", source, slot, currentROMHash)
+            return
+        }
+        guard !currentROMHash.isEmpty else {
+            statusMessage = "Load failed: missing ROM hash"
+            return
+        }
+        guard let session = emulatorSession else {
+            statusMessage = "No active session"
+            return
+        }
+
+        isStateLoadInProgress = true
+        Task {
+            let op = performanceProfiler.beginOperation("load_state", metadata: ["slot": String(slot), "source": source])
+            defer {
+                performanceProfiler.endOperation(op)
+                isStateLoadInProgress = false
+            }
+
+            do {
+                // Serialize state restore by pausing emulation/audio first.
+                let wasPaused = isPaused
+                emulatorSession?.pause()
+                audioEngine?.pause()
+                defer {
+                    if !wasPaused {
+                        emulatorSession?.resume()
+                        audioEngine?.resume()
+                    }
+                }
+
+                let (data, _, _) = try SaveStateStorage.shared.load(slot: slot, romHash: currentROMHash)
+                try session.loadState(from: data)
+                audioEngine?.quarantineAfterStateLoad(silenceMs: 220, fadeInMs: 120)
+                if markAutoResume {
+                    hasAutoResumedStateThisSession = true
+                }
+                statusMessage = slot == 0 ? "State loaded" : "State loaded from slot \(slot)"
+                refreshSaveStateDebugLine()
+                NSLog("[StateLoadGuard] load applied source=%@ slot=%d bytes=%d rom=%@", source, slot, data.count, currentROMHash)
+            } catch {
+                NSLog("[StateLoadGuard] load failed source=%@ slot=%d rom=%@ error=%@", source, slot, currentROMHash, error.localizedDescription)
+                statusMessage = "Load failed: \(detailedErrorMessage(error))"
+            }
+        }
+    }
+
     func refreshSaveStatesStatus() {
         refreshSaveStateDebugLine()
     }
@@ -779,38 +824,42 @@ extension GamePlayViewModel: EmulatorRenderDelegate {
     func emulatorDidGenerateAudio(samples: Data?, sampleRate: Int) {
         autoreleasepool {
             guard let samples = samples, !samples.isEmpty else { return }
-            
+            let rawMetrics = audioMetrics(for: samples)
+            var outputSamples = samples
+            var outputRate = sampleRate
+
             switch audioQuality {
             case 0:  // Sound First - resample to 48kHz for best quality
                 let targetRate = 48_000
+                outputRate = targetRate
                 if sampleRate != targetRate {
                     if let resampled = resampleAudioLinear(samples: samples, fromRate: sampleRate, toRate: targetRate) {
-                        audioEngine?.updateAudioBuffer(resampled)
-                    } else {
-                        audioEngine?.updateAudioBuffer(samples)
+                        outputSamples = resampled
                     }
-                } else {
-                    audioEngine?.updateAudioBuffer(samples)
                 }
                 
             case 1:  // Balanced - resample to 44.1kHz
                 let targetRate = 44_100
+                outputRate = targetRate
                 if sampleRate != targetRate {
                     if let resampled = resampleAudioLinear(samples: samples, fromRate: sampleRate, toRate: targetRate) {
-                        audioEngine?.updateAudioBuffer(resampled)
-                    } else {
-                        audioEngine?.updateAudioBuffer(samples)
+                        outputSamples = resampled
                     }
-                } else {
-                    audioEngine?.updateAudioBuffer(samples)
                 }
                 
             case 2:  // Frame First - no resampling, direct pass
-                audioEngine?.updateAudioBuffer(samples)
+                outputSamples = samples
                 
             default:
-                audioEngine?.updateAudioBuffer(samples)
+                outputSamples = samples
             }
+
+            audioEngine?.updateAudioBuffer(outputSamples)
+            logAudioABIfNeeded(rawSamples: samples,
+                               rawRate: sampleRate,
+                               rawMetrics: rawMetrics,
+                               outputSamples: outputSamples,
+                               outputRate: outputRate)
         }
     }
     
@@ -846,5 +895,67 @@ extension GamePlayViewModel: EmulatorRenderDelegate {
         }
         
         return result
+    }
+
+    private func logAudioABIfNeeded(rawSamples: Data,
+                                    rawRate: Int,
+                                    rawMetrics: (peak: Int, dcL: Double, dcR: Double),
+                                    outputSamples: Data,
+                                    outputRate: Int) {
+        guard currentPlatform == .GBA else { return }
+        guard UserDefaults.standard.bool(forKey: "dev.audio.debugAB") else { return }
+
+        audioDebugChunkCount += 1
+        guard audioDebugChunkCount % 120 == 0 else { return }
+
+        let outMetrics = audioMetrics(for: outputSamples)
+        let title = currentGameTitle.isEmpty ? "unknown" : currentGameTitle
+        let hashPrefix = String(currentROMHash.prefix(8))
+        NSLog("[AudioAB] game=%@ hash=%@ chunk=%d quality=%d rawRate=%d outRate=%d rawFrames=%d outFrames=%d rawPeak=%d outPeak=%d rawDcL=%.1f rawDcR=%.1f outDcL=%.1f outDcR=%.1f",
+              title,
+              hashPrefix,
+              audioDebugChunkCount,
+              audioQuality,
+              rawRate,
+              outputRate,
+              rawSamples.count / 4,
+              outputSamples.count / 4,
+              rawMetrics.peak,
+              outMetrics.peak,
+              rawMetrics.dcL,
+              rawMetrics.dcR,
+              outMetrics.dcL,
+              outMetrics.dcR)
+    }
+
+    private func audioMetrics(for samples: Data) -> (peak: Int, dcL: Double, dcR: Double) {
+        guard samples.count >= 4 else { return (0, 0, 0) }
+        let sampleCount = samples.count / 2
+        guard sampleCount >= 2 else { return (0, 0, 0) }
+
+        return samples.withUnsafeBytes { raw in
+            guard let ptr = raw.baseAddress?.assumingMemoryBound(to: Int16.self) else {
+                return (0, 0, 0)
+            }
+            var peak = 0
+            var sumL: Double = 0
+            var sumR: Double = 0
+            var frames = 0
+            var idx = 0
+            while idx + 1 < sampleCount {
+                let l = Int(ptr[idx])
+                let r = Int(ptr[idx + 1])
+                let absL = Swift.abs(l)
+                let absR = Swift.abs(r)
+                if absL > peak { peak = absL }
+                if absR > peak { peak = absR }
+                sumL += Double(l)
+                sumR += Double(r)
+                frames += 1
+                idx += 2
+            }
+            if frames == 0 { return (peak, 0, 0) }
+            return (peak, sumL / Double(frames), sumR / Double(frames))
+        }
     }
 }
