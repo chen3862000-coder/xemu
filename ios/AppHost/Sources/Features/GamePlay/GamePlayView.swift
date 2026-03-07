@@ -4623,6 +4623,7 @@ private struct NDSPressableControl<Content: View>: View {
     let onRelease: () -> Void
     let content: (Bool) -> Content
     @State private var pressTracker = TouchPressTracker()
+    private let hapticManager = HapticManager.shared
 
     init(onPress: @escaping () -> Void, onRelease: @escaping () -> Void, @ViewBuilder content: @escaping (Bool) -> Content) {
         self.onPress = onPress
@@ -4641,8 +4642,10 @@ private struct NDSPressableControl<Content: View>: View {
             .onLongPressGesture(minimumDuration: 0, maximumDistance: .infinity, pressing: { pressing in
                 switch pressTracker.transition(for: pressing) {
                 case .pressed:
+                    hapticManager.buttonPressed()
                     onPress()
                 case .released:
+                    hapticManager.buttonReleased()
                     onRelease()
                 case .none:
                     break
