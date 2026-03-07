@@ -45,6 +45,7 @@
 		70867E22BC48F79CF384061E /* Colors.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74BECED9B221104E4F9B3DD8 /* Colors.swift */; };
 		73B08C5F1BF0AEECADD3CD3F /* AdsPolicyController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4102CE4E593EBFCBCEEAB4D3 /* AdsPolicyController.swift */; };
 		755788A7BD8D16F285B141EC /* GameDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 04636AFBB1C5B621101AE08A /* GameDetailView.swift */; };
+		785516E5F54E0C4E5FB2CADC /* PlayerProgressStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 710211EBC87871D278F005F1 /* PlayerProgressStore.swift */; };
 		7959B081188039B1F334D8C9 /* XemuCores.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000F52E3A3CFCB55E604AE04 /* XemuCores.swift */; };
 		7AA215DA1F97E358DE6E0973 /* SubpageUI.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2133FE3F8BC4E5C41AA511DE /* SubpageUI.swift */; };
 		7BB9DA989AE3C0E0B8E95D68 /* EntitlementCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = 652880BA95C7641ACD748647 /* EntitlementCache.swift */; };
@@ -172,6 +173,7 @@
 		6A31AE7D5A0BC2527894EBA9 /* Alert.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Alert.swift; sourceTree = "<group>"; };
 		6CC9E8AC6255876C10AF7518 /* Progress.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Progress.swift; sourceTree = "<group>"; };
 		6E344896B7A6EE812208E94C /* StandardGameRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StandardGameRow.swift; sourceTree = "<group>"; };
+		710211EBC87871D278F005F1 /* PlayerProgressStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayerProgressStore.swift; sourceTree = "<group>"; };
 		733D007E7466C4BA97155B6B /* module.modulemap */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.module-map"; path = module.modulemap; sourceTree = "<group>"; };
 		7467A101DF9338E0F3357D42 /* PurchaseFlowController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PurchaseFlowController.swift; sourceTree = "<group>"; };
 		74BECED9B221104E4F9B3DD8 /* Colors.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Colors.swift; sourceTree = "<group>"; };
@@ -494,6 +496,7 @@
 			children = (
 				3BAD4B60C6D8C65B56AD16E3 /* ControllerMapping.swift */,
 				0D3DA034CE85C6DE2CF3193A /* PersistenceController.swift */,
+				710211EBC87871D278F005F1 /* PlayerProgressStore.swift */,
 				3CEBD6F5C153583F9BAD9C3A /* SaveState.swift */,
 				D48E6B75894DDBDF110BA572 /* Migrations */,
 			);
@@ -793,6 +796,7 @@
 				036F7DDCD64203C8C3D9AB22 /* PerformanceProfiler.swift in Sources */,
 				2FA0C4C780E6636C2A347303 /* PersistenceController.swift in Sources */,
 				6B5759AF17C87B632334A256 /* PlaceholderPatterns.swift in Sources */,
+				785516E5F54E0C4E5FB2CADC /* PlayerProgressStore.swift in Sources */,
 				89346E79C7ECC3CA6117990B /* PlayerStatsView.swift in Sources */,
 				B698C63CA572519D87273F7D /* Progress.swift in Sources */,
 				B2A8E7EF2A3A8AB827A295FF /* PurchaseFlowController.swift in Sources */,

@@ -39,7 +39,9 @@ public final class AudioEngine {
         // A fixed 800-frame target starves 44.1kHz streams (~735-739 frames/tick).
         let framesPerTick = max(1, Int((sampleRate / targetFPS).rounded()))
         preferredScheduleFrames = UInt32(framesPerTick)
-        minPartialScheduleFrames = UInt32(max(256, Int(Double(framesPerTick) * 0.70)))
+        // Allow smaller partial chunks to reduce underrun risk when cores emit
+        // variable audio batch sizes (observed on NDS/libretro).
+        minPartialScheduleFrames = UInt32(max(128, Int(Double(framesPerTick) * 0.25)))
         
         outputFormat = AVAudioFormat(commonFormat: .pcmFormatInt16,
                                      sampleRate: sampleRate,
@@ -100,7 +102,13 @@ public final class AudioEngine {
             let chunkFrames: Int
             if availableFrames >= Int(preferredScheduleFrames) {
                 chunkFrames = Int(preferredScheduleFrames)
-            } else if !isPlaying && availableFrames >= Int(minPartialScheduleFrames) {
+            } else if availableFrames >= Int(minPartialScheduleFrames),
+                      (!isPlaying || queuedFrames <= (minStartQueuedFrames / 2)) {
+                // When queue depth is low, accept smaller chunks to avoid bursty
+                // enqueue patterns that can underrun on variable-size core audio.
+                chunkFrames = availableFrames
+            } else if queuedFrames == 0 {
+                // Recover quickly from underrun even if we're already marked as playing.
                 chunkFrames = availableFrames
             } else if !isPlaying && queuedFrames == 0 {
                 // Kickstart playback with whatever we have.
@@ -273,9 +281,10 @@ public final class AudioEngine {
             try session.setCategory(.playback, mode: .default, options: [])
             // Prefer the core's native sample rate when possible to reduce resampling.
             try session.setPreferredSampleRate(sampleRate)
-            // Use larger buffer duration to reduce crackle (was 0.008 = 8ms)
-            // Increased to ~42.7ms at 48kHz = 2048 frames for better stability
-            try session.setPreferredIOBufferDuration(0.0427)
+            // Use minimal buffer duration for lowest possible audio delay
+            // Target ~15ms buffer to match aggressive NDS core trimming
+            let targetBufferDuration = 0.015  // ~15ms buffer
+            try session.setPreferredIOBufferDuration(targetBufferDuration)
             try session.setActive(true)
             NSLog("[AudioEngine] Configured session: sampleRate=\(sampleRate), actualRate=\(session.sampleRate), bufferDuration=\(session.ioBufferDuration)")
         } catch {

@@ -159,7 +159,7 @@ public:
             return XEMU_ERROR_NOT_INITIALIZED;
         }
 
-        audio_.clear();
+        // Don't clear audio buffer - let it accumulate naturally and return whatever is available
         receivedVideoFrameThisRun_ = false;
         api_.retro_run();
 
@@ -190,6 +190,16 @@ public:
     xemu_audio_buffer_t getAudioBuffer() override {
         audioBuffer_.data = audio_.empty() ? nullptr : audio_.data();
         audioBuffer_.sample_count = static_cast<int>(audio_.size());
+
+        // Return all available audio and clear buffer for next frame
+        // This provides the most responsive audio with no delay buildup
+        if (!audio_.empty()) {
+            std::vector<int16_t> samplesToReturn;
+            samplesToReturn.swap(audio_);  // Efficiently swap buffers
+            audioBuffer_.data = samplesToReturn.data();
+            audioBuffer_.sample_count = static_cast<int>(samplesToReturn.size());
+        }
+
         return audioBuffer_;
     }
 
