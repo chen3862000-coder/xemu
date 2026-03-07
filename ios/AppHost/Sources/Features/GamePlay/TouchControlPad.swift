@@ -1,4 +1,5 @@
 import SwiftUI
+import GameController
 
 struct TouchControlPad: View {
     let onButtonPress: (EmulatorButton, Bool) -> Void

@@ -16,10 +16,22 @@ struct CoverEditorSheet: View {
     @State private var candidateData: Data?
     @State private var isSaving = false
     @State private var errorMessage: String?
+
+    @State private var scale: CGFloat = 1.0
+    @State private var lastScale: CGFloat = 1.0
+    @State private var offset: CGSize = .zero
+    @State private var lastOffset: CGSize = .zero
+
+    private let minScale: CGFloat = 0.5
+    private let maxScale: CGFloat = 3.0
     private let previewCornerRadius: CGFloat = 18
 
     private var canReset: Bool {
         !((entry.customCoverURL ?? "").isEmpty) || CoverArtService.shared.customCoverExists(for: entry.id)
+    }
+
+    private var hasTransformation: Bool {
+        scale != 1.0 || offset != .zero
     }
 
     private var previewSide: CGFloat {
@@ -31,6 +43,27 @@ struct CoverEditorSheet: View {
         NavigationStack {
             VStack(spacing: 16) {
                 previewCard
+
+                if candidateData != nil && hasTransformation {
+                    HStack {
+                        Button {
+                            withAnimation(.spring(response: 0.3)) {
+                                scale = 1.0
+                                offset = .zero
+                            }
+                        } label: {
+                            Label("Reset Transform", systemImage: "arrow.counterclockwise")
+                                .font(.caption)
+                        }
+                        .buttonStyle(.bordered)
+
+                        Spacer()
+
+                        Text("Pinch to resize, drag to move")
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                    }
+                }
 
                 HStack(spacing: 10) {
                     PhotosPicker(selection: $selectedPhoto, matching: .images) {
@@ -118,18 +151,10 @@ struct CoverEditorSheet: View {
 
             if let candidateData,
                let image = UIImage(data: candidateData) {
-                Image(uiImage: image)
-                    .resizable()
-                    .scaledToFill()
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .clipped()
+                TransformableImage(image: image, scale: $scale, offset: $offset, minScale: minScale, maxScale: maxScale)
             } else if let resolved = CoverArtService.shared.resolve(for: entry),
                       let image = UIImage(data: resolved.data) {
-                Image(uiImage: image)
-                    .resizable()
-                    .scaledToFill()
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .clipped()
+                TransformableImage(image: image, scale: $scale, offset: $offset, minScale: minScale, maxScale: maxScale)
             } else {
                 Image(systemName: "photo")
                     .font(.system(size: 28, weight: .semibold))
@@ -164,6 +189,10 @@ struct CoverEditorSheet: View {
 
         do {
             candidateData = try Data(contentsOf: url)
+            withAnimation(.spring(response: 0.3)) {
+                scale = 1.0
+                offset = .zero
+            }
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -172,6 +201,12 @@ struct CoverEditorSheet: View {
     private func loadDataFromPhoto(item: PhotosPickerItem) async {
         do {
             candidateData = try await item.loadTransferable(type: Data.self)
+            await MainActor.run {
+                withAnimation(.spring(response: 0.3)) {
+                    scale = 1.0
+                    offset = .zero
+                }
+            }
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -182,7 +217,8 @@ struct CoverEditorSheet: View {
         isSaving = true
 
         do {
-            let url = try CoverArtService.shared.saveCustomCoverData(candidateData, for: entry.id)
+            let transformedData = applyTransformation(to: candidateData)
+            let url = try CoverArtService.shared.saveCustomCoverData(transformedData, for: entry.id)
             entry.customCoverURL = url.path
             try viewContext.save()
             UINotificationFeedbackGenerator().notificationOccurred(.success)
@@ -193,6 +229,39 @@ struct CoverEditorSheet: View {
         }
 
         isSaving = false
+    }
+
+    private func applyTransformation(to data: Data) -> Data {
+        guard let inputImage = UIImage(data: data),
+              let cgImage = inputImage.cgImage else {
+            return data
+        }
+
+        let size = CGSize(width: 600, height: 600)
+        let renderer = UIGraphicsImageRenderer(size: size)
+
+        let transformedImage = renderer.image { context in
+            context.cgContext.translateBy(x: size.width / 2 + offset.width, y: size.height / 2 + offset.height)
+            context.cgContext.scaleBy(x: scale, y: scale)
+            context.cgContext.translateBy(x: -size.width / 2, y: -size.height / 2)
+
+            if let cropped = cgImage.cropping(to: CGRect(x: 0, y: 0, width: cgImage.width, height: cgImage.height)) {
+                let aspectRatio = CGFloat(cropped.width) / CGFloat(cropped.height)
+                var drawRect: CGRect
+
+                if aspectRatio > 1 {
+                    let height = size.width / aspectRatio
+                    drawRect = CGRect(x: 0, y: (size.height - height) / 2, width: size.width, height: height)
+                } else {
+                    let width = size.height * aspectRatio
+                    drawRect = CGRect(x: (size.width - width) / 2, y: 0, width: width, height: size.height)
+                }
+
+                context.cgContext.draw(cropped, in: drawRect)
+            }
+        }
+
+        return transformedImage.jpegData(compressionQuality: 0.9) ?? data
     }
 
     private func resetCover() {
@@ -211,6 +280,51 @@ struct CoverEditorSheet: View {
         }
 
         isSaving = false
+    }
+}
+
+struct TransformableImage: View {
+    let image: UIImage
+    @Binding var scale: CGFloat
+    @Binding var offset: CGSize
+    let minScale: CGFloat
+    let maxScale: CGFloat
+
+    @State private var lastScale: CGFloat = 1.0
+    @State private var lastOffset: CGSize = .zero
+
+    var body: some View {
+        GeometryReader { geometry in
+            Image(uiImage: image)
+                .resizable()
+                .scaledToFill()
+                .frame(width: geometry.size.width, height: geometry.size.height)
+                .scaleEffect(scale)
+                .offset(offset)
+                .gesture(
+                    MagnificationGesture()
+                        .onChanged { value in
+                            let newScale = lastScale * value
+                            scale = min(max(newScale, minScale), maxScale)
+                        }
+                        .onEnded { _ in
+                            lastScale = scale
+                        }
+                )
+                .gesture(
+                    DragGesture()
+                        .onChanged { value in
+                            offset = CGSize(
+                                width: lastOffset.width + value.translation.width,
+                                height: lastOffset.height + value.translation.height
+                            )
+                        }
+                        .onEnded { _ in
+                            lastOffset = offset
+                        }
+                )
+                .clipped()
+        }
     }
 }
 #endif
