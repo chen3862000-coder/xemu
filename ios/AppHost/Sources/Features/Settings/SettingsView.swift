@@ -30,6 +30,7 @@ struct SettingsView: View {
     @AppStorage("settings.controller.hideTouchControls") private var controllerHideTouchControls = false
     @AppStorage("settings.controller.touchFallback") private var controllerTouchFallback = TouchFallbackMode.auto.rawValue
     @AppStorage("settings.controller.stickSensitivity") private var controllerStickSensitivity = StickSensitivity.medium.rawValue
+    @AppStorage("settings.controller.hapticFeedback") private var controllerHapticFeedback = true
 
     private let appStoreURL = URL(string: "https://apps.apple.com")
 
@@ -160,6 +161,7 @@ struct SettingsView: View {
                     hideTouchControls: $controllerHideTouchControls,
                     touchFallbackRaw: $controllerTouchFallback,
                     stickSensitivityRaw: $controllerStickSensitivity,
+                    hapticFeedback: $controllerHapticFeedback,
                     showDevAdvanced: isDeveloperModeVisible
                 )
             }
@@ -474,6 +476,7 @@ private struct ControllerSettingsView: View {
     @Binding var hideTouchControls: Bool
     @Binding var touchFallbackRaw: String
     @Binding var stickSensitivityRaw: String
+    @Binding var hapticFeedback: Bool
     let showDevAdvanced: Bool
 
     private var controllerStatus: String {
@@ -494,6 +497,7 @@ private struct ControllerSettingsView: View {
             Section(header: SettingsSectionHeader("Behavior")) {
                 ToggleSettingsRow(title: "Auto Switch to Immersive", isOn: $autoImmersive)
                 ToggleSettingsRow(title: "Hide Touch Controls", isOn: $hideTouchControls)
+                ToggleSettingsRow(title: "Haptic Feedback", isOn: $hapticFeedback)
 
                 NavigationSettingsRow(
                     title: "Touch Fallback",

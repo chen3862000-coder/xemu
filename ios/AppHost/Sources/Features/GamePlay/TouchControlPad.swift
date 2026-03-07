@@ -2,15 +2,16 @@ import SwiftUI
 
 struct TouchControlPad: View {
     let onButtonPress: (EmulatorButton, Bool) -> Void
+    var hapticManager: HapticManager? = HapticManager.shared
 
     var body: some View {
         GeometryReader { geometry in
             ZStack {
-                DPadControl(onButtonPress: onButtonPress)
+                DPadControl(onButtonPress: onButtonPress, hapticManager: hapticManager)
                     .position(x: geometry.size.width * 0.25, y: geometry.size.height * 0.7)
                     .frame(width: geometry.size.width * 0.4, height: geometry.size.height * 0.3)
 
-                ButtonControl(onButtonPress: onButtonPress)
+                ButtonControl(onButtonPress: onButtonPress, hapticManager: hapticManager)
                     .position(x: geometry.size.width * 0.75, y: geometry.size.height * 0.7)
                     .frame(width: geometry.size.width * 0.4, height: geometry.size.height * 0.3)
             }
@@ -20,6 +21,7 @@ struct TouchControlPad: View {
 
 struct DPadControl: View {
     let onButtonPress: (EmulatorButton, Bool) -> Void
+    var hapticManager: HapticManager?
 
     var body: some View {
         ZStack {
@@ -33,6 +35,7 @@ struct DPadControl: View {
                     .foregroundColor(.white)
             }
             .onLongPressGesture(minimumDuration: 0, pressing: { pressing in
+                if pressing { hapticManager?.buttonPressed() }
                 onButtonPress(.dpadUp, pressing)
             }, perform: {})
             .position(x: 0, y: -35)
@@ -43,6 +46,7 @@ struct DPadControl: View {
                     .foregroundColor(.white)
             }
             .onLongPressGesture(minimumDuration: 0, pressing: { pressing in
+                if pressing { hapticManager?.buttonPressed() }
                 onButtonPress(.dpadDown, pressing)
             }, perform: {})
             .position(x: 0, y: 35)
@@ -53,6 +57,7 @@ struct DPadControl: View {
                     .foregroundColor(.white)
             }
             .onLongPressGesture(minimumDuration: 0, pressing: { pressing in
+                if pressing { hapticManager?.buttonPressed() }
                 onButtonPress(.dpadLeft, pressing)
             }, perform: {})
             .position(x: -35, y: 0)
@@ -63,6 +68,7 @@ struct DPadControl: View {
                     .foregroundColor(.white)
             }
             .onLongPressGesture(minimumDuration: 0, pressing: { pressing in
+                if pressing { hapticManager?.buttonPressed() }
                 onButtonPress(.dpadRight, pressing)
             }, perform: {})
             .position(x: 35, y: 0)
@@ -72,13 +78,14 @@ struct DPadControl: View {
 
 struct ButtonControl: View {
     let onButtonPress: (EmulatorButton, Bool) -> Void
+    var hapticManager: HapticManager?
 
     var body: some View {
         ZStack {
-            ABButton(button: .a, label: "A", position: (x: 35, y: -20), onButtonPress: onButtonPress)
-            ABButton(button: .b, label: "B", position: (x: -35, y: 20), onButtonPress: onButtonPress)
-            XYButton(button: .x, label: "X", position: (x: -35, y: -20), onButtonPress: onButtonPress)
-            XYButton(button: .y, label: "Y", position: (x: 35, y: 20), onButtonPress: onButtonPress)
+            ABButton(button: .a, label: "A", position: (x: 35, y: -20), onButtonPress: onButtonPress, hapticManager: hapticManager)
+            ABButton(button: .b, label: "B", position: (x: -35, y: 20), onButtonPress: onButtonPress, hapticManager: hapticManager)
+            XYButton(button: .x, label: "X", position: (x: -35, y: -20), onButtonPress: onButtonPress, hapticManager: hapticManager)
+            XYButton(button: .y, label: "Y", position: (x: 35, y: 20), onButtonPress: onButtonPress, hapticManager: hapticManager)
         }
     }
 }
@@ -88,6 +95,7 @@ struct ABButton: View {
     let label: String
     let position: (x: CGFloat, y: CGFloat)
     let onButtonPress: (EmulatorButton, Bool) -> Void
+    var hapticManager: HapticManager?
 
     var body: some View {
         Button(action: { onButtonPress(button, true) }) {
@@ -103,6 +111,7 @@ struct ABButton: View {
             }
         }
         .onLongPressGesture(minimumDuration: 0, pressing: { pressing in
+            if pressing { hapticManager?.buttonPressed() }
             onButtonPress(button, pressing)
         }, perform: {})
         .position(x: position.x, y: position.y)
@@ -114,6 +123,7 @@ struct XYButton: View {
     let label: String
     let position: (x: CGFloat, y: CGFloat)
     let onButtonPress: (EmulatorButton, Bool) -> Void
+    var hapticManager: HapticManager?
 
     var body: some View {
         Button(action: { onButtonPress(button, true) }) {
@@ -129,6 +139,7 @@ struct XYButton: View {
             }
         }
         .onLongPressGesture(minimumDuration: 0, pressing: { pressing in
+            if pressing { hapticManager?.buttonPressed() }
             onButtonPress(button, pressing)
         }, perform: {})
         .position(x: position.x, y: position.y)
