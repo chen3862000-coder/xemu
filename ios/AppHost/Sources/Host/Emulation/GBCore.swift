@@ -4,6 +4,7 @@ import XemuCores
 #endif
 
 public final class GBCore: EmulatorCore {
+    public static let nativeAudioSampleRate = 65_536
     public var platform: Platform { .GB }
     public var isCGBModeDetected: Bool {
         coreWrapper?.currentSystem == .gameBoyColor
@@ -14,7 +15,7 @@ public final class GBCore: EmulatorCore {
     private var isPaused: Bool = false
     private var loadedROMData: Data?
     private var loadedROMPath: String?
-    private var lastAudioSampleRate: Int = 44_100
+    private var lastAudioSampleRate: Int = GBCore.nativeAudioSampleRate
     private var inputState: [Int: Float] = [:]
     
     public init() {}

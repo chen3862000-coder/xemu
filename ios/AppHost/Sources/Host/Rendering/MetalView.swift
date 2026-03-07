@@ -8,14 +8,20 @@ public struct MetalView: UIViewRepresentable {
     
     private let metalRenderer: MetalRenderer
     private let tick: (() -> Void)?
+    private let renderScaleProvider: (() -> Double)?
     
-    public init(metalRenderer: MetalRenderer, tick: (() -> Void)? = nil) {
+    public init(
+        metalRenderer: MetalRenderer,
+        tick: (() -> Void)? = nil,
+        renderScale: (() -> Double)? = nil
+    ) {
         self.metalRenderer = metalRenderer
         self.tick = tick
+        self.renderScaleProvider = renderScale
     }
     
     public func makeCoordinator() -> Coordinator {
-        Coordinator(metalRenderer: metalRenderer, tick: tick)
+        Coordinator(metalRenderer: metalRenderer, tick: tick, renderScaleProvider: renderScaleProvider)
     }
     
     @MainActor
@@ -33,6 +39,7 @@ public struct MetalView: UIViewRepresentable {
     
     public func updateUIView(_ uiView: MTKView, context: Context) {
         context.coordinator.tick = tick
+        context.coordinator.renderScaleProvider = renderScaleProvider
     }
     
     public static func dismantleUIView(_ uiView: MTKView, coordinator: Coordinator) {
@@ -46,15 +53,23 @@ public struct MetalView: UIViewRepresentable {
     public class Coordinator: NSObject, MTKViewDelegate {
         private let metalRenderer: MetalRenderer
         var tick: (() -> Void)?
+        var renderScaleProvider: (() -> Double)?
         private var frameCount = 0
+        private var lastDrawableSize: CGSize = .zero
         
-        init(metalRenderer: MetalRenderer, tick: (() -> Void)?) {
+        init(
+            metalRenderer: MetalRenderer,
+            tick: (() -> Void)?,
+            renderScaleProvider: (() -> Double)?
+        ) {
             self.metalRenderer = metalRenderer
             self.tick = tick
+            self.renderScaleProvider = renderScaleProvider
             super.init()
         }
         
         public func mtkView(_ view: MTKView, drawableSizeWillChange size: CGSize) {
+            applyDrawableScaleIfNeeded(in: view)
         }
         
         public func draw(in view: MTKView) {
@@ -69,6 +84,7 @@ public struct MetalView: UIViewRepresentable {
             
             // Call tick first to process frame
             tick?()
+            applyDrawableScaleIfNeeded(in: view)
             
             // Defensive: Check view is valid
             guard view.bounds.width > 0 && view.bounds.height > 0 else {
@@ -91,6 +107,18 @@ public struct MetalView: UIViewRepresentable {
             
             metalRenderer.render(to: drawable)
         }
+
+        private func applyDrawableScaleIfNeeded(in view: MTKView) {
+            let scale = max(0.5, min(1.0, renderScaleProvider?() ?? 1.0))
+            let nativeScale = view.window?.screen.scale ?? UIScreen.main.scale
+            let targetSize = CGSize(
+                width: max(1, floor(view.bounds.width * nativeScale * scale)),
+                height: max(1, floor(view.bounds.height * nativeScale * scale))
+            )
+            guard targetSize != lastDrawableSize else { return }
+            lastDrawableSize = targetSize
+            view.drawableSize = targetSize
+        }
     }
 }
 
@@ -101,14 +129,20 @@ public struct MetalView: NSViewRepresentable {
     
     private let metalRenderer: MetalRenderer
     private let tick: (() -> Void)?
+    private let renderScaleProvider: (() -> Double)?
     
-    public init(metalRenderer: MetalRenderer, tick: (() -> Void)? = nil) {
+    public init(
+        metalRenderer: MetalRenderer,
+        tick: (() -> Void)? = nil,
+        renderScale: (() -> Double)? = nil
+    ) {
         self.metalRenderer = metalRenderer
         self.tick = tick
+        self.renderScaleProvider = renderScale
     }
     
     public func makeCoordinator() -> Coordinator {
-        Coordinator(metalRenderer: metalRenderer, tick: tick)
+        Coordinator(metalRenderer: metalRenderer, tick: tick, renderScaleProvider: renderScaleProvider)
     }
     
     @MainActor
@@ -127,6 +161,7 @@ public struct MetalView: NSViewRepresentable {
     
     public func updateNSView(_ nsView: MTKView, context: Context) {
         context.coordinator.tick = tick
+        context.coordinator.renderScaleProvider = renderScaleProvider
     }
     
     public static func dismantleNSView(_ nsView: MTKView, coordinator: Coordinator) {
@@ -140,14 +175,22 @@ public struct MetalView: NSViewRepresentable {
     public class Coordinator: NSObject, MTKViewDelegate {
         private let metalRenderer: MetalRenderer
         var tick: (() -> Void)?
+        var renderScaleProvider: (() -> Double)?
+        private var lastDrawableSize: CGSize = .zero
         
-        init(metalRenderer: MetalRenderer, tick: (() -> Void)?) {
+        init(
+            metalRenderer: MetalRenderer,
+            tick: (() -> Void)?,
+            renderScaleProvider: (() -> Double)?
+        ) {
             self.metalRenderer = metalRenderer
             self.tick = tick
+            self.renderScaleProvider = renderScaleProvider
             super.init()
         }
         
         public func mtkView(_ view: MTKView, drawableSizeWillChange size: CGSize) {
+            applyDrawableScaleIfNeeded(in: view)
         }
         
         public func draw(in view: MTKView) {
@@ -160,6 +203,7 @@ public struct MetalView: NSViewRepresentable {
         private func _drawInternal(in view: MTKView) {
             // Call tick first to process frame
             tick?()
+            applyDrawableScaleIfNeeded(in: view)
             
             // Defensive: Check view is valid
             guard view.bounds.width > 0 && view.bounds.height > 0 else {
@@ -181,6 +225,20 @@ public struct MetalView: NSViewRepresentable {
             }
             
             metalRenderer.render(to: drawable)
+        }
+
+        private func applyDrawableScaleIfNeeded(in view: MTKView) {
+            let scale = max(0.5, min(1.0, renderScaleProvider?() ?? 1.0))
+            let nativeScale = view.window?.backingScaleFactor
+                ?? NSScreen.main?.backingScaleFactor
+                ?? 1.0
+            let targetSize = CGSize(
+                width: max(1, floor(view.bounds.width * nativeScale * scale)),
+                height: max(1, floor(view.bounds.height * nativeScale * scale))
+            )
+            guard targetSize != lastDrawableSize else { return }
+            lastDrawableSize = targetSize
+            view.drawableSize = targetSize
         }
     }
 }

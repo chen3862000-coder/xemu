@@ -17,9 +17,10 @@
 
 namespace xemu {
 
+constexpr size_t mGBAWrapper::SAVE_STATE_SIZE;
+
 namespace {
-constexpr bool MGBA_LOAD_DEBUG = true;
-constexpr bool MGBA_AUDIO_DIAG = true;
+constexpr bool MGBA_LOAD_DEBUG = false;
 }
 
 class mGBAWrapper::Impl {
@@ -32,14 +33,6 @@ public:
     std::array<char, 13> romTitle{};
     std::vector<uint8_t> romData;
     std::vector<color_t> nativeVideo;
-    int audioDiagFrameCount = 0;
-    int audioDiagOverflowCount = 0;
-    int audioDiagDroppedFrames = 0;
-    int audioDiagZeroAvailCount = 0;
-    int audioDiagZeroReadCount = 0;
-    int audioDiagMaxAvail = 0;
-    int audioDiagMinAvail = std::numeric_limits<int>::max();
-    long long audioDiagAvailSum = 0;
 };
 
 mGBAWrapper::mGBAWrapper() : impl_(std::make_unique<Impl>()) {
@@ -181,23 +174,6 @@ bool mGBAWrapper::loadROM(const char* filename, const uint8_t* data, size_t size
 }
 
 void mGBAWrapper::unloadROM() {
-    if (MGBA_AUDIO_DIAG && impl_->audioDiagFrameCount > 0) {
-        const double avgAvail = static_cast<double>(impl_->audioDiagAvailSum) /
-                                static_cast<double>(impl_->audioDiagFrameCount);
-        std::fprintf(stderr,
-                     "[BridgeDiag] session-end game=%s frames=%d avail[min/max/avg]=%d/%d/%.1f overflow=%d dropped=%d zeroAvail=%d zeroRead=%d sampleRate=%d\n",
-                     impl_->romTitle[0] ? impl_->romTitle.data() : "unknown",
-                     impl_->audioDiagFrameCount,
-                     impl_->audioDiagMinAvail == std::numeric_limits<int>::max() ? 0 : impl_->audioDiagMinAvail,
-                     impl_->audioDiagMaxAvail,
-                     avgAvail,
-                     impl_->audioDiagOverflowCount,
-                     impl_->audioDiagDroppedFrames,
-                     impl_->audioDiagZeroAvailCount,
-                     impl_->audioDiagZeroReadCount,
-                     impl_->audioSampleRate);
-    }
-
     if (impl_->core) {
         if (impl_->romLoaded) {
             xemu_mgba_core_unload_rom(impl_->core);
@@ -215,14 +191,6 @@ void mGBAWrapper::unloadROM() {
     std::fill(impl_->romTitle.begin(), impl_->romTitle.end(), '\0');
     std::fill(videoBuffer_.begin(), videoBuffer_.end(), 0);
     std::fill(audioBuffer_.begin(), audioBuffer_.end(), 0);
-    impl_->audioDiagFrameCount = 0;
-    impl_->audioDiagOverflowCount = 0;
-    impl_->audioDiagDroppedFrames = 0;
-    impl_->audioDiagZeroAvailCount = 0;
-    impl_->audioDiagZeroReadCount = 0;
-    impl_->audioDiagMaxAvail = 0;
-    impl_->audioDiagMinAvail = std::numeric_limits<int>::max();
-    impl_->audioDiagAvailSum = 0;
 }
 
 bool mGBAWrapper::isROMLoaded() const {
@@ -285,13 +253,6 @@ void mGBAWrapper::runFrame() {
 
     impl_->audioSampleCount = 0;
     const int availableFrames = xemu_mgba_core_audio_samples_avail(impl_->core);
-    ++impl_->audioDiagFrameCount;
-    impl_->audioDiagAvailSum += availableFrames;
-    impl_->audioDiagMaxAvail = std::max(impl_->audioDiagMaxAvail, availableFrames);
-    impl_->audioDiagMinAvail = std::min(impl_->audioDiagMinAvail, availableFrames);
-    if (availableFrames == 0) {
-        ++impl_->audioDiagZeroAvailCount;
-    }
     int readFrames = 0;
 
     if (availableFrames > 0) {
@@ -300,8 +261,6 @@ void mGBAWrapper::runFrame() {
 
         if (availableFrames > maxFrames) {
             int framesToDrop = availableFrames - maxFrames;
-            ++impl_->audioDiagOverflowCount;
-            impl_->audioDiagDroppedFrames += framesToDrop;
             std::array<int16_t, 1024> discardBuffer{}; // 512 stereo frames
             while (framesToDrop > 0) {
                 const int chunkFrames = std::min(framesToDrop, static_cast<int>(discardBuffer.size() / 2));
@@ -321,31 +280,6 @@ void mGBAWrapper::runFrame() {
                 impl_->audioSampleCount = sampleCount;
             }
         }
-    }
-
-    if (readFrames <= 0 && availableFrames > 0) {
-        ++impl_->audioDiagZeroReadCount;
-    }
-
-    if (MGBA_AUDIO_DIAG &&
-        ((impl_->audioDiagFrameCount % 120) == 0 ||
-         impl_->audioDiagOverflowCount > 0 && (impl_->audioDiagOverflowCount % 20) == 0)) {
-        const double avgAvail = static_cast<double>(impl_->audioDiagAvailSum) /
-                                static_cast<double>(impl_->audioDiagFrameCount);
-        std::fprintf(stderr,
-                     "[BridgeDiag] game=%s frames=%d avail[min/max/avg]=%d/%d/%.1f availNow=%d read=%d overflow=%d dropped=%d zeroAvail=%d zeroRead=%d sampleRate=%d\n",
-                     impl_->romTitle[0] ? impl_->romTitle.data() : "unknown",
-                     impl_->audioDiagFrameCount,
-                     impl_->audioDiagMinAvail == std::numeric_limits<int>::max() ? 0 : impl_->audioDiagMinAvail,
-                     impl_->audioDiagMaxAvail,
-                     avgAvail,
-                     availableFrames,
-                     readFrames,
-                     impl_->audioDiagOverflowCount,
-                     impl_->audioDiagDroppedFrames,
-                     impl_->audioDiagZeroAvailCount,
-                     impl_->audioDiagZeroReadCount,
-                     impl_->audioSampleRate);
     }
 }
 

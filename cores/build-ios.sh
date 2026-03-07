@@ -192,6 +192,78 @@ libtool -static -o build-ios-sim/libxemu_cores_combined.a "${SIM_LIBS[@]}"
 strip_dummy_bitcode_members "build-ios-sim/libxemu_cores_combined.a"
 mv build-ios-sim/libxemu_cores_combined.a build-ios-sim/libxemu_cores.a
 
+remove_bitcode_wrapper_members() {
+  local archive="$1"
+  python3 - "$archive" <<'PY'
+import os, subprocess, sys, tempfile
+
+archive = sys.argv[1]
+if not os.path.exists(archive):
+    sys.exit(0)
+
+MAGIC = bytes.fromhex('dec0170b')
+
+def list_members(path):
+    try:
+        out = subprocess.check_output(['xcrun', 'ar', '-t', path], text=True, stderr=subprocess.DEVNULL)
+    except subprocess.CalledProcessError:
+        return []
+    return [m for m in out.splitlines() if m and m != '__.SYMDEF']
+
+def bitcode_members(path):
+    bad = []
+    for m in list_members(path):
+        try:
+            data = subprocess.check_output(['xcrun', 'ar', '-p', path, m], stderr=subprocess.DEVNULL)
+        except subprocess.CalledProcessError:
+            continue
+        if len(data) >= 4 and data[:4] == MAGIC:
+            bad.append(m)
+    return bad
+
+def delete_members(path, names):
+    if not names:
+        return
+    chunk = 50
+    for i in range(0, len(names), chunk):
+        batch = names[i:i + chunk]
+        subprocess.run(['xcrun', 'ar', '-d', path, *batch], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=False)
+    subprocess.run(['ranlib', path], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=False)
+
+def lipo_arches(path):
+    try:
+        info = subprocess.check_output(['lipo', '-info', path], text=True, stderr=subprocess.STDOUT)
+    except Exception:
+        return []
+    if 'are:' in info:
+        return info.split('are:', 1)[1].strip().split()
+    if 'architecture:' in info:
+        return [info.split('architecture:', 1)[1].strip().split()[0]]
+    return []
+
+arches = lipo_arches(archive)
+if len(arches) > 1:
+    with tempfile.TemporaryDirectory() as d:
+        thins = []
+        for arch in arches:
+            thin = os.path.join(d, f'{arch}.a')
+            try:
+                subprocess.check_call(['lipo', archive, '-thin', arch, '-output', thin], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            except subprocess.CalledProcessError:
+                continue
+            delete_members(thin, bitcode_members(thin))
+            thins.append(thin)
+        if thins:
+            subprocess.run(['lipo', '-create', *thins, '-output', archive], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=False)
+            subprocess.run(['ranlib', archive], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=False)
+else:
+    delete_members(archive, bitcode_members(archive))
+PY
+}
+
+remove_bitcode_wrapper_members "$SCRIPT_DIR/build-ios-device/libxemu_cores.a"
+remove_bitcode_wrapper_members "$SCRIPT_DIR/build-ios-sim/libxemu_cores.a"
+
 scan_archive_for_bitcode_wrappers() {
   local archive="$1"
   local label="$2"

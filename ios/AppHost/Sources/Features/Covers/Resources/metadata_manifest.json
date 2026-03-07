@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "dataset_version": "mvp-local-empty-2026-03-05",
+  "min_app_version": "1.0.0",
+  "files": [
+    {
+      "path": "cover_metadata.sqlite",
+      "sha256": "c5c4b8b4bb899550fa9cf63970d1e819f4baf8d1280891def47db84f9003e096"
+    },
+    {
+      "path": "sha1_checksums.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "metadata_schema.sql",
+      "sha256": "876e19c22bd919e37e437be59ce0887d34f13548517b40e6627bb7ed704f0e85"
+    }
+  ],
+  "checksum_list_file": "sha1_checksums.txt"
+}

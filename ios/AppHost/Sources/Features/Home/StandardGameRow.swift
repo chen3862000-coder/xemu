@@ -66,7 +66,8 @@ struct StandardGameRow: View {
                 Image(uiImage: uiImage)
                     .resizable()
                     .aspectRatio(contentMode: .fill)
-            } else if let imageData = entry.coverImageData, let uiImage = UIImage(data: imageData) {
+            } else if let resolved = CoverArtService.shared.resolve(for: entry),
+                      let uiImage = UIImage(data: resolved.data) {
                 Image(uiImage: uiImage)
                     .resizable()
                     .aspectRatio(contentMode: .fill)

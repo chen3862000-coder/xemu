@@ -168,6 +168,10 @@ final class PerformanceProfiler: ObservableObject {
 
     private init() {}
 
+    var currentQualityProfile: PerfQualityProfile {
+        resolvedQualityProfile()
+    }
+
     func startSession(platform: Platform) {
         sessionPlatform = platform
         if isRunning {

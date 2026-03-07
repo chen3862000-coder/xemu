@@ -4,6 +4,166 @@ import CoreData
 import UIKit
 #endif
 
+private enum AllGamesTokens {
+    private static var currentTheme: AppThemeMode {
+        if let raw = UserDefaults.standard.string(forKey: "appThemeMode"),
+           let mode = AppThemeMode(rawValue: raw) {
+            return mode
+        }
+        return .light
+    }
+
+    static var isDark: Bool { currentTheme == .dark }
+
+    static var appBackground: Color {
+        isDark ? Color(hex: "14141A") : Color(hex: "F5F2FA")
+    }
+
+    static var surface: Color {
+        isDark ? Color(hex: "1D1D26") : Color(hex: "FFFFFF")
+    }
+
+    static var surfaceAlt: Color {
+        isDark ? Color(hex: "2A2A36") : Color(hex: "FBFBFD")
+    }
+
+    static var textPrimary: Color {
+        isDark ? Color(hex: "F6F6FA") : Color(hex: "23232B")
+    }
+
+    static var textSecondary: Color {
+        isDark ? Color(hex: "B5B5C1") : Color(hex: "6A6A75")
+    }
+
+    static var textTertiary: Color {
+        isDark ? Color(hex: "8C8C9A") : Color(hex: "9A9AA6")
+    }
+
+    static let accent = Color(hex: "8B3DFF")
+    static let accentPressed = Color(hex: "7B2FEA")
+    static let info = Color(hex: "3B82F6")
+
+    static var strokeSubtle: Color {
+        isDark ? Color.white.opacity(0.10) : Color.black.opacity(0.06)
+    }
+
+    static var strokeDivider: Color {
+        isDark ? Color.white.opacity(0.14) : Color.black.opacity(0.10)
+    }
+
+    static var shadowColor: Color {
+        isDark ? Color.black.opacity(0.28) : Color.black.opacity(0.12)
+    }
+
+    static var timeBadgeBackground: Color {
+        isDark ? Color.white.opacity(0.12) : Color.black.opacity(0.08)
+    }
+
+    static var timeBadgeText: Color {
+        textSecondary
+    }
+
+    static var consoleBadgeText: Color {
+        Color(hex: "FFFFFF")
+    }
+
+    static func placeholderGradient(for system: String?) -> LinearGradient {
+        let normalized = SubpageUI.CollectorIdentity.normalizedSystemCode(system)
+        switch normalized {
+        case "gbc", "gba", "nds":
+            return SubpageUI.CollectorIdentity.placeholderGradient(forSystem: system)
+        default:
+            return LinearGradient(colors: [surfaceAlt, surface], startPoint: .topLeading, endPoint: .bottomTrailing)
+        }
+    }
+
+    static func placeholderGlyph(for system: String?) -> String {
+        switch (system ?? "").uppercased() {
+        case "GB", "GBC", "GB/GBC": return "rectangle.3.group.bubble"
+        case "GBA": return "bolt.fill"
+        case "NDS": return "rectangle.split.2x1"
+        default: return "gamecontroller.fill"
+        }
+    }
+}
+
+private struct AllGamesCardStyle: ViewModifier {
+    let cornerRadius: CGFloat
+    let elevated: Bool
+
+    func body(content: Content) -> some View {
+        content
+            .background(AllGamesTokens.surface)
+            .overlay(
+                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                    .stroke(AllGamesTokens.strokeSubtle, lineWidth: 1)
+            )
+            .shadow(
+                color: elevated ? AllGamesTokens.shadowColor : .clear,
+                radius: elevated ? 4 : 0,
+                x: 0,
+                y: elevated ? 2 : 0
+            )
+            .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
+    }
+}
+
+private struct AllGamesSearchFieldStyle: ViewModifier {
+    let cornerRadius: CGFloat
+    let height: CGFloat
+
+    func body(content: Content) -> some View {
+        content
+            .padding(.horizontal, 14)
+            .frame(height: height)
+            .background(AllGamesTokens.surfaceAlt)
+            .overlay(
+                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                    .stroke(AllGamesTokens.strokeSubtle, lineWidth: 1)
+            )
+            .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
+    }
+}
+
+private struct AllGamesConsoleBadge: View {
+    let text: String
+    let backgroundColor: Color
+
+    var body: some View {
+        Text(text)
+            .font(.system(size: 11, weight: .semibold))
+            .foregroundColor(AllGamesTokens.consoleBadgeText)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .background(backgroundColor)
+            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+    }
+}
+
+private struct AllGamesTimeBadge: View {
+    let text: String
+
+    var body: some View {
+        Text(text)
+            .font(.system(size: 11, weight: .medium))
+            .foregroundColor(AllGamesTokens.timeBadgeText)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .background(AllGamesTokens.timeBadgeBackground)
+            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+    }
+}
+
+private extension View {
+    func allGamesCard(cornerRadius: CGFloat = 20, elevated: Bool = true) -> some View {
+        modifier(AllGamesCardStyle(cornerRadius: cornerRadius, elevated: elevated))
+    }
+
+    func allGamesSearchField(cornerRadius: CGFloat = 20, height: CGFloat = 44) -> some View {
+        modifier(AllGamesSearchFieldStyle(cornerRadius: cornerRadius, height: height))
+    }
+}
+
 struct GameLibraryView: View {
     private enum LibrarySortOption: String, CaseIterable, Identifiable {
         case recent = "Recent"
@@ -29,6 +189,8 @@ struct GameLibraryView: View {
 
     @Environment(\.managedObjectContext) private var viewContext
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.verticalSizeClass) private var verticalSizeClass
+    @StateObject private var performanceProfiler = PerformanceProfiler.shared
     @State private var games: [ROMLibraryEntry] = []
     @State private var selectedGame: Game?
     @State private var searchText = ""
@@ -37,10 +199,60 @@ struct GameLibraryView: View {
     @State private var viewMode: LibraryViewMode = .grid
     @State private var showConsoleFilters: Bool = true
     @State private var activeAlert: LibraryAlertState?
+    @State private var coverEditorEntry: ROMLibraryEntry?
+
+    private var heavyUIEffectsEnabled: Bool {
+        performanceProfiler.currentQualityProfile.heavyUIEffects
+    }
+
+    private var collectorAtmosphere: some View {
+        LinearGradient(
+            colors: [Color.black.opacity(0.04), Color.clear],
+            startPoint: .top,
+            endPoint: .bottom
+        )
+        .ignoresSafeArea()
+        .allowsHitTesting(false)
+    }
+
+    private var isCollectorMode: Bool {
+#if os(iOS)
+        verticalSizeClass == .compact
+#else
+        false
+#endif
+    }
+
+    private var effectiveViewMode: LibraryViewMode {
+        isCollectorMode ? .grid : viewMode
+    }
+
+    private var contentHorizontalPadding: CGFloat {
+        isCollectorMode ? 16 : 20
+    }
+
+    private var gridColumns: [GridItem] {
+        if isCollectorMode {
+#if os(iOS)
+            let width = UIScreen.main.bounds.width
+            let columnCount = width >= 900 ? 4 : 3
+#else
+            let columnCount = 4
+#endif
+            return Array(repeating: GridItem(.flexible(minimum: 0), spacing: 16), count: columnCount)
+        }
+        return [
+            GridItem(.flexible(minimum: 0), spacing: 16),
+            GridItem(.flexible(minimum: 0), spacing: 16)
+        ]
+    }
     
     var body: some View {
         ZStack {
             backgroundLayer
+            if isCollectorMode {
+                collectorAtmosphere
+            }
 
             VStack(spacing: 0) {
                 headerSection
@@ -50,19 +262,20 @@ struct GameLibraryView: View {
                         if filteredGames.isEmpty {
                             emptyState
                         } else {
-                            if viewMode == .grid {
+                            if effectiveViewMode == .grid {
                                 gamesGrid
                             } else {
                                 gamesList
                             }
                         }
                     }
-                    .padding(.horizontal, 16)
+                    .padding(.horizontal, contentHorizontalPadding)
                     .padding(.top, 12)
                     .padding(.bottom, 24)
                 }
             }
         }
+        .animation(.easeInOut(duration: 0.28), value: isCollectorMode)
         #if os(iOS)
         .fullScreenCover(item: $selectedGame) { game in
             GamePlayView(game: game, onExit: {
@@ -104,6 +317,16 @@ struct GameLibraryView: View {
         .onReceive(NotificationCenter.default.publisher(for: .romLibraryDidChange)) { _ in
             loadGames()
         }
+        .onReceive(NotificationCenter.default.publisher(for: .coverArtDidChange)) { _ in
+            loadGames()
+        }
+#if os(iOS)
+        .sheet(item: $coverEditorEntry) { entry in
+            CoverEditorSheet(entry: entry) {
+                loadGames()
+            }
+        }
+#endif
     }
 
     private var filteredGames: [ROMLibraryEntry] {
@@ -148,195 +371,291 @@ struct GameLibraryView: View {
 
     private var backgroundLayer: some View {
         ZStack {
-            AppColors.background.ignoresSafeArea()
+            AllGamesTokens.appBackground.ignoresSafeArea()
 
             Circle()
                 .fill(
                     LinearGradient(
-                        colors: [AppColors.primary.opacity(0.18), AppColors.accent.opacity(0.14)],
+                        colors: [AllGamesTokens.accent.opacity(0.14), AllGamesTokens.info.opacity(0.10)],
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing
                     )
                 )
-                .blur(radius: 120)
-                .frame(width: 380, height: 380)
-                .offset(x: 140, y: -220)
+                .blur(radius: heavyUIEffectsEnabled ? 36 : 22)
+                .frame(width: 300, height: 300)
+                .opacity(0.85)
+                .offset(x: 140, y: -250)
 
-            Circle()
-                .fill(
-                    LinearGradient(
-                        colors: [AppColors.accent.opacity(0.12), AppColors.primary.opacity(0.10)],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
+            if heavyUIEffectsEnabled {
+                Circle()
+                    .fill(
+                        LinearGradient(
+                            colors: [AllGamesTokens.info.opacity(0.10), AllGamesTokens.accent.opacity(0.08)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
                     )
-                )
-                .blur(radius: 140)
-                .frame(width: 420, height: 420)
-                .offset(x: -180, y: 320)
+                    .blur(radius: 28)
+                    .frame(width: 240, height: 240)
+                    .opacity(0.85)
+                    .offset(x: -130, y: -180)
+            }
         }
     }
 
     private var headerSection: some View {
-        VStack(spacing: 10) {
+        VStack(spacing: isCollectorMode ? 8 : 10) {
             HStack(spacing: 12) {
                 Button(action: { dismiss() }) {
                     Image(systemName: "arrow.left")
                         .font(.system(size: 16, weight: .semibold))
-                        .foregroundColor(AppColors.textPrimary)
+                        .foregroundColor(AllGamesTokens.textPrimary)
                         .frame(width: 36, height: 36)
-                        .background(AppColors.surfaceLight.opacity(0.5))
+                        .background(AllGamesTokens.surfaceAlt)
+                        .overlay(
+                            Circle().stroke(AllGamesTokens.strokeSubtle, lineWidth: 1)
+                        )
                         .clipShape(Circle())
                 }
 
                 VStack(alignment: .leading, spacing: 1) {
-                    Text("All Games")
-                        .font(SubpageUI.Font.title)
+                    Text("Game Library")
+                        .font(isCollectorMode ? .system(size: 20, weight: .bold) : SubpageUI.Font.title)
                         .lineLimit(1)
                         .minimumScaleFactor(0.9)
                         .allowsTightening(true)
-                        .foregroundColor(AppColors.textPrimary)
+                        .foregroundColor(AllGamesTokens.textPrimary)
                     Text("\(games.count) games total")
                         .font(SubpageUI.Font.subtitle)
-                        .foregroundColor(AppColors.primary)
+                        .foregroundColor(AllGamesTokens.textSecondary)
                 }
 
                 Spacer()
             }
 
-            HStack(spacing: 8) {
-                Image(systemName: "magnifyingglass")
-                    .font(.system(size: 13))
-                    .foregroundColor(AppColors.textMuted)
+            if isCollectorMode {
+                HStack(spacing: 8) {
+                    HStack(spacing: 8) {
+                        Image(systemName: "magnifyingglass")
+                            .font(.system(size: 13))
+                            .foregroundColor(AllGamesTokens.textTertiary)
 
-                TextField("Search games...", text: $searchText)
+                        TextField("Search games...", text: $searchText)
 #if os(iOS)
-                    .textInputAutocapitalization(.never)
-                    .autocorrectionDisabled()
+                            .textInputAutocapitalization(.never)
+                            .autocorrectionDisabled()
 #endif
-                    .foregroundColor(AppColors.textPrimary)
-            }
-            .subpageSearchField(cornerRadius: 19, height: 38)
+                            .foregroundColor(AllGamesTokens.textPrimary)
+                    }
+                    .allGamesSearchField(cornerRadius: 19, height: 38)
 
-            HStack(spacing: 8) {
-                Menu {
-                    ForEach(LibrarySortOption.allCases) { option in
-                        Button {
-                            selectedSort = option
-                        } label: {
-                            HStack {
-                                Text(option.rawValue)
-                                if selectedSort == option {
-                                    Image(systemName: "checkmark")
+                    Menu {
+                        ForEach(LibrarySortOption.allCases) { option in
+                            Button {
+                                selectedSort = option
+                            } label: {
+                                HStack {
+                                    Text(option.rawValue)
+                                    if selectedSort == option {
+                                        Image(systemName: "checkmark")
+                                    }
                                 }
                             }
                         }
-                    }
-                } label: {
-                    HStack(spacing: 5) {
-                        Image(systemName: "arrow.up.arrow.down.circle")
-                            .font(.system(size: 12, weight: .semibold))
-                        Text(selectedSort.rawValue)
-                            .font(.system(size: 12, weight: .semibold))
-                        Image(systemName: "chevron.down")
-                            .font(.system(size: 10, weight: .bold))
-                    }
-                    .foregroundColor(AppColors.textPrimary)
-                    .padding(.horizontal, 12)
-                    .frame(height: 34)
-                    .background(AppColors.surfaceLight.opacity(0.55))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 17)
-                            .stroke(AppColors.surfaceLight.opacity(0.85), lineWidth: 1)
-                    )
-                    .clipShape(Capsule())
-                }
-                .buttonStyle(.plain)
-
-                Spacer()
-
-                HStack(spacing: 0) {
-                    Button {
-                        withAnimation(.easeOut(duration: 0.18)) {
-                            viewMode = .grid
-                        }
                     } label: {
-                        Image(systemName: "square.grid.2x2")
-                            .font(.system(size: 12, weight: .semibold))
-                            .foregroundColor(viewMode == .grid ? .white : AppColors.textMuted)
-                            .frame(width: 34, height: 30)
-                            .background(viewMode == .grid ? AppColors.primary : Color.clear)
-                    }
-                    .buttonStyle(.plain)
-
-                    Button {
-                        withAnimation(.easeOut(duration: 0.18)) {
-                            viewMode = .list
+                        HStack(spacing: 5) {
+                            Image(systemName: "arrow.up.arrow.down.circle")
+                                .font(.system(size: 12, weight: .semibold))
+                            Text(selectedSort.rawValue)
+                                .font(.system(size: 12, weight: .semibold))
+                            Image(systemName: "chevron.down")
+                                .font(.system(size: 10, weight: .bold))
                         }
-                    } label: {
-                        Image(systemName: "list.bullet")
-                            .font(.system(size: 12, weight: .semibold))
-                            .foregroundColor(viewMode == .list ? .white : AppColors.textMuted)
-                            .frame(width: 34, height: 30)
-                            .background(viewMode == .list ? AppColors.primary : Color.clear)
-                    }
-                    .buttonStyle(.plain)
-                }
-                .background(AppColors.surfaceLight.opacity(0.55))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 15)
-                        .stroke(AppColors.surfaceLight.opacity(0.85), lineWidth: 1)
-                )
-                .clipShape(RoundedRectangle(cornerRadius: 15))
-
-                Button {
-                    withAnimation(.easeOut(duration: 0.2)) {
-                        showConsoleFilters.toggle()
-                    }
-                } label: {
-                    Image(systemName: "line.3.horizontal.decrease.circle")
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundColor(showConsoleFilters ? .white : AppColors.textPrimary)
-                        .frame(width: 34, height: 30)
-                        .background(showConsoleFilters ? AppColors.primary : AppColors.surfaceLight.opacity(0.55))
+                        .foregroundColor(AllGamesTokens.textPrimary)
+                        .padding(.horizontal, 12)
+                        .frame(height: 34)
+                        .background(AllGamesTokens.surface)
                         .overlay(
-                            RoundedRectangle(cornerRadius: 15)
-                                .stroke(AppColors.surfaceLight.opacity(0.85), lineWidth: 1)
+                            RoundedRectangle(cornerRadius: 17)
+                                .stroke(AllGamesTokens.strokeSubtle, lineWidth: 1)
                         )
-                        .clipShape(RoundedRectangle(cornerRadius: 15))
-                }
-                .buttonStyle(.plain)
-            }
+                        .clipShape(Capsule())
+                    }
+                    .buttonStyle(.plain)
 
-            if showConsoleFilters {
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 8) {
+                    Menu {
                         ForEach(LibrarySystemFilter.allCases) { filter in
                             Button {
-                                withAnimation(.easeOut(duration: 0.18)) {
-                                    selectedSystemFilter = filter
-                                }
+                                selectedSystemFilter = filter
                             } label: {
-                                Text(filter.rawValue)
-                                    .font(.system(size: 12, weight: .semibold))
-                                    .foregroundColor(selectedSystemFilter == filter ? .white : AppColors.textSecondary)
-                                    .padding(.horizontal, 12)
-                                    .frame(height: 30)
-                                    .background(selectedSystemFilter == filter ? AppColors.primary : AppColors.surfaceLight.opacity(0.5))
-                                    .clipShape(Capsule())
+                                HStack {
+                                    Text(filter.rawValue)
+                                    if selectedSystemFilter == filter {
+                                        Image(systemName: "checkmark")
+                                    }
+                                }
                             }
-                            .buttonStyle(.plain)
                         }
+                    } label: {
+                        HStack(spacing: 6) {
+                            Image(systemName: "line.3.horizontal.decrease.circle")
+                                .font(.system(size: 12, weight: .semibold))
+                            Text(selectedSystemFilter.rawValue)
+                                .font(.system(size: 12, weight: .semibold))
+                            Image(systemName: "chevron.down")
+                                .font(.system(size: 10, weight: .bold))
+                        }
+                        .foregroundColor(AllGamesTokens.textPrimary)
+                        .padding(.horizontal, 10)
+                        .frame(height: 34)
+                        .background(AllGamesTokens.surface)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 17)
+                                .stroke(AllGamesTokens.strokeSubtle, lineWidth: 1)
+                        )
+                        .clipShape(Capsule())
                     }
-                    .padding(.horizontal, 1)
+                    .buttonStyle(.plain)
+                }
+            } else {
+                HStack(spacing: 8) {
+                    Image(systemName: "magnifyingglass")
+                        .font(.system(size: 13))
+                        .foregroundColor(AllGamesTokens.textTertiary)
+
+                    TextField("Search games...", text: $searchText)
+#if os(iOS)
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
+#endif
+                        .foregroundColor(AllGamesTokens.textPrimary)
+                }
+                .allGamesSearchField(cornerRadius: 19, height: 38)
+
+                HStack(spacing: 8) {
+                    Menu {
+                        ForEach(LibrarySortOption.allCases) { option in
+                            Button {
+                                selectedSort = option
+                            } label: {
+                                HStack {
+                                    Text(option.rawValue)
+                                    if selectedSort == option {
+                                        Image(systemName: "checkmark")
+                                    }
+                                }
+                            }
+                        }
+                    } label: {
+                        HStack(spacing: 5) {
+                            Image(systemName: "arrow.up.arrow.down.circle")
+                                .font(.system(size: 12, weight: .semibold))
+                            Text(selectedSort.rawValue)
+                                .font(.system(size: 12, weight: .semibold))
+                            Image(systemName: "chevron.down")
+                                .font(.system(size: 10, weight: .bold))
+                        }
+                        .foregroundColor(AllGamesTokens.textPrimary)
+                        .padding(.horizontal, 12)
+                        .frame(height: 34)
+                        .background(AllGamesTokens.surface)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 17)
+                                .stroke(AllGamesTokens.strokeSubtle, lineWidth: 1)
+                        )
+                        .clipShape(Capsule())
+                    }
+                    .buttonStyle(.plain)
+
+                    Spacer()
+
+                    HStack(spacing: 0) {
+                        Button {
+                            withAnimation(.easeOut(duration: 0.18)) {
+                                viewMode = .grid
+                            }
+                        } label: {
+                            Image(systemName: "square.grid.2x2")
+                                .font(.system(size: 12, weight: .semibold))
+                                .foregroundColor(viewMode == .grid ? Color.white : AllGamesTokens.textSecondary)
+                                .frame(width: 34, height: 30)
+                                .background(viewMode == .grid ? AllGamesTokens.accent : Color.clear)
+                        }
+                        .buttonStyle(.plain)
+
+                        Button {
+                            withAnimation(.easeOut(duration: 0.18)) {
+                                viewMode = .list
+                            }
+                        } label: {
+                            Image(systemName: "list.bullet")
+                                .font(.system(size: 12, weight: .semibold))
+                                .foregroundColor(viewMode == .list ? Color.white : AllGamesTokens.textSecondary)
+                                .frame(width: 34, height: 30)
+                                .background(viewMode == .list ? AllGamesTokens.accent : Color.clear)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                    .background(AllGamesTokens.surface)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 15)
+                            .stroke(AllGamesTokens.strokeSubtle, lineWidth: 1)
+                    )
+                    .clipShape(RoundedRectangle(cornerRadius: 15))
+
+                    Button {
+                        withAnimation(.easeOut(duration: 0.2)) {
+                            showConsoleFilters.toggle()
+                        }
+                    } label: {
+                        Image(systemName: "line.3.horizontal.decrease.circle")
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundColor(showConsoleFilters ? Color.white : AllGamesTokens.textPrimary)
+                            .frame(width: 34, height: 30)
+                            .background(showConsoleFilters ? AllGamesTokens.accent : AllGamesTokens.surface)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 15)
+                                    .stroke(AllGamesTokens.strokeSubtle, lineWidth: 1)
+                            )
+                            .clipShape(RoundedRectangle(cornerRadius: 15))
+                    }
+                    .buttonStyle(.plain)
+                }
+
+                if showConsoleFilters {
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 8) {
+                            ForEach(LibrarySystemFilter.allCases) { filter in
+                                Button {
+                                    withAnimation(.easeOut(duration: 0.18)) {
+                                        selectedSystemFilter = filter
+                                    }
+                                } label: {
+                                    Text(filter.rawValue)
+                                        .font(.system(size: 12, weight: .semibold))
+                                        .foregroundColor(selectedSystemFilter == filter ? Color.white : AllGamesTokens.textSecondary)
+                                        .padding(.horizontal, 12)
+                                        .frame(height: 30)
+                                        .background(selectedSystemFilter == filter ? AllGamesTokens.accent : AllGamesTokens.surface)
+                                        .overlay(
+                                            Capsule().stroke(AllGamesTokens.strokeSubtle, lineWidth: selectedSystemFilter == filter ? 0 : 1)
+                                        )
+                                        .clipShape(Capsule())
+                                }
+                                .buttonStyle(.plain)
+                            }
+                        }
+                        .padding(.horizontal, 1)
+                    }
                 }
             }
         }
-        .padding(.horizontal, 16)
+        .padding(.horizontal, contentHorizontalPadding)
         .padding(.vertical, 12)
-        .background(AppColors.background.opacity(0.85))
+        .background(AllGamesTokens.appBackground.opacity(0.96))
         .overlay(
             Rectangle()
-                .fill(AppColors.surfaceLight.opacity(0.5))
+                .fill(AllGamesTokens.strokeDivider)
                 .frame(height: 1),
             alignment: .bottom
         )
@@ -344,14 +663,11 @@ struct GameLibraryView: View {
 
     private var gamesGrid: some View {
         LazyVGrid(
-            columns: [
-                GridItem(.flexible(), spacing: 12),
-                GridItem(.flexible(), spacing: 12)
-            ],
-            spacing: 12
+            columns: gridColumns,
+            spacing: 16
         ) {
             ForEach(filteredGames) { entry in
-                AllGamesCard(entry: entry) {
+                AllGamesCard(entry: entry, collectorMode: isCollectorMode) {
                     launchGame(entry)
                 }
                 .buttonStyle(PressScaleButtonStyle())
@@ -367,10 +683,16 @@ struct GameLibraryView: View {
                         Label("Rename", systemImage: "pencil")
                     }
                     Button {
-                        showComingSoon("Set cover")
+                        editCover(entry)
                     } label: {
-                        Label("Set Cover", systemImage: "photo")
+                        Label("Edit Cover", systemImage: "photo")
                     }
+                    Button(role: .destructive) {
+                        resetCover(entry)
+                    } label: {
+                        Label("Reset Cover", systemImage: "arrow.counterclockwise")
+                    }
+                    .disabled(!hasCustomCover(entry))
                     Button {
                         showComingSoon("Game details")
                     } label: {
@@ -392,12 +714,29 @@ struct GameLibraryView: View {
     }
 
     private var gamesList: some View {
-        LazyVStack(spacing: 10) {
+        LazyVStack(spacing: 12) {
             ForEach(filteredGames) { entry in
                 AllGamesListRow(entry: entry) {
                     launchGame(entry)
                 }
                 .buttonStyle(PressScaleButtonStyle())
+                .swipeActions(edge: .leading, allowsFullSwipe: false) {
+#if os(iOS)
+                    if let shareURL = shareableROMURL(for: entry) {
+                        ShareLink(item: shareURL) {
+                            Label("Share", systemImage: "square.and.arrow.up")
+                        }
+                        .tint(.blue)
+                    }
+#endif
+                }
+                .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                    Button(role: .destructive) {
+                        activeAlert = LibraryAlertState(kind: .confirmDelete(LibraryDeleteCandidate(entry: entry, mode: .removeAll)))
+                    } label: {
+                        Label("Delete", systemImage: "trash")
+                    }
+                }
                 .contextMenu {
                     Button {
                         launchGame(entry)
@@ -410,10 +749,16 @@ struct GameLibraryView: View {
                         Label("Rename", systemImage: "pencil")
                     }
                     Button {
-                        showComingSoon("Set cover")
+                        editCover(entry)
                     } label: {
-                        Label("Set Cover", systemImage: "photo")
+                        Label("Edit Cover", systemImage: "photo")
                     }
+                    Button(role: .destructive) {
+                        resetCover(entry)
+                    } label: {
+                        Label("Reset Cover", systemImage: "arrow.counterclockwise")
+                    }
+                    .disabled(!hasCustomCover(entry))
                     Button {
                         showComingSoon("Game details")
                     } label: {
@@ -438,20 +783,39 @@ struct GameLibraryView: View {
         VStack(spacing: 10) {
             Image(systemName: searchText.isEmpty ? "gamecontroller" : "magnifyingglass")
                 .font(.system(size: 28, weight: .medium))
-                .foregroundColor(AppColors.textMuted)
+                .foregroundColor(AllGamesTokens.textTertiary)
 
             Text(searchText.isEmpty ? "No Games Yet" : "No Matching Games")
                 .font(.system(size: 16, weight: .semibold))
-                .foregroundColor(AppColors.textPrimary)
+                .foregroundColor(AllGamesTokens.textPrimary)
 
             Text(searchText.isEmpty ? "Import some ROMs to get started!" : "Try a different search term.")
                 .font(.system(size: 12))
-                .foregroundColor(AppColors.textMuted)
+                .foregroundColor(AllGamesTokens.textSecondary)
                 .multilineTextAlignment(.center)
+
+            if !searchText.isEmpty || selectedSystemFilter != .all {
+                Button {
+                    withAnimation(.easeOut(duration: 0.2)) {
+                        searchText = ""
+                        selectedSystemFilter = .all
+                    }
+                } label: {
+                    Text("Clear Filter")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 8)
+                        .background(AllGamesTokens.accent)
+                        .clipShape(Capsule())
+                }
+                .buttonStyle(.plain)
+                .padding(.top, 6)
+            }
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 40)
-        .subpageCard(cornerRadius: SubpageUI.Radius.sectionCard)
+        .allGamesCard(cornerRadius: 16, elevated: false)
     }
     
     private func loadGames() {
@@ -491,118 +855,193 @@ struct GameLibraryView: View {
     private func showComingSoon(_ feature: String) {
         activeAlert = LibraryAlertState(kind: .launchError("\(feature) is coming soon."))
     }
+
+    private func editCover(_ entry: ROMLibraryEntry) {
+#if os(iOS)
+        coverEditorEntry = entry
+#endif
+    }
+
+    private func hasCustomCover(_ entry: ROMLibraryEntry) -> Bool {
+        !((entry.customCoverURL ?? "").isEmpty) || CoverArtService.shared.customCoverExists(for: entry.id)
+    }
+
+    private func resetCover(_ entry: ROMLibraryEntry) {
+        CoverArtService.shared.removeCustomCover(for: entry.id)
+        entry.customCoverURL = nil
+        CoverArtService.shared.assignDeterministicPlaceholderIfNeeded(to: entry)
+        do {
+            try viewContext.save()
+#if os(iOS)
+            UINotificationFeedbackGenerator().notificationOccurred(.success)
+#endif
+            loadGames()
+        } catch {
+            activeAlert = LibraryAlertState(kind: .launchError("Could not reset cover: \(error.localizedDescription)"))
+        }
+    }
+
+    private func shareableROMURL(for entry: ROMLibraryEntry) -> URL? {
+        guard let checksum = entry.checksum else { return nil }
+        let preferredExt = (entry.fileName as NSString?)?.pathExtension.lowercased() ?? ""
+        if let location = ROMStorage.shared.getROMLocation(checksum: checksum, fileExtension: preferredExt) {
+            return location.url
+        }
+
+        let docs = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first
+        let romsDir = docs?.appendingPathComponent("ROMs", isDirectory: true)
+        guard let romsDir,
+              let files = try? FileManager.default.contentsOfDirectory(at: romsDir, includingPropertiesForKeys: nil) else {
+            return nil
+        }
+
+        return files.first(where: { $0.lastPathComponent.lowercased().hasPrefix("\(checksum.lowercased()).") })
+    }
 }
 
 struct AllGamesCard: View {
+    static let collectorCoverAspectRatio: CGFloat = 1.0
+
     let entry: ROMLibraryEntry
+    let collectorMode: Bool
     let onTap: () -> Void
-    
-    var body: some View {
-        Button(action: onTap) {
-            VStack(alignment: .leading, spacing: 0) {
-                ZStack(alignment: .topLeading) {
-                    coverArt
-                        .frame(height: 140)
-                        .frame(maxWidth: .infinity)
-                        .clipped()
-                        .clipShape(RoundedRectangle(cornerRadius: 14))
 
-                    LinearGradient(
-                        colors: [Color.clear, Color.black.opacity(0.33)],
-                        startPoint: .top,
-                        endPoint: .bottom
-                    )
-                    .frame(height: 140)
+    private let coverCornerRadius: CGFloat = 18
 
-                    HStack {
-                        if entry.playtimeTotal > 0 {
-                            Text(playtimeBadge)
-                                .font(.system(size: 11, weight: .semibold))
-                                .foregroundColor(AppColors.textPrimary)
-                                .padding(.horizontal, 10)
-                            .padding(.vertical, 5)
-                            .background(AppColors.background.opacity(0.72))
-                            .clipShape(Capsule())
-                        }
-
-                        Spacer()
-
-                        Text((entry.system ?? "UNK").uppercased())
-                            .font(.system(size: 10, weight: .bold))
-                            .foregroundColor(.white.opacity(0.95))
-                            .padding(.horizontal, 9)
-                            .padding(.vertical, 5)
-                            .background(AppColors.primary.opacity(0.68))
-                            .clipShape(Capsule())
-                    }
-                    .padding(8)
-
-                    if let issue = ROMCompatibilityService.shared.compatibility(for: entry).issue {
-                        VStack {
-                            HStack {
-                                Image(systemName: issue.iconName)
-                                    .font(.system(size: 11, weight: .bold))
-                                    .foregroundColor(.orange)
-                                    .padding(6)
-                                    .background(Color.black.opacity(0.55))
-                                    .clipShape(Circle())
-                                    .padding(8)
-                                Spacer()
-                            }
-                            Spacer()
-                        }
-                    }
-
-                }
-
-                VStack(alignment: .leading, spacing: 6) {
-                    Text(entry.title ?? "Unknown Game")
-                        .font(.system(size: 15, weight: .bold))
-                        .foregroundColor(AppColors.textPrimary)
-                        .lineLimit(2)
-
-                    if ROMCompatibilityService.shared.compatibility(for: entry).issue != nil {
-                        Label("Unsupported Mapper", systemImage: "exclamationmark.triangle.fill")
-                            .font(.system(size: 10, weight: .semibold))
-                            .foregroundColor(.orange)
-                    }
-
-                    HStack(spacing: 4) {
-                        Image(systemName: "clock.fill")
-                            .font(.system(size: 10))
-                        Text(lastPlayedLabel)
-                            .font(.system(size: 11, weight: .medium))
-                    }
-                    .foregroundColor(AppColors.primary)
-                }
-                .padding(.horizontal, 12)
-                .padding(.vertical, 10)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .background(AppColors.surface)
-            }
-            .frame(height: 220)
-        }
-        .buttonStyle(PlainButtonStyle())
-        .subpageCard(cornerRadius: SubpageUI.Radius.gameCard)
+    init(entry: ROMLibraryEntry, collectorMode: Bool = false, onTap: @escaping () -> Void) {
+        self.entry = entry
+        self.collectorMode = collectorMode
+        self.onTap = onTap
     }
 
-    @ViewBuilder
+    private var coverAspectRatio: CGFloat {
+        Self.collectorCoverAspectRatio
+    }
+
+    var body: some View {
+        let content = Button(action: onTap) {
+            VStack(alignment: .leading, spacing: 10) {
+                coverSection
+                titleSection
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+
+        if collectorMode {
+            content
+                .buttonStyle(CollectorCardPressStyle())
+        } else {
+            content
+                .buttonStyle(PlainButtonStyle())
+                .allGamesCard(cornerRadius: 18, elevated: true)
+        }
+    }
+
+    private var coverSection: some View {
+        ZStack(alignment: .bottom) {
+            GeometryReader { proxy in
+                coverArt
+                    .frame(width: proxy.size.width, height: proxy.size.height)
+                    .clipped()
+            }
+
+            LinearGradient(
+                colors: [Color.clear, Color.black.opacity(0.28)],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+            .allowsHitTesting(false)
+        }
+        .aspectRatio(coverAspectRatio, contentMode: .fit)
+        .frame(maxWidth: .infinity)
+        .clipped()
+        .overlay {
+            LinearGradient(
+                colors: [Color.white.opacity(0.12), Color.clear],
+                startPoint: .top,
+                endPoint: .center
+            )
+            .clipShape(RoundedRectangle(cornerRadius: coverCornerRadius))
+            .allowsHitTesting(false)
+        }
+        .overlay {
+            RoundedRectangle(cornerRadius: coverCornerRadius)
+                .stroke(Color.white.opacity(0.15), lineWidth: 1)
+                .allowsHitTesting(false)
+        }
+        .overlay(alignment: .bottomLeading) {
+            if entry.playtimeTotal > 0 {
+                AllGamesTimeBadge(text: playtimeBadge)
+                    .padding(collectorMode ? 6 : 8)
+            }
+        }
+        .overlay(alignment: .bottomTrailing) {
+            AllGamesConsoleBadge(
+                text: (entry.system ?? "UNK").uppercased(),
+                backgroundColor: SubpageUI.CollectorIdentity.accent(forSystem: entry.system)
+            )
+                .padding(collectorMode ? 6 : 8)
+        }
+        .clipShape(RoundedRectangle(cornerRadius: coverCornerRadius))
+        .overlay(alignment: .bottom) {
+            if collectorMode {
+                GeometryReader { proxy in
+                    Capsule()
+                        .fill(Color.black.opacity(0.08))
+                        .frame(width: proxy.size.width * 0.72, height: 10)
+                        .blur(radius: 8)
+                        .offset(y: 8)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
+                }
+                .allowsHitTesting(false)
+            }
+        }
+        .shadow(
+            color: .black.opacity(collectorMode ? 0.12 : 0.08),
+            radius: collectorMode ? 12 : 8,
+            x: 0,
+            y: collectorMode ? 6 : 4
+        )
+        .shadow(
+            color: SubpageUI.CollectorIdentity.glow(forSystem: entry.system).opacity(collectorMode ? 1.0 : 0.0),
+            radius: collectorMode ? 10 : 0,
+            x: 0,
+            y: collectorMode ? 5 : 0
+        )
+    }
+
+    private var titleSection: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(displayTitle(entry.title))
+                .font(.system(size: collectorMode ? 14 : 15, weight: .semibold))
+                .foregroundColor(AllGamesTokens.textPrimary)
+                .lineLimit(2)
+                .truncationMode(.tail)
+
+            HStack(spacing: 5) {
+                Image(systemName: ROMCompatibilityService.shared.compatibility(for: entry).issue == nil ? "clock.fill" : "exclamationmark.triangle.fill")
+                    .font(.system(size: 10, weight: .semibold))
+                Text(ROMCompatibilityService.shared.compatibility(for: entry).issue?.title ?? lastPlayedLabel)
+                    .font(.system(size: 12, weight: .medium))
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+            }
+            .foregroundColor(ROMCompatibilityService.shared.compatibility(for: entry).issue == nil ? AllGamesTokens.textSecondary : .orange)
+        }
+        .frame(height: collectorMode ? 46 : 56, alignment: .topLeading)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 2)
+        .padding(.bottom, collectorMode ? 0 : 12)
+    }
+
     private var coverArt: some View {
-        ZStack {
+        Group {
             #if os(iOS)
-            if let imageData = entry.coverImageData, let uiImage = UIImage(data: imageData) {
+            if let resolved = CoverArtService.shared.resolve(for: entry),
+               let uiImage = UIImage(data: resolved.data) {
                 Image(uiImage: uiImage)
                     .resizable()
-                    .aspectRatio(contentMode: .fill)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .clipped()
-            } else if let screenshot = SaveStateStorage.shared.latestScreenshot(for: entry.checksum ?? ""),
-                      let uiImage = UIImage(data: screenshot) {
-                Image(uiImage: uiImage)
-                    .resizable()
-                    .aspectRatio(contentMode: .fill)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .clipped()
+                    .scaledToFill()
             } else {
                 placeholderGlyph
             }
@@ -613,26 +1052,49 @@ struct AllGamesCard: View {
     }
 
     private var placeholderGlyph: some View {
-        ZStack {
-            RoundedRectangle(cornerRadius: 14)
-                .fill(consoleGradient)
+        GeometryReader { proxy in
+            let minSide = min(proxy.size.width, proxy.size.height)
+            let letterSize = minSide * 0.25
 
-            Text(String((entry.title ?? "?").prefix(1)).uppercased())
-                .font(.system(size: 56, weight: .heavy, design: .rounded))
-                .foregroundColor(.white.opacity(0.22))
-                .shadow(color: .black.opacity(0.08), radius: 2, x: 0, y: 1)
+            ZStack {
+                RoundedRectangle(cornerRadius: coverCornerRadius)
+                    .fill(AllGamesTokens.placeholderGradient(for: entry.system))
 
-            VStack {
-                Spacer()
-                HStack {
+                RadialGradient(
+                    colors: [Color.white.opacity(AllGamesTokens.isDark ? 0.12 : 0.18), .clear],
+                    center: .topLeading,
+                    startRadius: 8,
+                    endRadius: minSide * 0.85
+                )
+                .blendMode(.screen)
+
+                Text(String((entry.title ?? "?").prefix(1)).uppercased())
+                    .font(.system(size: letterSize, weight: .heavy, design: .rounded))
+                    .foregroundColor(.white.opacity(0.15))
+                    .shadow(color: .black.opacity(0.14), radius: 2, x: 0, y: 1)
+
+                VStack {
+                    HStack {
+                        Image(systemName: AllGamesTokens.placeholderGlyph(for: entry.system))
+                            .font(.system(size: 15, weight: .bold))
+                            .foregroundColor(.white.opacity(0.42))
+                        Spacer()
+                    }
+                    .padding(10)
+
                     Spacer()
-                    Image(systemName: consoleGlyph)
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundColor(.white.opacity(0.25))
-                        .padding(10)
+
+                    HStack {
+                        Spacer()
+                        Image(systemName: AllGamesTokens.placeholderGlyph(for: entry.system))
+                            .font(.system(size: 12, weight: .bold))
+                            .foregroundColor(.white.opacity(0.30))
+                    }
+                    .padding(10)
                 }
             }
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     private var lastPlayedLabel: String {
@@ -651,26 +1113,14 @@ struct AllGamesCard: View {
         return "\(hours)h"
     }
 
-    private var consoleGradient: LinearGradient {
-        switch (entry.system ?? "").uppercased() {
-        case "GB", "GBC", "GB/GBC":
-            return LinearGradient(colors: [Color(red: 0.66, green: 0.91, blue: 0.84), Color(red: 0.70, green: 0.82, blue: 0.93)], startPoint: .topLeading, endPoint: .bottomTrailing)
-        case "GBA":
-            return LinearGradient(colors: [Color(red: 0.74, green: 0.67, blue: 0.98), Color(red: 0.55, green: 0.46, blue: 0.90)], startPoint: .topLeading, endPoint: .bottomTrailing)
-        case "NDS":
-            return LinearGradient(colors: [Color(red: 0.64, green: 0.75, blue: 0.98), Color(red: 0.57, green: 0.67, blue: 0.93)], startPoint: .topLeading, endPoint: .bottomTrailing)
-        default:
-            return LinearGradient(colors: [AppColors.surfaceLight, AppColors.surface], startPoint: .topLeading, endPoint: .bottomTrailing)
-        }
-    }
-
-    private var consoleGlyph: String {
-        switch (entry.system ?? "").uppercased() {
-        case "GB", "GBC", "GB/GBC": return "rectangle.3.group.bubble"
-        case "GBA": return "bolt.fill"
-        case "NDS": return "rectangle.split.2x1"
-        default: return "gamecontroller.fill"
-        }
+    private func displayTitle(_ title: String?) -> String {
+        let raw = (title ?? "Unknown Game").trimmingCharacters(in: .whitespacesAndNewlines)
+        let withoutTags = raw.replacingOccurrences(
+            of: #"\s*\([^)]*\)"#,
+            with: "",
+            options: .regularExpression
+        )
+        return withoutTags.replacingOccurrences(of: "_", with: " ")
     }
 }
 
@@ -680,29 +1130,26 @@ private struct AllGamesListRow: View {
 
     var body: some View {
         Button(action: onTap) {
-            HStack(spacing: 10) {
+            HStack(spacing: 12) {
                 rowThumbnail
-                    .frame(width: 120, height: 68)
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                    .frame(width: 88, height: 88)
+                    .clipShape(RoundedRectangle(cornerRadius: 14))
 
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(entry.title ?? "Unknown Game")
+                    Text(displayTitle(entry.title))
                         .font(.system(size: 15, weight: .semibold))
-                        .foregroundColor(AppColors.textPrimary)
-                        .lineLimit(1)
+                        .foregroundColor(AllGamesTokens.textPrimary)
+                        .lineLimit(2)
 
                     HStack(spacing: 6) {
-                        Text((entry.system ?? "UNK").uppercased())
-                            .font(.system(size: 10, weight: .bold))
-                            .foregroundColor(AppColors.primary.opacity(0.88))
-                            .padding(.horizontal, 7)
-                            .padding(.vertical, 4)
-                            .background(AppColors.primary.opacity(0.12))
-                            .clipShape(Capsule())
+                        AllGamesConsoleBadge(
+                            text: (entry.system ?? "UNK").uppercased(),
+                            backgroundColor: SubpageUI.CollectorIdentity.accent(forSystem: entry.system)
+                        )
 
                         Text(lastPlayedLabel)
                             .font(.system(size: 11, weight: .medium))
-                            .foregroundColor(AppColors.textMuted)
+                            .foregroundColor(AllGamesTokens.textSecondary)
                     }
                 }
 
@@ -716,11 +1163,11 @@ private struct AllGamesListRow: View {
 
                 Image(systemName: "chevron.right")
                     .font(.system(size: 13, weight: .semibold))
-                    .foregroundColor(AppColors.textMuted)
+                    .foregroundColor(AllGamesTokens.textTertiary)
             }
-            .padding(10)
-            .frame(minHeight: 92)
-            .subpageCard(cornerRadius: 12, shadowOpacity: 0.04)
+            .padding(12)
+            .frame(minHeight: 96)
+            .allGamesCard(cornerRadius: 18, elevated: false)
         }
         .buttonStyle(.plain)
     }
@@ -729,7 +1176,8 @@ private struct AllGamesListRow: View {
     private var rowThumbnail: some View {
         ZStack {
             #if os(iOS)
-            if let imageData = entry.coverImageData, let uiImage = UIImage(data: imageData) {
+            if let resolved = CoverArtService.shared.resolve(for: entry),
+               let uiImage = UIImage(data: resolved.data) {
                 Image(uiImage: uiImage)
                     .resizable()
                     .aspectRatio(contentMode: .fill)
@@ -741,31 +1189,23 @@ private struct AllGamesListRow: View {
             } else {
                 RoundedRectangle(cornerRadius: 12)
                     .fill(
-                        LinearGradient(
-                            colors: [AppColors.surfaceLight, AppColors.surface],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
+                        AllGamesTokens.placeholderGradient(for: entry.system)
                     )
                     .overlay(
-                        Image(systemName: "gamecontroller.fill")
+                        Image(systemName: AllGamesTokens.placeholderGlyph(for: entry.system))
                             .font(.system(size: 20))
-                            .foregroundColor(AppColors.textMuted)
+                            .foregroundColor(Color.white.opacity(0.28))
                     )
             }
             #else
             RoundedRectangle(cornerRadius: 12)
                 .fill(
-                    LinearGradient(
-                        colors: [AppColors.surfaceLight, AppColors.surface],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
+                    AllGamesTokens.placeholderGradient(for: entry.system)
                 )
                 .overlay(
-                    Image(systemName: "gamecontroller.fill")
+                    Image(systemName: AllGamesTokens.placeholderGlyph(for: entry.system))
                         .font(.system(size: 20))
-                        .foregroundColor(AppColors.textMuted)
+                        .foregroundColor(Color.white.opacity(0.28))
                 )
             #endif
         }
@@ -777,6 +1217,16 @@ private struct AllGamesListRow: View {
         let formatter = RelativeDateTimeFormatter()
         formatter.unitsStyle = .short
         return formatter.localizedString(for: lastPlayed, relativeTo: Date())
+    }
+
+    private func displayTitle(_ title: String?) -> String {
+        let raw = (title ?? "Unknown Game").trimmingCharacters(in: .whitespacesAndNewlines)
+        let withoutTags = raw.replacingOccurrences(
+            of: #"\s*\([^)]*\)"#,
+            with: "",
+            options: .regularExpression
+        )
+        return withoutTags.replacingOccurrences(of: "_", with: " ")
     }
 }
 

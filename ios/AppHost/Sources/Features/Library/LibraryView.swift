@@ -20,6 +20,9 @@ struct LibraryView: View {
         .onAppear {
             viewModel.loadEntries(in: viewContext)
         }
+        .onReceive(NotificationCenter.default.publisher(for: .coverArtDidChange)) { _ in
+            viewModel.loadEntries(in: viewContext)
+        }
         .sheet(item: $selectedRom) { rom in
             RomDetailView(rom: rom) {
                 viewModel.loadEntries(in: viewContext)
@@ -532,12 +535,16 @@ class ROMLibraryEntry: NSManagedObject {
     @NSManaged var fileName: String?
     @NSManaged var fileSize: Int64
     @NSManaged var coverImageData: Data?
+    @NSManaged var customCoverURL: String?
     @NSManaged var system: String?
     @NSManaged var lastPlayedAt: Date?
     @NSManaged var playtimeTotal: Int64
     @NSManaged var isFavorite: Bool
     @NSManaged var dateAdded: Date?
     @NSManaged var checksum: String?
+    @NSManaged var romSha1: String?
+    @NSManaged var defaultCoverKey: String?
+    @NSManaged var canonicalTitleID: String?
 }
 
 final class LibraryViewModel: ObservableObject {

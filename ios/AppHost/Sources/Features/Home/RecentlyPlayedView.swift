@@ -7,17 +7,55 @@ import UIKit
 struct RecentlyPlayedView: View {
     @Environment(\.managedObjectContext) private var viewContext
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.verticalSizeClass) private var verticalSizeClass
 
+    @StateObject private var performanceProfiler = PerformanceProfiler.shared
     @State private var games: [ROMLibraryEntry] = []
     @State private var searchText = ""
     @State private var selectedGame: Game?
     @State private var activeAlert: RecentAlertState?
     @State private var showEarlier = false
     @State private var sortMode: RecentSortMode = .recent
+    @State private var coverEditorEntry: ROMLibraryEntry?
+
+    private var heavyUIEffectsEnabled: Bool {
+        performanceProfiler.currentQualityProfile.heavyUIEffects
+    }
+
+    private var collectorAtmosphere: some View {
+        LinearGradient(
+            colors: [Color.black.opacity(0.04), Color.clear],
+            startPoint: .top,
+            endPoint: .bottom
+        )
+        .ignoresSafeArea()
+        .allowsHitTesting(false)
+    }
+
+    private var isCollectorMode: Bool {
+#if os(iOS)
+        verticalSizeClass == .compact
+#else
+        false
+#endif
+    }
+
+    private var collectorGridColumns: [GridItem] {
+#if os(iOS)
+        let width = UIScreen.main.bounds.width
+        let columnCount = width >= 900 ? 4 : 3
+#else
+        let columnCount = 4
+#endif
+        return Array(repeating: GridItem(.flexible(minimum: 0), spacing: 16), count: columnCount)
+    }
 
     var body: some View {
         ZStack {
             backgroundLayer
+            if isCollectorMode {
+                collectorAtmosphere
+            }
 
             VStack(spacing: 0) {
                 headerSection
@@ -27,9 +65,13 @@ struct RecentlyPlayedView: View {
                         if filteredAndSortedGames.isEmpty {
                             emptyState
                         } else {
-                            continuePlayingSection
-                            recentlyPlayedSection
-                            earlierSection
+                            if isCollectorMode {
+                                collectorGridSection
+                            } else {
+                                continuePlayingSection
+                                recentlyPlayedSection
+                                earlierSection
+                            }
                         }
                     }
                     .padding(.horizontal, 20)
@@ -38,6 +80,7 @@ struct RecentlyPlayedView: View {
                 }
             }
         }
+        .animation(.easeInOut(duration: 0.28), value: isCollectorMode)
         #if os(iOS)
         .fullScreenCover(item: $selectedGame) { game in
             GamePlayView(game: game, onExit: {
@@ -77,6 +120,16 @@ struct RecentlyPlayedView: View {
         .onReceive(NotificationCenter.default.publisher(for: .romLibraryDidChange)) { _ in
             loadGames()
         }
+        .onReceive(NotificationCenter.default.publisher(for: .coverArtDidChange)) { _ in
+            loadGames()
+        }
+#if os(iOS)
+        .sheet(item: $coverEditorEntry) { entry in
+            CoverEditorSheet(entry: entry) {
+                loadGames()
+            }
+        }
+#endif
     }
 
     private var sortedGames: [ROMLibraryEntry] {
@@ -125,14 +178,14 @@ struct RecentlyPlayedView: View {
                         endPoint: .bottomTrailing
                     )
                 )
-                .blur(radius: 120)
+                .blur(radius: heavyUIEffectsEnabled ? 120 : 30)
                 .frame(width: 380, height: 380)
                 .offset(x: 170, y: -240)
         }
     }
 
     private var headerSection: some View {
-        VStack(spacing: 12) {
+        VStack(spacing: isCollectorMode ? 8 : 12) {
             HStack(spacing: 12) {
                 Button(action: { dismiss() }) {
                     Image(systemName: "arrow.left")
@@ -145,7 +198,7 @@ struct RecentlyPlayedView: View {
 
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Recently Played")
-                        .font(SubpageUI.Font.heroTitle)
+                        .font(isCollectorMode ? .system(size: 22, weight: .bold) : SubpageUI.Font.heroTitle)
                         .lineLimit(1)
                         .minimumScaleFactor(0.8)
                         .allowsTightening(true)
@@ -153,7 +206,7 @@ struct RecentlyPlayedView: View {
                         .foregroundColor(AppColors.textPrimary)
                     Text("\(games.count) games")
                         .font(SubpageUI.Font.subtitle)
-                        .foregroundColor(AppColors.primary)
+                        .foregroundColor(isCollectorMode ? AppColors.textSecondary : AppColors.primary)
                 }
 
                 Spacer()
@@ -202,7 +255,7 @@ struct RecentlyPlayedView: View {
                     .foregroundColor(AppColors.textPrimary)
                     .font(.system(size: 17))
             }
-            .subpageSearchField(cornerRadius: 22, height: 44)
+            .subpageSearchField(cornerRadius: 22, height: isCollectorMode ? 38 : 44)
         }
         .padding(.horizontal, 20)
         .padding(.top, 18)
@@ -252,6 +305,19 @@ struct RecentlyPlayedView: View {
                     .contextMenu {
                         recentContextMenu(entry)
                     }
+                }
+            }
+        }
+    }
+
+    private var collectorGridSection: some View {
+        LazyVGrid(columns: collectorGridColumns, spacing: 16) {
+            ForEach(filteredAndSortedGames) { entry in
+                RecentCollectorCard(entry: entry) {
+                    launchGame(entry)
+                }
+                .contextMenu {
+                    recentContextMenu(entry)
                 }
             }
         }
@@ -307,6 +373,22 @@ struct RecentlyPlayedView: View {
                 .font(.system(size: 13))
                 .foregroundColor(AppColors.textMuted)
                 .multilineTextAlignment(.center)
+
+            if !searchText.isEmpty {
+                Button {
+                    searchText = ""
+                } label: {
+                    Text("Clear Search")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 8)
+                        .background(AppColors.primary)
+                        .clipShape(Capsule())
+                }
+                .buttonStyle(.plain)
+                .padding(.top, 4)
+            }
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 44)
@@ -315,6 +397,29 @@ struct RecentlyPlayedView: View {
 
     @ViewBuilder
     private func recentContextMenu(_ entry: ROMLibraryEntry) -> some View {
+        Button {
+            launchGame(entry)
+        } label: {
+            Label("Play", systemImage: "play.fill")
+        }
+        Button {
+            editCover(entry)
+        } label: {
+            Label("Edit Cover", systemImage: "photo")
+        }
+        Button(role: .destructive) {
+            resetCover(entry)
+        } label: {
+            Label("Reset Cover", systemImage: "arrow.counterclockwise")
+        }
+        .disabled(!hasCustomCover(entry))
+#if os(iOS)
+        if let shareURL = shareableROMURL(for: entry) {
+            ShareLink(item: shareURL) {
+                Label("Share", systemImage: "square.and.arrow.up")
+            }
+        }
+#endif
         Button(role: .destructive) {
             activeAlert = .confirmDelete(RecentDeleteCandidate(entry: entry, mode: .removeROMOnly))
         } label: {
@@ -355,6 +460,159 @@ struct RecentlyPlayedView: View {
         } catch {
             activeAlert = .launchError("Could not delete game: \(error.localizedDescription)")
         }
+    }
+
+    private func editCover(_ entry: ROMLibraryEntry) {
+#if os(iOS)
+        coverEditorEntry = entry
+#endif
+    }
+
+    private func resetCover(_ entry: ROMLibraryEntry) {
+        CoverArtService.shared.removeCustomCover(for: entry.id)
+        entry.customCoverURL = nil
+        CoverArtService.shared.assignDeterministicPlaceholderIfNeeded(to: entry)
+
+        do {
+            try viewContext.save()
+#if os(iOS)
+            UINotificationFeedbackGenerator().notificationOccurred(.success)
+#endif
+            loadGames()
+        } catch {
+            activeAlert = .launchError("Could not reset cover: \(error.localizedDescription)")
+        }
+    }
+
+    private func shareableROMURL(for entry: ROMLibraryEntry) -> URL? {
+        guard let checksum = entry.checksum else { return nil }
+        let ext = (entry.fileName as NSString?)?.pathExtension.lowercased() ?? ""
+        if let location = ROMStorage.shared.getROMLocation(checksum: checksum, fileExtension: ext) {
+            return location.url
+        }
+        return nil
+    }
+
+    private func hasCustomCover(_ entry: ROMLibraryEntry) -> Bool {
+        !((entry.customCoverURL ?? "").isEmpty) || CoverArtService.shared.customCoverExists(for: entry.id)
+    }
+}
+
+private struct RecentCollectorCard: View {
+    let entry: ROMLibraryEntry
+    let onTap: () -> Void
+
+    private var consoleAccent: Color {
+        SubpageUI.CollectorIdentity.accent(forSystem: entry.system)
+    }
+
+    var body: some View {
+        Button(action: onTap) {
+            VStack(alignment: .leading, spacing: 8) {
+                ZStack(alignment: .topTrailing) {
+                    coverArt
+                        .aspectRatio(2.0 / 3.0, contentMode: .fit)
+                        .frame(maxWidth: .infinity)
+
+                    Text((entry.system ?? "UNK").uppercased())
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(consoleAccent.opacity(0.94))
+                        .clipShape(Capsule())
+                        .padding(8)
+                }
+
+                Text(entry.title ?? "Unknown Game")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(AppColors.textPrimary)
+                    .lineLimit(2)
+
+                Text(metaLine)
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundColor(AppColors.textMuted)
+                    .lineLimit(1)
+            }
+        }
+        .buttonStyle(CollectorCardPressStyle())
+    }
+
+    @ViewBuilder
+    private var coverArt: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 18)
+                .fill(SubpageUI.CollectorIdentity.placeholderGradient(forSystem: entry.system))
+#if os(iOS)
+            if let resolved = CoverArtService.shared.resolve(for: entry),
+               let uiImage = UIImage(data: resolved.data) {
+                Image(uiImage: uiImage)
+                    .resizable()
+                    .scaledToFill()
+            } else if let screenshotData = SaveStateStorage.shared.latestScreenshot(for: entry.checksum ?? ""),
+                      let uiImage = UIImage(data: screenshotData) {
+                Image(uiImage: uiImage)
+                    .resizable()
+                    .scaledToFill()
+            } else {
+                Image(systemName: "gamecontroller.fill")
+                    .font(.system(size: 24))
+                    .foregroundColor(AppColors.textMuted)
+            }
+#else
+            Image(systemName: "gamecontroller.fill")
+                .font(.system(size: 24))
+                .foregroundColor(AppColors.textMuted)
+#endif
+        }
+        .clipShape(RoundedRectangle(cornerRadius: 18))
+        .overlay {
+            LinearGradient(
+                colors: [Color.white.opacity(0.12), Color.clear],
+                startPoint: .top,
+                endPoint: .center
+            )
+            .clipShape(RoundedRectangle(cornerRadius: 18))
+            .allowsHitTesting(false)
+        }
+        .overlay {
+            RoundedRectangle(cornerRadius: 18)
+                .stroke(Color.white.opacity(0.15), lineWidth: 1)
+                .allowsHitTesting(false)
+        }
+        .overlay(alignment: .bottom) {
+            GeometryReader { proxy in
+                Capsule()
+                    .fill(Color.black.opacity(0.08))
+                    .frame(width: proxy.size.width * 0.72, height: 10)
+                    .blur(radius: 8)
+                    .offset(y: 8)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
+            }
+            .allowsHitTesting(false)
+        }
+        .shadow(color: .black.opacity(0.12), radius: 12, x: 0, y: 6)
+        .shadow(color: SubpageUI.CollectorIdentity.glow(forSystem: entry.system), radius: 10, x: 0, y: 5)
+    }
+
+    private var metaLine: String {
+        if let issue = ROMCompatibilityService.shared.compatibility(for: entry).issue {
+            return issue.title
+        }
+        if entry.playtimeTotal > 0 {
+            let h = max(0, Int(entry.playtimeTotal) / 3600)
+            return h > 0 ? "\(lastPlayedLabel) • \(h)h" : "\(lastPlayedLabel) • \(max(1, Int(entry.playtimeTotal) / 60))m"
+        }
+        return lastPlayedLabel
+    }
+
+    private var lastPlayedLabel: String {
+        guard let date = entry.lastPlayedAt else { return "Never played" }
+        if Calendar.current.isDateInToday(date) { return "Today" }
+        if Calendar.current.isDateInYesterday(date) { return "Yesterday" }
+        let formatter = RelativeDateTimeFormatter()
+        formatter.unitsStyle = .short
+        return formatter.localizedString(for: date, relativeTo: Date())
     }
 }
 

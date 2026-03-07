@@ -2,6 +2,7 @@
 #include "nds/nds_libretro_abi.h"
 #include "nds/nds_libretro_core_api.h"
 #include "nds/nds_melonds_libretro_binding.h"
+#include "nds/nds_touch_pointer_mapping.h"
 
 #include <algorithm>
 #include <cstdarg>
@@ -46,6 +47,38 @@ static std::string extractDefaultCoreOptionValue(const char* definition) {
         --valueEnd;
     }
     return std::string(valueStart, valueEnd);
+}
+
+static std::string extractDefaultOptionValueV1(const retro_core_option_definition& definition) {
+    if (definition.default_value && definition.default_value[0] != '\0') {
+        return std::string(definition.default_value);
+    }
+    for (int i = 0; i < RETRO_NUM_CORE_OPTION_VALUES_MAX; ++i) {
+        const retro_core_option_value& value = definition.values[i];
+        if (!value.value) {
+            break;
+        }
+        if (value.value[0] != '\0') {
+            return std::string(value.value);
+        }
+    }
+    return std::string();
+}
+
+static std::string extractDefaultOptionValueV2(const retro_core_option_v2_definition& definition) {
+    if (definition.default_value && definition.default_value[0] != '\0') {
+        return std::string(definition.default_value);
+    }
+    for (int i = 0; i < RETRO_NUM_CORE_OPTION_VALUES_MAX; ++i) {
+        const retro_core_option_value& value = definition.values[i];
+        if (!value.value) {
+            break;
+        }
+        if (value.value[0] != '\0') {
+            return std::string(value.value);
+        }
+    }
+    return std::string();
 }
 
 class LibretroBackend final : public Backend {
@@ -347,7 +380,9 @@ private:
             *static_cast<unsigned*>(data) = 2;
             return true;
         case RETRO_ENVIRONMENT_SET_CORE_OPTIONS_V2:
+            return setCoreOptionDefinitionsV2(data);
         case RETRO_ENVIRONMENT_SET_CORE_OPTIONS:
+            return setCoreOptionDefinitionsV1(data);
         case RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY:
         case RETRO_ENVIRONMENT_SET_CORE_OPTIONS_UPDATE_DISPLAY_CALLBACK:
             return true;
@@ -452,6 +487,18 @@ private:
 
     void onInputPoll() { ++inputPollCount_; }
 
+    xemu::nds::PointerFrameCoordinates mapTouchToLibretroPointerCoords() const {
+        const int frameW = coreFrameWidth_ > 0 ? coreFrameWidth_ : (coreBaseWidth_ > 0 ? coreBaseWidth_ : 256);
+        const int frameH = coreFrameHeight_ > 0 ? coreFrameHeight_ : (coreBaseHeight_ > 0 ? coreBaseHeight_ : 384);
+
+        return xemu::nds::mapTouchToPointerFrame(
+            static_cast<int>(touch_.x),
+            static_cast<int>(touch_.y),
+            frameW,
+            frameH
+        );
+    }
+
     int16_t onInputState(unsigned port, unsigned device, unsigned index, unsigned id) const {
         (void)index;
         if (port != 0) {
@@ -466,11 +513,12 @@ private:
         }
 
         if (device == RETRO_DEVICE_POINTER) {
+            const xemu::nds::PointerFrameCoordinates pointer = mapTouchToLibretroPointerCoords();
             switch (id) {
             case RETRO_DEVICE_ID_POINTER_X:
-                return static_cast<int16_t>(mapPointerAxisToLibretro(touch_.x, 255));
+                return static_cast<int16_t>(mapPointerAxisToLibretro(pointer.x, pointer.maxX));
             case RETRO_DEVICE_ID_POINTER_Y:
-                return static_cast<int16_t>(mapPointerAxisToLibretro(touch_.y, 191));
+                return static_cast<int16_t>(mapPointerAxisToLibretro(pointer.y, pointer.maxY));
             case RETRO_DEVICE_ID_POINTER_PRESSED:
                 return touch_.is_pressed ? 1 : 0;
             default:
@@ -795,8 +843,55 @@ private:
         for (const retro_variable* v = vars; v && v->key; ++v) {
             coreOptions_[v->key] = extractDefaultCoreOptionValue(v->value);
         }
+        applyCoreOptionOverrides();
         coreOptionsDirty_ = false;
         return true;
+    }
+
+    bool setCoreOptionDefinitionsV1(void* data) {
+        if (!data) {
+            return false;
+        }
+        const retro_core_option_definition* definitions =
+            static_cast<const retro_core_option_definition*>(data);
+        if (!definitions) {
+            return false;
+        }
+        coreOptions_.clear();
+        for (const retro_core_option_definition* definition = definitions;
+             definition && definition->key;
+             ++definition) {
+            coreOptions_[definition->key] = extractDefaultOptionValueV1(*definition);
+        }
+        applyCoreOptionOverrides();
+        coreOptionsDirty_ = false;
+        return true;
+    }
+
+    bool setCoreOptionDefinitionsV2(void* data) {
+        if (!data) {
+            return false;
+        }
+        const retro_core_options_v2* options = static_cast<const retro_core_options_v2*>(data);
+        if (!options || !options->definitions) {
+            return false;
+        }
+        coreOptions_.clear();
+        for (const retro_core_option_v2_definition* definition = options->definitions;
+             definition && definition->key;
+             ++definition) {
+            coreOptions_[definition->key] = extractDefaultOptionValueV2(*definition);
+        }
+        applyCoreOptionOverrides();
+        // Frontend default: avoid requiring external DS BIOS/firmware dumps.
+        // melonDS DS publishes "Native" first for this option, but "Built-In"
+        // yields a working out-of-the-box ROM load path in app environments.
+        coreOptionsDirty_ = false;
+        return true;
+    }
+
+    void applyCoreOptionOverrides() {
+        coreOptions_["melonds_sysfile_mode"] = "builtin";
     }
 
     bool getCoreOptionVariable(void* data) {

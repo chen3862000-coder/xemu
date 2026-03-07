@@ -30,6 +30,8 @@ class GamePlayViewModel: ObservableObject {
     private var inputBus: InputBus?
     private var activeCore: EmulatorCore?
     private let performanceProfiler = PerformanceProfiler.shared
+    private var activeDisplayPlatform: Platform?
+    private var lastAppliedQualityProfile: PerfQualityProfile?
     private var activeAudioSampleRate: Double = 48_000
     private var pendingReleaseTasks: [EmulatorButton: Task<Void, Never>] = [:]
     private var touchButtonStates: [EmulatorButton: Bool] = [:]
@@ -44,10 +46,16 @@ class GamePlayViewModel: ObservableObject {
     private var frameHeight = 144
     private var lastFPSTime: Double = 0
     private var lastNativeSavePersistTime: Double = 0
-    private var adaptiveRenderFrameCounter: Int = 0
     private var isStoppingEmulation = false
     private var hasAutoResumedStateThisSession = false
     private var isStateLoadInProgress = false
+    private var audioResamplerSourceRate: Int = 0
+    private var audioResamplerTargetRate: Int = 0
+    private var audioResamplerPosition: Double = 0
+    private var audioResamplerCarryFrame: (Int16, Int16)?
+    private var ndsTouchIsPressed = false
+    private var ndsTouchPressedAtNs: UInt64 = 0
+    private var pendingNDSTouchReleaseTask: Task<Void, Never>?
     #if canImport(UIKit)
     private var lifecycleObservers: [NSObjectProtocol] = []
     #endif
@@ -182,35 +190,32 @@ class GamePlayViewModel: ObservableObject {
                     return platform
                 }
             }()
-
-            switch effectiveDisplayPlatform {
-            case .GBC:
-                metalRenderer?.setColorAdjustments(
-                    brightness: 2.28,
-                    gamma: 1.86,
-                    contrast: 1.10,
-                    saturation: 1.22
-                )
-            case .GB:
-                metalRenderer?.setColorAdjustments()
-            default:
-                metalRenderer?.setColorAdjustments()
-            }
+            activeDisplayPlatform = effectiveDisplayPlatform
+            applyDisplayColorAdjustments(for: effectiveDisplayPlatform)
 
             let audioEngineRate: Double
             switch audioQuality {
             case 0:  // Sound First - 48kHz for best quality
                 audioEngineRate = 48_000
-            case 1:  // Balanced - 44.1kHz native
-                audioEngineRate = 44_100
-            default:  // Frame First - 44.1kHz
-                audioEngineRate = 44_100
+            case 1:  // Balanced - stable 44.1kHz output
+                if platform == .GB || platform == .GBC {
+                    audioEngineRate = Double(GBCore.nativeAudioSampleRate)
+                } else {
+                    audioEngineRate = 44_100
+                }
+            default:  // Frame First - direct pass-through; keep GB/GBC native
+                if platform == .GB || platform == .GBC {
+                    audioEngineRate = Double(GBCore.nativeAudioSampleRate)
+                } else {
+                    audioEngineRate = 44_100
+                }
             }
             activeAudioSampleRate = audioEngineRate
             audioEngine = AudioEngine(sampleRate: audioEngineRate)
             audioEngine?.configureAudioSession()
             try? audioEngine?.start()
             audioEngine?.setVolume(1.0)
+            resetAudioResamplerState()
 
             emulatorSession?.start()
             refreshSaveStateDebugLine()
@@ -222,6 +227,7 @@ class GamePlayViewModel: ObservableObject {
             isPaused = false
             statusMessage = ""
             performanceProfiler.startSession(platform: platform)
+            applyPerformanceProfileIfNeeded(performanceProfiler.currentQualityProfile)
         } catch {
             statusMessage = "Error: \(error.localizedDescription)"
         }
@@ -244,6 +250,7 @@ class GamePlayViewModel: ObservableObject {
             persistNativeSaveIfNeeded(force: true)
             cancelPendingTouchReleases()
             releaseAllTouchButtons()
+            clearPendingNDSTouchRelease()
 
             inputBus?.clearTarget()
 
@@ -261,15 +268,19 @@ class GamePlayViewModel: ObservableObject {
             audioEngine = nil
             inputBus = nil
             activeCore = nil
+            activeDisplayPlatform = nil
+            lastAppliedQualityProfile = nil
             activeAudioSampleRate = 44_100
+            resetAudioResamplerState()
             currentPlatform = nil
             currentROMHash = ""
             currentGameTitle = ""
             sessionStartedAt = nil
             lastFrameSnapshot = nil
-            adaptiveRenderFrameCounter = 0
             hasAutoResumedStateThisSession = false
             isStateLoadInProgress = false
+            ndsTouchIsPressed = false
+            ndsTouchPressedAtNs = 0
         }
         
         isRunning = false
@@ -623,19 +634,61 @@ class GamePlayViewModel: ObservableObject {
     }
 
     func setNDSTouchNormalized(x: CGFloat, y: CGFloat, pressed: Bool) {
+        guard pressed else {
+            clearNDSTouch()
+            return
+        }
         guard let ndsCore = activeCore as? NDSCore else { return }
+        clearPendingNDSTouchRelease()
+        let nowNs = DispatchTime.now().uptimeNanoseconds
+        if !ndsTouchIsPressed {
+            ndsTouchIsPressed = true
+            ndsTouchPressedAtNs = nowNs
+        }
         let clampedX = max(0, min(1, x))
         let clampedY = max(0, min(1, y))
         ndsCore.setStylus(
             x: Int((clampedX * 255.0).rounded()),
             y: Int((clampedY * 191.0).rounded()),
-            pressed: pressed
+            pressed: true
         )
     }
 
     func clearNDSTouch() {
         guard let ndsCore = activeCore as? NDSCore else { return }
-        ndsCore.clearStylus()
+        guard ndsTouchIsPressed else {
+            ndsCore.clearStylus()
+            return
+        }
+        let nowNs = DispatchTime.now().uptimeNanoseconds
+        let elapsed = nowNs >= ndsTouchPressedAtNs ? nowNs - ndsTouchPressedAtNs : 0
+        let minimum = Self.minimumTouchPressDurationNs
+        let remaining = minimum > elapsed ? minimum - elapsed : 0
+        clearPendingNDSTouchRelease()
+
+        if remaining == 0 {
+            ndsCore.clearStylus()
+            ndsTouchIsPressed = false
+            ndsTouchPressedAtNs = 0
+            return
+        }
+
+        pendingNDSTouchReleaseTask = Task { [weak self] in
+            try? await Task.sleep(nanoseconds: remaining)
+            guard !Task.isCancelled else { return }
+            await MainActor.run {
+                guard let self, self.ndsTouchIsPressed else { return }
+                (self.activeCore as? NDSCore)?.clearStylus()
+                self.ndsTouchIsPressed = false
+                self.ndsTouchPressedAtNs = 0
+                self.pendingNDSTouchReleaseTask = nil
+            }
+        }
+    }
+
+    private func clearPendingNDSTouchRelease() {
+        pendingNDSTouchReleaseTask?.cancel()
+        pendingNDSTouchReleaseTask = nil
     }
 
     private func mapButtonToInputType(_ button: EmulatorButton) -> ControllerButton {
@@ -662,6 +715,10 @@ class GamePlayViewModel: ObservableObject {
     func setFastForward(_ speed: Int) {
         // TODO: Implement fast forward by adjusting frame timing
         statusMessage = "Fast forward: \(speed)x"
+    }
+
+    func currentRenderScale() -> Double {
+        max(0.5, min(1.0, performanceProfiler.currentQualityProfile.renderScale))
     }
 
     func setupRenderer(mtkView: MTKView) {
@@ -782,6 +839,33 @@ class GamePlayViewModel: ObservableObject {
         return nil
         #endif
     }
+
+    private func applyDisplayColorAdjustments(for displayPlatform: Platform?) {
+        switch displayPlatform {
+        case .GBC:
+            metalRenderer?.setColorAdjustments(
+                brightness: 2.28,
+                gamma: 1.86,
+                contrast: 1.10,
+                saturation: 1.22
+            )
+        case .GB:
+            metalRenderer?.setColorAdjustments()
+        default:
+            metalRenderer?.setColorAdjustments()
+        }
+    }
+
+    private func applyPerformanceProfileIfNeeded(_ profile: PerfQualityProfile) {
+        guard let renderer = metalRenderer else { return }
+        guard lastAppliedQualityProfile != profile else { return }
+        lastAppliedQualityProfile = profile
+        emulatorSession?.setRenderFrameSkip(max(0, profile.frameSkip))
+        renderer.setPostProcessingEnabled(profile.shadersEnabled)
+        if profile.shadersEnabled {
+            applyDisplayColorAdjustments(for: activeDisplayPlatform)
+        }
+    }
 }
 
 extension GamePlayViewModel: EmulatorRenderDelegate {
@@ -798,17 +882,10 @@ extension GamePlayViewModel: EmulatorRenderDelegate {
                 return
             }
             lastFrameSnapshot = (data: data, width: width, height: height, bytesPerRow: pitch)
-            
-            let adaptiveFrameSkip = max(0, performanceProfiler.hudSnapshot.qualityProfile.frameSkip)
-            if adaptiveFrameSkip <= 0 {
-                metalRenderer?.enqueueFrame(data, width: width, height: height, bytesPerRow: pitch)
-            } else {
-                adaptiveRenderFrameCounter += 1
-                if adaptiveRenderFrameCounter >= (adaptiveFrameSkip + 1) {
-                    adaptiveRenderFrameCounter = 0
-                    metalRenderer?.enqueueFrame(data, width: width, height: height, bytesPerRow: pitch)
-                }
-            }
+            let qualityProfile = performanceProfiler.currentQualityProfile
+            applyPerformanceProfileIfNeeded(qualityProfile)
+
+            metalRenderer?.enqueueFrame(data, width: width, height: height, bytesPerRow: pitch)
             performanceProfiler.recordFrame()
             
             let now = CACurrentMediaTime()
@@ -824,7 +901,6 @@ extension GamePlayViewModel: EmulatorRenderDelegate {
     func emulatorDidGenerateAudio(samples: Data?, sampleRate: Int) {
         autoreleasepool {
             guard let samples = samples, !samples.isEmpty else { return }
-            let rawMetrics = audioMetrics(for: samples)
             var outputSamples = samples
             var outputRate = sampleRate
 
@@ -833,73 +909,143 @@ extension GamePlayViewModel: EmulatorRenderDelegate {
                 let targetRate = 48_000
                 outputRate = targetRate
                 if sampleRate != targetRate {
-                    if let resampled = resampleAudioLinear(samples: samples, fromRate: sampleRate, toRate: targetRate) {
-                        outputSamples = resampled
+                    guard let resampled = resampleAudioLinearStreaming(samples: samples, fromRate: sampleRate, toRate: targetRate) else {
+                        return
                     }
+                    outputSamples = resampled
+                } else {
+                    resetAudioResamplerState()
                 }
                 
-            case 1:  // Balanced - resample to 44.1kHz
-                let targetRate = 44_100
-                outputRate = targetRate
-                if sampleRate != targetRate {
-                    if let resampled = resampleAudioLinear(samples: samples, fromRate: sampleRate, toRate: targetRate) {
+            case 1:  // Balanced - keep GB/GBC native to avoid resample artifacts
+                if currentPlatform == .GB || currentPlatform == .GBC {
+                    outputSamples = samples
+                    outputRate = sampleRate
+                    resetAudioResamplerState()
+                } else {
+                    let targetRate = 44_100
+                    outputRate = targetRate
+                    if sampleRate != targetRate {
+                        guard let resampled = resampleAudioLinearStreaming(samples: samples, fromRate: sampleRate, toRate: targetRate) else {
+                            return
+                        }
                         outputSamples = resampled
+                    } else {
+                        resetAudioResamplerState()
                     }
                 }
                 
             case 2:  // Frame First - no resampling, direct pass
                 outputSamples = samples
+                resetAudioResamplerState()
                 
             default:
                 outputSamples = samples
+                resetAudioResamplerState()
             }
 
             audioEngine?.updateAudioBuffer(outputSamples)
             logAudioABIfNeeded(rawSamples: samples,
                                rawRate: sampleRate,
-                               rawMetrics: rawMetrics,
                                outputSamples: outputSamples,
                                outputRate: outputRate)
         }
     }
-    
-    private func resampleAudioLinear(samples: Data, fromRate: Int, toRate: Int) -> Data? {
-        guard fromRate != toRate, fromRate > 0, toRate > 0 else { return samples }
-        
-        let ratio = Double(toRate) / Double(fromRate)
+
+    private func resetAudioResamplerState() {
+        audioResamplerSourceRate = 0
+        audioResamplerTargetRate = 0
+        audioResamplerPosition = 0
+        audioResamplerCarryFrame = nil
+    }
+
+    private func resampleAudioLinearStreaming(samples: Data, fromRate: Int, toRate: Int) -> Data? {
+        guard fromRate > 0, toRate > 0 else { return samples }
+        guard fromRate != toRate else { return samples }
+
         let channelCount = 2
-        let sourceFrames = samples.count / (2 * channelCount)
-        let targetFrames = Int(Double(sourceFrames) * ratio)
-        
-        guard targetFrames > 0, sourceFrames > 4 else { return samples }
-        
-        let sourcePtr = samples.withUnsafeBytes { $0.baseAddress!.assumingMemoryBound(to: Int16.self) }
-        
-        var result = Data(capacity: targetFrames * 2 * channelCount)
-        
-        for i in 0..<targetFrames {
-            let srcPos = Double(i) / ratio
-            let srcIndex = Int(srcPos)
-            let frac = srcPos - Double(srcIndex)
-            
-            for ch in 0..<channelCount {
-                let srcIdx = srcIndex * channelCount + ch
-                let srcIdx1 = min(srcIdx + channelCount, sourceFrames * channelCount - channelCount)
-                
-                let s0 = Int(sourcePtr[srcIdx])
-                let s1 = Int(sourcePtr[srcIdx1])
-                let interpolated = s0 + Int(Double(s1 - s0) * frac)
-                
-                result.append(contentsOf: withUnsafeBytes(of: Int16(clamping: interpolated)) { Data($0) })
-            }
+        let bytesPerFrame = MemoryLayout<Int16>.size * channelCount
+        let sourceFrames = samples.count / bytesPerFrame
+        guard sourceFrames > 0 else { return nil }
+
+        if audioResamplerSourceRate != fromRate || audioResamplerTargetRate != toRate {
+            audioResamplerSourceRate = fromRate
+            audioResamplerTargetRate = toRate
+            audioResamplerPosition = 0
+            audioResamplerCarryFrame = nil
         }
-        
-        return result
+
+        var sourceSamples = [Int16](repeating: 0, count: sourceFrames * channelCount)
+        _ = sourceSamples.withUnsafeMutableBytes { dst in
+            samples.copyBytes(to: dst)
+        }
+
+        var workingSamples: [Int16]
+        if let carry = audioResamplerCarryFrame {
+            workingSamples = [carry.0, carry.1]
+            workingSamples.append(contentsOf: sourceSamples)
+        } else {
+            workingSamples = sourceSamples
+        }
+
+        let workingFrames = workingSamples.count / channelCount
+        guard workingFrames > 1 else {
+            let last = sourceSamples.count - channelCount
+            if last >= 0 {
+                audioResamplerCarryFrame = (sourceSamples[last], sourceSamples[last + 1])
+            }
+            return nil
+        }
+
+        let step = Double(fromRate) / Double(toRate)
+        if !step.isFinite || step <= 0 {
+            return samples
+        }
+
+        let capacityFrames = max(
+            1,
+            Int((Double(workingFrames - 1) - audioResamplerPosition) / step) + 2
+        )
+        var outSamples: [Int16] = []
+        outSamples.reserveCapacity(capacityFrames * channelCount)
+
+        var position = audioResamplerPosition
+        while position + 1.0 < Double(workingFrames) {
+            let baseFrame = Int(position)
+            let nextFrame = baseFrame + 1
+            let frac = position - Double(baseFrame)
+
+            for channel in 0..<channelCount {
+                let s0 = Double(workingSamples[(baseFrame * channelCount) + channel])
+                let s1 = Double(workingSamples[(nextFrame * channelCount) + channel])
+                let mixed = s0 + ((s1 - s0) * frac)
+                let clamped = max(Double(Int16.min), min(Double(Int16.max), mixed.rounded()))
+                outSamples.append(Int16(clamped))
+            }
+
+            position += step
+        }
+
+        audioResamplerPosition = position - Double(workingFrames - 1)
+        if !audioResamplerPosition.isFinite || audioResamplerPosition < 0 {
+            audioResamplerPosition = 0
+        }
+
+        let lastFrameIndex = (workingFrames - 1) * channelCount
+        audioResamplerCarryFrame = (
+            workingSamples[lastFrameIndex],
+            workingSamples[lastFrameIndex + 1]
+        )
+
+        guard !outSamples.isEmpty else { return nil }
+        return outSamples.withUnsafeBufferPointer { buffer in
+            guard let base = buffer.baseAddress else { return Data() }
+            return Data(bytes: base, count: buffer.count * MemoryLayout<Int16>.size)
+        }
     }
 
     private func logAudioABIfNeeded(rawSamples: Data,
                                     rawRate: Int,
-                                    rawMetrics: (peak: Int, dcL: Double, dcR: Double),
                                     outputSamples: Data,
                                     outputRate: Int) {
         guard currentPlatform == .GBA else { return }
@@ -908,6 +1054,7 @@ extension GamePlayViewModel: EmulatorRenderDelegate {
         audioDebugChunkCount += 1
         guard audioDebugChunkCount % 120 == 0 else { return }
 
+        let rawMetrics = audioMetrics(for: rawSamples)
         let outMetrics = audioMetrics(for: outputSamples)
         let title = currentGameTitle.isEmpty ? "unknown" : currentGameTitle
         let hashPrefix = String(currentROMHash.prefix(8))
@@ -954,8 +1101,9 @@ extension GamePlayViewModel: EmulatorRenderDelegate {
                 frames += 1
                 idx += 2
             }
-            if frames == 0 { return (peak, 0, 0) }
+            guard frames > 0 else { return (peak, 0, 0) }
             return (peak, sumL / Double(frames), sumR / Double(frames))
         }
     }
+
 }

@@ -1,5 +1,8 @@
 import CryptoKit
 import Foundation
+import ImageIO
+import os.log
+import UniformTypeIdentifiers
 #if canImport(UIKit)
 import UIKit
 #elseif canImport(AppKit)
@@ -17,66 +20,85 @@ struct CoverResolutionResult: Sendable {
     let source: CoverResolutionSource
 }
 
-protocol CoverMetadataMatching: Sendable {
-    func defaultCoverKey(for checksum: String, normalizedTitle: String, systemRaw: String) -> String?
-}
-
-struct NullCoverMetadataMatcher: CoverMetadataMatching {
-    func defaultCoverKey(for checksum: String, normalizedTitle: String, systemRaw: String) -> String? {
-        nil
-    }
-}
-
 final class CoverArtService {
     static let shared = CoverArtService()
 
-    private let cache = NSCache<NSString, NSData>()
+    private final class CachedCoverObject: NSObject {
+        let data: NSData
+        let sourceRaw: NSString
+
+        init(data: Data, source: CoverResolutionSource) {
+            self.data = data as NSData
+            self.sourceRaw = source.rawValue as NSString
+        }
+
+        var source: CoverResolutionSource {
+            CoverResolutionSource(rawValue: sourceRaw as String) ?? .embedded
+        }
+    }
+
+    private struct CoverRequest: Sendable {
+        let id: UUID
+        let title: String
+        let systemRaw: String
+        let embeddedData: Data?
+        let romSha1: String?
+        let customCoverURLString: String?
+    }
+
+    private let cache = NSCache<NSString, CachedCoverObject>()
     private let fileManager = FileManager.default
     private let metadataMatcher: CoverMetadataMatching
+    private let logger = Logger(subsystem: "com.xemu.app", category: "CoverArt")
+    private let ioQueue = DispatchQueue(label: "com.xemu.cover-art.io", qos: .userInitiated)
 
-    init(metadataMatcher: CoverMetadataMatching = NullCoverMetadataMatcher()) {
+    init(metadataMatcher: CoverMetadataMatching = SQLiteCoverMetadataMatcher.makeDefault()) {
         self.metadataMatcher = metadataMatcher
         cache.countLimit = 512
         cache.totalCostLimit = 96 * 1024 * 1024
     }
 
     func resolve(for entry: ROMLibraryEntry) -> CoverResolutionResult? {
-        let cacheKey = cacheKey(for: entry)
-        if let cached = cache.object(forKey: cacheKey as NSString) as Data? {
-            return CoverResolutionResult(data: cached, source: .embedded)
-        }
+        resolve(request: makeRequest(for: entry), targetPixelSize: 600)
+    }
 
-        if let customData = loadCustomCover(for: entry.id) {
-            putInCache(customData, key: cacheKey)
-            return CoverResolutionResult(data: customData, source: .customOverride)
+    func resolveAsync(for entry: ROMLibraryEntry, targetPixelSize: Int = 320) async -> CoverResolutionResult? {
+        let request = makeRequest(for: entry)
+        return await withCheckedContinuation { continuation in
+            ioQueue.async { [weak self] in
+                guard let self else {
+                    continuation.resume(returning: nil)
+                    return
+                }
+                continuation.resume(returning: self.resolve(request: request, targetPixelSize: targetPixelSize))
+            }
         }
+    }
 
-        if let embedded = entry.coverImageData, !embedded.isEmpty {
-            putInCache(embedded, key: cacheKey)
-            return CoverResolutionResult(data: embedded, source: .embedded)
-        }
-
-        let normalizedTitle = normalizedTitle(for: entry.title)
-        _ = metadataMatcher.defaultCoverKey(
-            for: entry.checksum ?? "",
-            normalizedTitle: normalizedTitle,
+    func metadataMatch(for entry: ROMLibraryEntry) -> CoverMetadataMatch? {
+        metadataMatcher.match(
+            romSha1: entry.romSha1,
+            normalizedTitle: normalizedTitle(for: entry.title),
             systemRaw: entry.system ?? ""
         )
+    }
 
-        guard let placeholder = makePlaceholderData(title: entry.title ?? "Unknown", systemRaw: entry.system ?? "gbc") else {
-            return nil
-        }
-        putInCache(placeholder, key: cacheKey)
-        return CoverResolutionResult(data: placeholder, source: .placeholder)
+    func metadataMatch(romSha1: String?, title: String?, systemRaw: String?) -> CoverMetadataMatch? {
+        metadataMatcher.match(
+            romSha1: romSha1,
+            normalizedTitle: normalizedTitle(for: title),
+            systemRaw: systemRaw ?? ""
+        )
     }
 
     func assignDeterministicPlaceholderIfNeeded(to entry: ROMLibraryEntry) {
         guard (entry.coverImageData ?? Data()).isEmpty else { return }
+        guard !customCoverExists(for: entry.id) else { return }
         guard let placeholder = makePlaceholderData(title: entry.title ?? "Unknown", systemRaw: entry.system ?? "gbc") else {
             return
         }
         entry.coverImageData = placeholder
-        putInCache(placeholder, key: cacheKey(for: entry))
+        putInCache(placeholder, key: cacheKey(for: entry.id), source: .placeholder)
     }
 
     @discardableResult
@@ -85,7 +107,12 @@ final class CoverArtService {
         let encoded = try normalizeCoverDataForStorage(data)
         try ensureCoverDirectoryExists()
         try encoded.write(to: outputURL, options: [.atomic])
-        cache.removeObject(forKey: entryID.uuidString as NSString)
+        cache.removeAllObjects()
+        NotificationCenter.default.post(
+            name: .coverArtDidChange,
+            object: nil,
+            userInfo: ["entryID": entryID]
+        )
         return outputURL
     }
 
@@ -94,7 +121,12 @@ final class CoverArtService {
         if fileManager.fileExists(atPath: url.path) {
             try? fileManager.removeItem(at: url)
         }
-        cache.removeObject(forKey: entryID.uuidString as NSString)
+        cache.removeAllObjects()
+        NotificationCenter.default.post(
+            name: .coverArtDidChange,
+            object: nil,
+            userInfo: ["entryID": entryID]
+        )
     }
 
     func customCoverExists(for entryID: UUID) -> Bool {
@@ -125,12 +157,84 @@ final class CoverArtService {
         return title.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
-    private func cacheKey(for entry: ROMLibraryEntry) -> String {
-        entry.id.uuidString
+    private func cacheKey(for entryID: UUID) -> String {
+        entryID.uuidString.lowercased()
     }
 
-    private func putInCache(_ data: Data, key: String) {
-        cache.setObject(data as NSData, forKey: key as NSString, cost: data.count)
+    private func putInCache(_ data: Data, key: String, source: CoverResolutionSource) {
+        cache.setObject(CachedCoverObject(data: data, source: source), forKey: key as NSString, cost: data.count)
+    }
+
+    private func makeRequest(for entry: ROMLibraryEntry) -> CoverRequest {
+        CoverRequest(
+            id: entry.id,
+            title: entry.title ?? "Unknown",
+            systemRaw: entry.system ?? "gbc",
+            embeddedData: entry.coverImageData,
+            romSha1: entry.romSha1,
+            customCoverURLString: entry.customCoverURL
+        )
+    }
+
+    private func resolve(request: CoverRequest, targetPixelSize: Int) -> CoverResolutionResult? {
+        let key = cacheKey(for: request.id)
+        if let cached = cache.object(forKey: key as NSString) {
+            let result = CoverResolutionResult(data: cached.data as Data, source: cached.source)
+            logResolution(for: request, source: result.source, cacheHit: true, placeholderReason: nil)
+            return result
+        }
+
+        if let customData = loadCustomCover(for: request) {
+            let prepared = downsampleDataIfNeeded(customData, maxPixelSize: targetPixelSize)
+            putInCache(prepared, key: key, source: .customOverride)
+            logResolution(for: request, source: .customOverride, cacheHit: false, placeholderReason: nil)
+            return CoverResolutionResult(data: prepared, source: .customOverride)
+        }
+
+        if let embedded = request.embeddedData, !embedded.isEmpty {
+            let prepared = downsampleDataIfNeeded(embedded, maxPixelSize: targetPixelSize)
+            putInCache(prepared, key: key, source: .embedded)
+            logResolution(for: request, source: .embedded, cacheHit: false, placeholderReason: nil)
+            return CoverResolutionResult(data: prepared, source: .embedded)
+        }
+
+        let normalized = normalizedTitle(for: request.title)
+        let metadataMatch = metadataMatcher.match(
+            romSha1: request.romSha1,
+            normalizedTitle: normalized,
+            systemRaw: request.systemRaw
+        )
+
+        let placeholderTitle = metadataMatch?.canonicalTitle ?? request.title
+        guard let placeholder = makePlaceholderData(title: placeholderTitle, systemRaw: request.systemRaw) else {
+            return nil
+        }
+
+        let reason: String
+        if request.romSha1?.isEmpty ?? true {
+            reason = "missing_rom_sha1"
+        } else if metadataMatch == nil {
+            reason = "metadata_no_match"
+        } else {
+            reason = "metadata_matched_placeholder"
+        }
+
+        let prepared = downsampleDataIfNeeded(placeholder, maxPixelSize: targetPixelSize)
+        putInCache(prepared, key: key, source: .placeholder)
+        logResolution(for: request, source: .placeholder, cacheHit: false, placeholderReason: reason)
+        return CoverResolutionResult(data: prepared, source: .placeholder)
+    }
+
+    private func logResolution(
+        for request: CoverRequest,
+        source: CoverResolutionSource,
+        cacheHit: Bool,
+        placeholderReason: String?
+    ) {
+        let reason = placeholderReason ?? "n/a"
+        logger.debug(
+            "cover.resolve id=\(request.id.uuidString, privacy: .private(mask: .hash)) source=\(source.rawValue, privacy: .public) cache=\(cacheHit ? "hit" : "miss", privacy: .public) placeholder_reason=\(reason, privacy: .public)"
+        )
     }
 
     private func coverDirectoryURL() -> URL {
@@ -151,9 +255,51 @@ final class CoverArtService {
         }
     }
 
-    private func loadCustomCover(for entryID: UUID) -> Data? {
-        let url = customCoverURL(for: entryID)
-        return try? Data(contentsOf: url)
+    private func loadCustomCover(for request: CoverRequest) -> Data? {
+        if let storedPath = request.customCoverURLString,
+           !storedPath.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            let url = URL(fileURLWithPath: storedPath)
+            if let data = try? Data(contentsOf: url) {
+                return data
+            }
+        }
+        let fallback = customCoverURL(for: request.id)
+        return try? Data(contentsOf: fallback)
+    }
+
+    private func downsampleDataIfNeeded(_ data: Data, maxPixelSize: Int) -> Data {
+        guard maxPixelSize > 0 else { return data }
+        guard let source = CGImageSourceCreateWithData(data as CFData, nil) else {
+            return data
+        }
+
+        let options: [CFString: Any] = [
+            kCGImageSourceCreateThumbnailFromImageAlways: true,
+            kCGImageSourceCreateThumbnailWithTransform: true,
+            kCGImageSourceThumbnailMaxPixelSize: maxPixelSize
+        ]
+
+        guard let image = CGImageSourceCreateThumbnailAtIndex(source, 0, options as CFDictionary) else {
+            return data
+        }
+
+        let encoded = NSMutableData()
+        guard let destination = CGImageDestinationCreateWithData(
+            encoded,
+            UTType.jpeg.identifier as CFString,
+            1,
+            nil
+        ) else {
+            return data
+        }
+        let props: [CFString: Any] = [
+            kCGImageDestinationLossyCompressionQuality: 0.82
+        ]
+        CGImageDestinationAddImage(destination, image, props as CFDictionary)
+        guard CGImageDestinationFinalize(destination) else {
+            return data
+        }
+        return encoded as Data
     }
 
     private func normalizeCoverDataForStorage(_ data: Data) throws -> Data {
@@ -210,7 +356,7 @@ final class CoverArtService {
 
     private func makePlaceholderData(title: String, systemRaw: String) -> Data? {
         #if canImport(UIKit)
-        let size = CGSize(width: 600, height: 900)  // 2:3 aspect ratio like real covers
+        let size = CGSize(width: 600, height: 600)
         let seed = placeholderSeed(title: title, systemRaw: systemRaw)
         
         // Console-based color palette (not rainbow - controlled tones)

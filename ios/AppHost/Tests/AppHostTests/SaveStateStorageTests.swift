@@ -6,6 +6,7 @@ final class SaveStateStorageTests: XCTestCase {
 
     var storage: SaveStateStorage!
     var tempDirectory: URL!
+    var persistence: PersistenceController!
 
     override func setUp() {
         super.setUp()
@@ -15,11 +16,13 @@ final class SaveStateStorageTests: XCTestCase {
 
         try? FileManager.default.createDirectory(at: tempDirectory, withIntermediateDirectories: true)
 
-        storage = SaveStateStorage(directory: tempDirectory)
+        persistence = PersistenceController(inMemory: true)
+        storage = SaveStateStorage(directory: tempDirectory, viewContext: persistence.viewContext)
     }
 
     override func tearDown() {
         storage = nil
+        persistence = nil
         try? FileManager.default.removeItem(at: tempDirectory)
         tempDirectory = nil
         super.tearDown()

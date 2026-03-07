@@ -3,6 +3,7 @@ import Foundation
 
 extension Notification.Name {
     static let romLibraryDidChange = Notification.Name("romLibraryDidChange")
+    static let coverArtDidChange = Notification.Name("coverArtDidChange")
 }
 
 struct ROMLaunchIssue: Equatable {
@@ -145,6 +146,8 @@ final class GameDeletionService {
         }
 
         if mode == .removeAll {
+            CoverArtService.shared.removeCustomCover(for: entry.id)
+            entry.customCoverURL = nil
             deleteRelationshipObjects(named: "saveStates", for: entry, in: context)
             deleteRelationshipObjects(named: "nativeSaveFiles", for: entry, in: context)
             deleteRelationshipObjects(named: "gameSettings", for: entry, in: context)

@@ -13,6 +13,8 @@ final class EmulatorSession: ObservableObject {
     private var frameCount: Int = 0
     private var lastFPSUpdate: CFTimeInterval = 0
     private var gameLoopTimer: Timer?
+    private var renderFrameInterval: Int = 1
+    private var renderFrameCounter: Int = 0
     
     private let targetFPS: Double = 60.0
     private let frameInterval: TimeInterval = 1.0 / 60.0
@@ -82,7 +84,16 @@ final class EmulatorSession: ObservableObject {
         stop()
         core?.cleanup()
         core = nil
+        renderFrameCounter = 0
+        renderFrameInterval = 1
         // Debug log disabled: NSLog("[EmulatorSession] Cleanup complete")
+    }
+
+    func setRenderFrameSkip(_ skip: Int) {
+        renderFrameInterval = max(1, skip + 1)
+        if renderFrameCounter >= renderFrameInterval {
+            renderFrameCounter = 0
+        }
     }
     
     private func startGameLoop() {
@@ -102,12 +113,16 @@ final class EmulatorSession: ObservableObject {
         
         // Run one frame of emulation
         _ = core.frame()
-        
-        // Use atomic getFrameBufferInfo to prevent race conditions
-        if let fbInfo = core.getFrameBufferInfo() {
-            let neededSize = fbInfo.pitch * fbInfo.height
-            guard fbInfo.data.count >= neededSize else { return }
-            renderDelegate?.emulatorDidRenderFrameBufferInfo(fbInfo)
+        renderFrameCounter += 1
+        let shouldEmitRenderFrame = renderFrameCounter >= renderFrameInterval
+        if shouldEmitRenderFrame {
+            renderFrameCounter = 0
+            // Use atomic getFrameBufferInfo to prevent race conditions
+            if let fbInfo = core.getFrameBufferInfo() {
+                let neededSize = fbInfo.pitch * fbInfo.height
+                guard fbInfo.data.count >= neededSize else { return }
+                renderDelegate?.emulatorDidRenderFrameBufferInfo(fbInfo)
+            }
         }
 
         let audioSamples = core.getAudioSamples()
@@ -146,17 +161,21 @@ final class EmulatorSession: ObservableObject {
         let currentTime = CACurrentMediaTime()
         
         _ = core.frame()
-        
-        // Use getFrameBufferInfo to atomically get data + dimensions together
-        // This prevents race condition where dimensions change between separate calls
-        if let fbInfo = core.getFrameBufferInfo() {
-            // Validate before passing to renderer
-            let neededSize = fbInfo.pitch * fbInfo.height
-            guard fbInfo.data.count >= neededSize else {
-                // Buffer too small - skip frame
-                return
+        renderFrameCounter += 1
+        let shouldEmitRenderFrame = renderFrameCounter >= renderFrameInterval
+        if shouldEmitRenderFrame {
+            renderFrameCounter = 0
+            // Use getFrameBufferInfo to atomically get data + dimensions together
+            // This prevents race condition where dimensions change between separate calls
+            if let fbInfo = core.getFrameBufferInfo() {
+                // Validate before passing to renderer
+                let neededSize = fbInfo.pitch * fbInfo.height
+                guard fbInfo.data.count >= neededSize else {
+                    // Buffer too small - skip frame
+                    return
+                }
+                renderDelegate?.emulatorDidRenderFrameBufferInfo(fbInfo)
             }
-            renderDelegate?.emulatorDidRenderFrameBufferInfo(fbInfo)
         }
         
         let audioSamples = core.getAudioSamples()

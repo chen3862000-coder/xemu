@@ -27,9 +27,9 @@ struct GamePlayView: View {
     @State private var saveSlotSummaries: [SaveStateSlotSummary] = []
     @AppStorage("resumeLaunchPolicy") private var resumeLaunchPolicyRaw = ResumeLaunchPolicy.autoResumeLatest.rawValue
     @AppStorage("showFPSMeter") private var showFPSMeter = false
+    @StateObject private var performanceProfiler = PerformanceProfiler.shared
     #if DEBUG
     @AppStorage("showPerformanceHUD") private var showPerformanceHUD = false
-    @StateObject private var performanceProfiler = PerformanceProfiler.shared
     #endif
     
     init(game: Game, onExit: @escaping () -> Void) {
@@ -117,6 +117,10 @@ struct GamePlayView: View {
 
     private var resumeLaunchPolicy: ResumeLaunchPolicy {
         ResumeLaunchPolicy(rawValue: resumeLaunchPolicyRaw) ?? .autoResumeLatest
+    }
+
+    private var heavyUIEffectsEnabled: Bool {
+        performanceProfiler.currentQualityProfile.heavyUIEffects
     }
 
     private func handleLaunchResumeFlowIfNeeded() {
@@ -1182,6 +1186,8 @@ struct GamePlayView: View {
         } else {
             let shellWidth = safeFrameValue(min(geometry.size.width - 18, 420.0), fallback: 220)
             let shellHeight = safeFrameValue(min(geometry.size.height - 28, 860.0), fallback: 360)
+            let bottomSafePadding = max(34.0, geometry.safeAreaInsets.bottom)
+            let controllerBottomMargin = bottomSafePadding + 12.0
 
             return AnyView(
                 VStack(spacing: 0) {
@@ -1190,7 +1196,12 @@ struct GamePlayView: View {
                         .padding(.top, 4)
                         .padding(.bottom, 8)
 
-                    ndsConsoleLayoutPortraitShell(width: shellWidth, height: shellHeight)
+                    ndsConsoleLayoutPortraitShell(
+                        width: shellWidth,
+                        height: shellHeight,
+                        viewportWidth: geometry.size.width,
+                        controllerBottomMargin: controllerBottomMargin
+                    )
                         .padding(.bottom, 4)
 
                     statusBar
@@ -1279,13 +1290,16 @@ struct GamePlayView: View {
                                     .frame(width: bottomCardWidth, height: bottomCardHeight * 2 + 20)
                                     .offset(y: -(bottomCardHeight / 2 + 10))
 
-                                NDSTouchScreenOverlayView { normalizedX, normalizedY, pressed in
+                                NDSTouchScreenOverlayView(
+                                    onStylus: { normalizedX, normalizedY, pressed in
                                     if pressed {
                                         viewModel.setNDSTouchNormalized(x: normalizedX, y: normalizedY, pressed: true)
                                     } else {
                                         viewModel.clearNDSTouch()
                                     }
-                                }
+                                },
+                                    yBiasNormalized: 20.0 / ((bottomCardHeight * 2.0) + 20.0)
+                                )
                                 .frame(width: bottomCardWidth, height: bottomCardHeight)
                             }
                         }
@@ -1545,21 +1559,72 @@ struct GamePlayView: View {
         guard hasUsableGeometry(geometry) else { return AnyView(Color.black) }
         let safeLeading = geometry.safeAreaInsets.leading
         let safeTrailing = geometry.safeAreaInsets.trailing
-        let shellWidth = safeFrameValue(max(560, min(geometry.size.width - safeLeading - safeTrailing - 12, 1180.0)), fallback: 560)
+        // Landscape-only layout rules (independent from portrait control rules).
+        let cameraSideExclusionInset: CGFloat = 64
+        let cameraOnLeadingSide = safeLeading > safeTrailing
+        let cameraLeadingInset = cameraOnLeadingSide ? cameraSideExclusionInset : 0
+        let cameraTrailingInset = cameraOnLeadingSide ? 0 : cameraSideExclusionInset
+
+        let shellWidth = safeFrameValue(
+            max(
+                560,
+                min(
+                    geometry.size.width - safeLeading - safeTrailing - cameraLeadingInset - cameraTrailingInset - 12,
+                    1180.0
+                )
+            ),
+            fallback: 560
+        )
         let shellHeight = safeFrameValue(max(300, min(geometry.size.height - 12, 600.0)), fallback: 300)
         let innerWidth = safeFrameValue(shellWidth - 28, fallback: 532)
-        let sideColumnWidth: CGFloat = 140
-        let centerGap: CGFloat = 6
-        let displayPanelWidth = safeFrameValue(max(520, min(900, innerWidth - (sideColumnWidth * 2) - (centerGap * 2))), fallback: 520)
+        let mainEdgeInset: CGFloat = 16
+        let centerGap: CGFloat = 20
+        let sideColumnPreferred: CGFloat = 140
+        let sideColumnMax: CGFloat = 148
+        let sideColumnMin: CGFloat = 132
+        let centerColumnMin: CGFloat = 360
+        let controlEdgeAnchor: CGFloat = 80
+        let sideColumnCeiling = safeFrameValue(
+            max(sideColumnMin, (innerWidth - centerColumnMin - (centerGap * 2) - (mainEdgeInset * 2)) / 2),
+            fallback: sideColumnPreferred
+        )
+        let sideColumnWidth = safeFrameValue(
+            max(sideColumnMin, min(sideColumnMax, min(sideColumnPreferred, sideColumnCeiling))),
+            fallback: sideColumnPreferred
+        )
+        let centerColumnWidth = safeFrameValue(
+            max(
+                centerColumnMin,
+                innerWidth - (sideColumnWidth * 2) - (centerGap * 2) - (mainEdgeInset * 2)
+            ),
+            fallback: centerColumnMin
+        )
+        let displayPanelWidth = safeFrameValue(max(320, min(760, centerColumnWidth * 0.88)), fallback: 420)
+        let topBandHeight: CGFloat = 58
+        let bottomBarHeight: CGFloat = 64
+        let mainRowHeight = safeFrameValue(
+            max(150, shellHeight - topBandHeight - bottomBarHeight - 44),
+            fallback: 180
+        )
+        let controlsToScreenMinGap: CGFloat = 20
+        let shoulderToScreenMinGap: CGFloat = 16
         let displayAspect = 512.0 / 192.0
-        let displayWidth = safeFrameValue(min(displayPanelWidth - 8, (shellHeight * 0.70) * displayAspect), fallback: 320)
-        let displayHeight = safeFrameValue(displayWidth / displayAspect, fallback: 120)
-        let centerModuleHeight = safeFrameValue(displayHeight + 48, fallback: 168)
-        let utilityRowWidth = safeFrameValue(min(displayPanelWidth - 12, displayWidth + 10), fallback: 200)
-        let dpadScale: CGFloat = 0.60
-        let faceScale: CGFloat = 0.60
-        let dpadSize: CGFloat = 180 * dpadScale
-        let faceClusterWidth: CGFloat = 200 * faceScale
+        let maxDisplayHeightFromWidth = safeFrameValue((displayPanelWidth - 8) / displayAspect, fallback: 120)
+        let displayHeight = safeFrameValue(min(mainRowHeight * 0.76, maxDisplayHeightFromWidth), fallback: 120)
+        let displayWidth = safeFrameValue(displayHeight * displayAspect, fallback: 320)
+        let dpadSize = safeFrameValue(110, fallback: 110)
+        let faceButtonDiameter = safeFrameValue(50, fallback: 50)
+        let faceButtonSpacing = safeFrameValue(8, fallback: 8)
+        let faceClusterWidth = (faceButtonDiameter + faceButtonSpacing) * 2
+        let currentEdgeAnchor = mainEdgeInset + (sideColumnWidth * 0.5)
+        let controlAnchorDelta = controlEdgeAnchor - currentEdgeAnchor
+        let shoulderWidth: CGFloat = 96
+        let shoulderHeight: CGFloat = 34
+        let utilityIconSize: CGFloat = 40
+        assert(centerGap >= controlsToScreenMinGap, "Landscape layout must keep >=20pt gap between screen and gameplay controls.")
+        assert(shoulderToScreenMinGap >= 16, "Landscape shoulder buttons must remain above gameplay controls with >=16pt gap.")
+        assert((mainEdgeInset + (sideColumnWidth - dpadSize) * 0.5) >= 24, "D-pad must keep >=24pt gap from device edge.")
+        assert((mainEdgeInset + (sideColumnWidth - faceClusterWidth) * 0.5) >= 20, "ABXY must keep >=20pt gap from device edge.")
 
         return AnyView(
         VStack(spacing: 0) {
@@ -1583,44 +1648,47 @@ struct GamePlayView: View {
                     )
                     .shadow(color: .black.opacity(0.30), radius: 22, x: 0, y: 12)
 
-                // Shoulder buttons at top corners like a real handheld.
-                VStack {
-                    HStack {
-                        GBAShoulderBar(label: "L") {
-                            viewModel.handleButtonPress(.l1, pressed: true)
-                        } onRelease: {
-                            viewModel.handleButtonPress(.l1, pressed: false)
+                VStack(spacing: 0) {
+                    HStack(spacing: centerGap) {
+                        HStack {
+                            GBAShoulderBar(label: "L", width: shoulderWidth, height: shoulderHeight, fontSize: 17) {
+                                viewModel.handleButtonPress(.l1, pressed: true)
+                            } onRelease: {
+                                viewModel.handleButtonPress(.l1, pressed: false)
+                            }
+                            Spacer(minLength: 0)
                         }
-                        Spacer()
-                        GBAShoulderBar(label: "R") {
-                            viewModel.handleButtonPress(.r1, pressed: true)
-                        } onRelease: {
-                            viewModel.handleButtonPress(.r1, pressed: false)
-                        }
-                    }
-                    .padding(.horizontal, 18)
-                    .padding(.top, 8)
-                    Spacer()
-                }
+                        .frame(width: sideColumnWidth)
 
-                HStack(spacing: centerGap) {
-                    VStack {
-                        Spacer(minLength: 0)
-                        NDSDPadView { button, pressed in
-                            viewModel.handleButtonPress(button, pressed: pressed)
-                        }
-                        .scaleEffect(dpadScale)
-                        .frame(width: dpadSize, height: dpadSize)
-                        Spacer(minLength: 0)
-                        shellLandscapeMenuButton(theme: .light) {
-                            showPauseMenu = true
-                        }
-                        .frame(width: sideColumnWidth - 8, alignment: .leading)
-                    }
-                    .frame(width: sideColumnWidth, height: centerModuleHeight, alignment: .top)
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                        Color.clear
+                            .frame(width: centerColumnWidth)
 
-                    VStack(spacing: 10) {
+                        HStack {
+                            Spacer(minLength: 0)
+                            GBAShoulderBar(label: "R", width: shoulderWidth, height: shoulderHeight, fontSize: 17) {
+                                viewModel.handleButtonPress(.r1, pressed: true)
+                            } onRelease: {
+                                viewModel.handleButtonPress(.r1, pressed: false)
+                            }
+                        }
+                        .frame(width: sideColumnWidth)
+                    }
+                    .frame(height: topBandHeight)
+                    .padding(.horizontal, mainEdgeInset)
+                    .padding(.top, 16)
+                    .padding(.bottom, shoulderToScreenMinGap)
+
+                    HStack(spacing: centerGap) {
+                        ZStack {
+                            NDSDPadView(size: dpadSize) { button, pressed in
+                                viewModel.handleButtonPress(button, pressed: pressed)
+                            }
+                            .frame(width: dpadSize, height: dpadSize)
+                            .offset(x: 0, y: 8)
+                        }
+                        .offset(x: controlAnchorDelta)
+                        .frame(width: sideColumnWidth, height: mainRowHeight)
+
                         ZStack {
                             emulatorDisplayView
                                 .frame(width: displayWidth, height: displayHeight)
@@ -1641,59 +1709,74 @@ struct GamePlayView: View {
                                         .shadow(color: Color.purple.opacity(0.20), radius: 8, x: 0, y: 0)
                                         .padding(.trailing, 4)
                                 }
-
-                            // In side-by-side mode, the right half is the touch screen (lower screen).
-                            NDSTouchScreenOverlayView { normalizedX, normalizedY, pressed in
-                                if pressed {
-                                    viewModel.setNDSTouchNormalized(x: normalizedX, y: normalizedY, pressed: true)
-                                } else {
-                                    viewModel.clearNDSTouch()
+                                .overlay(alignment: .trailing) {
+                                    NDSTouchScreenOverlayView { normalizedX, normalizedY, pressed in
+                                        if pressed {
+                                            viewModel.setNDSTouchNormalized(x: normalizedX, y: normalizedY, pressed: true)
+                                        } else {
+                                            viewModel.clearNDSTouch()
+                                        }
+                                    }
+                                    .frame(width: displayWidth / 2, height: displayHeight)
                                 }
-                            }
-                            .frame(width: displayWidth / 2, height: displayHeight)
-                            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .trailing)
                         }
-                            .frame(width: displayPanelWidth, height: safeFrameValue(max(displayHeight + 10, shellHeight * 0.52), fallback: 160))
+                        .frame(width: displayPanelWidth, height: mainRowHeight)
                         .background(Color.black.opacity(0.10))
                         .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+                        .frame(width: centerColumnWidth)
 
-                        HStack(spacing: 10) {
-                            gbUtilityIcon(systemName: "square.and.arrow.down.fill", tint: .green) { viewModel.quickSave() }
-                            gbUtilityIcon(systemName: "square.and.arrow.up.fill", tint: .orange) { viewModel.quickLoad() }
-                            gbUtilityIcon(systemName: "forward.fill", tint: .yellow) {
+                        ZStack {
+                            NDSFaceClusterView(
+                                onButton: { button, pressed in
+                                    viewModel.handleButtonPress(button, pressed: pressed)
+                                },
+                                buttonDiameter: faceButtonDiameter,
+                                buttonSpacing: faceButtonSpacing,
+                                showsBasePlate: false
+                            )
+                            .frame(width: faceClusterWidth, height: faceClusterWidth)
+                            .offset(x: 0, y: 6)
+                        }
+                        .offset(x: -controlAnchorDelta)
+                        .frame(width: sideColumnWidth, height: mainRowHeight)
+                    }
+                    .padding(.horizontal, mainEdgeInset)
+                    .padding(.bottom, 10)
+
+                    HStack(spacing: centerGap) {
+                        HStack {
+                            ndsLandscapeMenuCompactButton(theme: .light) {
+                                showPauseMenu = true
+                            }
+                            Spacer(minLength: 0)
+                        }
+                        .frame(width: sideColumnWidth)
+
+                        HStack(spacing: 12) {
+                            gbUtilityIcon(systemName: "square.and.arrow.down.fill", tint: .green, customSize: utilityIconSize) { viewModel.quickSave() }
+                            gbUtilityIcon(systemName: "square.and.arrow.up.fill", tint: .orange, customSize: utilityIconSize) { viewModel.quickLoad() }
+                            gbUtilityIcon(systemName: "forward.fill", tint: .yellow, customSize: utilityIconSize) {
                                 fastForwardSpeed = fastForwardSpeed == 2 ? 1 : 2
                                 viewModel.setFastForward(fastForwardSpeed)
                             }
-                            gbUtilityIcon(systemName: "speaker.wave.2.fill", tint: .cyan) {}
+                            gbUtilityIcon(systemName: "speaker.wave.2.fill", tint: .cyan, customSize: utilityIconSize) {}
                         }
-                        .frame(width: utilityRowWidth, height: 46)
-                        .background(Color.white.opacity(0.08))
-                        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-                    }
-                    .frame(width: displayPanelWidth)
-                    .frame(maxHeight: .infinity, alignment: .center)
+                        .frame(width: centerColumnWidth, height: 40)
 
-                    VStack {
-                        Spacer(minLength: 0)
-                        NDSFaceClusterView { button, pressed in
-                            viewModel.handleButtonPress(button, pressed: pressed)
+                        HStack {
+                            Spacer(minLength: 0)
+                            ndsLandscapeSelectStartCompactRow(theme: .light) { pressed in
+                                viewModel.handleButtonPress(.select, pressed: pressed)
+                            } onStartPress: { pressed in
+                                viewModel.handleButtonPress(.start, pressed: pressed)
+                            }
                         }
-                        .scaleEffect(faceScale)
-                        .frame(width: faceClusterWidth, height: 150)
-                        Spacer(minLength: 0)
-                        shellLandscapeSelectStartRow(theme: .light) { pressed in
-                            viewModel.handleButtonPress(.select, pressed: pressed)
-                        } onStartPress: { pressed in
-                            viewModel.handleButtonPress(.start, pressed: pressed)
-                        }
-                        .frame(width: sideColumnWidth - 8, alignment: .trailing)
+                        .frame(width: sideColumnWidth)
                     }
-                    .frame(width: sideColumnWidth, height: centerModuleHeight, alignment: .top)
-                    .frame(maxWidth: .infinity, alignment: .trailing)
+                    .frame(height: bottomBarHeight)
+                    .padding(.horizontal, mainEdgeInset)
+                    .padding(.bottom, 18)
                 }
-                .padding(.horizontal, 14)
-                .padding(.top, 26)
-                .padding(.bottom, 14)
             }
             .frame(width: shellWidth, height: shellHeight)
             .padding(.bottom, 6)
@@ -1702,13 +1785,18 @@ struct GamePlayView: View {
                 .padding(.horizontal, 8)
                 .padding(.bottom, 4)
         }
-        .padding(.leading, safeLeading)
-        .padding(.trailing, safeTrailing)
+        .padding(.leading, safeLeading + cameraLeadingInset)
+        .padding(.trailing, safeTrailing + cameraTrailingInset)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         )
     }
 
-    private func ndsConsoleLayoutPortraitShell(width shellWidth: CGFloat, height shellHeight: CGFloat) -> some View {
+    private func ndsConsoleLayoutPortraitShell(
+        width shellWidth: CGFloat,
+        height shellHeight: CGFloat,
+        viewportWidth: CGFloat,
+        controllerBottomMargin: CGFloat
+    ) -> some View {
         ZStack {
             RoundedRectangle(cornerRadius: 26, style: .continuous)
                 .fill(
@@ -1727,11 +1815,15 @@ struct GamePlayView: View {
                 )
                 .shadow(color: .black.opacity(0.35), radius: 28, x: 0, y: 16)
 
-            VStack(spacing: 14) {
+            VStack(spacing: 8) {
                 ndsDisplayStack(shellWidth: shellWidth)
                 ndsCenterDots
-                ndsControlDeck
-                ndsBottomMenuStrip
+                ndsLayoutModeRow
+                ndsControlDeck(
+                    shellWidth: shellWidth,
+                    viewportWidth: viewportWidth,
+                    controllerBottomMargin: controllerBottomMargin
+                )
             }
             .padding(.horizontal, 14)
             .padding(.vertical, 14)
@@ -1777,6 +1869,11 @@ struct GamePlayView: View {
         )
         let displayHeight = safeFrameValue(displayWidth * (384.0 / 256.0), fallback: 270)
         let screenHalfHeight = safeFrameValue((displayHeight - 10) / 2, fallback: 120)
+        let stackedTouchHeight = safeFrameValue(displayHeight / 2.0, fallback: 120)
+        // Keep a light active-area trim for the decorative bezel in stacked mode.
+        let stackedTouchTopInsetNormalized = safeFrameValue(6.0 / max(stackedTouchHeight, 1.0), fallback: 0.03)
+        let stackedTouchBottomInsetNormalized = safeFrameValue(4.0 / max(stackedTouchHeight, 1.0), fallback: 0.02)
+        let stackedTouchYBiasNormalized: CGFloat = 0
 
         return ZStack {
             RoundedRectangle(cornerRadius: 18, style: .continuous)
@@ -1849,13 +1946,18 @@ struct GamePlayView: View {
                 Color.clear
                     .frame(width: displayWidth, height: displayHeight)
                     .overlay(alignment: .bottom) {
-                        NDSTouchScreenOverlayView { normalizedX, normalizedY, pressed in
-                            if pressed {
-                                viewModel.setNDSTouchNormalized(x: normalizedX, y: normalizedY, pressed: true)
-                            } else {
-                                viewModel.clearNDSTouch()
-                            }
-                        }
+                        NDSTouchScreenOverlayView(
+                            onStylus: { normalizedX, normalizedY, pressed in
+                                if pressed {
+                                    viewModel.setNDSTouchNormalized(x: normalizedX, y: normalizedY, pressed: true)
+                                } else {
+                                    viewModel.clearNDSTouch()
+                                }
+                            },
+                            yBiasNormalized: stackedTouchYBiasNormalized,
+                            topInsetNormalized: stackedTouchTopInsetNormalized,
+                            bottomInsetNormalized: stackedTouchBottomInsetNormalized
+                        )
                         .frame(width: displayWidth, height: displayHeight / 2)
                     }
 
@@ -1901,46 +2003,171 @@ struct GamePlayView: View {
         .padding(.top, 2)
     }
 
-    private var ndsControlDeck: some View {
-        VStack(spacing: 6) {
-            HStack(alignment: .center, spacing: 22) {
-                NDSDPadView { button, pressed in
-                    viewModel.handleButtonPress(button, pressed: pressed)
-                }
-                .scaleEffect(0.9)
-                .frame(maxWidth: .infinity, alignment: .leading)
-
-                NDSFaceClusterView { button, pressed in
-                    viewModel.handleButtonPress(button, pressed: pressed)
-                }
-                .scaleEffect(0.9)
-                .frame(maxWidth: .infinity, alignment: .trailing)
-            }
-            .frame(height: 170)
-
-            HStack(spacing: 8) {
-                ndsMiniLayoutButton(title: "TOP") { viewModel.setNDSScreenLayout(.topOnly) }
-                ndsMiniLayoutButton(title: "STACK") { viewModel.setNDSScreenLayout(.stacked) }
-                ndsMiniLayoutButton(title: "BOT") { viewModel.setNDSScreenLayout(.bottomOnly) }
-            }
+    private var ndsLayoutModeRow: some View {
+        HStack(spacing: 8) {
+            ndsMiniLayoutButton(title: "TOP") { viewModel.setNDSScreenLayout(.topOnly) }
+            ndsMiniLayoutButton(title: "STACK") { viewModel.setNDSScreenLayout(.stacked) }
+            ndsMiniLayoutButton(title: "BOT") { viewModel.setNDSScreenLayout(.bottomOnly) }
         }
-        .padding(.horizontal, 10)
-        .frame(height: 212)
-        .offset(y: -16)
-        .zIndex(1)
+        .padding(.top, 2)
     }
 
-    private var ndsBottomMenuStrip: some View {
-        shellSystemButtonsRow(theme: .light) {
-            showPauseMenu = true
-        } onSelectPress: { pressed in
-            viewModel.handleButtonPress(.select, pressed: pressed)
-        } onStartPress: { pressed in
-            viewModel.handleButtonPress(.start, pressed: pressed)
+    private enum NDSControlSizePreset {
+        case compact
+        case standard
+        case large
+    }
+
+    private struct NDSControlMetrics {
+        let dpadSize: CGFloat
+        let faceDiameter: CGFloat
+        let faceSpacing: CGFloat
+        let systemDiameter: CGFloat
+        let homeWidth: CGFloat
+        let homeHeight: CGFloat
+        let sideMargin: CGFloat
+        let centerGap: CGFloat
+        let arcOffset: CGFloat
+        let switchToControlsGap: CGFloat
+    }
+
+    private func ndsControlMetrics(for viewportWidth: CGFloat) -> NDSControlMetrics {
+        let preset: NDSControlSizePreset
+        if viewportWidth > 430 {
+            preset = .large
+        } else if viewportWidth < 390 {
+            preset = .compact
+        } else {
+            preset = .standard
         }
-        .padding(.bottom, 0)
-        .offset(y: -24)
-        .zIndex(0)
+
+        switch preset {
+        case .compact:
+            return NDSControlMetrics(
+                dpadSize: 140,
+                faceDiameter: 60,
+                faceSpacing: 13,
+                systemDiameter: 48,
+                homeWidth: 84,
+                homeHeight: 42,
+                sideMargin: 36,
+                centerGap: 22,
+                arcOffset: 22,
+                switchToControlsGap: 34
+            )
+        case .standard:
+            return NDSControlMetrics(
+                dpadSize: 150,
+                faceDiameter: 64,
+                faceSpacing: 14,
+                systemDiameter: 52,
+                homeWidth: 90,
+                homeHeight: 46,
+                sideMargin: 40,
+                centerGap: 26,
+                arcOffset: 26,
+                switchToControlsGap: 40
+            )
+        case .large:
+            return NDSControlMetrics(
+                dpadSize: 162,
+                faceDiameter: 68,
+                faceSpacing: 16,
+                systemDiameter: 56,
+                homeWidth: 96,
+                homeHeight: 48,
+                sideMargin: 42,
+                centerGap: 30,
+                arcOffset: 30,
+                switchToControlsGap: 44
+            )
+        }
+    }
+
+    private func ndsControlDeck(shellWidth: CGFloat, viewportWidth: CGFloat, controllerBottomMargin: CGFloat) -> some View {
+        let metrics = ndsControlMetrics(for: viewportWidth)
+        let minimumDistanceBetweenControls: CGFloat = 16
+        let baseDPadSize: CGFloat = metrics.dpadSize
+        let faceDiameter: CGFloat = metrics.faceDiameter
+        let faceSpacing: CGFloat = metrics.faceSpacing
+        let baseFaceClusterWidth = (faceDiameter + faceSpacing) * 2
+        let sideMargin = metrics.sideMargin
+        let availableMainRowWidth = max(0, shellWidth - (sideMargin * 2))
+        let spacingBudget = max(18, min(metrics.centerGap, 34))
+        let fitScale = min(
+            1.0,
+            max(0.84, (availableMainRowWidth - spacingBudget) / (baseDPadSize + baseFaceClusterWidth))
+        )
+        let dpadSize = baseDPadSize * fitScale
+        let faceClusterWidth = baseFaceClusterWidth * fitScale
+        let faceButtonDiameter = max(58, faceDiameter * fitScale)
+        let faceButtonSpacing = max(14, faceSpacing * fitScale)
+        let systemButtonDiameter = max(44, metrics.systemDiameter * fitScale)
+        let homeWidth = max(68, metrics.homeWidth * fitScale)
+        let homeHeight = max(40, metrics.homeHeight * fitScale)
+        let systemTouchDiameter = max(62, systemButtonDiameter + 10)
+        let homeTouchWidth = max(80, homeWidth + 8)
+        let homeTouchHeight = max(50, homeHeight + 10)
+        let targetEdgeInset = max(sideMargin, 40)
+        let minDPadCenterX = targetEdgeInset + (dpadSize / 2)
+        let maxABXYCenterX = shellWidth - targetEdgeInset - (faceClusterWidth / 2)
+        let availableCenterDistance = max(0, maxABXYCenterX - minDPadCenterX)
+        let desiredCenterDistance = min(260, max(220, availableCenterDistance))
+        let dpadCenterX = max(minDPadCenterX, (shellWidth - desiredCenterDistance) / 2)
+        let abxyCenterX = min(maxABXYCenterX, dpadCenterX + desiredCenterDistance)
+        let controlsRowHeight = max(dpadSize, faceClusterWidth) + 26
+        let rowCenterY = controlsRowHeight / 2
+        let plateInset: CGFloat = 16
+        let plateMinX = dpadCenterX - (dpadSize / 2) - plateInset
+        let plateMaxX = abxyCenterX + (faceClusterWidth / 2) + plateInset
+        let plateWidth = max(0, plateMaxX - plateMinX)
+        let plateCenterX = (plateMinX + plateMaxX) / 2
+        assert(
+            dpadSize + minimumDistanceBetweenControls + faceClusterWidth <= availableMainRowWidth,
+            "NDS controls overlap: insufficient horizontal room for D-pad and ABXY cluster."
+        )
+
+        return VStack(spacing: 0) {
+            VStack(spacing: 24) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 40, style: .continuous)
+                        .fill(Color.black.opacity(0.04))
+                        .frame(width: plateWidth, height: controlsRowHeight)
+                        .position(x: plateCenterX, y: rowCenterY)
+
+                    NDSDPadView(size: dpadSize) { button, pressed in
+                        viewModel.handleButtonPress(button, pressed: pressed)
+                    }
+                    .frame(width: dpadSize, height: dpadSize)
+                    .position(x: dpadCenterX, y: rowCenterY)
+
+                    NDSFaceClusterView(
+                        onButton: { button, pressed in
+                            viewModel.handleButtonPress(button, pressed: pressed)
+                        },
+                        buttonDiameter: faceButtonDiameter,
+                        buttonSpacing: faceButtonSpacing,
+                        showsBasePlate: false
+                    )
+                    .frame(width: faceClusterWidth, height: faceClusterWidth)
+                    .position(x: abxyCenterX, y: rowCenterY)
+                }
+                .frame(width: shellWidth, height: controlsRowHeight)
+
+                ndsSystemButtonsStrip(
+                    systemButtonDiameter: systemButtonDiameter,
+                    homeWidth: homeWidth,
+                    homeHeight: homeHeight,
+                    systemTouchDiameter: systemTouchDiameter,
+                    homeTouchWidth: homeTouchWidth,
+                    homeTouchHeight: homeTouchHeight
+                )
+                    .padding(.horizontal, 36)
+            }
+            .padding(.top, metrics.switchToControlsGap)
+            .padding(.bottom, controllerBottomMargin)
+        }
+        .frame(maxWidth: .infinity)
     }
 
     private func ndsMiniLayoutButton(title: String, action: @escaping () -> Void) -> some View {
@@ -1970,8 +2197,8 @@ struct GamePlayView: View {
         .buttonStyle(.plain)
     }
 
-    private func gbUtilityIcon(systemName: String, tint: Color, action: @escaping () -> Void) -> AnyView {
-        let utilitySize = safeThemeDimension(shellOverride.utilityButtonSize ?? shellTheme.controlStyle.utilityButtonSize)
+    private func gbUtilityIcon(systemName: String, tint: Color, customSize: CGFloat? = nil, action: @escaping () -> Void) -> AnyView {
+        let utilitySize = customSize ?? safeThemeDimension(shellOverride.utilityButtonSize ?? shellTheme.controlStyle.utilityButtonSize)
         let iconColor = shellPalette.utilityIcon.color
         let strokeColor = shellPalette.utilityStroke.color
         let fillStart = shellPalette.utilityFillStart.color
@@ -2015,6 +2242,78 @@ struct GamePlayView: View {
                 .scaleEffect(0.98)
             )
         }
+    }
+
+    private func ndsSystemButtonsStrip(
+        systemButtonDiameter: CGFloat,
+        homeWidth: CGFloat,
+        homeHeight: CGFloat,
+        systemTouchDiameter: CGFloat,
+        homeTouchWidth: CGFloat,
+        homeTouchHeight: CGFloat
+    ) -> some View {
+        HStack(spacing: 10) {
+            HStack(spacing: 8) {
+                Text("SELECT")
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundColor(Color.black.opacity(0.36))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+                    .fixedSize(horizontal: true, vertical: false)
+                    .frame(minWidth: 38, alignment: .trailing)
+                NDSPressableControl(
+                    onPress: { viewModel.handleButtonPress(.select, pressed: true) },
+                    onRelease: { viewModel.handleButtonPress(.select, pressed: false) }
+                ) { isPressed in
+                    Circle()
+                        .fill(Color.white.opacity(isPressed ? 0.82 : 0.96))
+                        .overlay(Circle().stroke(Color.black.opacity(0.48), lineWidth: 1.5))
+                        .shadow(color: Color.black.opacity(isPressed ? 0.0 : 0.15), radius: 4, x: 0, y: 2)
+                        .frame(width: systemButtonDiameter, height: systemButtonDiameter)
+                        .frame(width: systemTouchDiameter, height: systemTouchDiameter)
+                }
+            }
+
+            Spacer(minLength: 8)
+
+            NDSPressableControl(onPress: { showPauseMenu = true }, onRelease: {}) { isPressed in
+                Capsule(style: .continuous)
+                    .fill(Color.white.opacity(isPressed ? 0.84 : 0.96))
+                    .overlay(Capsule(style: .continuous).stroke(Color.black.opacity(0.40), lineWidth: 1.5))
+                    .shadow(color: Color.black.opacity(isPressed ? 0.0 : 0.15), radius: 4, x: 0, y: 2)
+                    .frame(width: homeWidth, height: homeHeight)
+                    .frame(width: homeTouchWidth, height: homeTouchHeight)
+                    .overlay(
+                        Image(systemName: "house.fill")
+                            .font(.system(size: 14, weight: .bold))
+                            .foregroundColor(Color.black.opacity(0.32))
+                    )
+            }
+
+            Spacer(minLength: 8)
+
+            HStack(spacing: 8) {
+                NDSPressableControl(
+                    onPress: { viewModel.handleButtonPress(.start, pressed: true) },
+                    onRelease: { viewModel.handleButtonPress(.start, pressed: false) }
+                ) { isPressed in
+                    Circle()
+                        .fill(Color.white.opacity(isPressed ? 0.82 : 0.96))
+                        .overlay(Circle().stroke(Color.black.opacity(0.48), lineWidth: 1.5))
+                        .shadow(color: Color.black.opacity(isPressed ? 0.0 : 0.15), radius: 4, x: 0, y: 2)
+                        .frame(width: systemButtonDiameter, height: systemButtonDiameter)
+                        .frame(width: systemTouchDiameter, height: systemTouchDiameter)
+                }
+                Text("START")
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundColor(Color.black.opacity(0.36))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+                    .fixedSize(horizontal: true, vertical: false)
+                    .frame(minWidth: 34, alignment: .leading)
+            }
+        }
+        .frame(height: max(systemTouchDiameter, homeTouchHeight))
     }
 
     private func shellSystemButtonsRow(
@@ -2064,10 +2363,21 @@ struct GamePlayView: View {
 
     private func shellLandscapeMenuButton(theme: ShellSystemButtonTheme, onMenu: @escaping () -> Void) -> some View {
         HStack {
-            ShellSystemButton(theme: theme, label: "MENU", icon: "house.fill", onPress: onMenu, onRelease: {})
+            ShellSystemButton(
+                theme: theme,
+                label: "MENU",
+                icon: "line.3.horizontal",
+                minWidth: 110,
+                controlHeight: 44,
+                fontSize: 14,
+                knobDiameter: 28,
+                horizontalPadding: 16,
+                onPress: onMenu,
+                onRelease: {}
+            )
             Spacer(minLength: 0)
         }
-        .frame(height: 34)
+        .frame(height: 44)
     }
 
     private func shellLandscapeSelectStartRow(
@@ -2075,19 +2385,94 @@ struct GamePlayView: View {
         onSelectPress: @escaping (Bool) -> Void,
         onStartPress: @escaping (Bool) -> Void
     ) -> some View {
-        HStack(spacing: 8) {
-            ShellSystemButton(theme: theme, label: "SELECT", icon: nil) {
+        HStack(spacing: 12) {
+            ShellSystemButton(
+                theme: theme,
+                label: "SELECT",
+                icon: "circle.fill",
+                minWidth: 90,
+                controlHeight: 44,
+                fontSize: 14,
+                knobDiameter: 28,
+                horizontalPadding: 16
+            ) {
                 onSelectPress(true)
             } onRelease: {
                 onSelectPress(false)
             }
-            ShellSystemButton(theme: theme, label: "START", icon: nil) {
+            ShellSystemButton(
+                theme: theme,
+                label: "START",
+                icon: "play.fill",
+                minWidth: 90,
+                controlHeight: 44,
+                fontSize: 14,
+                knobDiameter: 28,
+                horizontalPadding: 16
+            ) {
                 onStartPress(true)
             } onRelease: {
                 onStartPress(false)
             }
         }
-        .frame(height: 34)
+        .frame(height: 44)
+    }
+
+    private func ndsLandscapeMenuCompactButton(theme: ShellSystemButtonTheme, onMenu: @escaping () -> Void) -> some View {
+        HStack {
+            ShellSystemButton(
+                theme: theme,
+                label: "Menu",
+                icon: "line.3.horizontal",
+                minWidth: 96,
+                controlHeight: 40,
+                fontSize: 13,
+                knobDiameter: 24,
+                horizontalPadding: 12,
+                onPress: onMenu,
+                onRelease: {}
+            )
+            Spacer(minLength: 0)
+        }
+        .frame(height: 40)
+    }
+
+    private func ndsLandscapeSelectStartCompactRow(
+        theme: ShellSystemButtonTheme,
+        onSelectPress: @escaping (Bool) -> Void,
+        onStartPress: @escaping (Bool) -> Void
+    ) -> some View {
+        HStack(spacing: 8) {
+            ShellSystemButton(
+                theme: theme,
+                label: "Sel",
+                icon: "circle.fill",
+                minWidth: 76,
+                controlHeight: 40,
+                fontSize: 13,
+                knobDiameter: 24,
+                horizontalPadding: 10
+            ) {
+                onSelectPress(true)
+            } onRelease: {
+                onSelectPress(false)
+            }
+            ShellSystemButton(
+                theme: theme,
+                label: "Start",
+                icon: "play.fill",
+                minWidth: 76,
+                controlHeight: 40,
+                fontSize: 13,
+                knobDiameter: 24,
+                horizontalPadding: 10
+            ) {
+                onStartPress(true)
+            } onRelease: {
+                onStartPress(false)
+            }
+        }
+        .frame(height: 40)
     }
 
     private func gbConsoleLayoutLandscape(in geometry: GeometryProxy) -> AnyView {
@@ -2439,7 +2824,11 @@ struct GamePlayView: View {
     private var emulatorDisplayView: some View {
         ZStack {
             if let renderer = viewModel.renderer {
-                MetalView(metalRenderer: renderer, tick: viewModel.tick)
+                MetalView(
+                    metalRenderer: renderer,
+                    tick: viewModel.tick,
+                    renderScale: viewModel.currentRenderScale
+                )
             } else {
                 retroMindPlaceholderView
             }
@@ -2672,9 +3061,17 @@ struct GamePlayView: View {
     
     private var pauseMenuOverlay: some View {
         ZStack {
-            AppColors.background.opacity(0.42)
+            AppColors.background.opacity(heavyUIEffectsEnabled ? 0.42 : 0.56)
                 .ignoresSafeArea()
-                .overlay(.ultraThinMaterial.opacity(0.16))
+                .overlay {
+                    if heavyUIEffectsEnabled {
+                        Rectangle()
+                            .fill(.ultraThinMaterial)
+                            .opacity(0.16)
+                    } else {
+                        Color.black.opacity(0.08)
+                    }
+                }
                 .onTapGesture { }
 
             VStack(spacing: 12) {
@@ -3274,38 +3671,92 @@ private struct NDSScreenFrame<Content: View>: View {
 
 private struct NDSTouchScreenOverlayView: View {
     let onStylus: (_ normalizedX: CGFloat, _ normalizedY: CGFloat, _ pressed: Bool) -> Void
-    var yBiasNormalized: CGFloat = 0.035
+    var yBiasNormalized: CGFloat = 0
+    var topInsetNormalized: CGFloat = 0
+    var bottomInsetNormalized: CGFloat = 0
     @State private var isPressed = false
+    @State private var stylusLocation: CGPoint?
 
     var body: some View {
         GeometryReader { proxy in
             Color.clear
                 .contentShape(Rectangle())
+                .overlay(alignment: .topLeading) {
+                    if let stylusLocation {
+                        stylusIndicator
+                            .position(x: stylusLocation.x, y: stylusLocation.y)
+                            .allowsHitTesting(false)
+                    }
+                }
                 .highPriorityGesture(
                     DragGesture(minimumDistance: 0)
                         .onChanged { value in
                             let size = proxy.size
                             guard size.width > 0, size.height > 0 else { return }
-                            let x = max(0, min(1, value.location.x / size.width))
+                            let rawX = value.location.x / size.width
                             let rawY = value.location.y / size.height
-                            let y = max(0, min(1, rawY + yBiasNormalized))
+                            let topInset = max(0, min(0.45, topInsetNormalized))
+                            let bottomInset = max(0, min(0.45, bottomInsetNormalized))
+                            let minY = topInset
+                            let maxY = 1.0 - bottomInset
+                            guard rawX >= 0, rawX <= 1, rawY >= minY, rawY <= maxY else {
+                                stylusLocation = nil
+                                if isPressed {
+                                    isPressed = false
+                                    onStylus(0, 0, false)
+                                }
+                                return
+                            }
+
+                            let usableHeight = max(0.001, 1.0 - topInset - bottomInset)
+                            let adjustedY = (rawY - topInset) / usableHeight
+                            let x = max(0, min(1, rawX))
+                            let y = max(0, min(1, adjustedY + yBiasNormalized))
+                            let quantizedX = (x * 255.0).rounded() / 255.0
+                            let quantizedY = (y * 191.0).rounded() / 191.0
                             isPressed = true
-                            onStylus(x, y, true)
+                            stylusLocation = CGPoint(
+                                x: quantizedX * size.width,
+                                y: quantizedY * size.height
+                            )
+                            onStylus(quantizedX, quantizedY, true)
                         }
                         .onEnded { _ in
                             if isPressed {
                                 isPressed = false
                                 onStylus(0, 0, false)
+                                let releasePoint = stylusLocation
+                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                                    if !isPressed, stylusLocation == releasePoint {
+                                        stylusLocation = nil
+                                    }
+                                }
                             }
                         }
                 )
                 .onDisappear {
                     if isPressed {
                         isPressed = false
+                        stylusLocation = nil
                         onStylus(0, 0, false)
                     }
                 }
         }
+    }
+
+    private var stylusIndicator: some View {
+        ZStack {
+            Circle()
+                .fill(Color.black.opacity(0.72))
+                .frame(width: 26, height: 26)
+                .overlay(Circle().stroke(Color.white.opacity(0.95), lineWidth: 1.2))
+            Circle()
+                .fill(Color.black.opacity(0.95))
+                .frame(width: 8, height: 8)
+                .overlay(Circle().stroke(Color.white.opacity(0.88), lineWidth: 0.8))
+                .shadow(color: Color.black.opacity(0.55), radius: 1.5, x: 0, y: 0)
+        }
+        .shadow(color: Color.black.opacity(0.35), radius: 2, x: 0, y: 1)
     }
 }
 
@@ -3314,7 +3765,7 @@ private struct NDSPressableControl<Content: View>: View {
     let onPress: () -> Void
     let onRelease: () -> Void
     let content: (Bool) -> Content
-    @State private var isPressed = false
+    @State private var pressTracker = TouchPressTracker()
 
     init(onPress: @escaping () -> Void, onRelease: @escaping () -> Void, @ViewBuilder content: @escaping (Bool) -> Content) {
         self.onPress = onPress
@@ -3323,28 +3774,22 @@ private struct NDSPressableControl<Content: View>: View {
     }
 
     var body: some View {
-        content(isPressed)
-            .scaleEffect(isPressed ? shellTheme.controlStyle.pressScale : 1.0)
-            .animation(.easeOut(duration: shellTheme.animationStyle.tapDuration), value: isPressed)
+        content(pressTracker.isPressed)
+            .scaleEffect(pressTracker.isPressed ? shellTheme.controlStyle.pressScale : 1.0)
+            .animation(.easeOut(duration: shellTheme.animationStyle.tapDuration), value: pressTracker.isPressed)
             .contentShape(Rectangle())
-            .highPriorityGesture(
-                DragGesture(minimumDistance: 0)
-                    .onChanged { _ in
-                        if !isPressed {
-                            isPressed = true
-                            onPress()
-                        }
-                    }
-                    .onEnded { _ in
-                        if isPressed {
-                            isPressed = false
-                            onRelease()
-                        }
-                    }
-            )
+            .onLongPressGesture(minimumDuration: 0, maximumDistance: .infinity, pressing: { pressing in
+                switch pressTracker.transition(for: pressing) {
+                case .pressed:
+                    onPress()
+                case .released:
+                    onRelease()
+                case .none:
+                    break
+                }
+            }, perform: {})
             .onDisappear {
-                if isPressed {
-                    isPressed = false
+                if pressTracker.reset() {
                     onRelease()
                 }
             }
@@ -3352,88 +3797,90 @@ private struct NDSPressableControl<Content: View>: View {
 }
 
 private struct NDSDPadView: View {
-    @Environment(\.emulatorShellTheme) private var shellTheme
+    let size: CGFloat
     let onButton: (EmulatorButton, Bool) -> Void
+
+    init(size: CGFloat = 150, onButton: @escaping (EmulatorButton, Bool) -> Void) {
+        self.size = size
+        self.onButton = onButton
+    }
+
+    private var armWidth: CGFloat { size * (44.0 / 150.0) }
+    private var centerRadius: CGFloat { size * (18.0 / 150.0) }
+    private var cornerRadius: CGFloat { max(10, size * (10.0 / 150.0)) }
+    private var zoneSize: CGFloat { max(80.0, size * 0.56) }
+    private var zoneOffset: CGFloat { (size * 0.5) - (zoneSize * 0.30) }
 
     var body: some View {
         ZStack {
-            RoundedRectangle(cornerRadius: 22, style: .continuous)
-                .fill(
-                    LinearGradient(
-                        colors: [
-                            shellTheme.colorPalette.shellHighlight.color.opacity(shellTheme.controlStyle.dpadBasePlateOpacity),
-                            shellTheme.colorPalette.shellAccent.color.opacity(shellTheme.controlStyle.dpadBasePlateOpacity * 0.9),
-                            Color.black.opacity(0.02)
-                        ],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
+            NDSCrossShape(size: size, armWidth: armWidth, cornerRadius: cornerRadius)
+                .fill(Color.white.opacity(0.94))
+                .overlay(
+                    NDSCrossShape(size: size, armWidth: armWidth, cornerRadius: cornerRadius)
+                        .stroke(Color.black.opacity(0.78), lineWidth: 2.2)
                 )
-                .overlay(RoundedRectangle(cornerRadius: 22).stroke(shellTheme.colorPalette.controlStroke.color.opacity(0.25), lineWidth: 1))
-                .shadow(color: shellTheme.colorPalette.shellShadow.color.opacity(0.6), radius: 8, x: 0, y: 4)
-                .frame(width: 182, height: 182)
+                .shadow(color: Color.black.opacity(0.15), radius: 4, x: 0, y: 2)
 
-            VStack(spacing: 0) {
-                NDSDPadArm(direction: .up, onButton: onButton)
-                HStack(spacing: 0) {
-                    NDSDPadArm(direction: .left, onButton: onButton)
-                    RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .fill(shellTheme.colorPalette.controlSurfaceTop.color.opacity(0.95))
-                        .frame(width: 54, height: 54)
-                        .overlay(RoundedRectangle(cornerRadius: 12).stroke(shellTheme.colorPalette.controlStroke.color.opacity(0.8), lineWidth: 2))
-                        .overlay(RoundedRectangle(cornerRadius: 10).stroke(shellTheme.colorPalette.shellHighlight.color.opacity(0.35), lineWidth: 1).padding(1))
-                    NDSDPadArm(direction: .right, onButton: onButton)
-                }
-                NDSDPadArm(direction: .down, onButton: onButton)
-            }
+            Circle()
+                .fill(Color.black.opacity(0.15))
+                .frame(width: centerRadius * 2, height: centerRadius * 2)
+
+            NDSDPadPressZone(button: .dpadUp, onButton: onButton)
+                .frame(width: zoneSize, height: zoneSize)
+                .offset(y: -zoneOffset)
+
+            NDSDPadPressZone(button: .dpadDown, onButton: onButton)
+                .frame(width: zoneSize, height: zoneSize)
+                .offset(y: zoneOffset)
+
+            NDSDPadPressZone(button: .dpadLeft, onButton: onButton)
+                .frame(width: zoneSize, height: zoneSize)
+                .offset(x: -zoneOffset)
+
+            NDSDPadPressZone(button: .dpadRight, onButton: onButton)
+                .frame(width: zoneSize, height: zoneSize)
+                .offset(x: zoneOffset)
         }
-        .frame(width: 180, height: 180)
+        .frame(width: size, height: size)
     }
 }
 
-private enum NDSDPadDirection { case up, down, left, right }
+private enum NDSDPadDirection {
+    case up
+    case down
+    case left
+    case right
+}
 
-private struct NDSDPadArm: View {
-    @Environment(\.emulatorShellTheme) private var shellTheme
-    let direction: NDSDPadDirection
-    let onButton: (EmulatorButton, Bool) -> Void
+private struct NDSCrossShape: Shape {
+    let size: CGFloat
+    let armWidth: CGFloat
+    let cornerRadius: CGFloat
 
-    private var button: EmulatorButton {
-        switch direction {
-        case .up: return .dpadUp
-        case .down: return .dpadDown
-        case .left: return .dpadLeft
-        case .right: return .dpadRight
-        }
+    func path(in _: CGRect) -> Path {
+        let rect = CGRect(x: 0, y: 0, width: size, height: size)
+        let vertical = CGRect(x: rect.midX - armWidth / 2, y: 0, width: armWidth, height: size)
+        let horizontal = CGRect(x: 0, y: rect.midY - armWidth / 2, width: size, height: armWidth)
+
+        var path = Path()
+        path.addPath(Path(roundedRect: vertical, cornerRadius: cornerRadius))
+        path.addPath(Path(roundedRect: horizontal, cornerRadius: cornerRadius))
+        return path
     }
+}
+
+private struct NDSDPadPressZone: View {
+    let button: EmulatorButton
+    let onButton: (EmulatorButton, Bool) -> Void
 
     var body: some View {
         NDSPressableControl(
             onPress: { onButton(button, true) },
             onRelease: { onButton(button, false) }
         ) { isPressed in
-            ZStack {
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .fill(shellTheme.colorPalette.controlSurfaceTop.color.opacity(isPressed ? 0.80 : 0.95))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 14, style: .continuous)
-                            .stroke(shellTheme.colorPalette.controlStroke.color.opacity(0.8), lineWidth: 2)
-                    )
-                Capsule()
-                    .fill(shellTheme.colorPalette.controlIcon.color.opacity(0.85))
-                    .frame(
-                        width: (direction == .left || direction == .right) ? 28 : 6,
-                        height: (direction == .up || direction == .down) ? 28 : 6
-                    )
-            }
-            .frame(
-                width: (direction == .left || direction == .right) ? 64 : 54,
-                height: (direction == .up || direction == .down) ? 64 : 54
-            )
-            .offset(
-                x: direction == .left ? 6 : (direction == .right ? -6 : 0),
-                y: direction == .up ? 6 : (direction == .down ? -6 : 0)
-            )
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .fill(Color.black.opacity(isPressed ? 0.10 : 0.001))
+                .contentShape(Rectangle())
         }
     }
 }
@@ -3441,34 +3888,55 @@ private struct NDSDPadArm: View {
 private struct NDSFaceClusterView: View {
     @Environment(\.emulatorShellTheme) private var shellTheme
     let onButton: (EmulatorButton, Bool) -> Void
+    var buttonDiameter: CGFloat = 64
+    var buttonSpacing: CGFloat = 14
+    var showsBasePlate: Bool = true
+
+    private var offsetAmount: CGFloat { buttonSpacing + (buttonDiameter / 2) }
+    private var clusterSize: CGFloat { (offsetAmount + (buttonDiameter / 2)) * 2 }
 
     var body: some View {
-        VStack(spacing: 10) {
-            round(.x, "X")
-            HStack(spacing: 12) {
-                round(.y, "Y")
-                Color.clear.frame(width: 62, height: 62)
-                round(.a, "A")
+        ZStack {
+            if showsBasePlate {
+                Circle()
+                    .fill(shellTheme.colorPalette.shellHighlight.color.opacity(0.08))
+                    .frame(width: max(clusterSize - 40, 100), height: max(clusterSize - 40, 100))
+                    .overlay(
+                        Circle()
+                            .stroke(shellTheme.colorPalette.controlStroke.color.opacity(0.2), lineWidth: 1)
+                    )
             }
+            round(.x, "X")
+                .offset(y: -offsetAmount)
+            round(.y, "Y")
+                .offset(x: -offsetAmount)
+            round(.a, "A")
+                .offset(x: offsetAmount)
             round(.b, "B")
+                .offset(y: offsetAmount)
         }
-        .frame(width: 200, height: 180)
+        .frame(width: clusterSize, height: clusterSize)
     }
 
     private func round(_ button: EmulatorButton, _ label: String) -> some View {
-        NDSPressableControl(
+        let touchSize = max(78, buttonDiameter + 12)
+        return NDSPressableControl(
             onPress: { onButton(button, true) },
             onRelease: { onButton(button, false) }
         ) { isPressed in
-            Circle()
-                .fill(shellTheme.colorPalette.controlSurfaceTop.color.opacity(isPressed ? 0.84 : 0.96))
-                .overlay(Circle().stroke(shellTheme.colorPalette.controlStroke.color.opacity(0.8), lineWidth: 2))
-                .overlay(
-                    Text(label)
-                        .font(.system(size: 28, weight: .medium))
-                        .foregroundColor(shellTheme.colorPalette.controlIcon.color.opacity(0.8))
-                )
-                .frame(width: 62, height: 62)
+            ZStack {
+                Circle()
+                    .fill(Color.white.opacity(isPressed ? 0.90 : 0.98))
+                    .overlay(Circle().stroke(Color.black.opacity(0.6), lineWidth: 1.5))
+                    .shadow(color: Color.black.opacity(isPressed ? 0.0 : 0.15), radius: 4, x: 0, y: 2)
+                    .overlay(
+                        Text(label)
+                            .font(.system(size: max(18, buttonDiameter * 0.42), weight: .semibold))
+                            .foregroundColor(Color.black.opacity(0.32))
+                    )
+                    .frame(width: buttonDiameter, height: buttonDiameter)
+            }
+            .frame(width: touchSize, height: touchSize)
         }
     }
 }
@@ -3712,8 +4180,27 @@ private struct GBAFaceButtonsView: View {
 private struct GBAShoulderBar: View {
     @Environment(\.emulatorShellTheme) private var shellTheme
     let label: String
+    let width: CGFloat
+    let height: CGFloat
+    let fontSize: CGFloat
     let onPress: () -> Void
     let onRelease: () -> Void
+
+    init(
+        label: String,
+        width: CGFloat = 110,
+        height: CGFloat = 34,
+        fontSize: CGFloat = 20,
+        onPress: @escaping () -> Void,
+        onRelease: @escaping () -> Void
+    ) {
+        self.label = label
+        self.width = width
+        self.height = height
+        self.fontSize = fontSize
+        self.onPress = onPress
+        self.onRelease = onRelease
+    }
 
     var body: some View {
         NDSPressableControl(onPress: onPress, onRelease: onRelease) { isPressed in
@@ -3748,10 +4235,10 @@ private struct GBAShoulderBar: View {
                             .padding(2)
                     )
                 Text(label)
-                    .font(.system(size: 20, weight: .bold))
+                    .font(.system(size: fontSize, weight: .bold))
                     .foregroundColor(shellTheme.colorPalette.controlIcon.color.opacity(0.72))
             }
-            .frame(width: 110, height: 34)
+            .frame(width: width, height: height)
         }
     }
 }
@@ -4009,6 +4496,11 @@ private struct ShellSystemButton: View {
     let theme: ShellSystemButtonTheme
     let label: String
     let icon: String?
+    let minWidth: CGFloat
+    let controlHeight: CGFloat
+    let fontSize: CGFloat
+    let knobDiameter: CGFloat
+    let horizontalPadding: CGFloat
     let onPress: () -> Void
     let onRelease: () -> Void
 
@@ -4016,12 +4508,22 @@ private struct ShellSystemButton: View {
         theme: ShellSystemButtonTheme,
         label: String,
         icon: String? = nil,
+        minWidth: CGFloat = 64,
+        controlHeight: CGFloat = 30,
+        fontSize: CGFloat = 8,
+        knobDiameter: CGFloat = 22,
+        horizontalPadding: CGFloat = 6,
         onPress: @escaping () -> Void,
         onRelease: @escaping () -> Void = {}
     ) {
         self.theme = theme
         self.label = label
         self.icon = icon
+        self.minWidth = minWidth
+        self.controlHeight = controlHeight
+        self.fontSize = fontSize
+        self.knobDiameter = knobDiameter
+        self.horizontalPadding = horizontalPadding
         self.onPress = onPress
         self.onRelease = onRelease
     }
@@ -4030,27 +4532,29 @@ private struct ShellSystemButton: View {
         NDSPressableControl(onPress: onPress, onRelease: onRelease) { isPressed in
             HStack(spacing: 6) {
                 Text(label)
-                    .font(.system(size: 8, weight: .semibold))
+                    .font(.system(size: fontSize, weight: .semibold))
                     .foregroundColor(theme.text.opacity(isPressed ? 0.9 : 1.0))
                     .lineLimit(1)
                     .minimumScaleFactor(0.7)
+                    .allowsTightening(false)
 
                 Circle()
                     .fill(theme.knobFill.opacity(isPressed ? 0.80 : 1.0))
-                    .frame(width: 22, height: 22)
+                    .frame(width: knobDiameter, height: knobDiameter)
                     .overlay(
                         Group {
                             if let icon {
                                 Image(systemName: icon)
-                                    .font(.system(size: 11, weight: .semibold))
+                                    .font(.system(size: max(11.0, knobDiameter * 0.50), weight: .semibold))
                                     .foregroundColor(Color.black.opacity(0.28))
                             }
                         }
                     )
                     .overlay(Circle().stroke(theme.knobStroke, lineWidth: 1.5))
             }
-            .padding(.horizontal, 6)
-            .frame(height: 30)
+            .padding(.horizontal, horizontalPadding)
+            .frame(minWidth: minWidth)
+            .frame(height: controlHeight)
             .background(
                 Capsule(style: .continuous)
                     .fill(theme.fill.opacity(isPressed ? 0.78 : 1.0))

@@ -125,7 +125,10 @@ final class SaveStateStorage {
         if let saveState = try fetchSaveState(slot: slot, romHash: romHash, context: viewContext),
            let compressedData = saveState.data {
             let decompressed = try decompress(data: compressedData)
-            let inferredHash = romHash ?? saveState.rom?.checksum ?? ""
+            let inferredHash = romHash
+                ?? saveState.rom?.checksum
+                ?? inferROMHashFromDisk(slot: slot)
+                ?? ""
             let metadata = SaveStateMetadata(
                 slot: slot,
                 romHash: inferredHash,
@@ -321,6 +324,31 @@ final class SaveStateStorage {
         request.predicate = NSPredicate(format: "checksum == %@", checksum)
         request.fetchLimit = 1
         return try context.fetch(request).first
+    }
+
+    private func inferROMHashFromDisk(slot: Int) -> String? {
+        guard let contents = try? FileManager.default.contentsOfDirectory(
+            at: directory,
+            includingPropertiesForKeys: nil,
+            options: [.skipsHiddenFiles]
+        ) else {
+            return nil
+        }
+
+        for candidate in contents {
+            let metadataURL = candidate
+                .appendingPathComponent(String(slot), isDirectory: true)
+                .appendingPathComponent("metadata.json")
+            guard FileManager.default.fileExists(atPath: metadataURL.path),
+                  let data = try? Data(contentsOf: metadataURL),
+                  let metadata = try? decoder.decode(SaveStateMetadata.self, from: data),
+                  !metadata.romHash.isEmpty else {
+                continue
+            }
+            return metadata.romHash
+        }
+
+        return nil
     }
 
     private func fetchSaveState(slot: Int, romHash: String?, context: NSManagedObjectContext) throws -> SaveState? {

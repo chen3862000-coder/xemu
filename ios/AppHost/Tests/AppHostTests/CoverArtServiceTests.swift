@@ -51,5 +51,26 @@ final class CoverArtServiceTests: XCTestCase {
         XCTAssertEqual(resolved?.source, .embedded)
         XCTAssertEqual(resolved?.data, embedded)
     }
-}
 
+    func testResolveUsesStoredCustomCoverURL() throws {
+        let controller = PersistenceController(inMemory: true)
+        let context = controller.viewContext
+        let entry = ROMLibraryEntry(context: context)
+        entry.id = UUID()
+        entry.title = "Advance Wars"
+        entry.system = "gba"
+
+        let tempURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString)
+            .appendingPathExtension("jpg")
+        let customData = Data([0x10, 0x20, 0x30, 0x40])
+        try customData.write(to: tempURL, options: .atomic)
+        entry.customCoverURL = tempURL.path
+        defer { try? FileManager.default.removeItem(at: tempURL) }
+
+        let service = CoverArtService()
+        let resolved = service.resolve(for: entry)
+        XCTAssertEqual(resolved?.source, .customOverride)
+        XCTAssertEqual(resolved?.data, customData)
+    }
+}

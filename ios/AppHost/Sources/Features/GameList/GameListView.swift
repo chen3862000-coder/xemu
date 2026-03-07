@@ -8,31 +8,93 @@ import UIKit
 #endif
 
 struct GameListView: View {
+    private enum GameListSortOption: String, CaseIterable, Identifiable {
+        case recent = "Recent"
+        case alphabetical = "A-Z"
+        case mostPlayed = "Most Played"
+
+        var id: String { rawValue }
+    }
+
     let platform: EmulatorPlatform
     @Environment(\.managedObjectContext) private var viewContext
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.verticalSizeClass) private var verticalSizeClass
     @StateObject private var viewModel = GameListViewModel()
+    @StateObject private var performanceProfiler = PerformanceProfiler.shared
     @State private var searchText = ""
+    @State private var selectedSort: GameListSortOption = .recent
     @State private var selectedGame: Game?
     @State private var showAllGames = false
     @State private var activeAlert: GameListAlertState?
+
+    private var heavyUIEffectsEnabled: Bool {
+        performanceProfiler.currentQualityProfile.heavyUIEffects
+    }
+
+    private var collectorAtmosphere: some View {
+        LinearGradient(
+            colors: [Color.black.opacity(0.04), Color.clear],
+            startPoint: .top,
+            endPoint: .bottom
+        )
+        .ignoresSafeArea()
+        .allowsHitTesting(false)
+    }
+
+    private var isCollectorMode: Bool {
+#if os(iOS)
+        verticalSizeClass == .compact
+#else
+        false
+#endif
+    }
+
+    private var sortedFilteredGames: [Game] {
+        let filtered = viewModel.filteredGames(searchText: searchText)
+        switch selectedSort {
+        case .recent:
+            return filtered.sorted { ($0.lastPlayedDate ?? .distantPast) > ($1.lastPlayedDate ?? .distantPast) }
+        case .alphabetical:
+            return filtered.sorted { ($0.title ?? "").localizedCaseInsensitiveCompare($1.title ?? "") == .orderedAscending }
+        case .mostPlayed:
+            return filtered.sorted { $0.totalPlayTime > $1.totalPlayTime }
+        }
+    }
+
+    private var collectorGridColumns: [GridItem] {
+#if os(iOS)
+        let width = UIScreen.main.bounds.width
+        let columnCount = width >= 900 ? 4 : 3
+#else
+        let columnCount = 4
+#endif
+        return Array(repeating: GridItem(.flexible(minimum: 0), spacing: 16), count: columnCount)
+    }
     
     var body: some View {
         ZStack {
             backgroundLayer
+            if isCollectorMode {
+                collectorAtmosphere
+            }
 
             VStack(spacing: 0) {
                 headerSection
 
                 ScrollView {
                     VStack(spacing: 16) {
-                        systemIdentitySection
-                        continuePlayingSection
-                        consoleStatsSection
-                        achievementsSection
-                        mostPlayedSection
-                        recentlyAddedSection
-                        allGamesExpandableSection
+                        if isCollectorMode {
+                            collectorModeContent
+                        } else {
+                            systemIdentitySection
+                            continuePlayingSection
+                            consoleStatsSection
+                            achievementsSection
+                            mostPlayedSection
+                            recentlyAddedSection
+                            allGamesExpandableSection
+                        }
                     }
                     .padding(.horizontal, 16)
                     .padding(.top, 12)
@@ -40,6 +102,7 @@ struct GameListView: View {
                 }
             }
         }
+        .animation(.easeInOut(duration: 0.28), value: isCollectorMode)
         .alert(item: $activeAlert) { state in
             switch state.kind {
             case .launchError(let message):
@@ -102,26 +165,28 @@ struct GameListView: View {
                         endPoint: .bottomTrailing
                     )
                 )
-                .blur(radius: 120)
+                .blur(radius: heavyUIEffectsEnabled ? 120 : 36)
                 .frame(width: 360, height: 360)
                 .offset(x: 140, y: -210)
 
-            Circle()
-                .fill(
-                    LinearGradient(
-                        colors: [AppColors.accent.opacity(0.12), AppColors.primary.opacity(0.10)],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
+            if heavyUIEffectsEnabled {
+                Circle()
+                    .fill(
+                        LinearGradient(
+                            colors: [AppColors.accent.opacity(0.12), AppColors.primary.opacity(0.10)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
                     )
-                )
-                .blur(radius: 140)
-                .frame(width: 420, height: 420)
-                .offset(x: -170, y: 320)
+                    .blur(radius: 140)
+                    .frame(width: 420, height: 420)
+                    .offset(x: -170, y: 320)
+            }
         }
     }
     
     private var headerSection: some View {
-        VStack(spacing: 10) {
+        VStack(spacing: isCollectorMode ? 8 : 10) {
             HStack(spacing: 12) {
                 Button(action: { dismiss() }) {
                     Image(systemName: "arrow.left")
@@ -134,11 +199,11 @@ struct GameListView: View {
 
                 VStack(alignment: .leading, spacing: 1) {
                     Text(platformDisplay.displayName)
-                        .font(SubpageUI.Font.title)
+                        .font(isCollectorMode ? .system(size: 20, weight: .bold) : SubpageUI.Font.title)
                         .foregroundColor(AppColors.textPrimary)
-                    Text("\(viewModel.filteredGames(searchText: searchText).count) games available")
+                    Text("\(sortedFilteredGames.count) games")
                         .font(SubpageUI.Font.subtitle)
-                        .foregroundColor(AppColors.primary)
+                        .foregroundColor(isCollectorMode ? AppColors.textSecondary : AppColors.primary)
                 }
 
                 Spacer()
@@ -156,10 +221,10 @@ struct GameListView: View {
             }
 
             HStack(spacing: 8) {
-                HStack(spacing: 8) {
-                    Image(systemName: "magnifyingglass")
-                        .font(.system(size: 13, weight: .medium))
-                        .foregroundColor(AppColors.textMuted)
+                    HStack(spacing: 8) {
+                        Image(systemName: "magnifyingglass")
+                            .font(.system(size: 13, weight: .medium))
+                            .foregroundColor(AppColors.textMuted)
 
                     TextField("Search games...", text: $searchText)
 #if os(iOS)
@@ -171,12 +236,21 @@ struct GameListView: View {
                 .subpageSearchField(cornerRadius: 19, height: 38)
 
                 Menu {
-                    Button("Recent") {}
-                    Button("A–Z") {}
-                    Button("Most Played") {}
+                    ForEach(GameListSortOption.allCases) { option in
+                        Button {
+                            selectedSort = option
+                        } label: {
+                            HStack {
+                                Text(option.rawValue)
+                                if selectedSort == option {
+                                    Image(systemName: "checkmark")
+                                }
+                            }
+                        }
+                    }
                 } label: {
                     HStack(spacing: 6) {
-                        Text("Recent")
+                        Text(selectedSort.rawValue)
                             .font(.system(size: 12, weight: .semibold))
                         Image(systemName: "chevron.down")
                             .font(.system(size: 10, weight: .semibold))
@@ -399,7 +473,7 @@ struct GameListView: View {
                 }
             } label: {
                 HStack {
-                    Text(showAllGames ? "Hide Games" : "View All \(viewModel.totalGames) Games")
+                    Text(showAllGames ? "Hide Games" : "Open Game Library (\(viewModel.totalGames))")
                         .font(.system(size: 15, weight: .semibold))
                         .foregroundColor(AppColors.textPrimary)
                     Spacer()
@@ -421,6 +495,56 @@ struct GameListView: View {
             if showAllGames {
                 gamesSection
                     .transition(.opacity.combined(with: .move(edge: .top)))
+            }
+        }
+    }
+
+    private var collectorModeContent: some View {
+        Group {
+            if sortedFilteredGames.isEmpty {
+                VStack(spacing: 10) {
+                    Image(systemName: searchText.isEmpty ? "gamecontroller" : "magnifyingglass")
+                        .font(.system(size: 26, weight: .medium))
+                        .foregroundColor(AppColors.textMuted)
+                    Text(searchText.isEmpty ? "No Games Yet" : "No Matching Games")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundColor(AppColors.textPrimary)
+                    if !searchText.isEmpty {
+                        Button {
+                            searchText = ""
+                        } label: {
+                            Text("Clear Search")
+                                .font(.system(size: 12, weight: .semibold))
+                                .foregroundColor(.white)
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 8)
+                                .background(AppColors.primary)
+                                .clipShape(Capsule())
+                        }
+                        .buttonStyle(.plain)
+                        .padding(.top, 4)
+                    }
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 40)
+                .subpageCard(cornerRadius: 16, shadowOpacity: 0.02)
+            } else {
+                LazyVGrid(columns: collectorGridColumns, spacing: 16) {
+                    ForEach(sortedFilteredGames) { game in
+                        Button {
+                            launchGame(game)
+                        } label: {
+                            SystemCollectorCard(
+                                game: game,
+                                platformText: platformDisplay.shortName,
+                                subtitle: recentSubtitle(for: game),
+                                launchIssue: viewModel.compatibilityIssue(for: game)
+                            )
+                        }
+                        .buttonStyle(CollectorCardPressStyle())
+                        .contextMenu { deletionMenu(for: game) }
+                    }
+                }
             }
         }
     }
@@ -452,13 +576,13 @@ struct GameListView: View {
     private var gamesSection: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack {
-                Text("All Games")
+                Text("Game Library")
                     .font(.system(size: 16, weight: .semibold))
                     .foregroundColor(AppColors.textPrimary)
 
                 Spacer()
 
-                Text("Recent")
+                Text(selectedSort.rawValue)
                     .font(.system(size: 12, weight: .semibold))
                     .foregroundColor(AppColors.textMuted)
                     .padding(.horizontal, 10)
@@ -467,7 +591,7 @@ struct GameListView: View {
                     .clipShape(Capsule())
             }
 
-            let games = viewModel.filteredGames(searchText: searchText)
+            let games = sortedFilteredGames
 
             if games.isEmpty {
                 VStack(spacing: 10) {
@@ -910,6 +1034,116 @@ private struct SystemHubGameCard: View {
             Image(systemName: "gamecontroller.fill")
                 .font(.system(size: 22, weight: .semibold))
                 .foregroundColor(AppColors.primary.opacity(0.75))
+        }
+    }
+}
+
+private struct SystemCollectorCard: View {
+    let game: Game
+    let platformText: String
+    let subtitle: String
+    let launchIssue: ROMLaunchIssue?
+
+    private var consoleAccent: Color {
+        SubpageUI.CollectorIdentity.accent(forSystem: platformText)
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            ZStack(alignment: .topTrailing) {
+                coverView
+                    .aspectRatio(2.0 / 3.0, contentMode: .fit)
+                    .frame(maxWidth: .infinity)
+
+                Text(platformText)
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(consoleAccent.opacity(0.94))
+                    .clipShape(Capsule())
+                    .padding(8)
+            }
+
+            Text(game.title ?? "Unknown")
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundColor(AppColors.textPrimary)
+                .lineLimit(2)
+
+            HStack(spacing: 4) {
+                Image(systemName: launchIssue == nil ? "clock.fill" : "exclamationmark.triangle.fill")
+                    .font(.system(size: 10, weight: .semibold))
+                Text(launchIssue?.title ?? subtitle)
+                    .font(.system(size: 11, weight: .medium))
+                    .lineLimit(1)
+            }
+            .foregroundColor(launchIssue == nil ? AppColors.textMuted : .orange)
+        }
+    }
+
+    @ViewBuilder
+    private var coverView: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 18)
+                .fill(SubpageUI.CollectorIdentity.placeholderGradient(forSystem: platformText))
+
+#if canImport(AppKit)
+            if let data = game.coverImage, let img = NSImage(data: data) {
+                Image(nsImage: img)
+                    .resizable()
+                    .scaledToFill()
+            } else {
+                placeholder
+            }
+#elseif canImport(UIKit)
+            if let data = game.coverImage, let img = UIImage(data: data) {
+                Image(uiImage: img)
+                    .resizable()
+                    .scaledToFill()
+            } else {
+                placeholder
+            }
+#else
+            placeholder
+#endif
+        }
+        .clipShape(RoundedRectangle(cornerRadius: 18))
+        .overlay {
+            LinearGradient(
+                colors: [Color.white.opacity(0.12), Color.clear],
+                startPoint: .top,
+                endPoint: .center
+            )
+            .clipShape(RoundedRectangle(cornerRadius: 18))
+            .allowsHitTesting(false)
+        }
+        .overlay {
+            RoundedRectangle(cornerRadius: 18)
+                .stroke(Color.white.opacity(0.15), lineWidth: 1)
+                .allowsHitTesting(false)
+        }
+        .overlay(alignment: .bottom) {
+            GeometryReader { proxy in
+                Capsule()
+                    .fill(Color.black.opacity(0.08))
+                    .frame(width: proxy.size.width * 0.72, height: 10)
+                    .blur(radius: 8)
+                    .offset(y: 8)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
+            }
+            .allowsHitTesting(false)
+        }
+        .shadow(color: .black.opacity(0.12), radius: 12, x: 0, y: 6)
+        .shadow(color: SubpageUI.CollectorIdentity.glow(forSystem: platformText), radius: 10, x: 0, y: 5)
+    }
+
+    private var placeholder: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 18)
+                .fill(SubpageUI.CollectorIdentity.placeholderGradient(forSystem: platformText))
+            Image(systemName: "gamecontroller.fill")
+                .font(.system(size: 22, weight: .semibold))
+                .foregroundColor(AppColors.textMuted)
         }
     }
 }

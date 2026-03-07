@@ -105,6 +105,7 @@ final class RomImportCoordinator: ObservableObject {
         do {
             // URL is now a temp file that doesn't need security scope
             let fileData = try Data(contentsOf: url)
+            let romSha1 = await Self.computeSHA1Hex(data: fileData)
             importProgress = 0.2
             
             let validation = try RomValidator.validate(at: url)
@@ -144,6 +145,8 @@ final class RomImportCoordinator: ObservableObject {
                 existingEntry.system = validation.system.rawValue
                 existingEntry.fileName = importedDisplayFileName
                 existingEntry.fileSize = Int64(fileData.count)
+                existingEntry.romSha1 = romSha1
+                applyMetadataMatch(to: existingEntry)
                 CoverArtService.shared.assignDeterministicPlaceholderIfNeeded(to: existingEntry)
                 if context.hasChanges {
                     try context.save()
@@ -168,10 +171,12 @@ final class RomImportCoordinator: ObservableObject {
             entry.system = validation.system.rawValue
             entry.fileName = importedDisplayFileName
             entry.fileSize = Int64(fileData.count)
+            entry.romSha1 = romSha1
             entry.dateAdded = Date()
             entry.lastPlayedAt = nil
             entry.playtimeTotal = 0
             entry.isFavorite = false
+            applyMetadataMatch(to: entry)
             CoverArtService.shared.assignDeterministicPlaceholderIfNeeded(to: entry)
             
             // Create ROMs directory if it doesn't exist
@@ -218,6 +223,25 @@ final class RomImportCoordinator: ObservableObject {
         }
         if let firstError = failures.first {
             throw firstError
+        }
+    }
+
+    private func applyMetadataMatch(to entry: ROMLibraryEntry) {
+        let match = CoverArtService.shared.metadataMatch(
+            romSha1: entry.romSha1,
+            title: entry.title,
+            systemRaw: entry.system
+        )
+        entry.defaultCoverKey = match?.defaultCoverKey
+        entry.canonicalTitleID = match?.titleID
+    }
+
+    nonisolated private static func computeSHA1Hex(data: Data) async -> String {
+        await withCheckedContinuation { continuation in
+            DispatchQueue.global(qos: .userInitiated).async {
+                let digest = Insecure.SHA1.hash(data: data)
+                continuation.resume(returning: digest.map { String(format: "%02x", $0) }.joined())
+            }
         }
     }
 }

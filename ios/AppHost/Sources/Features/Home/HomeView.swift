@@ -13,7 +13,9 @@ struct HomeView: View {
 
     @Environment(\.managedObjectContext) private var viewContext
     @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.verticalSizeClass) private var verticalSizeClass
     @StateObject private var viewModel = HomeViewModel()
+    @StateObject private var performanceProfiler = PerformanceProfiler.shared
     @State private var showingSettings = false
     @State private var showingImport = false
     @State private var showingGameLibrary = false
@@ -28,19 +30,48 @@ struct HomeView: View {
     @State private var idleTarget: IdleHighlightTarget = .none
     private let idleThreshold: TimeInterval = 10
     private let idleTimer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
+
+    private var heavyUIEffectsEnabled: Bool {
+        performanceProfiler.currentQualityProfile.heavyUIEffects
+    }
+
+    private var collectorAtmosphere: some View {
+        LinearGradient(
+            colors: [Color.black.opacity(0.04), Color.clear],
+            startPoint: .top,
+            endPoint: .bottom
+        )
+        .ignoresSafeArea()
+        .allowsHitTesting(false)
+    }
+
+    private var isCollectorMode: Bool {
+#if os(iOS)
+        verticalSizeClass == .compact
+#else
+        false
+#endif
+    }
     
     var body: some View {
         ZStack {
             backgroundGradients
+            if isCollectorMode {
+                collectorAtmosphere
+            }
 
             VStack(spacing: 0) {
                 headerSection
 
                 ScrollView {
-                    VStack(spacing: 24) {
-                        statsGrid
-                        recentGamesSection
-                        emulatorsSection
+                    VStack(spacing: isCollectorMode ? 18 : 24) {
+                        if isCollectorMode {
+                            collectorModeContent
+                        } else {
+                            statsGrid
+                            recentGamesSection
+                            emulatorsSection
+                        }
                     }
                     .padding(.top, 12)
                     .padding(.horizontal, 16)
@@ -48,6 +79,7 @@ struct HomeView: View {
                 }
             }
         }
+        .animation(.easeInOut(duration: 0.28), value: isCollectorMode)
         .sheet(isPresented: $showingSettings) {
             SettingsView()
                 .swipeBack {
@@ -146,6 +178,9 @@ struct HomeView: View {
         .onReceive(NotificationCenter.default.publisher(for: .romLibraryDidChange)) { _ in
             refreshHome()
         }
+        .onReceive(NotificationCenter.default.publisher(for: .coverArtDidChange)) { _ in
+            refreshHome()
+        }
         .simultaneousGesture(
             TapGesture().onEnded {
                 markInteraction()
@@ -194,21 +229,23 @@ struct HomeView: View {
                         endPoint: .bottomTrailing
                     )
                 )
-                .blur(radius: 120)
+                .blur(radius: heavyUIEffectsEnabled ? 120 : 36)
                 .frame(width: 380, height: 380)
                 .offset(x: 140, y: -220)
 
-            Circle()
-                .fill(
-                    LinearGradient(
-                        colors: [AppColors.accent.opacity(0.16), AppColors.primary.opacity(0.10)],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
+            if heavyUIEffectsEnabled {
+                Circle()
+                    .fill(
+                        LinearGradient(
+                            colors: [AppColors.accent.opacity(0.16), AppColors.primary.opacity(0.10)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
                     )
-                )
-                .blur(radius: 140)
-                .frame(width: 420, height: 420)
-                .offset(x: -160, y: 320)
+                    .blur(radius: 140)
+                    .frame(width: 420, height: 420)
+                    .offset(x: -160, y: 320)
+            }
         }
     }
     
@@ -221,6 +258,142 @@ struct HomeView: View {
                 showingSettings = true
             }
         )
+    }
+
+    private var collectorModeContent: some View {
+        VStack(alignment: .leading, spacing: 18) {
+            collectorActionsRow
+            collectorContinueSection
+            collectorSystemsSection
+        }
+    }
+
+    private var collectorActionsRow: some View {
+        HStack(spacing: 10) {
+            Button {
+                showingGameLibrary = true
+            } label: {
+                HStack(spacing: 6) {
+                    Image(systemName: "square.grid.2x2")
+                        .font(.system(size: 12, weight: .semibold))
+                    Text("All Games")
+                        .font(.system(size: 13, weight: .semibold))
+                }
+                .foregroundColor(AppColors.textPrimary)
+                .padding(.horizontal, 12)
+                .frame(height: 34)
+                .background(AppColors.surface)
+                .overlay(
+                    Capsule().stroke(AppColors.surfaceLight.opacity(0.6), lineWidth: 1)
+                )
+                .clipShape(Capsule())
+            }
+            .buttonStyle(.plain)
+
+            Button {
+                showingPlayerStats = true
+            } label: {
+                HStack(spacing: 6) {
+                    Image(systemName: "chart.bar.fill")
+                        .font(.system(size: 12, weight: .semibold))
+                    Text("Stats")
+                        .font(.system(size: 13, weight: .semibold))
+                }
+                .foregroundColor(AppColors.textPrimary)
+                .padding(.horizontal, 12)
+                .frame(height: 34)
+                .background(AppColors.surface)
+                .overlay(
+                    Capsule().stroke(AppColors.surfaceLight.opacity(0.6), lineWidth: 1)
+                )
+                .clipShape(Capsule())
+            }
+            .buttonStyle(.plain)
+
+            Spacer()
+        }
+    }
+
+    private var collectorContinueSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Text("Continue Playing")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundColor(AppColors.textPrimary)
+                Spacer()
+                Button("View All") {
+                    showingRecentlyPlayed = true
+                }
+                .buttonStyle(.plain)
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundColor(AppColors.primary)
+            }
+
+            if viewModel.recentGames.isEmpty {
+                Text("No recent games")
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundColor(AppColors.textMuted)
+                    .frame(maxWidth: .infinity, minHeight: 120)
+                    .background(AppColors.surface)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 16)
+                            .stroke(AppColors.surfaceLight.opacity(0.5), lineWidth: 1)
+                    )
+                    .clipShape(RoundedRectangle(cornerRadius: 16))
+            } else {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    LazyHStack(spacing: 20) {
+                        ForEach(viewModel.recentGames) { game in
+                            RecentGameCard(game: game) {
+                                launchRecentGame(game)
+                            }
+                            .frame(width: 210)
+                            .contextMenu {
+                                recentGameContextMenu(game)
+                            }
+                        }
+                    }
+                    .scrollTargetLayout()
+                    .padding(.horizontal, 24)
+                }
+#if os(iOS)
+                .scrollTargetBehavior(.viewAligned)
+#endif
+            }
+        }
+    }
+
+    private var collectorSystemsSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Text("Systems")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundColor(AppColors.textPrimary)
+                Spacer()
+                Text("\(viewModel.emulators.count)")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundColor(AppColors.textMuted)
+                    .padding(.horizontal, 10)
+                    .frame(height: 26)
+                    .background(AppColors.surfaceLight.opacity(0.45))
+                    .clipShape(Capsule())
+            }
+
+            ScrollView(.horizontal, showsIndicators: false) {
+                LazyHStack(spacing: 20) {
+                    ForEach(viewModel.emulators) { emulator in
+                        CollectorSystemTile(emulator: emulator) {
+                            selectedPlatform = platform(for: emulator.shortName)
+                        }
+                    }
+                }
+                .scrollTargetLayout()
+                .padding(.horizontal, 24)
+            }
+#if os(iOS)
+            .scrollTargetBehavior(.viewAligned)
+#endif
+        }
     }
     
     private var statsGrid: some View {
@@ -502,21 +675,49 @@ struct LandscapeGameRow: View {
                 placeholderImage
                 #endif
                 
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(game.title)
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(displayTitle(game.title))
                         .font(.system(size: 15, weight: .semibold))
                         .foregroundColor(AppColors.textPrimary)
                         .lineLimit(2)
                     
-                    if let lastPlayed = game.lastPlayed {
-                        Text(formatRecentDate(lastPlayed))
-                            .font(.system(size: 12))
-                            .foregroundColor(AppColors.textSecondary)
+                    HStack(spacing: 6) {
+                        if let lastPlayed = game.lastPlayed {
+                            Text(formatRecentDate(lastPlayed))
+                                .font(.system(size: 12, weight: .medium))
+                                .foregroundColor(AppColors.textSecondary)
+                        }
+
+                        if game.totalPlaySeconds > 0 {
+                            Text("•")
+                                .font(.system(size: 11, weight: .semibold))
+                                .foregroundColor(AppColors.textMuted)
+                            Text(totalHoursText)
+                                .font(.system(size: 11, weight: .medium))
+                                .foregroundColor(AppColors.textMuted)
+                        }
                     }
-                    
-                    Text(game.console)
-                        .font(.system(size: 11))
-                        .foregroundColor(AppColors.textMuted)
+
+                    GeometryReader { geo in
+                        ZStack(alignment: .leading) {
+                            Capsule()
+                                .fill(AppColors.surfaceLight.opacity(0.65))
+                            Capsule()
+                                .fill(AppColors.primary.opacity(0.75))
+                                .frame(width: max(8, geo.size.width * sessionProgress))
+                        }
+                    }
+                    .frame(height: 6)
+
+                    HStack {
+                        Text(game.console)
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundColor(AppColors.textMuted)
+                        Spacer()
+                        Text("Resume")
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundColor(AppColors.primary)
+                    }
                 }
                 
                 Spacer()
@@ -553,6 +754,26 @@ struct LandscapeGameRow: View {
         if calendar.isDateInToday(date) { return "Today" }
         if calendar.isDateInYesterday(date) { return "Yesterday" }
         return date.formatted(.dateTime.month(.abbreviated).day())
+    }
+
+    private var totalHoursText: String {
+        let hours = max(0, game.totalPlaySeconds / 3600)
+        return "\(hours)h"
+    }
+
+    private var sessionProgress: CGFloat {
+        guard game.totalPlaySeconds > 0 else { return 0.08 }
+        let capped = min(1.0, CGFloat(game.totalPlaySeconds) / CGFloat(4 * 3600))
+        return max(0.08, capped)
+    }
+
+    private func displayTitle(_ title: String) -> String {
+        let withoutTags = title.replacingOccurrences(
+            of: #"\s*\([^)]*\)"#,
+            with: "",
+            options: .regularExpression
+        )
+        return withoutTags.replacingOccurrences(of: "_", with: " ")
     }
 }
 
@@ -655,7 +876,7 @@ struct RecentGameCard: View {
             .shadow(color: AppColors.primary.opacity(0.06), radius: 10, x: 0, y: 5)
             .clipShape(RoundedRectangle(cornerRadius: 16))
         }
-        .buttonStyle(PlainButtonStyle())
+        .buttonStyle(CollectorCardPressStyle())
     }
 
     @ViewBuilder
@@ -871,6 +1092,64 @@ struct EmulatorCard: View {
                 isHovered = hovering
             }
         }
+    }
+}
+
+private struct CollectorSystemTile: View {
+    let emulator: EmulatorInfo
+    let onTap: () -> Void
+
+    private var consoleAssetName: String? {
+        switch emulator.shortName {
+        case "GB/GBC": return "ConsoleGBGBC"
+        case "GBA": return "ConsoleGBA"
+        case "NDS": return "ConsoleNDS"
+        default: return nil
+        }
+    }
+
+    var body: some View {
+        Button(action: onTap) {
+            VStack(alignment: .leading, spacing: 8) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 14)
+                        .fill(
+                            LinearGradient(
+                                colors: emulator.gradient.map { $0.opacity(0.35) } + [AppColors.surface],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                        .frame(width: 130, height: 84)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 14)
+                                .stroke(AppColors.surfaceLight.opacity(0.65), lineWidth: 1)
+                        )
+
+                    if let consoleAssetName {
+                        Image(consoleAssetName)
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: 64, height: 64)
+                            .clipShape(RoundedRectangle(cornerRadius: 10))
+                    } else {
+                        Text(emulator.icon)
+                            .font(.system(size: 26))
+                    }
+                }
+
+                Text(emulator.shortName)
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundColor(AppColors.textPrimary)
+                    .lineLimit(1)
+
+                Text("\(emulator.gamesCount) games")
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundColor(AppColors.textMuted)
+            }
+            .frame(width: 130, alignment: .leading)
+        }
+        .buttonStyle(CollectorCardPressStyle())
     }
 }
 

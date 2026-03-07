@@ -24,6 +24,60 @@ enum SubpageUI {
 
     static let sectionBorderOpacity: Double = 0.55
     static let cardShadowOpacity: Double = 0.08
+
+    enum CollectorIdentity {
+        static let gbHex = "B7D6A4"
+        static let gbaHex = "6C5CE7"
+        static let ndsHex = "1F2A44"
+        static let fallbackHex = "8B3DFF"
+
+        static let gb = Color(hex: gbHex)
+        static let gba = Color(hex: gbaHex)
+        static let nds = Color(hex: ndsHex)
+        static let fallback = Color(hex: fallbackHex)
+
+        static func normalizedSystemCode(_ raw: String?) -> String {
+            let code = (raw ?? "")
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+                .lowercased()
+            switch code {
+            case "gb", "gbc", "gb/gbc", "game boy", "game boy + color":
+                return "gbc"
+            case "gba", "game boy advance":
+                return "gba"
+            case "nds", "nintendo ds":
+                return "nds"
+            default:
+                return code
+            }
+        }
+
+        static func accentHex(forSystem raw: String?) -> String {
+            switch normalizedSystemCode(raw) {
+            case "gbc": return gbHex
+            case "gba": return gbaHex
+            case "nds": return ndsHex
+            default: return fallbackHex
+            }
+        }
+
+        static func accent(forSystem raw: String?) -> Color {
+            Color(hex: accentHex(forSystem: raw))
+        }
+
+        static func glow(forSystem raw: String?) -> Color {
+            accent(forSystem: raw).opacity(0.22)
+        }
+
+        static func placeholderGradient(forSystem raw: String?) -> LinearGradient {
+            let accent = accent(forSystem: raw)
+            return LinearGradient(
+                colors: [accent.opacity(0.72), accent.opacity(0.42), AppColors.surface.opacity(0.92)],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+        }
+    }
 }
 
 struct SubpageSectionHeader: View {
@@ -112,5 +166,19 @@ extension View {
 
     func subpagePopup(cornerRadius: CGFloat = SubpageUI.Radius.popup) -> some View {
         modifier(SubpagePopupModifier(cornerRadius: cornerRadius))
+    }
+}
+
+struct CollectorCardPressStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed ? 0.97 : 1.0)
+            .shadow(
+                color: .black.opacity(configuration.isPressed ? 0.16 : 0.0),
+                radius: configuration.isPressed ? 14 : 0,
+                x: 0,
+                y: configuration.isPressed ? 9 : 0
+            )
+            .animation(.spring(response: 0.25, dampingFraction: 0.82), value: configuration.isPressed)
     }
 }

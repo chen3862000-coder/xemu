@@ -19,12 +19,9 @@ public final class AudioEngine {
     private let softLatencyCapFrames: UInt32
     private let preferredScheduleFrames: UInt32
     private let minPartialScheduleFrames: UInt32
-    private var debugUpdateCounter: UInt64 = 0
-    private var debugQueueCapHits: UInt64 = 0
     private var postLoadSilenceUntil: CFTimeInterval = 0
     private var postLoadFadeStart: CFTimeInterval = 0
     private var postLoadFadeUntil: CFTimeInterval = 0
-    private var postLoadSilenceLogCounter: UInt64 = 0
 
     public init(sampleRate: Double = 48_000.0, channels: Int = 2, volume: Float = 1.0) {
         self.sampleRate = sampleRate
@@ -38,16 +35,16 @@ public final class AudioEngine {
         minStartQueuedFrames = UInt32(sampleRate * secondsPerFrame)
         hardResetQueuedFrames = UInt32(sampleRate * 0.90)
         softLatencyCapFrames = UInt32(sampleRate * 0.20)  // Increased from 0.18
-        // Match actual frame sizes (803-1000 frames from resampling)
-        preferredScheduleFrames = max(800, UInt32(sampleRate / 60.0))
-        minPartialScheduleFrames = max(600, UInt32(sampleRate / 80.0))  // Increased from 512
+        // Keep scheduling cadence aligned to one emulation frame of audio.
+        // A fixed 800-frame target starves 44.1kHz streams (~735-739 frames/tick).
+        let framesPerTick = max(1, Int((sampleRate / targetFPS).rounded()))
+        preferredScheduleFrames = UInt32(framesPerTick)
+        minPartialScheduleFrames = UInt32(max(256, Int(Double(framesPerTick) * 0.70)))
         
         outputFormat = AVAudioFormat(commonFormat: .pcmFormatInt16,
                                      sampleRate: sampleRate,
                                      channels: self.channels,
                                      interleaved: true)!
-        
-        NSLog("[AudioEngine] Initialized: sampleRate=\(sampleRate), preferredScheduleFrames=\(preferredScheduleFrames), minPartialScheduleFrames=\(minPartialScheduleFrames)")
         
         setupEngine()
         setVolume(volume)
@@ -79,13 +76,6 @@ public final class AudioEngine {
             let now = CACurrentMediaTime()
 
             if now < self.postLoadSilenceUntil {
-                self.postLoadSilenceLogCounter &+= 1
-                if self.postLoadSilenceLogCounter <= 4 || (self.postLoadSilenceLogCounter % 30) == 0 {
-                    NSLog("[AudioEngine] post-load silence drop frames=%u until=%.3f now=%.3f",
-                          frameCount,
-                          self.postLoadSilenceUntil,
-                          now)
-                }
                 return
             }
 
@@ -98,7 +88,6 @@ public final class AudioEngine {
             // dropping whole packets when queue pressure is transient.
             self.pendingPCM.append(workingSamples)
             self.drainPendingPCM(bytesPerFrame: bytesPerFrame)
-            self.debugLogQueueStateIfNeeded(bytesPerFrame: bytesPerFrame)
         }
     }
 
@@ -129,9 +118,6 @@ public final class AudioEngine {
             } else {
                 return
             }
-        }
-        if queuedFrames >= maxQueuedFrames {
-            debugQueueCapHits &+= 1
         }
     }
 
@@ -236,9 +222,6 @@ public final class AudioEngine {
             self.postLoadSilenceUntil = now + silenceSeconds
             self.postLoadFadeStart = self.postLoadSilenceUntil
             self.postLoadFadeUntil = self.postLoadFadeStart + fadeSeconds
-            self.postLoadSilenceLogCounter = 0
-
-            NSLog("[AudioEngine] post-load quarantine silenceMs=%d fadeInMs=%d", silenceMs, fadeInMs)
         }
     }
 
@@ -281,20 +264,6 @@ public final class AudioEngine {
         return output
     }
 
-    private func debugLogQueueStateIfNeeded(bytesPerFrame: Int) {
-        guard UserDefaults.standard.bool(forKey: "dev.audio.debugAB") else { return }
-        debugUpdateCounter &+= 1
-        guard debugUpdateCounter % 120 == 0 else { return }
-        let pendingFrames = pendingPCM.count / max(1, bytesPerFrame)
-        NSLog("[AudioAB] queue updates=%llu queuedFrames=%u pendingFrames=%d maxQueued=%u capHits=%llu isPlaying=%d",
-              debugUpdateCounter,
-              queuedFrames,
-              pendingFrames,
-              maxQueuedFrames,
-              debugQueueCapHits,
-              isPlaying ? 1 : 0)
-    }
-    
     public func configureAudioSession() {
         #if os(iOS)
         do {

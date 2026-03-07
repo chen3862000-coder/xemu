@@ -41,12 +41,13 @@ let package = Package(
                 "AppHost/iOSApp.swift",
                 "XemuCores"
             ],
-            swiftSettings: [
-                .define("USE_XEMU_CORES")
+            resources: [
+                .process("Features/Covers/Resources")
             ],
             linkerSettings: [
                 .linkedLibrary("c++"),
-                .linkedLibrary("resolv")
+                .linkedLibrary("resolv"),
+                .linkedLibrary("sqlite3")
             ]
         ),
         

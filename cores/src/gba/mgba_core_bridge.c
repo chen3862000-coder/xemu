@@ -1,8 +1,4 @@
 #include "mgba_core_bridge.h"
-#include <stdio.h>
-
-static int g_audio_rate_change_count = 0;
-static int g_audio_lr_mismatch_count = 0;
 
 uintptr_t xemu_mgba_core_init_ptr(struct mCore* core) {
     return core && core->init ? (uintptr_t) core->init : 0;
@@ -46,14 +42,6 @@ void xemu_mgba_core_set_audio_sample_rate(struct mCore* core, unsigned sample_ra
     }
     blip_set_rates(left, (double)freq, (double)sample_rate);
     blip_set_rates(right, (double)freq, (double)sample_rate);
-    ++g_audio_rate_change_count;
-    if (g_audio_rate_change_count <= 8 || (g_audio_rate_change_count % 64) == 0) {
-        fprintf(stderr,
-                "[BridgeDiag] audio-rate-config count=%d coreFreq=%d targetRate=%u\n",
-                g_audio_rate_change_count,
-                (int)freq,
-                sample_rate);
-    }
 }
 
 int xemu_mgba_core_audio_samples_avail(struct mCore* core) {
@@ -79,17 +67,6 @@ int xemu_mgba_core_audio_read_interleaved(struct mCore* core, int16_t* out, int 
 
     const int producedLeft = blip_read_samples(left, out, frames, 1);
     const int producedRight = blip_read_samples(right, out + 1, frames, 1);
-    if (producedLeft != producedRight) {
-        ++g_audio_lr_mismatch_count;
-        if (g_audio_lr_mismatch_count <= 10 || (g_audio_lr_mismatch_count % 100) == 0) {
-            fprintf(stderr,
-                    "[BridgeDiag] audio-lr-mismatch count=%d left=%d right=%d req=%d\n",
-                    g_audio_lr_mismatch_count,
-                    producedLeft,
-                    producedRight,
-                    frames);
-        }
-    }
     if (producedLeft <= 0 || producedRight <= 0) {
         return 0;
     }

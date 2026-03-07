@@ -19,6 +19,7 @@ set(TEST_SOURCES
     main.cpp
     gb/gambatte_wrapper_test.cpp
     gba/mgba_wrapper_test.cpp
+    nds/nds_touch_pointer_mapping_test.cpp
     api/c_api_test.cpp
     api/test_error_codes.cpp
     api/test_version.cpp
