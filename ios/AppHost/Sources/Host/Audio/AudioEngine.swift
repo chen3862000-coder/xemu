@@ -22,6 +22,8 @@ public final class AudioEngine {
     private var postLoadSilenceUntil: CFTimeInterval = 0
     private var postLoadFadeStart: CFTimeInterval = 0
     private var postLoadFadeUntil: CFTimeInterval = 0
+    private var consecutiveSilentFrames: Int = 0
+    private let noiseGateThreshold: Int32 = 28000
 
     public init(sampleRate: Double = 48_000.0, channels: Int = 2, volume: Float = 1.0) {
         self.sampleRate = sampleRate
@@ -31,10 +33,10 @@ public final class AudioEngine {
         
         let targetFPS: Double = 60.0
         let secondsPerFrame = 1.0 / targetFPS
-        maxQueuedFrames = UInt32(sampleRate * 0.35)  // Increased buffer capacity
-        minStartQueuedFrames = UInt32(sampleRate * secondsPerFrame)
+        maxQueuedFrames = UInt32(sampleRate * 0.35)
+        minStartQueuedFrames = UInt32(sampleRate * secondsPerFrame * 2.0)
         hardResetQueuedFrames = UInt32(sampleRate * 0.90)
-        softLatencyCapFrames = UInt32(sampleRate * 0.20)  // Increased from 0.18
+        softLatencyCapFrames = UInt32(sampleRate * 0.20)
         // Keep scheduling cadence aligned to one emulation frame of audio.
         // A fixed 800-frame target starves 44.1kHz streams (~735-739 frames/tick).
         let framesPerTick = max(1, Int((sampleRate / targetFPS).rounded()))
@@ -86,11 +88,41 @@ public final class AudioEngine {
                 workingSamples = self.applyPostLoadFade(to: samples, atTime: now, bytesPerFrame: bytesPerFrame)
             }
 
+            if !self.isAudioValid(workingSamples) {
+                self.consecutiveSilentFrames += 1
+                if self.consecutiveSilentFrames < 3 {
+                    return
+                }
+            } else {
+                self.consecutiveSilentFrames = 0
+            }
+
             // Accumulate incoming PCM and drain in bounded chunks to avoid
             // dropping whole packets when queue pressure is transient.
             self.pendingPCM.append(workingSamples)
             self.drainPendingPCM(bytesPerFrame: bytesPerFrame)
         }
+    }
+
+    private func isAudioValid(_ samples: Data) -> Bool {
+        let threshold = noiseGateThreshold
+        let checkCount = min(samples.count / 2, 64)
+        var loudCount = 0
+
+        samples.withUnsafeBytes { raw in
+            let pcm = raw.bindMemory(to: Int16.self)
+            for i in 0..<checkCount {
+                let sample = abs(Int32(pcm[i]))
+                if sample > threshold {
+                    loudCount += 1
+                }
+            }
+        }
+
+        if loudCount > checkCount / 2 {
+            return false
+        }
+        return true
     }
 
     private func drainPendingPCM(bytesPerFrame: Int) {
@@ -215,7 +247,7 @@ public final class AudioEngine {
 
     /// Flush queued audio and quarantine output briefly after state restore,
     /// then fade-in to avoid audible glitches from transient bad core samples.
-    public func quarantineAfterStateLoad(silenceMs: Int = 220, fadeInMs: Int = 120) {
+    public func quarantineAfterStateLoad(silenceMs: Int = 350, fadeInMs: Int = 150) {
         queue.async { [weak self] in
             guard let self else { return }
             let now = CACurrentMediaTime()
@@ -276,14 +308,9 @@ public final class AudioEngine {
         #if os(iOS)
         do {
             let session = AVAudioSession.sharedInstance()
-            // Use a neutral playback mode for emulator audio. `.moviePlayback` can make
-            // game audio feel softer/processed on some devices.
-            try session.setCategory(.playback, mode: .default, options: [])
-            // Prefer the core's native sample rate when possible to reduce resampling.
+            try session.setCategory(.playback, mode: .default, options: [.mixWithOthers])
             try session.setPreferredSampleRate(sampleRate)
-            // Use minimal buffer duration for lowest possible audio delay
-            // Target ~15ms buffer to match aggressive NDS core trimming
-            let targetBufferDuration = 0.015  // ~15ms buffer
+            let targetBufferDuration = 0.04
             try session.setPreferredIOBufferDuration(targetBufferDuration)
             try session.setActive(true)
             NSLog("[AudioEngine] Configured session: sampleRate=\(sampleRate), actualRate=\(session.sampleRate), bufferDuration=\(session.ioBufferDuration)")

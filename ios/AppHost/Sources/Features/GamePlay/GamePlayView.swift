@@ -2,8 +2,17 @@
 // Full-screen emulator view for game playback
 
 import SwiftUI
+#if canImport(AVFoundation)
+import AVFoundation
+#endif
 #if canImport(UIKit)
 import UIKit
+#endif
+#if canImport(AudioToolbox)
+import AudioToolbox
+#endif
+#if canImport(AppKit)
+import AppKit
 #endif
 
 struct GamePlayView: View {
@@ -24,9 +33,20 @@ struct GamePlayView: View {
     @State private var pauseSheetMode: PauseSheetMode = .quick
     @State private var fastForwardSpeed: Int = 1
     @State private var startTask: Task<Void, Never>?
+    @State private var showCartridgeIntro = false
+    @State private var cartridgeInsertionProgress: CGFloat = 0
+    @State private var cartridgeRevealProgress: CGFloat = 0
+    @State private var showCartridgePowerOnGlow = false
+    @State private var showRetroBootSequence = false
+    @State private var retroBootProgress: CGFloat = 0
+    @State private var pendingLaunchResumeFlow = false
+    @State private var achievementToast: PlayerAchievementUnlock?
+    @State private var achievementToastTask: Task<Void, Never>?
     @State private var saveSlotSummaries: [SaveStateSlotSummary] = []
     @AppStorage("resumeLaunchPolicy") private var resumeLaunchPolicyRaw = ResumeLaunchPolicy.autoResumeLatest.rawValue
     @AppStorage("showFPSMeter") private var showFPSMeter = false
+    @AppStorage("showCartridgeLaunchIntro") private var showCartridgeLaunchIntro = true
+    @AppStorage("dynamicConsoleLightingEnabled") private var dynamicConsoleLightingEnabled = true
     @StateObject private var performanceProfiler = PerformanceProfiler.shared
     #if DEBUG
     @AppStorage("showPerformanceHUD") private var showPerformanceHUD = false
@@ -55,6 +75,15 @@ struct GamePlayView: View {
                 } else {
                     standardGameLayout(in: geometry)
                 }
+
+                if shouldShowDynamicConsoleLighting {
+                    dynamicShellLightingOverlay(in: geometry)
+                }
+
+                if showCartridgeIntro {
+                    cartridgeLaunchOverlay(in: geometry)
+                        .transition(.opacity)
+                }
                 
                 // Pause menu overlay
                 if showPauseMenu {
@@ -79,6 +108,14 @@ struct GamePlayView: View {
                         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
                 }
 
+                if let achievementToast {
+                    achievementToastOverlay(achievementToast)
+                        .padding(.bottom, 32)
+                        .transition(.move(edge: .bottom).combined(with: .opacity))
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
+                        .zIndex(20)
+                }
+
                 #if DEBUG
                 if showPerformanceHUD {
                     performanceHUDOverlay
@@ -90,17 +127,36 @@ struct GamePlayView: View {
             }
         }
         .onAppear {
-            startTask?.cancel()
-            startTask = Task { @MainActor in
-                try? await Task.sleep(nanoseconds: 100_000_000)
-                guard !Task.isCancelled else { return }
-                launchGame(allowResumeFlow: true)
-            }
+            beginLaunchSequence(allowResumeFlow: true)
         }
         .onDisappear {
             startTask?.cancel()
             startTask = nil
+            achievementToastTask?.cancel()
+            achievementToastTask = nil
+            showCartridgeIntro = false
+            cartridgeInsertionProgress = 0
+            cartridgeRevealProgress = 0
+            showCartridgePowerOnGlow = false
+            showRetroBootSequence = false
+            retroBootProgress = 0
+            pendingLaunchResumeFlow = false
             viewModel.stopEmulation()
+        }
+        .onChange(of: viewModel.latestUnlockedAchievement?.id) { _, _ in
+            guard let unlocked = viewModel.latestUnlockedAchievement else { return }
+            achievementToastTask?.cancel()
+            withAnimation(.spring(response: 0.24, dampingFraction: 0.86)) {
+                achievementToast = unlocked
+            }
+            triggerHaptic(.light)
+            achievementToastTask = Task { @MainActor in
+                try? await Task.sleep(nanoseconds: 2_500_000_000)
+                guard !Task.isCancelled else { return }
+                withAnimation(.easeInOut(duration: 0.26)) {
+                    achievementToast = nil
+                }
+            }
         }
         .onChange(of: showPauseMenu) { _, isPresented in
             if isPresented {
@@ -115,12 +171,189 @@ struct GamePlayView: View {
         }
     }
 
+    private func achievementToastOverlay(_ unlocked: PlayerAchievementUnlock) -> some View {
+        HStack(spacing: 10) {
+            Image(systemName: "trophy.fill")
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundColor(.yellow)
+                .frame(width: 28, height: 28)
+                .background(Circle().fill(Color.yellow.opacity(0.18)))
+
+            VStack(alignment: .leading, spacing: 1) {
+                Text("Achievement Unlocked")
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundColor(.white.opacity(0.78))
+                Text(unlocked.title)
+                    .font(.system(size: 14, weight: .bold))
+                    .foregroundColor(.white.opacity(0.95))
+            }
+
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
+        .frame(maxWidth: 320)
+        .background(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .fill(Color.black.opacity(0.78))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .stroke(Color.white.opacity(0.14), lineWidth: 1)
+        )
+        .shadow(color: .black.opacity(0.32), radius: 14, x: 0, y: 8)
+    }
+
     private var resumeLaunchPolicy: ResumeLaunchPolicy {
         ResumeLaunchPolicy(rawValue: resumeLaunchPolicyRaw) ?? .autoResumeLatest
     }
 
     private var heavyUIEffectsEnabled: Bool {
         performanceProfiler.currentQualityProfile.heavyUIEffects
+    }
+
+    private var shouldShowDynamicConsoleLighting: Bool {
+        dynamicConsoleLightingEnabled && heavyUIEffectsEnabled && viewModel.isRunning
+    }
+
+    private var consoleLightingBiasColor: Color {
+        switch game.gamePlatform {
+        case .GB, .GBC:
+            return Color(red: 0.63, green: 0.80, blue: 0.45)
+        case .GBA:
+            return Color(red: 0.55, green: 0.42, blue: 0.92)
+        case .NDS:
+            return Color(red: 0.45, green: 0.65, blue: 0.98)
+        default:
+            return Color(red: 0.62, green: 0.50, blue: 0.90)
+        }
+    }
+
+    @ViewBuilder
+    private func dynamicShellLightingOverlay(in geometry: GeometryProxy) -> some View {
+        let extent = max(geometry.size.width, geometry.size.height)
+        let primaryRadius = max(120, extent * 0.30)
+        let secondaryRadius = max(220, extent * 0.50)
+        let gameColor = viewModel.dynamicShellLightingColor
+
+        ZStack {
+            RadialGradient(
+                colors: [
+                    gameColor.opacity(0.32),
+                    gameColor.opacity(0.15),
+                    .clear
+                ],
+                center: .top,
+                startRadius: 10,
+                endRadius: primaryRadius
+            )
+            .blendMode(.screen)
+
+            RadialGradient(
+                colors: [
+                    consoleLightingBiasColor.opacity(0.10),
+                    .clear
+                ],
+                center: .top,
+                startRadius: 24,
+                endRadius: secondaryRadius
+            )
+            .blendMode(.overlay)
+        }
+        .opacity(0.78)
+        .mask(
+            LinearGradient(
+                colors: [Color.white.opacity(0.95), Color.white.opacity(0.62), .clear],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+        )
+        .allowsHitTesting(false)
+    }
+
+    private func beginLaunchSequence(allowResumeFlow: Bool) {
+        startTask?.cancel()
+        startTask = Task { @MainActor in
+            pendingLaunchResumeFlow = false
+            if showCartridgeLaunchIntro {
+                showCartridgeIntro = true
+                showCartridgePowerOnGlow = false
+                showRetroBootSequence = false
+                cartridgeInsertionProgress = 0
+                cartridgeRevealProgress = 0
+                retroBootProgress = 0
+                try? await Task.sleep(nanoseconds: 120_000_000)
+                guard !Task.isCancelled else { return }
+
+                withAnimation(.timingCurve(0.20, 0.80, 0.22, 1.0, duration: 0.62)) {
+                    cartridgeInsertionProgress = 0.84
+                }
+                try? await Task.sleep(nanoseconds: 560_000_000)
+                guard !Task.isCancelled else { return }
+
+                withAnimation(.spring(response: 0.30, dampingFraction: 0.76, blendDuration: 0.12)) {
+                    cartridgeInsertionProgress = 1.03
+                }
+
+                try? await Task.sleep(nanoseconds: 130_000_000)
+                guard !Task.isCancelled else { return }
+
+                playCartridgeInsertionFeedback()
+                withAnimation(.spring(response: 0.30, dampingFraction: 0.90, blendDuration: 0.10)) {
+                    cartridgeInsertionProgress = 1.0
+                }
+
+                try? await Task.sleep(nanoseconds: 180_000_000)
+                guard !Task.isCancelled else { return }
+
+                withAnimation(.easeOut(duration: 0.24)) {
+                    showCartridgePowerOnGlow = true
+                }
+                withAnimation(.easeInOut(duration: 0.30)) {
+                    cartridgeRevealProgress = 0.58
+                }
+
+                try? await Task.sleep(nanoseconds: 140_000_000)
+                guard !Task.isCancelled else { return }
+
+                launchGame(allowResumeFlow: allowResumeFlow, deferResumeFlow: true)
+
+                for _ in 0..<14 {
+                    if viewModel.isRunning { break }
+                    try? await Task.sleep(nanoseconds: 100_000_000)
+                    guard !Task.isCancelled else { return }
+                }
+
+                if pendingLaunchResumeFlow {
+                    pendingLaunchResumeFlow = false
+                    handleLaunchResumeFlowIfNeeded()
+                }
+
+                withAnimation(.easeInOut(duration: 0.38)) {
+                    cartridgeRevealProgress = 1.0
+                }
+
+                try? await Task.sleep(nanoseconds: 420_000_000)
+                guard !Task.isCancelled else { return }
+                withAnimation(.easeInOut(duration: 0.42)) {
+                    showCartridgePowerOnGlow = false
+                    showRetroBootSequence = false
+                    showCartridgeIntro = false
+                    cartridgeRevealProgress = 0
+                    cartridgeInsertionProgress = 0
+                }
+            } else {
+                showCartridgeIntro = false
+                showCartridgePowerOnGlow = false
+                showRetroBootSequence = false
+                cartridgeInsertionProgress = 0
+                cartridgeRevealProgress = 0
+                retroBootProgress = 0
+                try? await Task.sleep(nanoseconds: 100_000_000)
+                guard !Task.isCancelled else { return }
+                launchGame(allowResumeFlow: allowResumeFlow)
+            }
+        }
     }
 
     private func handleLaunchResumeFlowIfNeeded() {
@@ -141,7 +374,7 @@ struct GamePlayView: View {
         }
     }
 
-    private func launchGame(allowResumeFlow: Bool) {
+    private func launchGame(allowResumeFlow: Bool, deferResumeFlow: Bool = false) {
         guard let romPath = game.romPath, let platform = game.gamePlatform else { return }
         viewModel.startEmulation(
             romPath: romPath,
@@ -155,10 +388,18 @@ struct GamePlayView: View {
             saveSlotSummaries = viewModel.saveSlotSummaries().filter { !$0.isEmpty }
             guard !saveSlotSummaries.isEmpty else {
                 showLaunchStatePicker = false
+                pendingLaunchResumeFlow = false
                 return
             }
-            handleLaunchResumeFlowIfNeeded()
+            if deferResumeFlow {
+                pendingLaunchResumeFlow = true
+                showLaunchStatePicker = false
+            } else {
+                pendingLaunchResumeFlow = false
+                handleLaunchResumeFlowIfNeeded()
+            }
         } else {
+            pendingLaunchResumeFlow = false
             showLaunchStatePicker = false
         }
     }
@@ -224,21 +465,21 @@ struct GamePlayView: View {
             let shellHeight = safeFrameValue(max(360, min(geometry.size.height - 20, 900.0)), fallback: 360)
             let displayFrameWidth = safeFrameValue(shellWidth - 28, fallback: 180)
             let displayFrameHeight = safeFrameValue(min(shellHeight * 0.48, 470), fallback: 180)
-            let gameWidth = safeFrameValue(min(displayFrameWidth - 14, displayFrameWidth * gbScreenScale), fallback: 120)
+            let gameWidth = safeFrameValue(min(displayFrameWidth - 8, displayFrameWidth * gbScreenScale), fallback: 120)
             let gameHeight = safeFrameValue(gameWidth * (144.0 / 160.0), fallback: 108)
 
             return AnyView(
             VStack(spacing: 0) {
                 HStack {
                     Text(game.title ?? "Game Boy")
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundColor(.white.opacity(0.94))
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundColor(.white.opacity(0.92))
                         .lineLimit(1)
                     Spacer()
                     if !viewModel.statusMessage.isEmpty {
                         Text(viewModel.statusMessage)
-                            .font(.system(size: 11, weight: .medium))
-                            .foregroundColor(.yellow.opacity(0.9))
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundColor(.white.opacity(0.72))
                             .lineLimit(1)
                     }
                 }
@@ -391,7 +632,7 @@ struct GamePlayView: View {
         let shellHeight = safeFrameValue(max(360, min(geometry.size.height - 20, 900.0)), fallback: 360)
         let displayFrameWidth = safeFrameValue(shellWidth - 28, fallback: 180)
         let displayFrameHeight = safeFrameValue(min(shellHeight * 0.44, 410), fallback: 170)
-        let gameWidth = safeFrameValue(min(displayFrameWidth - 36, displayFrameWidth * 0.70), fallback: 120)
+        let gameWidth = safeFrameValue(min(displayFrameWidth - 26, displayFrameWidth * 0.70), fallback: 120)
         let gameHeight = safeFrameValue(gameWidth * (144.0 / 160.0), fallback: 108)
         let dpadScale = CGFloat(shellOverride.dpadScaleMultiplier ?? 0.90)
         let faceScale = CGFloat(shellOverride.faceButtonScaleMultiplier ?? 0.90)
@@ -400,14 +641,14 @@ struct GamePlayView: View {
         VStack(spacing: 0) {
             HStack {
                 Text(game.title ?? "Game Boy Color")
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundColor(.white.opacity(0.94))
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundColor(.white.opacity(0.92))
                     .lineLimit(1)
                 Spacer()
                 if pauseSheetMode == .quick, !viewModel.statusMessage.isEmpty {
                     Text(viewModel.statusMessage)
-                        .font(.system(size: 11, weight: .medium))
-                        .foregroundColor(.yellow.opacity(0.88))
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundColor(.white.opacity(0.72))
                         .lineLimit(1)
                 }
             }
@@ -548,8 +789,8 @@ struct GamePlayView: View {
         VStack(spacing: 0) {
             HStack {
                 Text(game.title ?? "Game Boy Color")
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundColor(.white.opacity(0.94))
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundColor(.white.opacity(0.92))
                     .lineLimit(1)
                 Spacer()
             }
@@ -754,21 +995,21 @@ struct GamePlayView: View {
             let shellHeight = safeFrameValue(max(360, min(geometry.size.height - 18, 900.0)), fallback: 360)
             let displayOuterWidth = safeFrameValue(shellWidth, fallback: 220)
             let displayOuterHeight = safeFrameValue(max(180, min(shellHeight * 0.53, 500)), fallback: 180)
-            let screenWidth = safeFrameValue(min(displayOuterWidth - 24, displayOuterWidth * gbaScreenScale), fallback: 120)
+            let screenWidth = safeFrameValue(min(displayOuterWidth - 16, displayOuterWidth * gbaScreenScale), fallback: 120)
             let screenHeight = safeFrameValue(screenWidth * (160.0 / 240.0), fallback: 80)
 
             return AnyView(
             VStack(spacing: 0) {
                 HStack {
                     Text(game.title ?? "Game Boy Advance")
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundColor(.white.opacity(0.94))
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundColor(.white.opacity(0.92))
                         .lineLimit(1)
                     Spacer()
                     if !viewModel.statusMessage.isEmpty {
                         Text(viewModel.statusMessage)
-                            .font(.system(size: 11, weight: .medium))
-                            .foregroundColor(.yellow.opacity(0.9))
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundColor(.white.opacity(0.72))
                             .lineLimit(1)
                     }
                 }
@@ -913,14 +1154,14 @@ struct GamePlayView: View {
         return VStack(spacing: 0) {
             HStack {
                 Text(game.title ?? "Game Boy Advance")
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundColor(.white.opacity(0.94))
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundColor(.white.opacity(0.92))
                     .lineLimit(1)
                 Spacer()
                 if !viewModel.statusMessage.isEmpty {
                     Text(viewModel.statusMessage)
-                        .font(.system(size: 11, weight: .medium))
-                        .foregroundColor(.yellow.opacity(0.9))
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundColor(.white.opacity(0.72))
                         .lineLimit(1)
                 }
             }
@@ -984,7 +1225,7 @@ struct GamePlayView: View {
                                     .stroke(Color.white.opacity(0.06), lineWidth: 1)
                             )
                     }
-                    .frame(width: screenWidth + 24, height: screenHeight + 24)
+                    .frame(width: screenWidth + 18, height: screenHeight + 18)
 
                     HStack(alignment: .center, spacing: 20) {
                         GBALightDPadView { button, pressed in
@@ -1043,8 +1284,8 @@ struct GamePlayView: View {
         return VStack(spacing: 0) {
             HStack {
                 Text(game.title ?? "Game Boy Advance")
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundColor(.white.opacity(0.94))
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundColor(.white.opacity(0.92))
                     .lineLimit(1)
                 Spacer()
             }
@@ -1186,8 +1427,8 @@ struct GamePlayView: View {
         } else {
             let shellWidth = safeFrameValue(min(geometry.size.width - 18, 420.0), fallback: 220)
             let shellHeight = safeFrameValue(min(geometry.size.height - 28, 860.0), fallback: 360)
-            let bottomSafePadding = max(34.0, geometry.safeAreaInsets.bottom)
-            let controllerBottomMargin = bottomSafePadding + 12.0
+            // Keep core controls reachable above the home indicator.
+            let controllerBottomMargin = max(8.0, min(16.0, geometry.safeAreaInsets.bottom + 2.0))
 
             return AnyView(
                 VStack(spacing: 0) {
@@ -1339,11 +1580,7 @@ struct GamePlayView: View {
                     .padding(.horizontal, 14)
                     .offset(y: -4)
 
-                    HStack(spacing: 8) {
-                        ndsMiniLayoutButton(title: "TOP") { viewModel.setNDSScreenLayout(.topOnly) }
-                        ndsMiniLayoutButton(title: "STACK") { viewModel.setNDSScreenLayout(.stacked) }
-                        ndsMiniLayoutButton(title: "BOT") { viewModel.setNDSScreenLayout(.bottomOnly) }
-                    }
+                    ndsQuickStateRow
                     .offset(y: -2)
 
                     shellSystemButtonsRow(theme: .neoGlass) {
@@ -1510,11 +1747,7 @@ struct GamePlayView: View {
                     }
                     .padding(.horizontal, 14)
 
-                    HStack(spacing: 8) {
-                        ndsMiniLayoutButton(title: "TOP") { viewModel.setNDSScreenLayout(.topOnly) }
-                        ndsMiniLayoutButton(title: "STACK") { viewModel.setNDSScreenLayout(.sideBySide) }
-                        ndsMiniLayoutButton(title: "BOT") { viewModel.setNDSScreenLayout(.bottomOnly) }
-                    }
+                    ndsQuickStateRow
                     .padding(.bottom, 8)
                 }
             }
@@ -1695,7 +1928,7 @@ struct GamePlayView: View {
                                 .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
                                 .overlay(
                                     RoundedRectangle(cornerRadius: 8, style: .continuous)
-                                        .stroke(Color.black.opacity(0.9), lineWidth: 3)
+                                        .stroke(Color.black.opacity(0.82), lineWidth: 2)
                                 )
                                 .overlay(alignment: .center) {
                                     Rectangle()
@@ -1818,7 +2051,7 @@ struct GamePlayView: View {
             VStack(spacing: 8) {
                 ndsDisplayStack(shellWidth: shellWidth)
                 ndsCenterDots
-                ndsLayoutModeRow
+                ndsQuickStateRow
                 ndsControlDeck(
                     shellWidth: shellWidth,
                     viewportWidth: viewportWidth,
@@ -1843,18 +2076,18 @@ struct GamePlayView: View {
         HStack(spacing: 10) {
             VStack(alignment: .leading, spacing: 2) {
                 Text(game.title ?? "Nintendo DS")
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundColor(.white.opacity(0.95))
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundColor(.white.opacity(0.92))
                     .lineLimit(1)
                 Text("NDS")
-                    .font(.system(size: 10, weight: .bold))
-                    .foregroundColor(.white.opacity(0.55))
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundColor(.white.opacity(0.58))
             }
             Spacer()
             if !viewModel.statusMessage.isEmpty {
                 Text(viewModel.statusMessage)
-                    .font(.system(size: 11, weight: .medium))
-                    .foregroundColor(.yellow.opacity(0.92))
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundColor(.white.opacity(0.72))
                     .lineLimit(1)
             }
         }
@@ -1889,7 +2122,7 @@ struct GamePlayView: View {
                     .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
                     .overlay(
                         RoundedRectangle(cornerRadius: 10, style: .continuous)
-                            .stroke(Color.black.opacity(0.9), lineWidth: 3)
+                            .stroke(Color.black.opacity(0.82), lineWidth: 2)
                     )
                     .overlay(
                         RoundedRectangle(cornerRadius: 10, style: .continuous)
@@ -2003,11 +2236,22 @@ struct GamePlayView: View {
         .padding(.top, 2)
     }
 
-    private var ndsLayoutModeRow: some View {
-        HStack(spacing: 8) {
-            ndsMiniLayoutButton(title: "TOP") { viewModel.setNDSScreenLayout(.topOnly) }
-            ndsMiniLayoutButton(title: "STACK") { viewModel.setNDSScreenLayout(.stacked) }
-            ndsMiniLayoutButton(title: "BOT") { viewModel.setNDSScreenLayout(.bottomOnly) }
+    private var ndsQuickStateRow: some View {
+        HStack(spacing: 10) {
+            ndsQuickStateButton(
+                title: "SAVE",
+                systemName: "square.and.arrow.down.fill",
+                tint: .green
+            ) {
+                viewModel.quickSave()
+            }
+            ndsQuickStateButton(
+                title: "LOAD",
+                systemName: "square.and.arrow.up.fill",
+                tint: .orange
+            ) {
+                viewModel.quickLoad()
+            }
         }
         .padding(.top, 2)
     }
@@ -2050,8 +2294,8 @@ struct GamePlayView: View {
                 systemDiameter: 48,
                 homeWidth: 84,
                 homeHeight: 42,
-                sideMargin: 36,
-                centerGap: 22,
+                sideMargin: 30,
+                centerGap: 18,
                 arcOffset: 22,
                 switchToControlsGap: 34
             )
@@ -2063,8 +2307,8 @@ struct GamePlayView: View {
                 systemDiameter: 52,
                 homeWidth: 90,
                 homeHeight: 46,
-                sideMargin: 40,
-                centerGap: 26,
+                sideMargin: 32,
+                centerGap: 20,
                 arcOffset: 26,
                 switchToControlsGap: 40
             )
@@ -2076,8 +2320,8 @@ struct GamePlayView: View {
                 systemDiameter: 56,
                 homeWidth: 96,
                 homeHeight: 48,
-                sideMargin: 42,
-                centerGap: 30,
+                sideMargin: 34,
+                centerGap: 24,
                 arcOffset: 30,
                 switchToControlsGap: 44
             )
@@ -2093,42 +2337,45 @@ struct GamePlayView: View {
         let baseFaceClusterWidth = (faceDiameter + faceSpacing) * 2
         let sideMargin = metrics.sideMargin
         let availableMainRowWidth = max(0, shellWidth - (sideMargin * 2))
-        let spacingBudget = max(18, min(metrics.centerGap, 34))
+        let spacingBudget = max(14, min(metrics.centerGap, 26))
         let fitScale = min(
             1.0,
-            max(0.84, (availableMainRowWidth - spacingBudget) / (baseDPadSize + baseFaceClusterWidth))
+            max(0.86, (availableMainRowWidth - spacingBudget) / (baseDPadSize + baseFaceClusterWidth))
         )
         let dpadSize = baseDPadSize * fitScale
         let faceClusterWidth = baseFaceClusterWidth * fitScale
         let faceButtonDiameter = max(58, faceDiameter * fitScale)
-        let faceButtonSpacing = max(14, faceSpacing * fitScale)
+        let faceButtonSpacing = max(10, faceSpacing * fitScale)
         let systemButtonDiameter = max(44, metrics.systemDiameter * fitScale)
         let homeWidth = max(68, metrics.homeWidth * fitScale)
         let homeHeight = max(40, metrics.homeHeight * fitScale)
-        let systemTouchDiameter = max(62, systemButtonDiameter + 10)
-        let homeTouchWidth = max(80, homeWidth + 8)
-        let homeTouchHeight = max(50, homeHeight + 10)
-        let targetEdgeInset = max(sideMargin, 40)
+        let systemTouchDiameter = max(66, systemButtonDiameter + 12)
+        let homeTouchWidth = max(92, homeWidth + 14)
+        let homeTouchHeight = max(54, homeHeight + 12)
+        let targetEdgeInset = max(sideMargin, 32)
         let minDPadCenterX = targetEdgeInset + (dpadSize / 2)
         let maxABXYCenterX = shellWidth - targetEdgeInset - (faceClusterWidth / 2)
         let availableCenterDistance = max(0, maxABXYCenterX - minDPadCenterX)
-        let desiredCenterDistance = min(260, max(220, availableCenterDistance))
+        let desiredCenterDistance = min(228, max(188, availableCenterDistance))
         let dpadCenterX = max(minDPadCenterX, (shellWidth - desiredCenterDistance) / 2)
         let abxyCenterX = min(maxABXYCenterX, dpadCenterX + desiredCenterDistance)
         let controlsRowHeight = max(dpadSize, faceClusterWidth) + 26
         let rowCenterY = controlsRowHeight / 2
-        let plateInset: CGFloat = 16
+        let plateInset: CGFloat = 12
+        let utilityIconSize = max(34.0, min(40.0, 36.0 * fitScale + 2.0))
         let plateMinX = dpadCenterX - (dpadSize / 2) - plateInset
         let plateMaxX = abxyCenterX + (faceClusterWidth / 2) + plateInset
         let plateWidth = max(0, plateMaxX - plateMinX)
         let plateCenterX = (plateMinX + plateMaxX) / 2
+        let topControlsInset = max(24.0, metrics.switchToControlsGap - 8.0)
+        let bottomControlsInset = max(8.0, min(16.0, controllerBottomMargin))
         assert(
             dpadSize + minimumDistanceBetweenControls + faceClusterWidth <= availableMainRowWidth,
             "NDS controls overlap: insufficient horizontal room for D-pad and ABXY cluster."
         )
 
         return VStack(spacing: 0) {
-            VStack(spacing: 24) {
+            VStack(spacing: 16) {
                 ZStack {
                     RoundedRectangle(cornerRadius: 40, style: .continuous)
                         .fill(Color.black.opacity(0.04))
@@ -2162,37 +2409,52 @@ struct GamePlayView: View {
                     homeTouchWidth: homeTouchWidth,
                     homeTouchHeight: homeTouchHeight
                 )
-                    .padding(.horizontal, 36)
+                    .padding(.horizontal, 28)
+
+                HStack(spacing: 10) {
+                    gbUtilityIcon(systemName: "square.and.arrow.down.fill", tint: .green, customSize: utilityIconSize) {
+                        viewModel.quickSave()
+                    }
+                    gbUtilityIcon(systemName: "square.and.arrow.up.fill", tint: .orange, customSize: utilityIconSize) {
+                        viewModel.quickLoad()
+                    }
+                }
+                .padding(.horizontal, 8)
+                .padding(.vertical, 6)
+                .background(.ultraThinMaterial, in: Capsule(style: .continuous))
+                .overlay(Capsule(style: .continuous).stroke(Color.white.opacity(0.16), lineWidth: 1))
             }
-            .padding(.top, metrics.switchToControlsGap)
-            .padding(.bottom, controllerBottomMargin)
+            .padding(.top, topControlsInset)
+            .padding(.bottom, bottomControlsInset)
         }
         .frame(maxWidth: .infinity)
     }
 
-    private func ndsMiniLayoutButton(title: String, action: @escaping () -> Void) -> some View {
-        let activeLayout = viewModel.getNDSScreenLayout()
-        let isActive = switch title {
-        case "TOP": activeLayout == .topOnly
-        case "STACK": activeLayout == .stacked
-        case "BOT": activeLayout == .bottomOnly
-        default: false
-        }
-        return Button(action: action) {
-            Text(title)
-                .font(.system(size: 9, weight: .bold))
-                .foregroundColor(isActive ? shellPalette.systemButtonKnobFill.color : shellPalette.controlIcon.color.opacity(0.7))
-                .padding(.horizontal, 8)
-                .padding(.vertical, 5)
-                .background(
-                    Capsule(style: .continuous)
-                        .fill(isActive ? shellPalette.shellAccent.color.opacity(0.88) : shellPalette.systemButtonKnobFill.color.opacity(0.94))
-                        .overlay(
-                            Capsule(style: .continuous)
-                                .stroke(isActive ? shellPalette.shellAccent.color.opacity(0.45) : shellPalette.systemButtonStroke.color.opacity(0.55), lineWidth: 1)
-                        )
-                )
-                .shadow(color: isActive ? shellPalette.shellAccent.color.opacity(0.24) : .clear, radius: 8, x: 0, y: 3)
+    private func ndsQuickStateButton(
+        title: String,
+        systemName: String,
+        tint: Color,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            HStack(spacing: 6) {
+                Image(systemName: systemName)
+                    .font(.system(size: 10, weight: .bold))
+                Text(title)
+                    .font(.system(size: 10, weight: .bold))
+            }
+            .foregroundColor(tint.opacity(0.95))
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
+            .background(
+                Capsule(style: .continuous)
+                    .fill(Color.white.opacity(0.90))
+                    .overlay(
+                        Capsule(style: .continuous)
+                            .stroke(tint.opacity(0.35), lineWidth: 1)
+                    )
+            )
+            .shadow(color: tint.opacity(0.22), radius: 8, x: 0, y: 3)
         }
         .buttonStyle(.plain)
     }
@@ -2255,8 +2517,8 @@ struct GamePlayView: View {
         HStack(spacing: 10) {
             HStack(spacing: 8) {
                 Text("SELECT")
-                    .font(.system(size: 10, weight: .semibold))
-                    .foregroundColor(Color.black.opacity(0.36))
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundColor(Color.black.opacity(0.60))
                     .lineLimit(1)
                     .minimumScaleFactor(0.8)
                     .fixedSize(horizontal: true, vertical: false)
@@ -2266,8 +2528,8 @@ struct GamePlayView: View {
                     onRelease: { viewModel.handleButtonPress(.select, pressed: false) }
                 ) { isPressed in
                     Circle()
-                        .fill(Color.white.opacity(isPressed ? 0.82 : 0.96))
-                        .overlay(Circle().stroke(Color.black.opacity(0.48), lineWidth: 1.5))
+                        .fill(Color.white.opacity(isPressed ? 0.84 : 0.98))
+                        .overlay(Circle().stroke(Color.black.opacity(0.58), lineWidth: 1.5))
                         .shadow(color: Color.black.opacity(isPressed ? 0.0 : 0.15), radius: 4, x: 0, y: 2)
                         .frame(width: systemButtonDiameter, height: systemButtonDiameter)
                         .frame(width: systemTouchDiameter, height: systemTouchDiameter)
@@ -2278,15 +2540,15 @@ struct GamePlayView: View {
 
             NDSPressableControl(onPress: { showPauseMenu = true }, onRelease: {}) { isPressed in
                 Capsule(style: .continuous)
-                    .fill(Color.white.opacity(isPressed ? 0.84 : 0.96))
-                    .overlay(Capsule(style: .continuous).stroke(Color.black.opacity(0.40), lineWidth: 1.5))
+                    .fill(Color.white.opacity(isPressed ? 0.86 : 0.98))
+                    .overlay(Capsule(style: .continuous).stroke(Color.black.opacity(0.48), lineWidth: 1.5))
                     .shadow(color: Color.black.opacity(isPressed ? 0.0 : 0.15), radius: 4, x: 0, y: 2)
                     .frame(width: homeWidth, height: homeHeight)
                     .frame(width: homeTouchWidth, height: homeTouchHeight)
                     .overlay(
                         Image(systemName: "house.fill")
                             .font(.system(size: 14, weight: .bold))
-                            .foregroundColor(Color.black.opacity(0.32))
+                            .foregroundColor(Color.black.opacity(0.50))
                     )
             }
 
@@ -2298,21 +2560,31 @@ struct GamePlayView: View {
                     onRelease: { viewModel.handleButtonPress(.start, pressed: false) }
                 ) { isPressed in
                     Circle()
-                        .fill(Color.white.opacity(isPressed ? 0.82 : 0.96))
-                        .overlay(Circle().stroke(Color.black.opacity(0.48), lineWidth: 1.5))
+                        .fill(Color.white.opacity(isPressed ? 0.84 : 0.98))
+                        .overlay(Circle().stroke(Color.black.opacity(0.58), lineWidth: 1.5))
                         .shadow(color: Color.black.opacity(isPressed ? 0.0 : 0.15), radius: 4, x: 0, y: 2)
                         .frame(width: systemButtonDiameter, height: systemButtonDiameter)
                         .frame(width: systemTouchDiameter, height: systemTouchDiameter)
                 }
                 Text("START")
-                    .font(.system(size: 10, weight: .semibold))
-                    .foregroundColor(Color.black.opacity(0.36))
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundColor(Color.black.opacity(0.60))
                     .lineLimit(1)
                     .minimumScaleFactor(0.8)
                     .fixedSize(horizontal: true, vertical: false)
                     .frame(minWidth: 34, alignment: .leading)
             }
         }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 5)
+        .background(
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .fill(Color.white.opacity(0.42))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 20, style: .continuous)
+                        .stroke(Color.black.opacity(0.10), lineWidth: 1)
+                )
+        )
         .frame(height: max(systemTouchDiameter, homeTouchHeight))
     }
 
@@ -2506,8 +2778,8 @@ struct GamePlayView: View {
         VStack(spacing: 0) {
             HStack {
                 Text(game.title ?? "Game Boy")
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundColor(.white.opacity(0.94))
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundColor(.white.opacity(0.92))
                     .lineLimit(1)
                 Spacer()
             }
@@ -2677,8 +2949,8 @@ struct GamePlayView: View {
         VStack(spacing: 0) {
             HStack {
                 Text(game.title ?? "Game Boy Advance")
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundColor(.white.opacity(0.94))
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundColor(.white.opacity(0.92))
                     .lineLimit(1)
                 Spacer()
             }
@@ -2833,6 +3105,19 @@ struct GamePlayView: View {
                 retroMindPlaceholderView
             }
         }
+        .overlay {
+            if shouldShowDynamicConsoleLighting {
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .stroke(viewModel.dynamicShellLightingColor.opacity(0.16), lineWidth: 1)
+                    .blur(radius: 0.5)
+            }
+        }
+        .shadow(
+            color: shouldShowDynamicConsoleLighting ? viewModel.dynamicShellLightingColor.opacity(0.20) : .clear,
+            radius: 14,
+            x: 0,
+            y: 0
+        )
     }
 
     private var retroMindPlaceholderView: some View {
@@ -2950,6 +3235,491 @@ struct GamePlayView: View {
             return "Nintendo 3DS"
         case .none:
             return "Emulator"
+        }
+    }
+
+    private func retroBootDurationSeconds(for platform: Platform?) -> Double {
+        switch platform {
+        case .GB, .GBC:
+            return 0.74
+        case .GBA:
+            return 0.66
+        case .NDS:
+            return 0.86
+        default:
+            return 0.68
+        }
+    }
+
+    private struct CartridgeLaunchStyle {
+        let width: CGFloat
+        let height: CGFloat
+        let cornerRadius: CGFloat
+        let labelHeight: CGFloat
+        let slotWidth: CGFloat
+    }
+
+    private var cartridgeLaunchStyle: CartridgeLaunchStyle {
+        switch game.gamePlatform {
+        case .GB, .GBC:
+            return CartridgeLaunchStyle(
+                width: 196,
+                height: 232,
+                cornerRadius: 22,
+                labelHeight: 144,
+                slotWidth: 156
+            )
+        case .GBA:
+            return CartridgeLaunchStyle(
+                width: 220,
+                height: 154,
+                cornerRadius: 24,
+                labelHeight: 92,
+                slotWidth: 186
+            )
+        case .NDS:
+            return CartridgeLaunchStyle(
+                width: 170,
+                height: 104,
+                cornerRadius: 20,
+                labelHeight: 54,
+                slotWidth: 132
+            )
+        default:
+            return CartridgeLaunchStyle(
+                width: 188,
+                height: 172,
+                cornerRadius: 22,
+                labelHeight: 92,
+                slotWidth: 152
+            )
+        }
+    }
+
+    private func cartridgeLaunchOverlay(in geometry: GeometryProxy) -> some View {
+        let style = cartridgeLaunchStyle
+        let insertionProgress = max(0.0, min(1.0, cartridgeInsertionProgress))
+        let revealProgress = max(0.0, min(1.0, cartridgeRevealProgress))
+        let bootProgress = max(0.0, min(1.0, retroBootProgress))
+        let depthProgress = 1.0 - insertionProgress
+        let easedDepth = depthProgress * depthProgress
+        let travel = max(108.0, min(180.0, geometry.size.height * 0.18))
+        let centerYOffset = -max(42.0, min(92.0, geometry.size.height * 0.08))
+        let sinkDistance = style.height * 0.46 * revealProgress
+        let cartridgeY = (-travel + (travel * 2.0 * insertionProgress)) + centerYOffset + sinkDistance
+        let slotY = travel + (style.height * 0.34) + centerYOffset
+        let tilt = -6.0 * (1.0 - insertionProgress)
+        let horizontalDrift = 7.0 * (1.0 - insertionProgress)
+        let cartridgeScale = 1.025 - (0.065 * insertionProgress)
+        let perspectivePitch = 24.0 * easedDepth
+        let perspectiveYaw = -10.0 * easedDepth
+        let perspectiveRoll = -4.0 * depthProgress
+        let sideCompression = 1.0 - (0.13 * easedDepth)
+        let cardShadowOpacity = 0.20 + (0.22 * depthProgress)
+        let cardVisibility = max(0.0, 1.0 - revealProgress * 1.2 - (showRetroBootSequence ? (0.20 + 0.65 * bootProgress) : 0))
+        let statusYOffset = max(94.0, min(154.0, geometry.size.height * 0.13))
+        let statusText: String = {
+            if revealProgress > 0.08 { return "Launching \(loadingPlatformName)" }
+            if showRetroBootSequence { return "Booting \(loadingPlatformName)" }
+            if showCartridgePowerOnGlow { return "Booting \(loadingPlatformName)" }
+            if insertionProgress < 0.5 { return "Inserting \(loadingPlatformName) Cartridge" }
+            if insertionProgress < 1.0 { return "Locking Cartridge" }
+            return "Powering On \(loadingPlatformName)"
+        }()
+
+        return ZStack {
+            Color.black.opacity(max(0.02, (0.24 - (0.12 * insertionProgress)) * (1.0 - 0.92 * revealProgress)))
+                .ignoresSafeArea()
+
+            ZStack {
+                Capsule(style: .continuous)
+                    .fill(Color.black.opacity(0.75))
+                    .frame(width: style.slotWidth, height: 18)
+                    .overlay(
+                        Capsule(style: .continuous)
+                            .fill(
+                                LinearGradient(
+                                    colors: [Color.white.opacity(0.16), Color.black.opacity(0.35)],
+                                    startPoint: .top,
+                                    endPoint: .bottom
+                                )
+                            )
+                            .blendMode(.overlay)
+                    )
+                    .overlay(
+                        Capsule(style: .continuous)
+                            .stroke(Color.white.opacity(0.10), lineWidth: 1)
+                    )
+                    .shadow(color: .black.opacity(0.40), radius: 10, x: 0, y: 4)
+                    .offset(y: slotY)
+                    .overlay(
+                        Capsule(style: .continuous)
+                            .fill(
+                                LinearGradient(
+                                    colors: [Color.white.opacity(showCartridgePowerOnGlow ? 0.22 : 0.06), Color.clear],
+                                    startPoint: .top,
+                                    endPoint: .bottom
+                                )
+                            )
+                            .frame(width: style.slotWidth * 0.82, height: 8)
+                            .offset(y: slotY - 2)
+                    )
+
+                cartridgeBody(
+                    style: style,
+                    insertionProgress: insertionProgress,
+                    revealProgress: revealProgress
+                )
+                    .frame(width: style.width, height: style.height)
+                    .offset(y: cartridgeY)
+                    .offset(x: horizontalDrift)
+                    .rotationEffect(.degrees(tilt), anchor: .bottom)
+                    .rotationEffect(.degrees(perspectiveRoll), anchor: .bottom)
+                    .rotation3DEffect(
+                        .degrees(perspectivePitch),
+                        axis: (x: 1, y: 0, z: 0),
+                        anchor: .bottom,
+                        perspective: 0.78
+                    )
+                    .rotation3DEffect(
+                        .degrees(perspectiveYaw),
+                        axis: (x: 0, y: 1, z: 0),
+                        anchor: .bottomTrailing,
+                        perspective: 0.78
+                    )
+                    .scaleEffect(
+                        x: cartridgeScale * sideCompression * (1.0 + 0.06 * revealProgress),
+                        y: cartridgeScale * (1.0 + 0.02 * revealProgress),
+                        anchor: .bottom
+                    )
+                    .shadow(color: Color.black.opacity(cardShadowOpacity), radius: 12, x: 0, y: 8)
+                    .opacity(cardVisibility)
+                    .blur(radius: 4.0 * revealProgress, opaque: false)
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+
+            if showCartridgePowerOnGlow {
+                RadialGradient(
+                    colors: [Color.white.opacity(0.30), Color.white.opacity(0.06), Color.clear],
+                    center: .center,
+                    startRadius: 10,
+                    endRadius: max(120, min(240, geometry.size.width * 0.34))
+                )
+                .ignoresSafeArea()
+                .transition(.opacity)
+            }
+
+            Color.black.opacity(0.20 * revealProgress)
+                .ignoresSafeArea()
+                .blendMode(.multiply)
+
+            Text(statusText)
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundColor(.white.opacity(0.82))
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+                .offset(y: statusYOffset)
+                .opacity(max(0.0, (1.0 - revealProgress * 2.1) * (showRetroBootSequence ? 0.62 : 1.0)))
+        }
+        .allowsHitTesting(true)
+    }
+
+    @ViewBuilder
+    private func retroBootSequenceView(
+        in geometry: GeometryProxy,
+        style: CartridgeLaunchStyle,
+        progress: CGFloat,
+        topInset: CGFloat
+    ) -> some View {
+        let p = max(0.0, min(1.0, progress))
+        let panelWidth = min(geometry.size.width * 0.52, max(170, style.slotWidth * 1.42))
+        let panelHeight = min(geometry.size.height * 0.20, max(96, style.labelHeight * 0.62))
+        let panelOpacity = min(1.0, max(0.0, (p + 0.12) / 0.34)) * (1.0 - max(0.0, (p - 0.84) / 0.16))
+
+        VStack(spacing: 12) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .fill(Color.black.opacity(0.88))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 18, style: .continuous)
+                            .stroke(Color.white.opacity(0.14), lineWidth: 1)
+                    )
+
+                switch game.gamePlatform {
+                case .GB, .GBC:
+                    gbBootSequence(progress: p)
+                case .GBA:
+                    gbaBootSequence(progress: p)
+                case .NDS:
+                    ndsBootSequence(progress: p)
+                default:
+                    defaultBootSequence(progress: p)
+                }
+            }
+            .frame(width: panelWidth, height: panelHeight)
+            .shadow(color: .black.opacity(0.35), radius: 18, x: 0, y: 10)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        .padding(.top, topInset)
+        .opacity(Double(panelOpacity))
+    }
+
+    private func retroBootTopInset(in geometry: GeometryProxy) -> CGFloat {
+        let baseRatio: CGFloat
+        switch game.gamePlatform {
+        case .NDS:
+            baseRatio = 0.13
+        case .GB, .GBC:
+            baseRatio = 0.17
+        case .GBA:
+            baseRatio = 0.15
+        default:
+            baseRatio = 0.16
+        }
+
+        let topSafe = geometry.safeAreaInsets.top
+        let candidate = geometry.size.height * baseRatio
+        return max(topSafe + 16, min(candidate, geometry.size.height * 0.24))
+    }
+
+    private func gbBootSequence(progress: CGFloat) -> some View {
+        let p = max(0.0, min(1.0, progress))
+        let logoDropProgress = min(1.0, p / 0.56)
+        let logoOffset = (1.0 - logoDropProgress) * -58
+        let logoOpacity = min(1.0, max(0.0, (p - 0.10) / 0.22))
+        let fadeOut = 1.0 - max(0.0, (p - 0.80) / 0.20)
+
+        return ZStack {
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .fill(Color(red: 0.73, green: 0.82, blue: 0.55))
+
+            Rectangle()
+                .fill(
+                    LinearGradient(
+                        colors: [Color.white.opacity(0.06), .clear, Color.black.opacity(0.08)],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
+                )
+                .opacity(0.9)
+                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+
+            Text("Nintendo")
+                .font(.system(size: 26, weight: .black, design: .rounded))
+                .foregroundColor(Color.black.opacity(0.56))
+                .offset(y: logoOffset)
+                .opacity(Double(logoOpacity * fadeOut))
+        }
+        .padding(12)
+    }
+
+    private func gbaBootSequence(progress: CGFloat) -> some View {
+        let p = max(0.0, min(1.0, progress))
+        let logoOpacity = min(1.0, max(0.0, (p - 0.14) / 0.32))
+        let logoScale = 0.94 + (0.06 * min(1.0, p / 0.52))
+        let fadeOut = 1.0 - max(0.0, (p - 0.82) / 0.18)
+
+        return ZStack {
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .fill(Color.black.opacity(0.94))
+            RadialGradient(
+                colors: [Color.purple.opacity(0.26), Color.clear],
+                center: .center,
+                startRadius: 8,
+                endRadius: 140
+            )
+
+            VStack(spacing: 4) {
+                Text("GAME BOY")
+                    .font(.system(size: 18, weight: .bold, design: .rounded))
+                    .foregroundColor(.white.opacity(0.80))
+                Text("ADVANCE")
+                    .font(.system(size: 24, weight: .black, design: .rounded))
+                    .foregroundColor(Color(red: 0.72, green: 0.60, blue: 0.98))
+                    .tracking(1.0)
+            }
+            .opacity(Double(logoOpacity * fadeOut))
+            .scaleEffect(logoScale)
+        }
+        .padding(12)
+    }
+
+    private func ndsBootSequence(progress: CGFloat) -> some View {
+        let p = max(0.0, min(1.0, progress))
+        let logoOpacity = min(1.0, max(0.0, (p - 0.10) / 0.24))
+        let flashOpacity = max(0.0, 1.0 - abs((p - 0.42) / 0.18))
+        let fadeOut = 1.0 - max(0.0, (p - 0.86) / 0.14)
+
+        return ZStack {
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .fill(Color.white.opacity(0.96))
+
+            VStack(spacing: 8) {
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .fill(Color.black.opacity(0.08))
+                    .frame(width: 126, height: 24)
+                Text("Nintendo DS")
+                    .font(.system(size: 24, weight: .bold, design: .rounded))
+                    .foregroundColor(Color.black.opacity(0.62))
+                    .opacity(Double(logoOpacity * fadeOut))
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .fill(Color.black.opacity(0.08))
+                    .frame(width: 126, height: 24)
+            }
+
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .fill(Color.white.opacity(Double(0.36 * flashOpacity)))
+        }
+        .padding(12)
+    }
+
+    private func defaultBootSequence(progress: CGFloat) -> some View {
+        let p = max(0.0, min(1.0, progress))
+        return ZStack {
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .fill(Color.black.opacity(0.88))
+
+            Text("Power On")
+                .font(.system(size: 24, weight: .bold, design: .rounded))
+                .foregroundColor(.white.opacity(0.82))
+                .opacity(Double(min(1.0, max(0.0, (p - 0.08) / 0.20))))
+        }
+        .padding(12)
+    }
+
+    private func cartridgeBody(
+        style: CartridgeLaunchStyle,
+        insertionProgress: CGFloat,
+        revealProgress: CGFloat
+    ) -> some View {
+        let depthProgress = 1.0 - insertionProgress
+        let visualDepth = min(1.0, depthProgress + revealProgress * 0.55)
+        return ZStack(alignment: .top) {
+            RoundedRectangle(cornerRadius: style.cornerRadius, style: .continuous)
+                .fill(
+                    LinearGradient(
+                        colors: [Color.white.opacity(0.94), Color(white: 0.86).opacity(0.98)],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: style.cornerRadius, style: .continuous)
+                        .stroke(Color.black.opacity(0.42), lineWidth: 1.6)
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: style.cornerRadius, style: .continuous)
+                        .fill(
+                            LinearGradient(
+                                colors: [
+                                    Color.white.opacity(0.24 + (0.28 * visualDepth)),
+                                    Color.clear,
+                                    Color.black.opacity(0.10 + (0.22 * visualDepth))
+                                ],
+                                startPoint: .top,
+                                endPoint: .bottom
+                            )
+                        )
+                        .blendMode(.overlay)
+                )
+                .shadow(color: .black.opacity(0.28), radius: 14, x: 0, y: 8)
+
+            if game.gamePlatform == .GB || game.gamePlatform == .GBC {
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .fill(Color.black.opacity(0.12))
+                    .frame(width: style.width * 0.44, height: 10)
+                    .offset(y: 12)
+            } else if game.gamePlatform == .NDS {
+                Capsule(style: .continuous)
+                    .fill(Color.black.opacity(0.12))
+                    .frame(width: style.width * 0.36, height: 8)
+                    .offset(y: 10)
+            }
+
+            VStack(spacing: 8) {
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .fill(Color.white.opacity(0.92))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12, style: .continuous)
+                            .stroke(Color.black.opacity(0.12), lineWidth: 1)
+                    )
+                    .overlay {
+                        cartridgeLabelContent
+                            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                            .padding(3)
+                    }
+                    .frame(height: style.labelHeight)
+
+                Text(loadingPlatformName.uppercased())
+                    .font(.system(size: 10, weight: .bold))
+                    .kerning(0.7)
+                    .foregroundColor(.black.opacity(0.48))
+                    .lineLimit(1)
+
+                Spacer(minLength: 0)
+            }
+            .padding(12)
+            .padding(.top, game.gamePlatform == .NDS ? 8 : 12)
+        }
+    }
+
+    @ViewBuilder
+    private var cartridgeLabelContent: some View {
+        ZStack(alignment: .bottomLeading) {
+            cartridgeCoverPreview
+
+            LinearGradient(
+                colors: [Color.clear, Color.black.opacity(0.62)],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(game.title ?? "Untitled")
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundColor(.white.opacity(0.94))
+                    .lineLimit(1)
+                Text(loadingPlatformName)
+                    .font(.system(size: 9, weight: .medium))
+                    .foregroundColor(.white.opacity(0.80))
+                    .lineLimit(1)
+            }
+            .padding(8)
+        }
+    }
+
+    @ViewBuilder
+    private var cartridgeCoverPreview: some View {
+#if canImport(UIKit)
+        if let data = game.coverImage, let image = UIImage(data: data) {
+            Image(uiImage: image)
+                .resizable()
+                .scaledToFill()
+        } else {
+            cartridgeCoverFallback
+        }
+#elseif canImport(AppKit)
+        if let data = game.coverImage, let image = NSImage(data: data) {
+            Image(nsImage: image)
+                .resizable()
+                .scaledToFill()
+        } else {
+            cartridgeCoverFallback
+        }
+#else
+        cartridgeCoverFallback
+#endif
+    }
+
+    private var cartridgeCoverFallback: some View {
+        ZStack {
+            LinearGradient(
+                colors: [Color(red: 0.32, green: 0.23, blue: 0.48), Color(red: 0.20, green: 0.29, blue: 0.53)],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+            Image(systemName: "gamecontroller.fill")
+                .font(.system(size: 30, weight: .semibold))
+                .foregroundColor(.white.opacity(0.34))
         }
     }
 
@@ -3298,9 +4068,7 @@ struct GamePlayView: View {
 
                 HStack(spacing: 10) {
                     pauseActionButton(title: "Retry", icon: "arrow.clockwise", style: .primary) {
-                        startTask?.cancel()
-                        startTask = nil
-                        launchGame(allowResumeFlow: true)
+                        beginLaunchSequence(allowResumeFlow: true)
                     }
                     pauseActionButton(title: "Back", icon: "xmark") {
                         onExit()
@@ -3372,6 +4140,20 @@ struct GamePlayView: View {
         let generator = UIImpactFeedbackGenerator(style: generatorStyle)
         generator.prepare()
         generator.impactOccurred()
+        #endif
+    }
+
+    private func playCartridgeInsertionFeedback() {
+        triggerHaptic(.medium)
+        #if canImport(AVFoundation) && canImport(UIKit)
+        let played = BootClickAudioPlayer.shared.play()
+        if !played {
+            #if canImport(AudioToolbox)
+            AudioServicesPlaySystemSound(1104)
+            #endif
+        }
+        #elseif canImport(AudioToolbox) && canImport(UIKit)
+        AudioServicesPlaySystemSound(1104)
         #endif
     }
 
@@ -3559,6 +4341,81 @@ struct GamePlayView: View {
         return URL(fileURLWithPath: romPath).deletingPathExtension().lastPathComponent
     }
 }
+
+#if canImport(AVFoundation) && canImport(UIKit)
+@MainActor
+private final class BootClickAudioPlayer {
+    static let shared = BootClickAudioPlayer()
+
+    private let engine = AVAudioEngine()
+    private let player = AVAudioPlayerNode()
+    private let format: AVAudioFormat?
+    private let clickBuffer: AVAudioPCMBuffer?
+
+    private init() {
+        format = AVAudioFormat(standardFormatWithSampleRate: 44_100, channels: 1)
+        guard let format else {
+            clickBuffer = nil
+            return
+        }
+        engine.attach(player)
+        engine.connect(player, to: engine.mainMixerNode, format: format)
+        engine.mainMixerNode.outputVolume = 1.0
+        clickBuffer = Self.makeClickBuffer(format: format)
+    }
+
+    @discardableResult
+    func play() -> Bool {
+        guard let buffer = clickBuffer else { return false }
+        configureAudioSession()
+
+        if !engine.isRunning {
+            do {
+                try engine.start()
+            } catch {
+                return false
+            }
+        }
+
+        if player.isPlaying {
+            player.stop()
+        }
+        player.scheduleBuffer(buffer, at: nil, options: [])
+        player.play()
+        return true
+    }
+
+    private func configureAudioSession() {
+        let session = AVAudioSession.sharedInstance()
+        // Route through media volume so the click is audible on real devices.
+        try? session.setCategory(.playback, mode: .default, options: [.mixWithOthers])
+        try? session.setActive(true)
+    }
+
+    private static func makeClickBuffer(format: AVAudioFormat) -> AVAudioPCMBuffer? {
+        let durationSeconds = 0.040
+        let frameCount = AVAudioFrameCount(max(1, Int(format.sampleRate * durationSeconds)))
+        guard let buffer = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: frameCount),
+              let channelData = buffer.floatChannelData?.pointee else {
+            return nil
+        }
+
+        buffer.frameLength = frameCount
+        let sr = format.sampleRate
+
+        for frame in 0..<Int(frameCount) {
+            let t = Double(frame) / sr
+            let envelope = exp(-t * 85.0)
+            let toneA = sin(2.0 * .pi * 2_200.0 * t)
+            let toneB = sin(2.0 * .pi * 1_250.0 * t)
+            let sample = (toneA * 0.72 + toneB * 0.28) * envelope * 0.95
+            channelData[frame] = Float(sample)
+        }
+
+        return buffer
+    }
+}
+#endif
 
 private struct ShellUtilityIconButton: View {
     enum Style {
@@ -3776,7 +4633,10 @@ private struct NDSPressableControl<Content: View>: View {
     var body: some View {
         content(pressTracker.isPressed)
             .scaleEffect(pressTracker.isPressed ? shellTheme.controlStyle.pressScale : 1.0)
-            .animation(.easeOut(duration: shellTheme.animationStyle.tapDuration), value: pressTracker.isPressed)
+            .animation(
+                .spring(response: max(0.16, shellTheme.animationStyle.tapDuration * 1.5), dampingFraction: 0.82),
+                value: pressTracker.isPressed
+            )
             .contentShape(Rectangle())
             .onLongPressGesture(minimumDuration: 0, maximumDistance: .infinity, pressing: { pressing in
                 switch pressTracker.transition(for: pressing) {
@@ -3805,8 +4665,8 @@ private struct NDSDPadView: View {
         self.onButton = onButton
     }
 
-    private var armWidth: CGFloat { size * (44.0 / 150.0) }
-    private var centerRadius: CGFloat { size * (18.0 / 150.0) }
+    private var armWidth: CGFloat { size * (42.0 / 150.0) }
+    private var centerHubDiameter: CGFloat { size * (42.0 / 150.0) }
     private var cornerRadius: CGFloat { max(10, size * (10.0 / 150.0)) }
     private var zoneSize: CGFloat { max(80.0, size * 0.56) }
     private var zoneOffset: CGFloat { (size * 0.5) - (zoneSize * 0.30) }
@@ -3819,11 +4679,23 @@ private struct NDSDPadView: View {
                     NDSCrossShape(size: size, armWidth: armWidth, cornerRadius: cornerRadius)
                         .stroke(Color.black.opacity(0.78), lineWidth: 2.2)
                 )
+                .overlay(
+                    NDSCrossShape(size: size, armWidth: armWidth, cornerRadius: cornerRadius)
+                        .stroke(Color.white.opacity(0.18), lineWidth: 1)
+                        .padding(1)
+                )
                 .shadow(color: Color.black.opacity(0.15), radius: 4, x: 0, y: 2)
 
             Circle()
-                .fill(Color.black.opacity(0.15))
-                .frame(width: centerRadius * 2, height: centerRadius * 2)
+                .fill(
+                    LinearGradient(
+                        colors: [Color.white.opacity(0.94), Color.white.opacity(0.82)],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+                .overlay(Circle().stroke(Color.black.opacity(0.40), lineWidth: 1.4))
+                .frame(width: centerHubDiameter, height: centerHubDiameter)
 
             NDSDPadPressZone(button: .dpadUp, onButton: onButton)
                 .frame(width: zoneSize, height: zoneSize)
@@ -3926,9 +4798,16 @@ private struct NDSFaceClusterView: View {
         ) { isPressed in
             ZStack {
                 Circle()
-                    .fill(Color.white.opacity(isPressed ? 0.90 : 0.98))
+                    .fill(
+                        LinearGradient(
+                            colors: [Color.white.opacity(isPressed ? 0.84 : 0.98), Color.white.opacity(isPressed ? 0.72 : 0.90)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
                     .overlay(Circle().stroke(Color.black.opacity(0.6), lineWidth: 1.5))
-                    .shadow(color: Color.black.opacity(isPressed ? 0.0 : 0.15), radius: 4, x: 0, y: 2)
+                    .overlay(Circle().stroke(Color.white.opacity(0.30), lineWidth: 1).padding(1))
+                    .shadow(color: Color.black.opacity(isPressed ? 0.0 : 0.24), radius: isPressed ? 2 : 6, x: 0, y: isPressed ? 1 : 3)
                     .overlay(
                         Text(label)
                             .font(.system(size: max(18, buttonDiameter * 0.42), weight: .semibold))
@@ -4154,6 +5033,7 @@ private struct GBAFaceButtonsView: View {
                     )
                 )
                 .overlay(Circle().stroke(shellTheme.colorPalette.controlStroke.color.opacity(0.95), lineWidth: 2))
+                .overlay(Circle().stroke(Color.white.opacity(0.20), lineWidth: 1).padding(2))
                 .overlay(
                     Circle()
                         .fill(
@@ -4171,7 +5051,7 @@ private struct GBAFaceButtonsView: View {
                         .foregroundColor(shellTheme.colorPalette.faceButtonText.color.opacity(0.9))
                 )
                 .frame(width: 78, height: 78)
-                .shadow(color: .black.opacity(0.18), radius: 5, x: 0, y: 3)
+                .shadow(color: .black.opacity(isPressed ? 0.10 : 0.28), radius: isPressed ? 3 : 8, x: 0, y: isPressed ? 1 : 4)
                 .shadow(color: shellTheme.controlStyle.glowEnabled ? glow.opacity(isPressed ? 0.45 : 1) : .clear, radius: emulatorButton == .a ? 7 : 9, x: 0, y: 0)
         }
     }
@@ -4222,7 +5102,7 @@ private struct GBAShoulderBar: View {
                             .stroke(shellTheme.colorPalette.shellHighlight.color.opacity(0.30), lineWidth: 1)
                             .padding(1)
                     )
-                    .shadow(color: .black.opacity(0.16), radius: 4, x: 0, y: 2)
+                    .shadow(color: .black.opacity(isPressed ? 0.08 : 0.22), radius: isPressed ? 2 : 6, x: 0, y: isPressed ? 1 : 3)
                     .overlay(
                         Capsule(style: .continuous)
                             .fill(
@@ -4338,6 +5218,7 @@ private struct GBFaceButtonsView: View {
                 )
                 .overlay(Circle().stroke(shellTheme.colorPalette.shellHighlight.color.opacity(0.24), lineWidth: 1.5))
                 .overlay(Circle().stroke(shellTheme.colorPalette.controlStroke.color.opacity(0.75), lineWidth: 2))
+                .overlay(Circle().stroke(Color.white.opacity(0.18), lineWidth: 1).padding(2))
                 .overlay(
                     Circle()
                         .fill(
@@ -4356,7 +5237,7 @@ private struct GBFaceButtonsView: View {
                 )
                 .frame(width: 78, height: 78)
                 .shadow(color: shellTheme.controlStyle.glowEnabled ? shellTheme.colorPalette.faceButtonGlow.color.opacity(0.22) : .clear, radius: 10, x: 0, y: 0)
-                .shadow(color: .black.opacity(0.16), radius: 5, x: 0, y: 3)
+                .shadow(color: .black.opacity(isPressed ? 0.10 : 0.24), radius: isPressed ? 3 : 8, x: 0, y: isPressed ? 1 : 4)
         }
     }
 }
@@ -4560,6 +5441,11 @@ private struct ShellSystemButton: View {
                     .fill(theme.fill.opacity(isPressed ? 0.78 : 1.0))
                     .overlay(Capsule(style: .continuous).stroke(theme.stroke, lineWidth: 1))
             )
+            .overlay(
+                Capsule(style: .continuous)
+                    .stroke(Color.white.opacity(isPressed ? 0.10 : 0.18), lineWidth: 1)
+                    .padding(1)
+            )
             .overlay {
                 if theme == .neoGlass && shellTheme.controlStyle.glowEnabled {
                     Capsule(style: .continuous)
@@ -4580,6 +5466,7 @@ private struct ShellSystemButton: View {
                 x: 0,
                 y: 0
             )
+            .shadow(color: .black.opacity(isPressed ? 0.06 : 0.16), radius: isPressed ? 2 : 6, x: 0, y: isPressed ? 1 : 3)
         }
     }
 }

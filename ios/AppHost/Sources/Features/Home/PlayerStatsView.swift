@@ -94,9 +94,10 @@ struct PlayerStatsView: View {
                     Text("Player Profile")
                         .font(.system(size: 22, weight: .bold))
                         .foregroundColor(AppColors.textPrimary)
-                    Text(viewModel.playerSinceText)
+                    Text("\(viewModel.playerSinceText) • Favorite: \(viewModel.favoriteSystemText)")
                         .font(.system(size: 14, weight: .medium))
                         .foregroundColor(AppColors.textSecondary)
+                        .lineLimit(2)
                 }
 
                 Spacer()
@@ -452,6 +453,7 @@ final class PlayerStatsViewModel: ObservableObject {
     @Published private(set) var gamesPlayedCount = 0
     @Published private(set) var longestPlayText = "0m"
     @Published private(set) var playerSinceText = "No play history yet"
+    @Published private(set) var favoriteSystemText = "None"
     @Published private(set) var consoleBreakdown: [ConsolePlayBreakdown] = []
     @Published private(set) var topGames: [TopPlayedGame] = []
     @Published private(set) var achievements: [PlayerAchievement] = []
@@ -461,6 +463,7 @@ final class PlayerStatsViewModel: ObservableObject {
     var unlockedAchievementCount: Int { achievements.filter(\.isUnlocked).count }
 
     func load(in context: NSManagedObjectContext) {
+        let progressSnapshot = PlayerProgressStore.shared.currentSnapshot()
         let request: NSFetchRequest<ROMLibraryEntry> = ROMLibraryEntry.fetchRequest()
         request.sortDescriptors = [
             NSSortDescriptor(keyPath: \ROMLibraryEntry.lastPlayedAt, ascending: false),
@@ -469,40 +472,52 @@ final class PlayerStatsViewModel: ObservableObject {
 
         do {
             let entries = try context.fetch(request)
-            rebuild(from: entries)
+            rebuild(from: entries, snapshot: progressSnapshot)
         } catch {
             print("Failed to load player stats: \(error)")
-            rebuild(from: [])
+            rebuild(from: [], snapshot: progressSnapshot)
         }
     }
 
-    private func rebuild(from entries: [ROMLibraryEntry]) {
-        let totalSeconds = entries.reduce(Int64(0)) { $0 + $1.playtimeTotal }
+    private func rebuild(from entries: [ROMLibraryEntry], snapshot: PlayerProgressSnapshot) {
+        let sessions = snapshot.sessions.sorted { $0.endTime > $1.endTime }
+        let sessionSeconds = sessions.reduce(0) { $0 + $1.durationSeconds }
+        let entrySeconds = Int(entries.reduce(Int64(0)) { $0 + $1.playtimeTotal })
+        let totalSeconds = max(sessionSeconds, entrySeconds)
         let totalHours = Int(totalSeconds / 3600)
         totalHoursText = totalHours > 0 ? "\(totalHours)h" : "0h"
 
         let playedEntries = entries.filter { $0.playtimeTotal > 0 || $0.lastPlayedAt != nil }
-        gamesPlayedCount = playedEntries.count
-        totalSessions = max(0, playedEntries.count + totalHours / 2) // estimated until session logging lands
+        let uniqueSessionGames = Set(sessions.map(\.gameID)).count
+        gamesPlayedCount = max(uniqueSessionGames, playedEntries.count)
+        totalSessions = sessions.isEmpty ? max(0, playedEntries.count + totalHours / 2) : sessions.count
 
+        let maxSessionSeconds = sessions.map(\.durationSeconds).max() ?? 0
         let maxGameSeconds = Int(playedEntries.map(\.playtimeTotal).max() ?? 0)
-        longestPlayText = Self.durationText(seconds: maxGameSeconds)
+        longestPlayText = Self.durationText(seconds: max(maxSessionSeconds, maxGameSeconds))
 
-        if let firstDate = entries.compactMap(\.dateAdded).min() {
+        if let firstSessionDate = sessions.map(\.startTime).min() {
+            playerSinceText = "Player since \(firstSessionDate.formatted(date: .abbreviated, time: .omitted))"
+        } else if let firstDate = entries.compactMap(\.dateAdded).min() {
             playerSinceText = "Player since \(firstDate.formatted(date: .abbreviated, time: .omitted))"
         } else {
             playerSinceText = "Player since today"
         }
 
-        buildConsoleBreakdown(from: entries, totalSeconds: Int(totalSeconds))
+        buildConsoleBreakdown(from: entries, sessions: sessions, totalSeconds: totalSeconds)
+        favoriteSystemText = consoleBreakdown.first?.name ?? "None"
         buildTopGames(from: playedEntries)
-        buildAchievements(from: entries, playedEntries: playedEntries, totalHours: totalHours, maxGameSeconds: maxGameSeconds)
-        buildTimeline(from: entries)
-        buildInsights(from: entries, playedEntries: playedEntries, totalSeconds: Int(totalSeconds))
+        buildAchievements(
+            sessions: sessions,
+            unlockedDates: snapshot.unlockedAchievementDates,
+            fallbackPlayedGames: playedEntries.count,
+            fallbackTotalPlaySeconds: totalSeconds
+        )
+        buildTimeline(from: entries, sessions: sessions)
+        buildInsights(playedEntries: playedEntries, sessions: sessions, totalSeconds: totalSeconds)
     }
 
-    private func buildConsoleBreakdown(from entries: [ROMLibraryEntry], totalSeconds: Int) {
-        let groups = Dictionary(grouping: entries) { normalizedSystem($0.system) }
+    private func buildConsoleBreakdown(from entries: [ROMLibraryEntry], sessions: [PlayerHistorySession], totalSeconds: Int) {
         let palette: [String: Color] = [
             "gb": .green,
             "gbc": .blue,
@@ -510,9 +525,21 @@ final class PlayerStatsViewModel: ObservableObject {
             "nds": .pink
         ]
 
+        let groups: [String: Int]
+        if !sessions.isEmpty {
+            groups = Dictionary(grouping: sessions) { normalizedSystem($0.system) }
+                .mapValues { items in
+                    items.reduce(0) { $0 + $1.durationSeconds }
+                }
+        } else {
+            groups = Dictionary(grouping: entries) { normalizedSystem($0.system) }
+                .mapValues { items in
+                    items.reduce(0) { $0 + Int($1.playtimeTotal) }
+                }
+        }
+
         consoleBreakdown = groups
-            .map { system, items in
-                let secs = items.reduce(0) { $0 + Int($1.playtimeTotal) }
+            .map { system, secs in
                 return ConsolePlayBreakdown(
                     id: system,
                     name: displaySystemName(system),
@@ -542,23 +569,73 @@ final class PlayerStatsViewModel: ObservableObject {
             }
     }
 
-    private func buildAchievements(from entries: [ROMLibraryEntry], playedEntries: [ROMLibraryEntry], totalHours: Int, maxGameSeconds: Int) {
-        let consoleCount = Set(entries.map { normalizedSystem($0.system) }.filter { !$0.isEmpty }).count
-        let playedGamesCount = playedEntries.count
-        let importedGamesCount = entries.count
-
-        achievements = [
-            PlayerAchievement.make(id: "first-hour", title: "First Hour", detail: "Play for 1 hour total", icon: "clock.badge.checkmark", color: .green, current: Double(totalHours), target: 1),
-            PlayerAchievement.make(id: "ten-hours", title: "10 Hours Milestone", detail: "Reach 10 hours total playtime", icon: "medal.fill", color: .orange, current: Double(totalHours), target: 10),
-            PlayerAchievement.make(id: "fifty-hours", title: "50 Hours Veteran", detail: "Reach 50 total hours", icon: "trophy.fill", color: .yellow, current: Double(totalHours), target: 50),
-            PlayerAchievement.make(id: "explorer", title: "Console Explorer", detail: "Play 3 different systems", icon: "gamecontroller.circle.fill", color: .blue, current: Double(consoleCount), target: 3),
-            PlayerAchievement.make(id: "collector", title: "Library Starter", detail: "Import 10 games", icon: "shippingbox.fill", color: .purple, current: Double(importedGamesCount), target: 10),
-            PlayerAchievement.make(id: "marathon", title: "Marathon Play", detail: "Play one game for 2 hours", icon: "flame.fill", color: .red, current: Double(maxGameSeconds), target: 7200),
-            PlayerAchievement.make(id: "sampler", title: "Game Sampler", detail: "Play 5 different games", icon: "sparkles", color: .mint, current: Double(playedGamesCount), target: 5)
+    private func buildAchievements(
+        sessions: [PlayerHistorySession],
+        unlockedDates: [String: Date],
+        fallbackPlayedGames: Int,
+        fallbackTotalPlaySeconds: Int
+    ) {
+        let sessionCount = sessions.count
+        let totalPlaySeconds = max(sessions.reduce(0) { $0 + $1.durationSeconds }, fallbackTotalPlaySeconds)
+        let uniqueGames = max(Set(sessions.map(\.gameID)).count, fallbackPlayedGames)
+        let colorsByID: [String: Color] = [
+            "power-on": .blue,
+            "first-hour": .green,
+            "retro-fan": .orange,
+            "dedicated-player": .purple,
+            "game-sampler": .mint
         ]
+
+        achievements = PlayerProgressStore.achievementDefinitions.map { definition in
+            let currentValue: Int
+            switch definition.metric {
+            case .sessionCount:
+                currentValue = sessionCount
+            case .totalPlaySeconds:
+                currentValue = totalPlaySeconds
+            case .uniqueGamesPlayed:
+                currentValue = uniqueGames
+            }
+
+            let progress = definition.target > 0
+                ? min(1, max(0, Double(currentValue) / Double(definition.target)))
+                : 1
+            let unlockedDate = unlockedDates[definition.id]
+            let unlocked = unlockedDate != nil || currentValue >= definition.target
+
+            return PlayerAchievement(
+                id: definition.id,
+                title: definition.title,
+                detail: definition.detail,
+                icon: definition.icon,
+                color: colorsByID[definition.id] ?? AppColors.primary,
+                progress: progress,
+                isUnlocked: unlocked,
+                unlockedDateText: unlockedDate.map { "Unlocked \($0.formatted(date: .abbreviated, time: .omitted))" }
+            )
+        }
     }
 
-    private func buildTimeline(from entries: [ROMLibraryEntry]) {
+    private func buildTimeline(from entries: [ROMLibraryEntry], sessions: [PlayerHistorySession]) {
+        if !sessions.isEmpty {
+            timeline = sessions
+                .sorted { $0.endTime > $1.endTime }
+                .prefix(10)
+                .map { session in
+                    let system = displaySystemName(normalizedSystem(session.system))
+                    let systemLabel = system.isEmpty ? "Unknown System" : system
+                    return PlayerActivityEvent(
+                        id: session.id.uuidString,
+                        date: session.endTime,
+                        icon: "gamecontroller.fill",
+                        color: AppColors.primary,
+                        title: "Played \(session.gameTitle)",
+                        subtitle: "\(Self.durationText(seconds: session.durationSeconds)) session · \(systemLabel)"
+                    )
+                }
+            return
+        }
+
         var events: [PlayerActivityEvent] = []
         for entry in entries {
             let title = entry.title ?? "Unknown Game"
@@ -595,7 +672,7 @@ final class PlayerStatsViewModel: ObservableObject {
             .map { $0 }
     }
 
-    private func buildInsights(from entries: [ROMLibraryEntry], playedEntries: [ROMLibraryEntry], totalSeconds: Int) {
+    private func buildInsights(playedEntries: [ROMLibraryEntry], sessions: [PlayerHistorySession], totalSeconds: Int) {
         var items: [String] = []
 
         if let topConsole = consoleBreakdown.first {
@@ -606,14 +683,24 @@ final class PlayerStatsViewModel: ObservableObject {
             items.append("Your top game is \(topGame.title) with \(topGame.hoursText) played.")
         }
 
-        if gamesPlayedCount > 0 {
+        if !sessions.isEmpty {
+            let averageSession = totalSeconds / max(1, sessions.count)
+            items.append("Average session length is \(Self.durationText(seconds: averageSession)).")
+            let activeDays = Set(sessions.map { Calendar.current.startOfDay(for: $0.endTime) }).count
+            items.append("You have logged activity on \(activeDays) day\(activeDays == 1 ? "" : "s").")
+        } else if gamesPlayedCount > 0 {
             let average = totalSeconds / max(1, gamesPlayedCount)
             items.append("Average playtime per game is \(Self.durationText(seconds: average)).")
         }
 
-        let recentHours = playedEntries
-            .compactMap(\.lastPlayedAt)
-            .map { Calendar.current.component(.hour, from: $0) }
+        let recentHours: [Int]
+        if !sessions.isEmpty {
+            recentHours = sessions.map { Calendar.current.component(.hour, from: $0.endTime) }
+        } else {
+            recentHours = playedEntries
+                .compactMap(\.lastPlayedAt)
+                .map { Calendar.current.component(.hour, from: $0) }
+        }
         if !recentHours.isEmpty {
             let eveningCount = recentHours.filter { (18...23).contains($0) }.count
             let daytimeCount = recentHours.filter { (10...17).contains($0) }.count

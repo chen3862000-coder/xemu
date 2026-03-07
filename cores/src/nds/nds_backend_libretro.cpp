@@ -188,18 +188,10 @@ public:
     }
 
     xemu_audio_buffer_t getAudioBuffer() override {
-        audioBuffer_.data = audio_.empty() ? nullptr : audio_.data();
-        audioBuffer_.sample_count = static_cast<int>(audio_.size());
-
-        // Return all available audio and clear buffer for next frame
-        // This provides the most responsive audio with no delay buildup
-        if (!audio_.empty()) {
-            std::vector<int16_t> samplesToReturn;
-            samplesToReturn.swap(audio_);  // Efficiently swap buffers
-            audioBuffer_.data = samplesToReturn.data();
-            audioBuffer_.sample_count = static_cast<int>(samplesToReturn.size());
-        }
-
+        const int count = static_cast<int>(audio_.size());
+        audioBuffer_.sample_count = count;
+        audioBuffer_.data = count > 0 ? audio_.data() : nullptr;
+        audio_.clear();
         return audioBuffer_;
     }
 
