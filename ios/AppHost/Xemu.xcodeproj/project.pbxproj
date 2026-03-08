@@ -35,6 +35,7 @@
 		3C1C1C30461209C438218C32 /* ROMStorage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60116C1286890A6031C40E8E /* ROMStorage.swift */; };
 		3C3159AB73ABDF963A313F5A /* VirtualPadView.swift in Sources */ = {isa = PBXBuildFile; fileRef = ACFE85D5A008F2D881F62BA9 /* VirtualPadView.swift */; };
 		3CE04755EFC1A1F1E7B31F6E /* MetalRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = E34A757D05BE16111E361A97 /* MetalRenderer.swift */; };
+		491C0B990DFAF8B4637610E6 /* HapticManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1401482B9019897D45053268 /* HapticManager.swift */; };
 		4A22E39D94CA207A2B4B760F /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 21860D43DA16DB3AF18139D3 /* SettingsView.swift */; };
 		50CA39455D8BC2354FB4CB56 /* SwipeBackModifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3AEF9FE24A117EA15A71E6D9 /* SwipeBackModifier.swift */; };
 		5131C250FDEFC17F026F6380 /* EntitlementStatusView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 466D0058781640285EE96634 /* EntitlementStatusView.swift */; };
@@ -128,6 +129,7 @@
 		0E27256B3C3C7FB89F1F47DE /* Card.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Card.swift; sourceTree = "<group>"; };
 		0EC16E530DB4C49A1BD9CF73 /* EmulatorCore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmulatorCore.swift; sourceTree = "<group>"; };
 		116AD7A4945F9AE8BE364572 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		1401482B9019897D45053268 /* HapticManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HapticManager.swift; sourceTree = "<group>"; };
 		153169A0519B5D36DA5ED8C1 /* GBACore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GBACore.swift; sourceTree = "<group>"; };
 		15C94619A252760EF9BF7DCB /* CompatibilityDiagnosticsSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CompatibilityDiagnosticsSheet.swift; sourceTree = "<group>"; };
 		16E22620B32971AFA3464BF3 /* ResumeCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ResumeCard.swift; sourceTree = "<group>"; };
@@ -414,6 +416,7 @@
 		739D0FA28A783B5672FC4567 /* Input */ = {
 			isa = PBXGroup;
 			children = (
+				1401482B9019897D45053268 /* HapticManager.swift */,
 				9485665368CFC41E8D938D95 /* InputBus.swift */,
 			);
 			path = Input;
@@ -780,6 +783,7 @@
 				A5D271408AC439164A94CA22 /* GamePlayView.swift in Sources */,
 				D4B1DCEDD183DC943A62F63D /* GamePlayViewModel.swift in Sources */,
 				2C2483EBEDF1562D319DB5D7 /* GenesisCore.swift in Sources */,
+				491C0B990DFAF8B4637610E6 /* HapticManager.swift in Sources */,
 				F93E44807879255BA51E06C3 /* Header.swift in Sources */,
 				B42C87D3E4D4B188DBDD73C9 /* HomeView.swift in Sources */,
 				8A942AB5E6436CC4D8394EB4 /* Input.swift in Sources */,

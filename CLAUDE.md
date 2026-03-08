@@ -124,6 +124,41 @@ The NDS backend is currently a scaffold/stub. The C API exists in `xemu_cores.h`
 3. **C++ Core Changes**: Modify files in `cores/src/` or `cores/third_party/`, run `./cores/build-ios.sh`
 4. **Testing**: Run `cd ios/AppHost && ./test.sh test`
 
+## Code Quality Guidelines
+
+### Always Ensure Code Compiles
+
+**Critical**: Before completing any task, ensure that your code changes compile successfully.
+
+**Verification Command**:
+```bash
+# For macOS builds (fast compilation)
+swift build
+
+# For iOS builds (requires Xcode)
+cd ios/AppHost
+xcodebuild -project Xemu.xcodeproj -scheme Xemu \
+  -destination 'platform=iOS Simulator,name=iPhone 17' \
+  -configuration Debug build
+```
+
+**Common Compilation Issues to Avoid**:
+- **Type visibility**: When using `private` types across struct boundaries, make them `internal` instead
+- **Missing imports**: Ensure all required modules are imported (e.g., `ImageIO`, `UniformTypeIdentifiers` for GIF handling)
+- **Enum conformance**: When using enums with `@AppStorage`, provide `init?(rawValue:)` initializers
+- **Module-level types**: Move shared enums/types to module level if used by multiple structs in the same file
+
+**Before Marking Tasks Complete**:
+1. Run compilation verification
+2. Check for any compiler warnings that could indicate issues
+3. Verify that no build errors exist
+4. If tests exist, ensure they pass
+
+**If compilation fails**:
+- Fix all compilation errors before marking a task as complete
+- Address compiler warnings that indicate potential runtime issues
+- Document any trade-offs or known limitations in comments
+
 ## Platform Support
 
 Currently supported platforms:

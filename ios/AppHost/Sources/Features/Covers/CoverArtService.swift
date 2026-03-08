@@ -103,8 +103,17 @@ final class CoverArtService {
 
     @discardableResult
     func saveCustomCoverData(_ data: Data, for entryID: UUID) throws -> URL {
-        let outputURL = customCoverURL(for: entryID)
-        let encoded = try normalizeCoverDataForStorage(data)
+        let isGIF = isGIFData(data)
+        let outputURL = customCoverURL(for: entryID, isGIF: isGIF)
+
+        let encoded: Data
+        if isGIF {
+            // Store GIF as-is without conversion
+            encoded = data
+        } else {
+            encoded = try normalizeCoverDataForStorage(data)
+        }
+
         try ensureCoverDirectoryExists()
         try encoded.write(to: outputURL, options: [.atomic])
         cache.removeAllObjects()
@@ -134,7 +143,18 @@ final class CoverArtService {
     }
 
     func customCoverURL(for entryID: UUID) -> URL {
-        coverDirectoryURL().appendingPathComponent("\(entryID.uuidString.lowercased()).jpg")
+        customCoverURL(for: entryID, isGIF: false)
+    }
+
+    func customCoverURL(for entryID: UUID, isGIF: Bool) -> URL {
+        let ext = isGIF ? "gif" : "jpg"
+        return coverDirectoryURL().appendingPathComponent("\(entryID.uuidString.lowercased()).\(ext)")
+    }
+
+    private func isGIFData(_ data: Data) -> Bool {
+        guard let source = CGImageSourceCreateWithData(data as CFData, nil) else { return false }
+        let type = CGImageSourceGetType(source)
+        return type == UTType.gif.identifier as CFString
     }
 
     func normalizedTitle(for value: String?) -> String {
@@ -185,7 +205,10 @@ final class CoverArtService {
         }
 
         if let customData = loadCustomCover(for: request) {
-            let prepared = downsampleDataIfNeeded(customData, maxPixelSize: targetPixelSize)
+            // Keep animated GIFs intact so grid cards can autoplay them.
+            let prepared: Data = isGIFData(customData)
+                ? customData
+                : downsampleDataIfNeeded(customData, maxPixelSize: targetPixelSize)
             putInCache(prepared, key: key, source: .customOverride)
             logResolution(for: request, source: .customOverride, cacheHit: false, placeholderReason: nil)
             return CoverResolutionResult(data: prepared, source: .customOverride)
@@ -263,8 +286,15 @@ final class CoverArtService {
                 return data
             }
         }
-        let fallback = customCoverURL(for: request.id)
-        return try? Data(contentsOf: fallback)
+
+        // Try both jpg and gif extensions
+        let jpgFallback = customCoverURL(for: request.id, isGIF: false)
+        if let data = try? Data(contentsOf: jpgFallback) {
+            return data
+        }
+
+        let gifFallback = customCoverURL(for: request.id, isGIF: true)
+        return try? Data(contentsOf: gifFallback)
     }
 
     private func downsampleDataIfNeeded(_ data: Data, maxPixelSize: Int) -> Data {
@@ -310,6 +340,8 @@ final class CoverArtService {
             throw NSError(domain: "CoverArtService", code: 1, userInfo: [NSLocalizedDescriptionKey: "Unable to decode image data"])
         }
 
+        let imageSize = image.size
+
         let format = UIGraphicsImageRendererFormat.default()
         format.scale = 1
         format.opaque = true
@@ -317,7 +349,7 @@ final class CoverArtService {
         let rendered = renderer.image { _ in
             UIColor.black.setFill()
             UIBezierPath(rect: CGRect(origin: .zero, size: CGSize(width: targetSize, height: targetSize))).fill()
-            image.draw(in: Self.aspectFillRect(imageSize: image.size, target: CGSize(width: targetSize, height: targetSize)))
+            image.draw(in: Self.aspectFillRect(imageSize: imageSize, target: CGSize(width: targetSize, height: targetSize)))
         }
         return rendered.jpegData(compressionQuality: 0.8) ?? data
         #elseif canImport(AppKit)

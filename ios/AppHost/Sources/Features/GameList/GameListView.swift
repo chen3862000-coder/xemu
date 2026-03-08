@@ -63,13 +63,12 @@ struct GameListView: View {
     }
 
     private var collectorGridColumns: [GridItem] {
-#if os(iOS)
-        let width = UIScreen.main.bounds.width
-        let columnCount = width >= 900 ? 4 : 3
-#else
-        let columnCount = 4
-#endif
-        return Array(repeating: GridItem(.flexible(minimum: 0), spacing: 16), count: columnCount)
+        [
+            GridItem(.flexible(minimum: 0, maximum: .infinity), spacing: 16, alignment: .top),
+            GridItem(.flexible(minimum: 0, maximum: .infinity), spacing: 16, alignment: .top),
+            GridItem(.flexible(minimum: 0, maximum: .infinity), spacing: 16, alignment: .top),
+            GridItem(.flexible(minimum: 0, maximum: .infinity), spacing: 16, alignment: .top)
+        ]
     }
     
     var body: some View {
@@ -540,10 +539,15 @@ struct GameListView: View {
                                 subtitle: recentSubtitle(for: game),
                                 launchIssue: viewModel.compatibilityIssue(for: game)
                             )
+                            .frame(maxWidth: .infinity, alignment: .topLeading)
                         }
+                        .frame(maxWidth: .infinity, alignment: .topLeading)
                         .buttonStyle(CollectorCardPressStyle())
                         .contextMenu { deletionMenu(for: game) }
                     }
+                }
+                .transaction { transaction in
+                    transaction.animation = nil
                 }
             }
         }
@@ -1044,26 +1048,9 @@ private struct SystemCollectorCard: View {
     let subtitle: String
     let launchIssue: ROMLaunchIssue?
 
-    private var consoleAccent: Color {
-        SubpageUI.CollectorIdentity.accent(forSystem: platformText)
-    }
-
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            ZStack(alignment: .topTrailing) {
-                coverView
-                    .aspectRatio(2.0 / 3.0, contentMode: .fit)
-                    .frame(maxWidth: .infinity)
-
-                Text(platformText)
-                    .font(.system(size: 10, weight: .semibold))
-                    .foregroundColor(.white)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
-                    .background(consoleAccent.opacity(0.94))
-                    .clipShape(Capsule())
-                    .padding(8)
-            }
+            coverSection
 
             Text(game.title ?? "Unknown")
                 .font(.system(size: 14, weight: .semibold))
@@ -1079,6 +1066,20 @@ private struct SystemCollectorCard: View {
             }
             .foregroundColor(launchIssue == nil ? AppColors.textMuted : .orange)
         }
+        .frame(maxWidth: .infinity, alignment: .topLeading)
+    }
+
+    private var coverSection: some View {
+        ZStack {
+            GeometryReader { proxy in
+                coverView
+                    .frame(width: proxy.size.width, height: proxy.size.height)
+                    .clipped()
+            }
+        }
+        .aspectRatio(1.0, contentMode: .fit)
+        .frame(maxWidth: .infinity)
+        .clipped()
     }
 
     @ViewBuilder

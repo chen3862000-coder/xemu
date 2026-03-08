@@ -1,8 +1,16 @@
 import SwiftUI
 import CoreData
+import ImageIO
+import UniformTypeIdentifiers
 #if canImport(UIKit)
 import UIKit
 #endif
+
+private func isGIFData(_ data: Data) -> Bool {
+    guard let source = CGImageSourceCreateWithData(data as CFData, nil) else { return false }
+    let type = CGImageSourceGetType(source)
+    return type == UTType.gif.identifier as CFString
+}
 
 private enum AllGamesTokens {
     private static var currentTheme: AppThemeMode {
@@ -164,28 +172,56 @@ private extension View {
     }
 }
 
+enum LibrarySortOption: String, CaseIterable, Identifiable {
+    case recent = "recent"
+    case alphabetical = "alphabetical"
+    case mostPlayed = "mostPlayed"
+
+    var id: String { rawValue }
+
+    init?(rawValue: String) {
+        switch rawValue {
+        case "recent": self = .recent
+        case "alphabetical": self = .alphabetical
+        case "mostPlayed": self = .mostPlayed
+        default: return nil
+        }
+    }
+}
+
+enum LibrarySystemFilter: String, CaseIterable, Identifiable {
+    case all = "all"
+    case gbc = "gbc"
+    case gba = "gba"
+    case nds = "nds"
+
+    var id: String { rawValue }
+
+    init?(rawValue: String) {
+        switch rawValue {
+        case "all": self = .all
+        case "gbc": self = .gbc
+        case "gba": self = .gba
+        case "nds": self = .nds
+        default: return nil
+        }
+    }
+}
+
+enum LibraryViewMode: String {
+    case grid = "grid"
+    case list = "list"
+
+    init?(rawValue: String) {
+        switch rawValue {
+        case "grid": self = .grid
+        case "list": self = .list
+        default: return nil
+        }
+    }
+}
+
 struct GameLibraryView: View {
-    private enum LibrarySortOption: String, CaseIterable, Identifiable {
-        case recent = "Recent"
-        case alphabetical = "A-Z"
-        case mostPlayed = "Most Played"
-
-        var id: String { rawValue }
-    }
-
-    private enum LibrarySystemFilter: String, CaseIterable, Identifiable {
-        case all = "All"
-        case gbc = "GB/GBC"
-        case gba = "GBA"
-        case nds = "NDS"
-
-        var id: String { rawValue }
-    }
-
-    private enum LibraryViewMode: String {
-        case grid
-        case list
-    }
 
     @Environment(\.managedObjectContext) private var viewContext
     @Environment(\.dismiss) private var dismiss
@@ -194,9 +230,9 @@ struct GameLibraryView: View {
     @State private var games: [ROMLibraryEntry] = []
     @State private var selectedGame: Game?
     @State private var searchText = ""
-    @State private var selectedSort: LibrarySortOption = .recent
-    @State private var selectedSystemFilter: LibrarySystemFilter = .all
-    @State private var viewMode: LibraryViewMode = .grid
+    @AppStorage("library.sortOption") private var selectedSort: LibrarySortOption = .recent
+    @AppStorage("library.systemFilter") private var selectedSystemFilter: LibrarySystemFilter = .all
+    @AppStorage("library.viewMode") private var viewMode: LibraryViewMode = .grid
     @State private var showConsoleFilters: Bool = true
     @State private var activeAlert: LibraryAlertState?
     @State private var coverEditorEntry: ROMLibraryEntry?
@@ -233,13 +269,12 @@ struct GameLibraryView: View {
 
     private var gridColumns: [GridItem] {
         if isCollectorMode {
-#if os(iOS)
-            let width = UIScreen.main.bounds.width
-            let columnCount = width >= 900 ? 4 : 3
-#else
-            let columnCount = 4
-#endif
-            return Array(repeating: GridItem(.flexible(minimum: 0), spacing: 16), count: columnCount)
+            return [
+                GridItem(.flexible(minimum: 0, maximum: .infinity), spacing: 16, alignment: .top),
+                GridItem(.flexible(minimum: 0, maximum: .infinity), spacing: 16, alignment: .top),
+                GridItem(.flexible(minimum: 0, maximum: .infinity), spacing: 16, alignment: .top),
+                GridItem(.flexible(minimum: 0, maximum: .infinity), spacing: 16, alignment: .top)
+            ]
         }
         return [
             GridItem(.flexible(minimum: 0), spacing: 16),
@@ -358,15 +393,31 @@ struct GameLibraryView: View {
             return filteredBySearch.sorted(by: { lhs, rhs in
                 let leftDate = lhs.lastPlayedAt ?? lhs.dateAdded ?? Date.distantPast
                 let rightDate = rhs.lastPlayedAt ?? rhs.dateAdded ?? Date.distantPast
-                return leftDate > rightDate
+                if leftDate != rightDate {
+                    return leftDate > rightDate
+                }
+                return stableOrderingKey(lhs) < stableOrderingKey(rhs)
             })
         case .alphabetical:
             return filteredBySearch.sorted(by: {
-                ($0.title ?? "").localizedCaseInsensitiveCompare($1.title ?? "") == .orderedAscending
+                let compare = ($0.title ?? "").localizedCaseInsensitiveCompare($1.title ?? "")
+                if compare == .orderedSame {
+                    return stableOrderingKey($0) < stableOrderingKey($1)
+                }
+                return compare == .orderedAscending
             })
         case .mostPlayed:
-            return filteredBySearch.sorted(by: { $0.playtimeTotal > $1.playtimeTotal })
+            return filteredBySearch.sorted(by: {
+                if $0.playtimeTotal != $1.playtimeTotal {
+                    return $0.playtimeTotal > $1.playtimeTotal
+                }
+                return stableOrderingKey($0) < stableOrderingKey($1)
+            })
         }
+    }
+
+    private func stableOrderingKey(_ entry: ROMLibraryEntry) -> String {
+        entry.objectID.uriRepresentation().absoluteString
     }
 
     private var backgroundLayer: some View {
@@ -667,9 +718,10 @@ struct GameLibraryView: View {
             spacing: 16
         ) {
             ForEach(filteredGames) { entry in
-                AllGamesCard(entry: entry, collectorMode: isCollectorMode) {
+                AllGamesCard(entry: entry, collectorMode: isCollectorMode, selectedSystemFilter: selectedSystemFilter) {
                     launchGame(entry)
                 }
+                .frame(maxWidth: .infinity, alignment: .topLeading)
                 .buttonStyle(PressScaleButtonStyle())
                 .contextMenu {
                     Button {
@@ -710,6 +762,9 @@ struct GameLibraryView: View {
                     }
                 }
             }
+        }
+        .transaction { transaction in
+            transaction.animation = nil
         }
     }
 
@@ -776,6 +831,9 @@ struct GameLibraryView: View {
                     }
                 }
             }
+        }
+        .transaction { transaction in
+            transaction.animation = nil
         }
     }
 
@@ -904,13 +962,15 @@ struct AllGamesCard: View {
 
     let entry: ROMLibraryEntry
     let collectorMode: Bool
+    let selectedSystemFilter: LibrarySystemFilter
     let onTap: () -> Void
 
     private let coverCornerRadius: CGFloat = 18
 
-    init(entry: ROMLibraryEntry, collectorMode: Bool = false, onTap: @escaping () -> Void) {
+    init(entry: ROMLibraryEntry, collectorMode: Bool = false, selectedSystemFilter: LibrarySystemFilter = .all, onTap: @escaping () -> Void) {
         self.entry = entry
         self.collectorMode = collectorMode
+        self.selectedSystemFilter = selectedSystemFilter
         self.onTap = onTap
     }
 
@@ -976,11 +1036,15 @@ struct AllGamesCard: View {
             }
         }
         .overlay(alignment: .bottomTrailing) {
-            AllGamesConsoleBadge(
-                text: (entry.system ?? "UNK").uppercased(),
-                backgroundColor: SubpageUI.CollectorIdentity.accent(forSystem: entry.system)
-            )
-                .padding(collectorMode ? 6 : 8)
+            let shouldShowBadge = !(entry.system?.lowercased().contains("gba") == true &&
+                                  selectedSystemFilter == .gba)
+            if shouldShowBadge {
+                AllGamesConsoleBadge(
+                    text: (entry.system ?? "UNK").uppercased(),
+                    backgroundColor: SubpageUI.CollectorIdentity.accent(forSystem: entry.system)
+                )
+                    .padding(collectorMode ? 6 : 8)
+            }
         }
         .clipShape(RoundedRectangle(cornerRadius: coverCornerRadius))
         .overlay(alignment: .bottom) {
@@ -1037,17 +1101,26 @@ struct AllGamesCard: View {
     private var coverArt: some View {
         Group {
             #if os(iOS)
-            if let resolved = CoverArtService.shared.resolve(for: entry),
-               let uiImage = UIImage(data: resolved.data) {
-                Image(uiImage: uiImage)
-                    .resizable()
-                    .scaledToFill()
+            if let resolved = CoverArtService.shared.resolve(for: entry) {
+                if isGIFData(resolved.data) {
+                    AnimatedGIFView(data: resolved.data)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else if let uiImage = UIImage(data: resolved.data) {
+                    Image(uiImage: uiImage)
+                        .resizable()
+                        .scaledToFill()
+                } else {
+                    placeholderGlyph
+                }
             } else {
                 placeholderGlyph
             }
             #else
             placeholderGlyph
             #endif
+        }
+        .transaction { transaction in
+            transaction.animation = nil
         }
     }
 
@@ -1243,6 +1316,109 @@ private struct LibraryDeleteCandidate: Identifiable {
     let entry: ROMLibraryEntry
     let mode: GameDeletionMode
 }
+
+#if os(iOS)
+struct AnimatedGIFView: View {
+    let data: Data
+
+    @State private var currentFrameIndex = 0
+    @State private var currentImage: UIImage?
+    @State private var isAnimating = false
+    @State private var loadedFrames: [UIImage] = []
+    @State private var loadedDurations: [TimeInterval] = []
+
+    var body: some View {
+        Group {
+            if let image = currentImage {
+                Image(uiImage: image)
+                    .resizable()
+                    .scaledToFill()
+                    .clipped()
+            } else {
+                Image(systemName: "photo")
+                    .foregroundColor(.secondary)
+            }
+        }
+        .onAppear {
+            loadAndAnimateGIF()
+        }
+        .onDisappear {
+            stopAnimation()
+        }
+    }
+
+    private func loadAndAnimateGIF() {
+        guard !isAnimating else { return }
+        isAnimating = true
+        loadedFrames.removeAll()
+        loadedDurations.removeAll()
+        currentFrameIndex = 0
+        currentImage = nil
+
+        guard let source = CGImageSourceCreateWithData(data as CFData, nil) else {
+            isAnimating = false
+            return
+        }
+
+        let count = CGImageSourceGetCount(source)
+        guard count > 0 else {
+            isAnimating = false
+            return
+        }
+
+        var frames: [UIImage] = []
+        var durations: [TimeInterval] = []
+
+        for i in 0..<count {
+            if let cgImage = CGImageSourceCreateImageAtIndex(source, i, nil) {
+                let image = UIImage(cgImage: cgImage)
+                frames.append(image)
+
+                let properties = CGImageSourceCopyPropertiesAtIndex(source, i, nil) as? [CFString: Any]
+                let gifDict = properties?[kCGImagePropertyGIFDictionary] as? [CFString: Any]
+                let delay = gifDict?[kCGImagePropertyGIFDelayTime] as? TimeInterval ?? 0.1
+                durations.append(delay)
+            }
+        }
+
+        guard !frames.isEmpty, !durations.isEmpty else {
+            isAnimating = false
+            return
+        }
+
+        self.loadedFrames = frames
+        self.loadedDurations = durations
+        self.currentImage = frames.first
+        self.currentFrameIndex = 0
+
+        // Start animation immediately
+        scheduleNextFrame()
+    }
+
+    private func stopAnimation() {
+        isAnimating = false
+    }
+
+    private func scheduleNextFrame() {
+        guard isAnimating,
+              !loadedFrames.isEmpty,
+              !loadedDurations.isEmpty,
+              currentFrameIndex < loadedFrames.count,
+              currentFrameIndex < loadedDurations.count else { return }
+
+        let delay = loadedDurations[currentFrameIndex]
+        // Use a minimum delay to ensure animation is visible
+        let adjustedDelay = max(delay, 0.05)
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + adjustedDelay) {
+            guard self.isAnimating else { return }
+            self.currentFrameIndex = (self.currentFrameIndex + 1) % self.loadedFrames.count
+            self.currentImage = self.loadedFrames[self.currentFrameIndex]
+            self.scheduleNextFrame()
+        }
+    }
+}
+#endif
 
 private struct LibraryAlertState: Identifiable {
     enum Kind {

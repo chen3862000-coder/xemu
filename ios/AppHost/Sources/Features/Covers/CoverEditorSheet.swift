@@ -3,6 +3,7 @@ import PhotosUI
 import SwiftUI
 import UniformTypeIdentifiers
 import UIKit
+import ImageIO
 
 struct CoverEditorSheet: View {
     let entry: ROMLibraryEntry
@@ -134,6 +135,16 @@ struct CoverEditorSheet: View {
                 await loadDataFromPhoto(item: newValue)
             }
         }
+        .onAppear {
+            if selectedPhoto == nil, candidateData == nil,
+               let resolved = CoverArtService.shared.resolve(for: entry) {
+                candidateData = resolved.data
+                withAnimation(.spring(response: 0.3)) {
+                    scale = 1.0
+                    offset = .zero
+                }
+            }
+        }
         .alert("Cover Update Failed", isPresented: Binding(
             get: { errorMessage != nil },
             set: { if !$0 { errorMessage = nil } }
@@ -217,7 +228,13 @@ struct CoverEditorSheet: View {
         isSaving = true
 
         do {
-            let transformedData = applyTransformation(to: candidateData)
+            let transformedData: Data
+            if isGIFData(candidateData) {
+                // Preserve animated GIFs; grid rendering will crop with aspect fill.
+                transformedData = candidateData
+            } else {
+                transformedData = applyTransformation(to: candidateData)
+            }
             let url = try CoverArtService.shared.saveCustomCoverData(transformedData, for: entry.id)
             entry.customCoverURL = url.path
             try viewContext.save()
@@ -232,36 +249,49 @@ struct CoverEditorSheet: View {
     }
 
     private func applyTransformation(to data: Data) -> Data {
-        guard let inputImage = UIImage(data: data),
-              let cgImage = inputImage.cgImage else {
+        guard let inputImage = UIImage(data: data) else {
             return data
         }
 
         let size = CGSize(width: 600, height: 600)
         let renderer = UIGraphicsImageRenderer(size: size)
+        let imageSize = inputImage.size
+        let baseRect = aspectFillRect(imageSize: imageSize, target: size)
 
         let transformedImage = renderer.image { context in
+            UIColor.black.setFill()
+            context.fill(CGRect(origin: .zero, size: size))
+
             context.cgContext.translateBy(x: size.width / 2 + offset.width, y: size.height / 2 + offset.height)
             context.cgContext.scaleBy(x: scale, y: scale)
             context.cgContext.translateBy(x: -size.width / 2, y: -size.height / 2)
-
-            if let cropped = cgImage.cropping(to: CGRect(x: 0, y: 0, width: cgImage.width, height: cgImage.height)) {
-                let aspectRatio = CGFloat(cropped.width) / CGFloat(cropped.height)
-                var drawRect: CGRect
-
-                if aspectRatio > 1 {
-                    let height = size.width / aspectRatio
-                    drawRect = CGRect(x: 0, y: (size.height - height) / 2, width: size.width, height: height)
-                } else {
-                    let width = size.height * aspectRatio
-                    drawRect = CGRect(x: (size.width - width) / 2, y: 0, width: width, height: size.height)
-                }
-
-                context.cgContext.draw(cropped, in: drawRect)
-            }
+            // UIImage draw path keeps EXIF orientation correct.
+            inputImage.draw(in: baseRect)
         }
 
         return transformedImage.jpegData(compressionQuality: 0.9) ?? data
+    }
+
+    private func aspectFillRect(imageSize: CGSize, target: CGSize) -> CGRect {
+        let sourceW = max(imageSize.width, 1)
+        let sourceH = max(imageSize.height, 1)
+        let scale = max(target.width / sourceW, target.height / sourceH)
+        let width = sourceW * scale
+        let height = sourceH * scale
+        return CGRect(
+            x: (target.width - width) * 0.5,
+            y: (target.height - height) * 0.5,
+            width: width,
+            height: height
+        )
+    }
+
+    private func isGIFData(_ data: Data) -> Bool {
+        guard let source = CGImageSourceCreateWithData(data as CFData, nil),
+              let type = CGImageSourceGetType(source) else {
+            return false
+        }
+        return type == UTType.gif.identifier as CFString
     }
 
     private func resetCover() {
@@ -297,6 +327,7 @@ struct TransformableImage: View {
         GeometryReader { geometry in
             Image(uiImage: image)
                 .resizable()
+                .drawingGroup()
                 .scaledToFill()
                 .frame(width: geometry.size.width, height: geometry.size.height)
                 .scaleEffect(scale)
