@@ -109,33 +109,26 @@ struct RomCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             ZStack {
-                Rectangle()
-                    .fill(Color.gray.opacity(0.3))
-                    .aspectRatio(3/4, contentMode: .fit)
-                    .cornerRadius(12)
-
                 if let coverData = CoverArtService.shared.resolve(for: entry)?.data,
                    let coverImage = Image(data: coverData) {
                     coverImage
                         .resizable()
                         .aspectRatio(contentMode: .fill)
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 150)
-                        .cornerRadius(12)
                 } else {
                     PlatformPlaceholder(platform: entry.system)
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 150)
-                        .cornerRadius(12)
                 }
-
-
             }
+            .frame(maxWidth: .infinity)
+            .frame(height: 150)
+            .clipped()
+            .clipShape(RoundedRectangle(cornerRadius: 12))
 
             VStack(alignment: .leading, spacing: 4) {
-                Text(entry.title ?? "Unknown")
+                Text(GameCardTitleFormatter.format(entry.title, maxWords: 7))
                     .font(.headline)
                     .lineLimit(2)
+                    .truncationMode(.tail)
+                    .frame(height: 44, alignment: .topLeading)
 
                 if ROMCompatibilityService.shared.compatibility(for: entry).issue != nil {
                     Label("Unsupported Mapper", systemImage: "exclamationmark.triangle.fill")

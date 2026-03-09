@@ -1793,73 +1793,35 @@ struct GamePlayView: View {
         let safeLeading = geometry.safeAreaInsets.leading
         let safeTrailing = geometry.safeAreaInsets.trailing
         // Landscape-only layout rules (independent from portrait control rules).
-        let cameraSideExclusionInset: CGFloat = 64
+        let cameraSideExclusionInset: CGFloat = 20
         let cameraOnLeadingSide = safeLeading > safeTrailing
         let cameraLeadingInset = cameraOnLeadingSide ? cameraSideExclusionInset : 0
         let cameraTrailingInset = cameraOnLeadingSide ? 0 : cameraSideExclusionInset
 
-        let shellWidth = safeFrameValue(
-            max(
-                560,
-                min(
-                    geometry.size.width - safeLeading - safeTrailing - cameraLeadingInset - cameraTrailingInset - 12,
-                    1180.0
-                )
-            ),
-            fallback: 560
-        )
-        let shellHeight = safeFrameValue(max(300, min(geometry.size.height - 12, 600.0)), fallback: 300)
-        let innerWidth = safeFrameValue(shellWidth - 28, fallback: 532)
-        let mainEdgeInset: CGFloat = 16
-        let centerGap: CGFloat = 20
-        let sideColumnPreferred: CGFloat = 140
-        let sideColumnMax: CGFloat = 148
-        let sideColumnMin: CGFloat = 132
-        let centerColumnMin: CGFloat = 360
-        let controlEdgeAnchor: CGFloat = 80
-        let sideColumnCeiling = safeFrameValue(
-            max(sideColumnMin, (innerWidth - centerColumnMin - (centerGap * 2) - (mainEdgeInset * 2)) / 2),
-            fallback: sideColumnPreferred
-        )
-        let sideColumnWidth = safeFrameValue(
-            max(sideColumnMin, min(sideColumnMax, min(sideColumnPreferred, sideColumnCeiling))),
-            fallback: sideColumnPreferred
-        )
-        let centerColumnWidth = safeFrameValue(
-            max(
-                centerColumnMin,
-                innerWidth - (sideColumnWidth * 2) - (centerGap * 2) - (mainEdgeInset * 2)
-            ),
-            fallback: centerColumnMin
-        )
-        let displayPanelWidth = safeFrameValue(max(320, min(760, centerColumnWidth * 0.88)), fallback: 420)
-        let topBandHeight: CGFloat = 58
-        let bottomBarHeight: CGFloat = 64
-        let mainRowHeight = safeFrameValue(
-            max(150, shellHeight - topBandHeight - bottomBarHeight - 44),
-            fallback: 180
-        )
-        let controlsToScreenMinGap: CGFloat = 20
-        let shoulderToScreenMinGap: CGFloat = 16
-        let displayAspect = 512.0 / 192.0
-        let maxDisplayHeightFromWidth = safeFrameValue((displayPanelWidth - 8) / displayAspect, fallback: 120)
-        let displayHeight = safeFrameValue(min(mainRowHeight * 0.76, maxDisplayHeightFromWidth), fallback: 120)
-        let displayWidth = safeFrameValue(displayHeight * displayAspect, fallback: 320)
-        let dpadSize = safeFrameValue(110, fallback: 110)
-        let faceButtonDiameter = safeFrameValue(50, fallback: 50)
-        let faceButtonSpacing = safeFrameValue(8, fallback: 8)
-        let faceClusterWidth = (faceButtonDiameter + faceButtonSpacing) * 2
-        let currentEdgeAnchor = mainEdgeInset + (sideColumnWidth * 0.5)
-        let controlAnchorDelta = controlEdgeAnchor - currentEdgeAnchor
-        let shoulderWidth: CGFloat = 96
-        let shoulderHeight: CGFloat = 34
-        let utilityIconSize: CGFloat = 40
-        assert(centerGap >= controlsToScreenMinGap, "Landscape layout must keep >=20pt gap between screen and gameplay controls.")
-        assert(shoulderToScreenMinGap >= 16, "Landscape shoulder buttons must remain above gameplay controls with >=16pt gap.")
-        assert((mainEdgeInset + (sideColumnWidth - dpadSize) * 0.5) >= 24, "D-pad must keep >=24pt gap from device edge.")
-        assert((mainEdgeInset + (sideColumnWidth - faceClusterWidth) * 0.5) >= 20, "ABXY must keep >=20pt gap from device edge.")
+        let availableWidth = geometry.size.width - safeLeading - safeTrailing - cameraLeadingInset - cameraTrailingInset
+        let shellWidth = safeFrameValue(max(560, min(availableWidth * 0.995, 1120.0)), fallback: 560)
+        let shellHeight = safeFrameValue(max(320, min(geometry.size.height * 0.88, 470.0)), fallback: 320)
 
         return AnyView(
+            ndsLandscapeShellBody(
+                shellWidth: shellWidth,
+                shellHeight: shellHeight,
+                safeLeading: safeLeading,
+                safeTrailing: safeTrailing,
+                cameraLeadingInset: cameraLeadingInset,
+                cameraTrailingInset: cameraTrailingInset
+            )
+        )
+    }
+
+    private func ndsLandscapeShellBody(
+        shellWidth: CGFloat,
+        shellHeight: CGFloat,
+        safeLeading: CGFloat,
+        safeTrailing: CGFloat,
+        cameraLeadingInset: CGFloat,
+        cameraTrailingInset: CGFloat
+    ) -> some View {
         VStack(spacing: 0) {
             ndsTopBar
                 .padding(.horizontal, 12)
@@ -1867,151 +1829,43 @@ struct GamePlayView: View {
                 .padding(.bottom, 8)
 
             ZStack {
-                RoundedRectangle(cornerRadius: 26, style: .continuous)
+                RoundedRectangle(cornerRadius: 42, style: .continuous)
                     .fill(
                         LinearGradient(
-                            colors: [Color(white: 0.95), Color(white: 0.90)],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
+                            colors: [
+                                Color.white.opacity(0.97),
+                                Color(red: 0.92, green: 0.92, blue: 0.94),
+                                Color(red: 0.86, green: 0.86, blue: 0.88)
+                            ],
+                            startPoint: .top,
+                            endPoint: .bottom
                         )
                     )
                     .overlay(
-                        RoundedRectangle(cornerRadius: 26, style: .continuous)
-                            .stroke(Color.black.opacity(0.12), lineWidth: 1)
+                        RoundedRectangle(cornerRadius: 42, style: .continuous)
+                            .stroke(Color.black.opacity(0.16), lineWidth: 1)
                     )
-                    .shadow(color: .black.opacity(0.30), radius: 22, x: 0, y: 12)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 42, style: .continuous)
+                            .stroke(Color.white.opacity(0.42), lineWidth: 1)
+                            .padding(1)
+                    )
+                    .shadow(color: Color.black.opacity(0.12), radius: 18, x: 0, y: 8)
 
-                VStack(spacing: 0) {
-                    HStack(spacing: centerGap) {
-                        HStack {
-                            GBAShoulderBar(label: "L", width: shoulderWidth, height: shoulderHeight, fontSize: 17) {
-                                viewModel.handleButtonPress(.l1, pressed: true)
-                            } onRelease: {
-                                viewModel.handleButtonPress(.l1, pressed: false)
-                            }
-                            Spacer(minLength: 0)
-                        }
-                        .frame(width: sideColumnWidth)
-
-                        Color.clear
-                            .frame(width: centerColumnWidth)
-
-                        HStack {
-                            Spacer(minLength: 0)
-                            GBAShoulderBar(label: "R", width: shoulderWidth, height: shoulderHeight, fontSize: 17) {
-                                viewModel.handleButtonPress(.r1, pressed: true)
-                            } onRelease: {
-                                viewModel.handleButtonPress(.r1, pressed: false)
-                            }
-                        }
-                        .frame(width: sideColumnWidth)
-                    }
-                    .frame(height: topBandHeight)
-                    .padding(.horizontal, mainEdgeInset)
-                    .padding(.top, 16)
-                    .padding(.bottom, shoulderToScreenMinGap)
-
-                    HStack(spacing: centerGap) {
-                        ZStack {
-                            NDSDPadView(size: dpadSize) { button, pressed in
-                                viewModel.handleButtonPress(button, pressed: pressed)
-                            }
-                            .frame(width: dpadSize, height: dpadSize)
-                            .offset(x: 0, y: 8)
-                        }
-                        .offset(x: controlAnchorDelta)
-                        .frame(width: sideColumnWidth, height: mainRowHeight)
-
-                        ZStack {
-                            emulatorDisplayView
-                                .frame(width: displayWidth, height: displayHeight)
-                                .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 8, style: .continuous)
-                                        .stroke(Color.black.opacity(0.82), lineWidth: 2)
-                                )
-                                .overlay(alignment: .center) {
-                                    Rectangle()
-                                        .fill(Color.black.opacity(0.85))
-                                        .frame(width: 3, height: displayHeight)
-                                }
-                                .overlay(alignment: .trailing) {
-                                    RoundedRectangle(cornerRadius: 8, style: .continuous)
-                                        .stroke(Color.purple.opacity(0.40), lineWidth: 2)
-                                        .frame(width: (displayWidth / 2) - 8, height: displayHeight - 8)
-                                        .shadow(color: Color.purple.opacity(0.20), radius: 8, x: 0, y: 0)
-                                        .padding(.trailing, 4)
-                                }
-                                .overlay(alignment: .trailing) {
-                                    NDSTouchScreenOverlayView { normalizedX, normalizedY, pressed in
-                                        if pressed {
-                                            viewModel.setNDSTouchNormalized(x: normalizedX, y: normalizedY, pressed: true)
-                                        } else {
-                                            viewModel.clearNDSTouch()
-                                        }
-                                    }
-                                    .frame(width: displayWidth / 2, height: displayHeight)
-                                }
-                        }
-                        .frame(width: displayPanelWidth, height: mainRowHeight)
-                        .background(Color.black.opacity(0.10))
-                        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
-                        .frame(width: centerColumnWidth)
-
-                        ZStack {
-                            NDSFaceClusterView(
-                                onButton: { button, pressed in
-                                    viewModel.handleButtonPress(button, pressed: pressed)
-                                },
-                                buttonDiameter: faceButtonDiameter,
-                                buttonSpacing: faceButtonSpacing,
-                                showsBasePlate: false
-                            )
-                            .frame(width: faceClusterWidth, height: faceClusterWidth)
-                            .offset(x: 0, y: 6)
-                        }
-                        .offset(x: -controlAnchorDelta)
-                        .frame(width: sideColumnWidth, height: mainRowHeight)
-                    }
-                    .padding(.horizontal, mainEdgeInset)
-                    .padding(.bottom, 10)
-
-                    HStack(spacing: centerGap) {
-                        HStack {
-                            ndsLandscapeMenuCompactButton(theme: .light) {
-                                showPauseMenu = true
-                            }
-                            Spacer(minLength: 0)
-                        }
-                        .frame(width: sideColumnWidth)
-
-                        HStack(spacing: 12) {
-                            gbUtilityIcon(systemName: "square.and.arrow.down.fill", tint: .green, customSize: utilityIconSize) { viewModel.quickSave() }
-                            gbUtilityIcon(systemName: "square.and.arrow.up.fill", tint: .orange, customSize: utilityIconSize) { viewModel.quickLoad() }
-                            gbUtilityIcon(systemName: "forward.fill", tint: .yellow, customSize: utilityIconSize) {
-                                fastForwardSpeed = fastForwardSpeed == 2 ? 1 : 2
-                                viewModel.setFastForward(fastForwardSpeed)
-                            }
-                            gbUtilityIcon(systemName: "speaker.wave.2.fill", tint: .cyan, customSize: utilityIconSize) {}
-                        }
-                        .frame(width: centerColumnWidth, height: 40)
-
-                        HStack {
-                            Spacer(minLength: 0)
-                            ndsLandscapeSelectStartCompactRow(theme: .light) { pressed in
-                                viewModel.handleButtonPress(.select, pressed: pressed)
-                            } onStartPress: { pressed in
-                                viewModel.handleButtonPress(.start, pressed: pressed)
-                            }
-                        }
-                        .frame(width: sideColumnWidth)
-                    }
-                    .frame(height: bottomBarHeight)
-                    .padding(.horizontal, mainEdgeInset)
-                    .padding(.bottom, 18)
+                GeometryReader { deckGeo in
+                    let metrics = ndsLandscapeMetrics(
+                        contentWidth: deckGeo.size.width,
+                        contentHeight: deckGeo.size.height
+                    )
+                    ndsLandscapeDeckLayer(metrics: metrics)
+                        .frame(width: deckGeo.size.width, height: deckGeo.size.height)
                 }
+                .padding(.horizontal, 28)
+                .padding(.top, 10)
+                .padding(.bottom, 20)
             }
             .frame(width: shellWidth, height: shellHeight)
+            .offset(y: -8)
             .padding(.bottom, 6)
 
             statusBar
@@ -2021,7 +1875,337 @@ struct GamePlayView: View {
         .padding(.leading, safeLeading + cameraLeadingInset)
         .padding(.trailing, safeTrailing + cameraTrailingInset)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+    }
+
+    private struct NDSLandscapeLayoutMetrics {
+        let contentWidth: CGFloat
+        let contentHeight: CGFloat
+        let deckWidth: CGFloat
+        let deckHeight: CGFloat
+        let deckTop: CGFloat
+        let shoulderWidth: CGFloat
+        let shoulderHeight: CGFloat
+        let shoulderY: CGFloat
+        let utilityWidth: CGFloat
+        let utilityHeight: CGFloat
+        let utilityY: CGFloat
+        let dpadY: CGFloat
+        let abxyY: CGFloat
+        let centerY: CGFloat
+        let dpadX: CGFloat
+        let abxyX: CGFloat
+    }
+
+    private func ndsLandscapeMetrics(contentWidth: CGFloat, contentHeight: CGFloat) -> NDSLandscapeLayoutMetrics {
+        let deckWidth = min(contentWidth * 0.88, 1000)
+        let deckHeight = min(contentHeight * 0.62, 376)
+        let deckTop: CGFloat = -12
+        let shoulderWidth: CGFloat = 34
+        let shoulderHeight: CGFloat = 96
+        // Keep shoulders in the upper half, aligned near the deck midline.
+        let shoulderY = deckTop + (deckHeight * 0.64)
+        let utilityWidth = min(340, deckWidth * 0.36)
+        let utilityHeight: CGFloat = 40
+        let utilityY = deckTop + deckHeight + 8 + (utilityHeight / 2)
+        let lowerTop = utilityY + (utilityHeight / 2) + 6
+        let lowerHeight = max(112, contentHeight - lowerTop - 14)
+        let dpadY = min(contentHeight - 64, lowerTop + (lowerHeight * 0.34))
+        let abxyY = dpadY
+        let centerY = min(contentHeight - 34, lowerTop + (lowerHeight * 0.60))
+        return NDSLandscapeLayoutMetrics(
+            contentWidth: contentWidth,
+            contentHeight: contentHeight,
+            deckWidth: deckWidth,
+            deckHeight: deckHeight,
+            deckTop: deckTop,
+            shoulderWidth: shoulderWidth,
+            shoulderHeight: shoulderHeight,
+            shoulderY: shoulderY,
+            utilityWidth: utilityWidth,
+            utilityHeight: utilityHeight,
+            utilityY: utilityY,
+            dpadY: dpadY,
+            abxyY: abxyY,
+            centerY: centerY,
+            dpadX: contentWidth * 0.15,
+            abxyX: contentWidth * 0.85
         )
+    }
+
+    private func ndsLandscapeDeckLayer(metrics: NDSLandscapeLayoutMetrics) -> some View {
+        let deckMinX = (metrics.contentWidth - metrics.deckWidth) / 2
+        let deckMaxX = deckMinX + metrics.deckWidth
+        return ZStack {
+            ndsLandscapeDisplayDeck(metrics: metrics)
+
+            ndsLandscapeSideShoulder(label: "L") {
+                viewModel.handleButtonPress(.l1, pressed: true)
+            } onRelease: {
+                viewModel.handleButtonPress(.l1, pressed: false)
+            }
+            .frame(width: metrics.shoulderWidth, height: metrics.shoulderHeight)
+            .position(
+                x: deckMinX - (metrics.shoulderWidth / 2) - 6,
+                y: metrics.shoulderY
+            )
+
+            ndsLandscapeSideShoulder(label: "R") {
+                viewModel.handleButtonPress(.r1, pressed: true)
+            } onRelease: {
+                viewModel.handleButtonPress(.r1, pressed: false)
+            }
+            .frame(width: metrics.shoulderWidth, height: metrics.shoulderHeight)
+            .position(
+                x: deckMaxX + (metrics.shoulderWidth / 2) + 6,
+                y: metrics.shoulderY
+            )
+
+            ndsLandscapeUtilityTray(width: metrics.utilityWidth, height: metrics.utilityHeight)
+                .position(x: metrics.contentWidth * 0.5, y: metrics.utilityY)
+
+            NDSDPadView(size: 98) { button, pressed in
+                viewModel.handleButtonPress(button, pressed: pressed)
+            }
+            .position(x: metrics.dpadX, y: metrics.dpadY)
+
+            NDSFaceClusterView(
+                onButton: { button, pressed in
+                    viewModel.handleButtonPress(button, pressed: pressed)
+                },
+                buttonDiameter: 40,
+                buttonSpacing: 6,
+                showsBasePlate: false,
+                minHitSize: 52
+            )
+            .position(x: metrics.abxyX, y: metrics.abxyY)
+
+            ndsLandscapeCenterSystemStrip()
+                .position(x: metrics.contentWidth * 0.5, y: metrics.centerY)
+        }
+    }
+
+    private func ndsLandscapeDisplayDeck(metrics: NDSLandscapeLayoutMetrics) -> some View {
+        RoundedRectangle(cornerRadius: 26, style: .continuous)
+            .fill(Color.black.opacity(0.06))
+            .overlay(
+                RoundedRectangle(cornerRadius: 26, style: .continuous)
+                    .stroke(Color.black.opacity(0.10), lineWidth: 1)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 22, style: .continuous)
+                    .stroke(Color.white.opacity(0.30), lineWidth: 1)
+                    .padding(3)
+            )
+            .overlay {
+                ndsLandscapeDualScreens(
+                    deckWidth: metrics.deckWidth,
+                    deckHeight: metrics.deckHeight
+                )
+            }
+            .shadow(color: Color.black.opacity(0.08), radius: 10, x: 0, y: 3)
+            .frame(width: metrics.deckWidth, height: metrics.deckHeight)
+            .position(x: metrics.contentWidth * 0.5, y: metrics.deckTop + (metrics.deckHeight / 2))
+    }
+
+    private func ndsLandscapeDualScreens(deckWidth: CGFloat, deckHeight: CGFloat) -> some View {
+        let innerPadding: CGFloat = 8
+        let dividerWidth: CGFloat = 4
+        let singleWidth = (deckWidth - (innerPadding * 2) - dividerWidth) / 2
+        let singleHeight = min(deckHeight - (innerPadding * 2), singleWidth * 0.92)
+        let combinedWidth = singleWidth * 2
+
+        return HStack(spacing: 0) {
+            ndsLandscapeSingleScreen(
+                width: singleWidth,
+                height: singleHeight,
+                combinedWidth: combinedWidth,
+                xOffset: combinedWidth / 4,
+                isTouchScreen: false,
+                drivesEmulation: true
+            )
+
+            Rectangle()
+                .fill(Color.black.opacity(0.30))
+                .frame(width: dividerWidth, height: max(1, singleHeight - 4))
+
+            ndsLandscapeSingleScreen(
+                width: singleWidth,
+                height: singleHeight,
+                combinedWidth: combinedWidth,
+                xOffset: -(combinedWidth / 4),
+                isTouchScreen: true,
+                drivesEmulation: false
+            )
+        }
+        .padding(innerPadding)
+    }
+
+    private func ndsLandscapeSingleScreen(
+        width: CGFloat,
+        height: CGFloat,
+        combinedWidth: CGFloat,
+        xOffset: CGFloat,
+        isTouchScreen: Bool,
+        drivesEmulation: Bool
+    ) -> some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                .fill(Color.black)
+            emulatorDisplayView(advancesEmulation: drivesEmulation)
+                .frame(width: combinedWidth, height: height)
+                .offset(x: xOffset)
+
+            if isTouchScreen {
+                NDSTouchScreenOverlayView { normalizedX, normalizedY, pressed in
+                    if pressed {
+                        viewModel.setNDSTouchNormalized(x: normalizedX, y: normalizedY, pressed: true)
+                    } else {
+                        viewModel.clearNDSTouch()
+                    }
+                }
+                .frame(width: width, height: height)
+            }
+        }
+        .frame(width: width, height: height)
+        .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                .stroke(Color.black.opacity(0.70), lineWidth: 1.2)
+        )
+    }
+
+    private func ndsLandscapeUtilityTray(width: CGFloat, height: CGFloat) -> some View {
+        HStack(spacing: 0) {
+            ndsLandscapeUtilitySegment(icon: "square.and.arrow.down") { viewModel.quickSave() }
+            Rectangle().fill(Color.black.opacity(0.18)).frame(width: 1, height: height - 8)
+            ndsLandscapeUtilitySegment(icon: "square.and.arrow.up") { viewModel.quickLoad() }
+            Rectangle().fill(Color.black.opacity(0.18)).frame(width: 1, height: height - 8)
+            ndsLandscapeUtilitySegment(icon: "forward.fill") {
+                fastForwardSpeed = fastForwardSpeed == 2 ? 1 : 2
+                viewModel.setFastForward(fastForwardSpeed)
+            }
+            Rectangle().fill(Color.black.opacity(0.18)).frame(width: 1, height: height - 8)
+            ndsLandscapeUtilitySegment(icon: "speaker.wave.2") {}
+        }
+        .frame(width: width, height: height)
+        .background(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .fill(Color.white.opacity(0.90))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .stroke(Color.black.opacity(0.22), lineWidth: 1.2)
+                )
+        )
+    }
+
+    private func ndsLandscapeUtilitySegment(icon: String, onPress: @escaping () -> Void) -> some View {
+        Button(action: onPress) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .fill(Color.clear)
+                    .padding(.horizontal, 2)
+                    .padding(.vertical, 2)
+
+                Image(systemName: icon)
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundColor(Color.black.opacity(0.36))
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+        }
+        .buttonStyle(.plain)
+        .contentShape(Rectangle())
+    }
+
+    private func ndsLandscapeCenterSystemStrip() -> some View {
+        HStack(spacing: 14) {
+            Text("SELECT")
+                .font(.system(size: 12, weight: .medium))
+                .foregroundColor(Color.black.opacity(0.34))
+
+            HStack(spacing: 12) {
+                ndsLandscapeRoundSystemButton(icon: "circle.fill", onPress: {
+                    viewModel.handleButtonPress(.select, pressed: true)
+                }, onRelease: {
+                    viewModel.handleButtonPress(.select, pressed: false)
+                })
+                ndsLandscapeHomeButton(onPress: { showPauseMenu = true })
+                ndsLandscapeRoundSystemButton(icon: "play.fill", onPress: {
+                    viewModel.handleButtonPress(.start, pressed: true)
+                }, onRelease: {
+                    viewModel.handleButtonPress(.start, pressed: false)
+                })
+            }
+            .padding(.horizontal, 12)
+            .frame(height: 44)
+            .background(
+                Capsule(style: .continuous)
+                    .fill(Color.white.opacity(0.65))
+                    .overlay(
+                        Capsule(style: .continuous)
+                            .stroke(Color.black.opacity(0.20), lineWidth: 1.2)
+                    )
+            )
+
+            Text("START")
+                .font(.system(size: 12, weight: .medium))
+                .foregroundColor(Color.black.opacity(0.34))
+        }
+        .frame(height: 44)
+    }
+
+    private func ndsLandscapeRoundSystemButton(
+        icon: String,
+        onPress: @escaping () -> Void,
+        onRelease: @escaping () -> Void
+    ) -> some View {
+        NDSPressableControl(onPress: onPress, onRelease: onRelease) { isPressed in
+            Circle()
+                .fill(Color.white.opacity(isPressed ? 0.80 : 0.96))
+                .overlay(Circle().stroke(Color.black.opacity(0.42), lineWidth: 1.4))
+                .frame(width: 36, height: 36)
+                .overlay(
+                    Image(systemName: icon)
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundColor(Color.black.opacity(0.32))
+                )
+                .shadow(color: Color.black.opacity(0.12), radius: 3, x: 0, y: 1)
+        }
+    }
+
+    private func ndsLandscapeHomeButton(onPress: @escaping () -> Void) -> some View {
+        NDSPressableControl(onPress: onPress, onRelease: {}) { isPressed in
+            Capsule(style: .continuous)
+                .fill(Color.white.opacity(isPressed ? 0.80 : 0.96))
+                .overlay(Capsule().stroke(Color.black.opacity(0.42), lineWidth: 1.4))
+                .frame(width: 62, height: 36)
+                .overlay(
+                    Image(systemName: "house.fill")
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundColor(Color.black.opacity(0.32))
+                )
+                .shadow(color: Color.black.opacity(0.12), radius: 3, x: 0, y: 1)
+        }
+    }
+
+    private func ndsLandscapeSideShoulder(
+        label: String,
+        onPress: @escaping () -> Void,
+        onRelease: @escaping () -> Void
+    ) -> some View {
+        NDSPressableControl(onPress: onPress, onRelease: onRelease) { isPressed in
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .fill(Color.white.opacity(isPressed ? 0.85 : 0.95))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .stroke(Color.black.opacity(0.38), lineWidth: 1.4)
+                )
+                .overlay(
+                    Text(label)
+                        .font(.system(size: 16, weight: .medium))
+                        .foregroundColor(Color.black.opacity(0.30))
+                )
+                .shadow(color: Color.black.opacity(0.12), radius: 4, x: 0, y: 1)
+        }
     }
 
     private func ndsConsoleLayoutPortraitShell(
@@ -3094,11 +3278,15 @@ struct GamePlayView: View {
     }
 
     private var emulatorDisplayView: some View {
+        emulatorDisplayView(advancesEmulation: true)
+    }
+
+    private func emulatorDisplayView(advancesEmulation: Bool) -> some View {
         ZStack {
             if let renderer = viewModel.renderer {
                 MetalView(
                     metalRenderer: renderer,
-                    tick: viewModel.tick,
+                    tick: advancesEmulation ? viewModel.tick : nil,
                     renderScale: viewModel.currentRenderScale
                 )
             } else {
@@ -4766,6 +4954,7 @@ private struct NDSFaceClusterView: View {
     var buttonDiameter: CGFloat = 64
     var buttonSpacing: CGFloat = 14
     var showsBasePlate: Bool = true
+    var minHitSize: CGFloat = 78
 
     private var offsetAmount: CGFloat { buttonSpacing + (buttonDiameter / 2) }
     private var clusterSize: CGFloat { (offsetAmount + (buttonDiameter / 2)) * 2 }
@@ -4794,7 +4983,7 @@ private struct NDSFaceClusterView: View {
     }
 
     private func round(_ button: EmulatorButton, _ label: String) -> some View {
-        let touchSize = max(78, buttonDiameter + 12)
+        let touchSize = max(minHitSize, buttonDiameter + 8)
         return NDSPressableControl(
             onPress: { onButton(button, true) },
             onRelease: { onButton(button, false) }

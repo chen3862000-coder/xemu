@@ -63,12 +63,13 @@ struct GameListView: View {
     }
 
     private var collectorGridColumns: [GridItem] {
-        [
-            GridItem(.flexible(minimum: 0, maximum: .infinity), spacing: 16, alignment: .top),
-            GridItem(.flexible(minimum: 0, maximum: .infinity), spacing: 16, alignment: .top),
-            GridItem(.flexible(minimum: 0, maximum: .infinity), spacing: 16, alignment: .top),
-            GridItem(.flexible(minimum: 0, maximum: .infinity), spacing: 16, alignment: .top)
-        ]
+        #if os(iOS)
+        let width = UIScreen.main.bounds.width
+        let columnCount = width >= 1200 ? 4 : 3
+        #else
+        let columnCount = 4
+        #endif
+        return Array(repeating: GridItem(.flexible(minimum: 0, maximum: .infinity), spacing: 20, alignment: .top), count: columnCount)
     }
     
     var body: some View {
@@ -414,7 +415,7 @@ struct GameListView: View {
                         ForEach(Array(viewModel.topPlayedGames.prefix(3).enumerated()), id: \.element.id) { idx, game in
                             MostPlayedBarRow(
                                 rank: idx + 1,
-                                title: game.title ?? "Unknown",
+                                title: GameCardTitleFormatter.format(game.title, maxWords: 7),
                                 seconds: game.totalPlayTime,
                                 maxSeconds: max(viewModel.topPlayedGames.first?.totalPlayTime ?? 1, 1)
                             )
@@ -927,11 +928,34 @@ private struct SystemHubGameCard: View {
     let launchIssue: ROMLaunchIssue?
     let variant: SystemHubGameCardVariant
 
+    private var coverHeight: CGFloat {
+        switch variant {
+        case .continuePlaying: return 110
+        case .recentlyAdded: return 96
+        }
+    }
+
+    private var cardHeight: CGFloat {
+        switch variant {
+        case .continuePlaying: return 196
+        case .recentlyAdded: return 182
+        }
+    }
+
+    private var titleHeight: CGFloat {
+        switch variant {
+        case .continuePlaying: return 44
+        case .recentlyAdded: return 36
+        }
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             ZStack(alignment: .topTrailing) {
                 coverView
-                    .frame(height: variant == .continuePlaying ? 110 : 96)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: coverHeight)
+                    .clipped()
 
                 Text(platformText)
                     .font(.system(size: 11, weight: .bold))
@@ -958,27 +982,38 @@ private struct SystemHubGameCard: View {
                     }
                 }
             }
+            .frame(maxWidth: .infinity)
 
             VStack(alignment: .leading, spacing: 4) {
-                Text(game.title ?? "Unknown")
+                Text(GameCardTitleFormatter.format(game.title, maxWords: 7))
                     .font(.system(size: 14, weight: .bold))
                     .foregroundColor(AppColors.textPrimary)
                     .lineLimit(2)
+                    .truncationMode(.tail)
+                    .frame(maxWidth: .infinity, minHeight: titleHeight, maxHeight: titleHeight, alignment: .topLeading)
                     .multilineTextAlignment(.leading)
 
                 Text(subtitle)
                     .font(.system(size: 11, weight: .medium))
                     .foregroundColor(AppColors.primary)
                     .lineLimit(1)
+                    .truncationMode(.tail)
+                    .frame(maxWidth: .infinity, minHeight: 16, maxHeight: 16, alignment: .leading)
+
+                Spacer(minLength: 0)
             }
+            .frame(maxWidth: .infinity, alignment: .topLeading)
             .padding(12)
+            .frame(maxWidth: .infinity, minHeight: cardHeight - coverHeight, maxHeight: cardHeight - coverHeight, alignment: .topLeading)
+            .background(AppColors.surface)
         }
+        .frame(maxWidth: .infinity, minHeight: cardHeight, maxHeight: cardHeight, alignment: .topLeading)
         .background(AppColors.surface)
         .overlay(
             RoundedRectangle(cornerRadius: 16)
                 .stroke(AppColors.surfaceLight.opacity(0.45), lineWidth: 1)
         )
-        .shadow(color: AppColors.primary.opacity(0.06), radius: 10, x: 0, y: 5)
+        .shadow(color: Color.black.opacity(0.06), radius: 8, x: 0, y: 3)
         .clipShape(RoundedRectangle(cornerRadius: 16))
     }
 
@@ -1049,37 +1084,17 @@ private struct SystemCollectorCard: View {
     let launchIssue: ROMLaunchIssue?
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            coverSection
-
-            Text(game.title ?? "Unknown")
-                .font(.system(size: 14, weight: .semibold))
-                .foregroundColor(AppColors.textPrimary)
-                .lineLimit(2)
-
-            HStack(spacing: 4) {
-                Image(systemName: launchIssue == nil ? "clock.fill" : "exclamationmark.triangle.fill")
-                    .font(.system(size: 10, weight: .semibold))
-                Text(launchIssue?.title ?? subtitle)
-                    .font(.system(size: 11, weight: .medium))
-                    .lineLimit(1)
-            }
-            .foregroundColor(launchIssue == nil ? AppColors.textMuted : .orange)
+        CollectorGameCard(
+            variant: .standard,
+            title: GameCardTitleFormatter.format(game.title, maxWords: 7),
+            metadataPrimary: subtitle,
+            metadataSecondary: nil,
+            platformTag: platformText,
+            launchIssueIconName: launchIssue?.iconName,
+            progress: nil
+        ) {
+            coverView
         }
-        .frame(maxWidth: .infinity, alignment: .topLeading)
-    }
-
-    private var coverSection: some View {
-        ZStack {
-            GeometryReader { proxy in
-                coverView
-                    .frame(width: proxy.size.width, height: proxy.size.height)
-                    .clipped()
-            }
-        }
-        .aspectRatio(1.0, contentMode: .fit)
-        .frame(maxWidth: .infinity)
-        .clipped()
     }
 
     @ViewBuilder
@@ -1109,33 +1124,6 @@ private struct SystemCollectorCard: View {
 #endif
         }
         .clipShape(RoundedRectangle(cornerRadius: 18))
-        .overlay {
-            LinearGradient(
-                colors: [Color.white.opacity(0.12), Color.clear],
-                startPoint: .top,
-                endPoint: .center
-            )
-            .clipShape(RoundedRectangle(cornerRadius: 18))
-            .allowsHitTesting(false)
-        }
-        .overlay {
-            RoundedRectangle(cornerRadius: 18)
-                .stroke(Color.white.opacity(0.15), lineWidth: 1)
-                .allowsHitTesting(false)
-        }
-        .overlay(alignment: .bottom) {
-            GeometryReader { proxy in
-                Capsule()
-                    .fill(Color.black.opacity(0.08))
-                    .frame(width: proxy.size.width * 0.72, height: 10)
-                    .blur(radius: 8)
-                    .offset(y: 8)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
-            }
-            .allowsHitTesting(false)
-        }
-        .shadow(color: .black.opacity(0.12), radius: 12, x: 0, y: 6)
-        .shadow(color: SubpageUI.CollectorIdentity.glow(forSystem: platformText), radius: 10, x: 0, y: 5)
     }
 
     private var placeholder: some View {
@@ -1158,10 +1146,11 @@ struct GameCardRow: View {
             gameCover
 
             VStack(alignment: .leading, spacing: 6) {
-                Text(game.title ?? "Unknown")
+                Text(GameCardTitleFormatter.format(game.title, maxWords: 7))
                     .font(.system(size: 14, weight: .semibold))
                     .foregroundColor(AppColors.textPrimary)
                     .lineLimit(1)
+                    .truncationMode(.tail)
 
                 if launchIssue != nil {
                     Label("Unsupported Mapper", systemImage: "exclamationmark.triangle.fill")

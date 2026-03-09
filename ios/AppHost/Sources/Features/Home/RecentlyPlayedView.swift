@@ -43,11 +43,11 @@ struct RecentlyPlayedView: View {
     private var collectorGridColumns: [GridItem] {
 #if os(iOS)
         let width = UIScreen.main.bounds.width
-        let columnCount = width >= 900 ? 4 : 3
+        let columnCount = width >= 1200 ? 4 : 3
 #else
         let columnCount = 4
 #endif
-        return Array(repeating: GridItem(.flexible(minimum: 0), spacing: 16), count: columnCount)
+        return Array(repeating: GridItem(.flexible(minimum: 0), spacing: 20), count: columnCount)
     }
 
     var body: some View {
@@ -316,10 +316,14 @@ struct RecentlyPlayedView: View {
                 RecentCollectorCard(entry: entry) {
                     launchGame(entry)
                 }
+                .frame(maxWidth: .infinity, alignment: .topLeading)
                 .contextMenu {
                     recentContextMenu(entry)
                 }
             }
+        }
+        .transaction { transaction in
+            transaction.animation = nil
         }
     }
 
@@ -502,38 +506,20 @@ private struct RecentCollectorCard: View {
     let entry: ROMLibraryEntry
     let onTap: () -> Void
 
-    private var consoleAccent: Color {
-        SubpageUI.CollectorIdentity.accent(forSystem: entry.system)
-    }
-
     var body: some View {
         Button(action: onTap) {
-            VStack(alignment: .leading, spacing: 8) {
-                ZStack(alignment: .topTrailing) {
-                    coverArt
-                        .aspectRatio(2.0 / 3.0, contentMode: .fit)
-                        .frame(maxWidth: .infinity)
-
-                    Text((entry.system ?? "UNK").uppercased())
-                        .font(.system(size: 10, weight: .semibold))
-                        .foregroundColor(.white)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 4)
-                        .background(consoleAccent.opacity(0.94))
-                        .clipShape(Capsule())
-                        .padding(8)
-                }
-
-                Text(entry.title ?? "Unknown Game")
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundColor(AppColors.textPrimary)
-                    .lineLimit(2)
-
-                Text(metaLine)
-                    .font(.system(size: 11, weight: .medium))
-                    .foregroundColor(AppColors.textMuted)
-                    .lineLimit(1)
+            CollectorGameCard(
+                variant: .standard,
+                title: GameCardTitleFormatter.format(entry.title, maxWords: 7),
+                metadataPrimary: lastPlayedLabel,
+                metadataSecondary: playtimeLabel,
+                platformTag: (entry.system ?? "UNK").uppercased(),
+                launchIssueIconName: ROMCompatibilityService.shared.compatibility(for: entry).issue?.iconName,
+                progress: nil
+            ) {
+                coverArt
             }
+            .frame(maxWidth: .infinity, alignment: .topLeading)
         }
         .buttonStyle(CollectorCardPressStyle())
     }
@@ -595,15 +581,12 @@ private struct RecentCollectorCard: View {
         .shadow(color: SubpageUI.CollectorIdentity.glow(forSystem: entry.system), radius: 10, x: 0, y: 5)
     }
 
-    private var metaLine: String {
-        if let issue = ROMCompatibilityService.shared.compatibility(for: entry).issue {
-            return issue.title
-        }
+    private var playtimeLabel: String? {
         if entry.playtimeTotal > 0 {
             let h = max(0, Int(entry.playtimeTotal) / 3600)
-            return h > 0 ? "\(lastPlayedLabel) • \(h)h" : "\(lastPlayedLabel) • \(max(1, Int(entry.playtimeTotal) / 60))m"
+            return h > 0 ? "\(h)h" : "\(max(1, Int(entry.playtimeTotal) / 60))m"
         }
-        return lastPlayedLabel
+        return nil
     }
 
     private var lastPlayedLabel: String {
@@ -635,10 +618,12 @@ private struct RecentResumeCard: View {
                     .clipShape(RoundedRectangle(cornerRadius: 20))
 
                 VStack(alignment: .leading, spacing: 7) {
-                    Text(entry.title ?? "Unknown Game")
+                    Text(GameCardTitleFormatter.format(entry.title, maxWords: 7))
                         .font(.system(size: 17, weight: .semibold))
                         .foregroundColor(.white)
                         .lineLimit(2)
+                        .truncationMode(.tail)
+                        .frame(height: 42, alignment: .topLeading)
                         .shadow(color: .black.opacity(0.25), radius: 4, x: 0, y: 1)
 
                     Text(lastPlayedLabel)
@@ -751,10 +736,12 @@ private struct RecentRow: View {
                     .clipShape(RoundedRectangle(cornerRadius: 14))
 
                 VStack(alignment: .leading, spacing: 5) {
-                    Text(entry.title ?? "Unknown Game")
+                    Text(GameCardTitleFormatter.format(entry.title, maxWords: 7))
                         .font(.system(size: 17, weight: .semibold))
                         .foregroundColor(AppColors.textPrimary)
                         .lineLimit(2)
+                        .truncationMode(.tail)
+                        .frame(height: 42, alignment: .topLeading)
 
                     Text(metaLine)
                         .font(.system(size: 13, weight: .medium))

@@ -22,10 +22,12 @@ struct ResumeCard: View {
                 
                 // Content
                 VStack(alignment: .leading, spacing: 6) {
-                    Text(entry.title ?? "Unknown")
+                    Text(GameCardTitleFormatter.format(entry.title, maxWords: 7))
                         .font(.system(size: 16, weight: .semibold))
                         .foregroundColor(.white)
                         .lineLimit(2)
+                        .truncationMode(.tail)
+                        .frame(height: 40, alignment: .topLeading)
                     
                     HStack(spacing: 6) {
                         Text(lastPlayedText)

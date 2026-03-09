@@ -261,11 +261,13 @@ struct HomeView: View {
     }
 
     private var collectorModeContent: some View {
-        VStack(alignment: .leading, spacing: 18) {
+        VStack(alignment: .leading, spacing: 28) {
             collectorActionsRow
             collectorContinueSection
             collectorSystemsSection
+            collectorRecentlyAddedSection
         }
+        .padding(.horizontal, 8)
     }
 
     private var collectorActionsRow: some View {
@@ -276,12 +278,12 @@ struct HomeView: View {
                 HStack(spacing: 6) {
                     Image(systemName: "square.grid.2x2")
                         .font(.system(size: 12, weight: .semibold))
-                    Text("All Games")
+                    Text("Library")
                         .font(.system(size: 13, weight: .semibold))
                 }
                 .foregroundColor(AppColors.textPrimary)
-                .padding(.horizontal, 12)
-                .frame(height: 34)
+                .padding(.horizontal, 14)
+                .frame(height: 38)
                 .background(AppColors.surface)
                 .overlay(
                     Capsule().stroke(AppColors.surfaceLight.opacity(0.6), lineWidth: 1)
@@ -300,8 +302,8 @@ struct HomeView: View {
                         .font(.system(size: 13, weight: .semibold))
                 }
                 .foregroundColor(AppColors.textPrimary)
-                .padding(.horizontal, 12)
-                .frame(height: 34)
+                .padding(.horizontal, 14)
+                .frame(height: 38)
                 .background(AppColors.surface)
                 .overlay(
                     Capsule().stroke(AppColors.surfaceLight.opacity(0.6), lineWidth: 1)
@@ -318,14 +320,14 @@ struct HomeView: View {
         VStack(alignment: .leading, spacing: 10) {
             HStack {
                 Text("Continue Playing")
-                    .font(.system(size: 16, weight: .semibold))
+                    .font(.system(size: 24, weight: .bold))
                     .foregroundColor(AppColors.textPrimary)
                 Spacer()
                 Button("View All") {
                     showingRecentlyPlayed = true
                 }
                 .buttonStyle(.plain)
-                .font(.system(size: 13, weight: .semibold))
+                .font(.system(size: 15, weight: .semibold))
                 .foregroundColor(AppColors.primary)
             }
 
@@ -344,10 +346,10 @@ struct HomeView: View {
                 ScrollView(.horizontal, showsIndicators: false) {
                     LazyHStack(spacing: 20) {
                         ForEach(viewModel.recentGames) { game in
-                            RecentGameCard(game: game) {
+                            RecentGameCard(game: game, variant: .featured) {
                                 launchRecentGame(game)
                             }
-                            .frame(width: 210)
+                            .frame(width: 330, height: 280)
                             .contextMenu {
                                 recentGameContextMenu(game)
                             }
@@ -361,20 +363,29 @@ struct HomeView: View {
 #endif
             }
         }
+        .padding(16)
+        .background(
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                .fill(Color.white.opacity(0.30))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 24, style: .continuous)
+                        .stroke(Color.white.opacity(0.18), lineWidth: 1)
+                )
+        )
     }
 
     private var collectorSystemsSection: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack {
-                Text("Systems")
-                    .font(.system(size: 16, weight: .semibold))
+                Text("Your Consoles")
+                    .font(.system(size: 24, weight: .bold))
                     .foregroundColor(AppColors.textPrimary)
                 Spacer()
-                Text("\(viewModel.emulators.count)")
-                    .font(.system(size: 12, weight: .semibold))
+                Text("\(viewModel.emulators.count) systems")
+                    .font(.system(size: 13, weight: .medium))
                     .foregroundColor(AppColors.textMuted)
                     .padding(.horizontal, 10)
-                    .frame(height: 26)
+                    .frame(height: 28)
                     .background(AppColors.surfaceLight.opacity(0.45))
                     .clipShape(Capsule())
             }
@@ -394,6 +405,58 @@ struct HomeView: View {
             .scrollTargetBehavior(.viewAligned)
 #endif
         }
+        .padding(16)
+        .background(
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                .fill(Color.white.opacity(0.26))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 24, style: .continuous)
+                        .stroke(Color.white.opacity(0.16), lineWidth: 1)
+                )
+        )
+    }
+
+    private var collectorRecentlyAddedSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Text("Recently Added")
+                    .font(.system(size: 22, weight: .bold))
+                    .foregroundColor(AppColors.textPrimary)
+                Spacer()
+            }
+
+            if viewModel.recentlyAddedGames.isEmpty {
+                EmptyView()
+            } else {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    LazyHStack(spacing: 16) {
+                        ForEach(viewModel.recentlyAddedGames.prefix(10)) { game in
+                            RecentGameCard(game: game, variant: .compact) {
+                                launchRecentGame(game)
+                            }
+                            .frame(width: 240)
+                            .contextMenu {
+                                recentGameContextMenu(game)
+                            }
+                        }
+                    }
+                    .padding(.horizontal, 24)
+                    .scrollTargetLayout()
+                }
+#if os(iOS)
+                .scrollTargetBehavior(.viewAligned)
+#endif
+            }
+        }
+        .padding(16)
+        .background(
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                .fill(Color.white.opacity(0.22))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 24, style: .continuous)
+                        .stroke(Color.white.opacity(0.14), lineWidth: 1)
+                )
+        )
     }
     
     private var statsGrid: some View {
@@ -676,10 +739,12 @@ struct LandscapeGameRow: View {
                 #endif
                 
                 VStack(alignment: .leading, spacing: 8) {
-                    Text(displayTitle(game.title))
+                    Text(GameCardTitleFormatter.format(game.title, maxWords: 7))
                         .font(.system(size: 15, weight: .semibold))
                         .foregroundColor(AppColors.textPrimary)
                         .lineLimit(2)
+                        .truncationMode(.tail)
+                        .frame(height: 38, alignment: .topLeading)
                     
                     HStack(spacing: 6) {
                         if let lastPlayed = game.lastPlayed {
@@ -767,133 +832,52 @@ struct LandscapeGameRow: View {
         return max(0.08, capped)
     }
 
-    private func displayTitle(_ title: String) -> String {
-        let withoutTags = title.replacingOccurrences(
-            of: #"\s*\([^)]*\)"#,
-            with: "",
-            options: .regularExpression
-        )
-        return withoutTags.replacingOccurrences(of: "_", with: " ")
-    }
 }
 
 struct RecentGameCard: View {
     let game: RecentGame
+    let variant: CollectorCardVariant
     let onTap: () -> Void
+
+    init(game: RecentGame, variant: CollectorCardVariant = .featured, onTap: @escaping () -> Void) {
+        self.game = game
+        self.variant = variant
+        self.onTap = onTap
+    }
     
     var body: some View {
         Button(action: onTap) {
-            VStack(alignment: .leading, spacing: 0) {
-                ZStack(alignment: .topTrailing) {
-                    recentCardArtwork
-
-                    LinearGradient(
-                        colors: [Color.clear, Color.black.opacity(0.38)],
-                        startPoint: .top,
-                        endPoint: .bottom
-                    )
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
-
-                Text(game.console)
-                    .font(.system(size: 11, weight: .bold))
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 6)
-                    .background(AppColors.primary.opacity(0.76))
-                    .foregroundColor(.white)
-                    .clipShape(Capsule())
-                    .padding(8)
-
-                    if let issue = game.launchIssue {
-                        VStack {
-                            HStack {
-                                Image(systemName: issue.iconName)
-                                    .font(.system(size: 11, weight: .bold))
-                                    .foregroundColor(.orange)
-                                    .padding(6)
-                                    .background(Color.black.opacity(0.55))
-                                    .clipShape(Circle())
-                                    .padding(8)
-                                Spacer()
-                            }
-                            Spacer()
-                        }
-                    }
-                }
-
-                VStack(alignment: .leading, spacing: 6) {
-                    Text(game.title)
-                        .font(.system(size: 17, weight: .bold))
-                        .lineLimit(2)
-                        .foregroundColor(AppColors.textPrimary)
-
-                    HStack(spacing: 5) {
-                        Image(systemName: "clock")
-                            .font(.system(size: 10, weight: .semibold))
-                        Text(playedDateText)
-                            .font(.system(size: 12, weight: .semibold))
-                        if game.totalPlaySeconds > 0 {
-                            Text("•")
-                                .font(.system(size: 11, weight: .medium))
-                                .opacity(0.55)
-                            Text(totalHoursText)
-                                .font(.system(size: 11, weight: .medium))
-                                .foregroundColor(AppColors.textMuted)
-                        }
-                    }
-                    .foregroundColor(AppColors.textSecondary)
-
-                    VStack(alignment: .leading, spacing: 4) {
-                        HStack(spacing: 6) {
-                            Text("Session")
-                                .font(.system(size: 10, weight: .medium))
-                                .foregroundColor(AppColors.textMuted)
-                            Text(sessionDescriptor)
-                                .font(.system(size: 10, weight: .semibold))
-                                .foregroundColor(AppColors.textSecondary)
-                        }
-
-                        GeometryReader { geo in
-                            ZStack(alignment: .leading) {
-                                Capsule()
-                                    .fill(AppColors.surfaceLight.opacity(0.65))
-                                Capsule()
-                                    .fill(AppColors.primary.opacity(0.75))
-                                    .frame(width: max(8, geo.size.width * sessionProgress))
-                            }
-                        }
-                        .frame(height: 6)
-                    }
-                }
-                .padding(.horizontal, 14)
-                .padding(.vertical, 13)
+            CollectorGameCard(
+                variant: variant,
+                title: GameCardTitleFormatter.format(game.title, maxWords: 7),
+                metadataPrimary: playedDateText,
+                metadataSecondary: game.totalPlaySeconds > 0 ? totalHoursText : nil,
+                platformTag: game.console,
+                launchIssueIconName: game.launchIssue?.iconName,
+                progress: sessionProgress
+            ) {
+                recentCardArtwork
             }
-            .frame(maxWidth: .infinity)
-            .background(AppColors.surface)
-            .overlay(
-                RoundedRectangle(cornerRadius: 16)
-                    .stroke(AppColors.surfaceLight.opacity(0.65), lineWidth: 1)
-            )
-            .shadow(color: AppColors.primary.opacity(0.06), radius: 10, x: 0, y: 5)
-            .clipShape(RoundedRectangle(cornerRadius: 16))
         }
         .buttonStyle(CollectorCardPressStyle())
     }
 
     @ViewBuilder
     private var recentCardArtwork: some View {
+        let artworkHeight: CGFloat = variant == .featured ? 152 : 126
         #if os(iOS)
         if let screenshotData = game.screenshotData, let uiImage = UIImage(data: screenshotData) {
             Image(uiImage: uiImage)
                 .resizable()
                 .aspectRatio(contentMode: .fill)
-                .frame(maxWidth: .infinity, minHeight: 120, maxHeight: 120)
+                .frame(maxWidth: .infinity, minHeight: artworkHeight, maxHeight: artworkHeight)
                 .overlay(Color.white.opacity(0.12))
                 .clipShape(RoundedRectangle(cornerRadius: 12))
         } else if let coverData = game.coverData, let uiImage = UIImage(data: coverData) {
             Image(uiImage: uiImage)
                 .resizable()
                 .aspectRatio(contentMode: .fill)
-                .frame(maxWidth: .infinity, minHeight: 120, maxHeight: 120)
+                .frame(maxWidth: .infinity, minHeight: artworkHeight, maxHeight: artworkHeight)
                 .overlay(Color.white.opacity(0.16))
                 .clipShape(RoundedRectangle(cornerRadius: 12))
         } else if let imageUrl = game.image, let url = URL(string: imageUrl) {
@@ -906,7 +890,7 @@ struct RecentGameCard: View {
                     .font(.system(size: 32))
                     .foregroundColor(AppColors.textMuted)
             }
-            .frame(maxWidth: .infinity, minHeight: 120, maxHeight: 120)
+            .frame(maxWidth: .infinity, minHeight: artworkHeight, maxHeight: artworkHeight)
             .overlay(Color.white.opacity(0.16))
             .clipShape(RoundedRectangle(cornerRadius: 12))
         } else {
@@ -923,7 +907,7 @@ struct RecentGameCard: View {
                     .font(.system(size: 32))
                     .foregroundColor(AppColors.textMuted)
             }
-            .frame(maxWidth: .infinity, minHeight: 120, maxHeight: 120)
+            .frame(maxWidth: .infinity, minHeight: artworkHeight, maxHeight: artworkHeight)
             .clipShape(RoundedRectangle(cornerRadius: 12))
         } else {
             fallbackArtwork
@@ -942,7 +926,7 @@ struct RecentGameCard: View {
                 .font(.system(size: 28))
                 .foregroundColor(AppColors.textMuted)
         }
-        .frame(maxWidth: .infinity, minHeight: 120, maxHeight: 120)
+        .frame(maxWidth: .infinity, minHeight: variant == .featured ? 152 : 126, maxHeight: variant == .featured ? 152 : 126)
         .clipShape(RoundedRectangle(cornerRadius: 12))
     }
 
@@ -957,13 +941,6 @@ struct RecentGameCard: View {
     private var totalHoursText: String {
         let hours = max(0, game.totalPlaySeconds / 3600)
         return "\(hours)h"
-    }
-
-    private var sessionDescriptor: String {
-        if game.totalPlaySeconds <= 0 { return "New" }
-        if game.totalPlaySeconds < 1800 { return "Early run" }
-        if game.totalPlaySeconds < 7200 { return "In progress" }
-        return "Veteran"
     }
 
     private var sessionProgress: CGFloat {
@@ -1109,47 +1086,14 @@ private struct CollectorSystemTile: View {
     }
 
     var body: some View {
-        Button(action: onTap) {
-            VStack(alignment: .leading, spacing: 8) {
-                ZStack {
-                    RoundedRectangle(cornerRadius: 14)
-                        .fill(
-                            LinearGradient(
-                                colors: emulator.gradient.map { $0.opacity(0.35) } + [AppColors.surface],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                        )
-                        .frame(width: 130, height: 84)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 14)
-                                .stroke(AppColors.surfaceLight.opacity(0.65), lineWidth: 1)
-                        )
-
-                    if let consoleAssetName {
-                        Image(consoleAssetName)
-                            .resizable()
-                            .scaledToFit()
-                            .frame(width: 64, height: 64)
-                            .clipShape(RoundedRectangle(cornerRadius: 10))
-                    } else {
-                        Text(emulator.icon)
-                            .font(.system(size: 26))
-                    }
-                }
-
-                Text(emulator.shortName)
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundColor(AppColors.textPrimary)
-                    .lineLimit(1)
-
-                Text("\(emulator.gamesCount) games")
-                    .font(.system(size: 11, weight: .medium))
-                    .foregroundColor(AppColors.textMuted)
-            }
-            .frame(width: 130, alignment: .leading)
-        }
-        .buttonStyle(CollectorCardPressStyle())
+        CollectorConsoleTile(
+            title: emulator.shortName,
+            subtitle: "\(emulator.gamesCount) games",
+            systemTag: emulator.shortName,
+            icon: emulator.icon,
+            consoleAssetName: consoleAssetName,
+            onTap: onTap
+        )
     }
 }
 
@@ -1439,6 +1383,7 @@ final class HomeViewModel: ObservableObject {
     @Published var totalGames: Int = 0
     @Published var totalHours: String = "0h"
     @Published var recentGames: [RecentGame] = []
+    @Published var recentlyAddedGames: [RecentGame] = []
     @Published var emulators: [EmulatorInfo] = []
     private var entriesByID: [UUID: ROMLibraryEntry] = [:]
     
@@ -1485,6 +1430,31 @@ final class HomeViewModel: ObservableObject {
                 title: entry.title ?? "Unknown",
                 console: entry.system?.uppercased() ?? "Unknown",
                 lastPlayed: entry.lastPlayedAt,
+                progress: 0,
+                image: nil,
+                screenshotData: SaveStateStorage.shared.latestScreenshot(for: entry.checksum ?? ""),
+                coverData: CoverArtService.shared.resolve(for: entry)?.data,
+                totalPlaySeconds: Int(entry.playtimeTotal),
+                playableGame: entry.toGame(),
+                gameId: entry.id,
+                launchIssue: ROMCompatibilityService.shared.compatibility(for: entry).issue
+            )
+        }
+
+        let addedEntries = entries
+            .sorted {
+                let lhs = $0.dateAdded ?? Date.distantPast
+                let rhs = $1.dateAdded ?? Date.distantPast
+                return lhs > rhs
+            }
+            .prefix(8)
+
+        recentlyAddedGames = addedEntries.map { entry in
+            RecentGame(
+                id: "added-\(entry.objectID.uriRepresentation().absoluteString)",
+                title: entry.title ?? "Unknown",
+                console: entry.system?.uppercased() ?? "Unknown",
+                lastPlayed: entry.dateAdded ?? entry.lastPlayedAt,
                 progress: 0,
                 image: nil,
                 screenshotData: SaveStateStorage.shared.latestScreenshot(for: entry.checksum ?? ""),

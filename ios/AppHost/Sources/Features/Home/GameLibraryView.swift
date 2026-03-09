@@ -264,17 +264,18 @@ struct GameLibraryView: View {
     }
 
     private var contentHorizontalPadding: CGFloat {
-        isCollectorMode ? 16 : 20
+        isCollectorMode ? 28 : 20
     }
 
     private var gridColumns: [GridItem] {
         if isCollectorMode {
-            return [
-                GridItem(.flexible(minimum: 0, maximum: .infinity), spacing: 16, alignment: .top),
-                GridItem(.flexible(minimum: 0, maximum: .infinity), spacing: 16, alignment: .top),
-                GridItem(.flexible(minimum: 0, maximum: .infinity), spacing: 16, alignment: .top),
-                GridItem(.flexible(minimum: 0, maximum: .infinity), spacing: 16, alignment: .top)
-            ]
+            #if os(iOS)
+            let width = UIScreen.main.bounds.width
+            let columnCount = width >= 1200 ? 4 : 3
+            #else
+            let columnCount = 4
+            #endif
+            return Array(repeating: GridItem(.flexible(minimum: 0, maximum: .infinity), spacing: 20, alignment: .top), count: columnCount)
         }
         return [
             GridItem(.flexible(minimum: 0), spacing: 16),
@@ -979,10 +980,23 @@ struct AllGamesCard: View {
     }
 
     var body: some View {
+        let issue = ROMCompatibilityService.shared.compatibility(for: entry).issue
+        let metadata = issue?.title ?? lastPlayedLabel
+        let shouldShowBadge = !(entry.system?.lowercased().contains("gba") == true &&
+                              selectedSystemFilter == .gba)
+        let progress: CGFloat? = entry.playtimeTotal > 0 ? max(0.08, min(1.0, CGFloat(entry.playtimeTotal) / CGFloat(4 * 3600))) : nil
         let content = Button(action: onTap) {
-            VStack(alignment: .leading, spacing: 10) {
-                coverSection
-                titleSection
+            CollectorGameCard(
+                variant: collectorMode ? .standard : .compact,
+                title: displayTitle(entry.title),
+                metadataPrimary: metadata,
+                metadataSecondary: entry.playtimeTotal > 0 ? playtimeBadge : nil,
+                platformTag: shouldShowBadge ? (entry.system ?? "UNK").uppercased() : nil,
+                launchIssueIconName: issue?.iconName,
+                progress: progress
+            ) {
+                coverArt
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
         }
@@ -1187,13 +1201,7 @@ struct AllGamesCard: View {
     }
 
     private func displayTitle(_ title: String?) -> String {
-        let raw = (title ?? "Unknown Game").trimmingCharacters(in: .whitespacesAndNewlines)
-        let withoutTags = raw.replacingOccurrences(
-            of: #"\s*\([^)]*\)"#,
-            with: "",
-            options: .regularExpression
-        )
-        return withoutTags.replacingOccurrences(of: "_", with: " ")
+        GameCardTitleFormatter.format(title, maxWords: 7)
     }
 }
 
@@ -1293,13 +1301,7 @@ private struct AllGamesListRow: View {
     }
 
     private func displayTitle(_ title: String?) -> String {
-        let raw = (title ?? "Unknown Game").trimmingCharacters(in: .whitespacesAndNewlines)
-        let withoutTags = raw.replacingOccurrences(
-            of: #"\s*\([^)]*\)"#,
-            with: "",
-            options: .regularExpression
-        )
-        return withoutTags.replacingOccurrences(of: "_", with: " ")
+        GameCardTitleFormatter.format(title, maxWords: 7)
     }
 }
 

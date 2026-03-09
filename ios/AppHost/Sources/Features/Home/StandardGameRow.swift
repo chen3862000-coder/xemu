@@ -15,10 +15,12 @@ struct StandardGameRow: View {
                 
                 // Content
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(entry.title ?? "Unknown")
+                    Text(GameCardTitleFormatter.format(entry.title, maxWords: 7))
                         .font(.system(size: 15, weight: .semibold))
                         .foregroundColor(AppColors.textPrimary)
                         .lineLimit(2)
+                        .truncationMode(.tail)
+                        .frame(height: 38, alignment: .topLeading)
                     
                     HStack(spacing: 6) {
                         // Last played
