@@ -30,7 +30,22 @@ final class CollectorIdentityTests: XCTestCase {
         XCTAssertEqual(SubpageUI.CollectorIdentity.accentHex(forSystem: nil), SubpageUI.CollectorIdentity.fallbackHex)
     }
 
-    func testCollectorCardCoverAspectRatioRemainsSquare() {
-        XCTAssertEqual(AllGamesCard.collectorCoverAspectRatio, 1.0, accuracy: 0.000_1)
+    func testCollectorCardCoverAspectRatioUsesBoxArtProportions() {
+        XCTAssertEqual(AllGamesCard.collectorCoverAspectRatio, 0.75, accuracy: 0.000_1)
+    }
+
+    func testCollectorShelfGroupingKeepsSupportedSystemsInCollectorOrder() {
+        let systems = ["nds", "gba", "gb", "ps1", "gbc"]
+        XCTAssertEqual(
+            CollectorShelfGrouping.orderedSectionKeys(for: systems),
+            ["gbc", "gba", "nds", "ps1"]
+        )
+    }
+
+    func testCollectorShelfGroupingMapsAliasesToFriendlyTitles() {
+        XCTAssertEqual(CollectorShelfGrouping.sectionKey(for: "Game Boy"), "gbc")
+        XCTAssertEqual(CollectorShelfGrouping.sectionKey(for: "Game Boy Advance"), "gba")
+        XCTAssertEqual(CollectorShelfGrouping.sectionTitle(for: "gbc"), "Game Boy + Color Collection")
+        XCTAssertEqual(CollectorShelfGrouping.sectionTitle(for: "nds"), "Nintendo DS Collection")
     }
 }

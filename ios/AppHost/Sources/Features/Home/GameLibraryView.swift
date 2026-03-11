@@ -267,7 +267,7 @@ struct GameLibraryView: View {
     }
 
     private var contentHorizontalPadding: CGFloat {
-        isCollectorMode ? 28 : 20
+        isCollectorMode ? 20 : 20
     }
 
     private var gridColumns: [GridItem] {
@@ -300,6 +300,8 @@ struct GameLibraryView: View {
                     VStack(spacing: 14) {
                         if filteredGames.isEmpty {
                             emptyState
+                        } else if isCollectorMode {
+                            collectorShelfContent
                         } else {
                             if effectiveViewMode == .grid {
                                 gamesGrid
@@ -445,12 +447,21 @@ struct GameLibraryView: View {
 
     private var backgroundLayer: some View {
         ZStack {
-            AllGamesTokens.appBackground.ignoresSafeArea()
+            LinearGradient(
+                colors: isCollectorMode
+                    ? [Color(hex: "F2ECE4"), Color(hex: "E7DCCF"), Color(hex: "D5C4B1")]
+                    : [AllGamesTokens.appBackground, AllGamesTokens.appBackground],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+            .ignoresSafeArea()
 
             Circle()
                 .fill(
                     LinearGradient(
-                        colors: [AllGamesTokens.accent.opacity(0.14), AllGamesTokens.info.opacity(0.10)],
+                        colors: isCollectorMode
+                            ? [Color(hex: "D8B18A").opacity(0.26), Color(hex: "8B5E3C").opacity(0.10)]
+                            : [AllGamesTokens.accent.opacity(0.14), AllGamesTokens.info.opacity(0.10)],
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing
                     )
@@ -464,7 +475,9 @@ struct GameLibraryView: View {
                 Circle()
                     .fill(
                         LinearGradient(
-                            colors: [AllGamesTokens.info.opacity(0.10), AllGamesTokens.accent.opacity(0.08)],
+                            colors: isCollectorMode
+                                ? [Color(hex: "8F7058").opacity(0.12), Color(hex: "EADBC8").opacity(0.10)]
+                                : [AllGamesTokens.info.opacity(0.10), AllGamesTokens.accent.opacity(0.08)],
                             startPoint: .topLeading,
                             endPoint: .bottomTrailing
                         )
@@ -529,7 +542,7 @@ struct GameLibraryView: View {
                                 selectedSort = option
                             } label: {
                                 HStack {
-                                    Text(option.rawValue)
+                                    Text(sortLabel(option))
                                     if selectedSort == option {
                                         Image(systemName: "checkmark")
                                     }
@@ -540,7 +553,7 @@ struct GameLibraryView: View {
                         HStack(spacing: 5) {
                             Image(systemName: "arrow.up.arrow.down.circle")
                                 .font(.system(size: 12, weight: .semibold))
-                            Text(selectedSort.rawValue)
+                            Text(sortLabel(selectedSort))
                                 .font(.system(size: 12, weight: .semibold))
                             Image(systemName: "chevron.down")
                                 .font(.system(size: 10, weight: .bold))
@@ -557,39 +570,19 @@ struct GameLibraryView: View {
                     }
                     .buttonStyle(.plain)
 
-                    Menu {
-                        ForEach(LibrarySystemFilter.allCases) { filter in
-                            Button {
-                                selectedSystemFilter = filter
-                            } label: {
-                                HStack {
-                                    Text(filter.rawValue)
-                                    if selectedSystemFilter == filter {
-                                        Image(systemName: "checkmark")
-                                    }
-                                }
-                            }
-                        }
-                    } label: {
-                        HStack(spacing: 6) {
-                            Image(systemName: "line.3.horizontal.decrease.circle")
-                                .font(.system(size: 12, weight: .semibold))
-                            Text(selectedSystemFilter.rawValue)
-                                .font(.system(size: 12, weight: .semibold))
-                            Image(systemName: "chevron.down")
-                                .font(.system(size: 10, weight: .bold))
-                        }
-                        .foregroundColor(AllGamesTokens.textPrimary)
-                        .padding(.horizontal, 10)
+                    Spacer()
+
+                    Text("\(filteredGames.count) on shelf")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundColor(AllGamesTokens.textSecondary)
+                        .padding(.horizontal, 12)
                         .frame(height: 34)
                         .background(AllGamesTokens.surface)
                         .overlay(
-                            RoundedRectangle(cornerRadius: 17)
+                            Capsule()
                                 .stroke(AllGamesTokens.strokeSubtle, lineWidth: 1)
                         )
                         .clipShape(Capsule())
-                    }
-                    .buttonStyle(.plain)
                 }
             } else {
                 HStack(spacing: 8) {
@@ -613,7 +606,7 @@ struct GameLibraryView: View {
                                 selectedSort = option
                             } label: {
                                 HStack {
-                                    Text(option.rawValue)
+                                    Text(sortLabel(option))
                                     if selectedSort == option {
                                         Image(systemName: "checkmark")
                                     }
@@ -624,7 +617,7 @@ struct GameLibraryView: View {
                         HStack(spacing: 5) {
                             Image(systemName: "arrow.up.arrow.down.circle")
                                 .font(.system(size: 12, weight: .semibold))
-                            Text(selectedSort.rawValue)
+                            Text(sortLabel(selectedSort))
                                 .font(.system(size: 12, weight: .semibold))
                             Image(systemName: "chevron.down")
                                 .font(.system(size: 10, weight: .bold))
@@ -746,44 +739,7 @@ struct GameLibraryView: View {
                 }
                 .frame(maxWidth: .infinity, alignment: .topLeading)
                 .buttonStyle(PressScaleButtonStyle())
-                .contextMenu {
-                    Button {
-                        launchGame(entry)
-                    } label: {
-                        Label("Play", systemImage: "play.fill")
-                    }
-                    Button {
-                        beginRename(entry)
-                    } label: {
-                        Label("Rename", systemImage: "pencil")
-                    }
-                    Button {
-                        editCover(entry)
-                    } label: {
-                        Label("Edit Cover", systemImage: "photo")
-                    }
-                    Button(role: .destructive) {
-                        resetCover(entry)
-                    } label: {
-                        Label("Reset Cover", systemImage: "arrow.counterclockwise")
-                    }
-                    .disabled(!hasCustomCover(entry))
-                    Button {
-                        showDetails(entry)
-                    } label: {
-                        Label("Details", systemImage: "info.circle")
-                    }
-                    Button(role: .destructive) {
-                        activeAlert = LibraryAlertState(kind: .confirmDelete(LibraryDeleteCandidate(entry: entry, mode: .removeROMOnly)))
-                    } label: {
-                        Label("Remove ROM Only", systemImage: "eject")
-                    }
-                    Button(role: .destructive) {
-                        activeAlert = LibraryAlertState(kind: .confirmDelete(LibraryDeleteCandidate(entry: entry, mode: .removeAll)))
-                    } label: {
-                        Label("Remove", systemImage: "trash")
-                    }
-                }
+                .contextMenu { gameActionsMenu(for: entry) }
             }
         }
         .transaction { transaction in
@@ -815,48 +771,42 @@ struct GameLibraryView: View {
                         Label("Delete", systemImage: "trash")
                     }
                 }
-                .contextMenu {
-                    Button {
-                        launchGame(entry)
-                    } label: {
-                        Label("Play", systemImage: "play.fill")
-                    }
-                    Button {
-                        beginRename(entry)
-                    } label: {
-                        Label("Rename", systemImage: "pencil")
-                    }
-                    Button {
-                        editCover(entry)
-                    } label: {
-                        Label("Edit Cover", systemImage: "photo")
-                    }
-                    Button(role: .destructive) {
-                        resetCover(entry)
-                    } label: {
-                        Label("Reset Cover", systemImage: "arrow.counterclockwise")
-                    }
-                    .disabled(!hasCustomCover(entry))
-                    Button {
-                        showDetails(entry)
-                    } label: {
-                        Label("Details", systemImage: "info.circle")
-                    }
-                    Button(role: .destructive) {
-                        activeAlert = LibraryAlertState(kind: .confirmDelete(LibraryDeleteCandidate(entry: entry, mode: .removeROMOnly)))
-                    } label: {
-                        Label("Remove ROM Only", systemImage: "eject")
-                    }
-                    Button(role: .destructive) {
-                        activeAlert = LibraryAlertState(kind: .confirmDelete(LibraryDeleteCandidate(entry: entry, mode: .removeAll)))
-                    } label: {
-                        Label("Remove", systemImage: "trash")
-                    }
-                }
+                .contextMenu { gameActionsMenu(for: entry) }
             }
         }
         .transaction { transaction in
             transaction.animation = nil
+        }
+    }
+
+    private var collectorShelfContent: some View {
+        VStack(alignment: .leading, spacing: 26) {
+            CollectorShelfFilterRail(
+                selectedFilter: selectedSystemFilter,
+                counts: shelfCounts
+            ) { filter in
+                selectedSystemFilter = filter
+            }
+
+            if !continuePlayingEntries.isEmpty {
+                CollectorShelfSectionView(
+                    title: "Continue Playing",
+                    subtitle: "\(continuePlayingEntries.count) recent",
+                    entries: continuePlayingEntries
+                ) { entry in
+                    collectorShelfBox(entry, metadata: shelfLastPlayedLabel(for: entry), progress: shelfProgress(for: entry), showsMetadataByDefault: true)
+                }
+            }
+
+            ForEach(collectorSections, id: \.key) { section in
+                CollectorShelfSectionView(
+                    title: section.title,
+                    subtitle: "\(section.entries.count) games",
+                    entries: section.entries
+                ) { entry in
+                    collectorShelfBox(entry, metadata: shelfMetadata(for: entry), progress: nil, showsMetadataByDefault: false)
+                }
+            }
         }
     }
 
@@ -898,7 +848,98 @@ struct GameLibraryView: View {
         .padding(.vertical, 40)
         .allGamesCard(cornerRadius: 16, elevated: false)
     }
-    
+
+    private var continuePlayingEntries: [ROMLibraryEntry] {
+        filteredGames
+            .filter { $0.lastPlayedAt != nil }
+            .sorted {
+                let lhs = $0.lastPlayedAt ?? Date.distantPast
+                let rhs = $1.lastPlayedAt ?? Date.distantPast
+                if lhs != rhs {
+                    return lhs > rhs
+                }
+                return stableOrderingKey($0) < stableOrderingKey($1)
+            }
+            .prefix(8)
+            .map { $0 }
+    }
+
+    private var collectorSections: [(key: String, title: String, entries: [ROMLibraryEntry])] {
+        let grouped = Dictionary(grouping: filteredGames) { entry in
+            CollectorShelfGrouping.sectionKey(for: entry.system)
+        }
+
+        return CollectorShelfGrouping.orderedSectionKeys(for: filteredGames.map(\.system)).compactMap { key in
+            guard let entries = grouped[key], !entries.isEmpty else { return nil }
+            return (
+                key: key,
+                title: CollectorShelfGrouping.sectionTitle(for: key),
+                entries: entries.sorted(by: collectorSectionOrdering(_:_:))
+            )
+        }
+    }
+
+    private var shelfCounts: [LibrarySystemFilter: Int] {
+        [
+            .all: games.count,
+            .gbc: games.filter {
+                let key = CollectorShelfGrouping.sectionKey(for: $0.system)
+                return key == "gbc"
+            }.count,
+            .gba: games.filter {
+                let key = CollectorShelfGrouping.sectionKey(for: $0.system)
+                return key == "gba"
+            }.count,
+            .nds: games.filter {
+                let key = CollectorShelfGrouping.sectionKey(for: $0.system)
+                return key == "nds"
+            }.count
+        ]
+    }
+
+    private func collectorSectionOrdering(_ lhs: ROMLibraryEntry, _ rhs: ROMLibraryEntry) -> Bool {
+        switch selectedSort {
+        case .recent:
+            let leftDate = lhs.lastPlayedAt ?? lhs.dateAdded ?? Date.distantPast
+            let rightDate = rhs.lastPlayedAt ?? rhs.dateAdded ?? Date.distantPast
+            if leftDate != rightDate {
+                return leftDate > rightDate
+            }
+        case .alphabetical:
+            let compare = (lhs.title ?? "").localizedCaseInsensitiveCompare(rhs.title ?? "")
+            if compare != .orderedSame {
+                return compare == .orderedAscending
+            }
+        case .mostPlayed:
+            if lhs.playtimeTotal != rhs.playtimeTotal {
+                return lhs.playtimeTotal > rhs.playtimeTotal
+            }
+        }
+        return stableOrderingKey(lhs) < stableOrderingKey(rhs)
+    }
+
+    private func collectorShelfBox(
+        _ entry: ROMLibraryEntry,
+        metadata: String,
+        progress: CGFloat?,
+        showsMetadataByDefault: Bool
+    ) -> some View {
+        CollectorShelfBoxButton(
+            title: displayTitle(entry.title),
+            systemTag: (entry.system ?? "UNK").uppercased(),
+            metadata: metadata,
+            progress: progress,
+            showsMetadataByDefault: showsMetadataByDefault
+        ) {
+            launchGame(entry)
+        } artwork: {
+            collectorShelfArtwork(for: entry)
+        }
+        .contextMenu {
+            gameActionsMenu(for: entry)
+        }
+    }
+
     private func loadGames() {
         let request = NSFetchRequest<ROMLibraryEntry>(entityName: "ROMLibraryEntry")
         request.sortDescriptors = [NSSortDescriptor(key: "title", ascending: true)]
@@ -922,6 +963,46 @@ struct GameLibraryView: View {
             return
         }
         selectedGame = game
+    }
+
+    @ViewBuilder
+    private func gameActionsMenu(for entry: ROMLibraryEntry) -> some View {
+        Button {
+            launchGame(entry)
+        } label: {
+            Label("Play", systemImage: "play.fill")
+        }
+        Button {
+            beginRename(entry)
+        } label: {
+            Label("Rename", systemImage: "pencil")
+        }
+        Button {
+            editCover(entry)
+        } label: {
+            Label("Edit Cover", systemImage: "photo")
+        }
+        Button(role: .destructive) {
+            resetCover(entry)
+        } label: {
+            Label("Reset Cover", systemImage: "arrow.counterclockwise")
+        }
+        .disabled(!hasCustomCover(entry))
+        Button {
+            showDetails(entry)
+        } label: {
+            Label("Details", systemImage: "info.circle")
+        }
+        Button(role: .destructive) {
+            activeAlert = LibraryAlertState(kind: .confirmDelete(LibraryDeleteCandidate(entry: entry, mode: .removeROMOnly)))
+        } label: {
+            Label("Remove ROM Only", systemImage: "eject")
+        }
+        Button(role: .destructive) {
+            activeAlert = LibraryAlertState(kind: .confirmDelete(LibraryDeleteCandidate(entry: entry, mode: .removeAll)))
+        } label: {
+            Label("Remove", systemImage: "trash")
+        }
     }
 
     private func performDeletion(_ candidate: LibraryDeleteCandidate) {
@@ -1017,10 +1098,114 @@ struct GameLibraryView: View {
 
         return files.first(where: { $0.lastPathComponent.lowercased().hasPrefix("\(checksum.lowercased()).") })
     }
+
+    @ViewBuilder
+    private func collectorShelfArtwork(for entry: ROMLibraryEntry) -> some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .fill(
+                    LinearGradient(
+                        colors: [Color.white.opacity(0.16), Color.black.opacity(0.06)],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+
+#if os(iOS)
+            if let resolved = CoverArtService.shared.resolve(for: entry),
+               let uiImage = UIImage(data: resolved.data) {
+                Image(uiImage: uiImage)
+                    .resizable()
+                    .scaledToFill()
+            } else {
+                collectorShelfPlaceholder(for: entry)
+            }
+#else
+            collectorShelfPlaceholder(for: entry)
+#endif
+        }
+        .overlay(alignment: .topLeading) {
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .fill(
+                    LinearGradient(
+                        colors: [Color.white.opacity(0.18), .clear],
+                        startPoint: .top,
+                        endPoint: .center
+                    )
+                )
+                .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        }
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+    }
+
+    private func collectorShelfPlaceholder(for entry: ROMLibraryEntry) -> some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .fill(AllGamesTokens.placeholderGradient(for: entry.system))
+
+            VStack(alignment: .leading, spacing: 10) {
+                HStack {
+                    Image(systemName: AllGamesTokens.placeholderGlyph(for: entry.system))
+                        .font(.system(size: 16, weight: .bold))
+                        .foregroundColor(.white.opacity(0.40))
+                    Spacer()
+                }
+
+                Spacer()
+
+                Text(String((displayTitle(entry.title)).prefix(1)).uppercased())
+                    .font(.system(size: 42, weight: .heavy, design: .rounded))
+                    .foregroundColor(.white.opacity(0.18))
+            }
+            .padding(14)
+        }
+    }
+
+    private func shelfMetadata(for entry: ROMLibraryEntry) -> String {
+        if entry.playtimeTotal > 0 {
+            return playtimeLabel(for: entry)
+        }
+        if let issue = ROMCompatibilityService.shared.compatibility(for: entry).issue {
+            return issue.title
+        }
+        return "Ready"
+    }
+
+    private func shelfLastPlayedLabel(for entry: ROMLibraryEntry) -> String {
+        guard let lastPlayed = entry.lastPlayedAt else { return shelfMetadata(for: entry) }
+        let formatter = RelativeDateTimeFormatter()
+        formatter.unitsStyle = .abbreviated
+        return formatter.localizedString(for: lastPlayed, relativeTo: Date())
+    }
+
+    private func shelfProgress(for entry: ROMLibraryEntry) -> CGFloat? {
+        guard entry.playtimeTotal > 0 else { return nil }
+        return max(0.08, min(1.0, CGFloat(entry.playtimeTotal) / CGFloat(4 * 3600)))
+    }
+
+    private func playtimeLabel(for entry: ROMLibraryEntry) -> String {
+        let minutes = Int(entry.playtimeTotal) / 60
+        if minutes < 60 {
+            return "\(max(minutes, 1))m"
+        }
+        return "\(minutes / 60)h"
+    }
+
+    private func displayTitle(_ title: String?) -> String {
+        GameCardTitleFormatter.format(title, maxWords: 7)
+    }
+
+    private func sortLabel(_ option: LibrarySortOption) -> String {
+        switch option {
+        case .recent: return "Recent"
+        case .alphabetical: return "A-Z"
+        case .mostPlayed: return "Most Played"
+        }
+    }
 }
 
 struct AllGamesCard: View {
-    static let collectorCoverAspectRatio: CGFloat = 1.0
+    static let collectorCoverAspectRatio: CGFloat = 0.75
 
     let entry: ROMLibraryEntry
     let collectorMode: Bool

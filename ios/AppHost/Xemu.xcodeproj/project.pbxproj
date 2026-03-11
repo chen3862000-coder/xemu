@@ -107,10 +107,12 @@
 		DCA06A10B711FE537E7C2F45 /* metadata_manifest.json in Resources */ = {isa = PBXBuildFile; fileRef = FD800C27927573BE5610B6D9 /* metadata_manifest.json */; };
 		E3C9C5C2B2726545ABD113E4 /* sha1_checksums.txt in Resources */ = {isa = PBXBuildFile; fileRef = 3996C0205ADC77C1FCC3A6BF /* sha1_checksums.txt */; };
 		E62C630456F0C5BAC8E91B7A /* OfflineGraceManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD2BA596028329B64FC9E98D /* OfflineGraceManager.swift */; };
+		EF9BD5A516293B07C8E53DEB /* CollectorShelfGrouping.swift in Sources */ = {isa = PBXBuildFile; fileRef = 914F519ECF129B08271F903E /* CollectorShelfGrouping.swift */; };
 		F09AFD7329FDC623A9AF9592 /* CoverMetadataManifest.swift in Sources */ = {isa = PBXBuildFile; fileRef = CE72D17588960E37DD40E4C5 /* CoverMetadataManifest.swift */; };
 		F2BDA4DC642132DB1C7C1244 /* CoverFeatureFlags.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9BD1651D701DAEACF8EBDCFC /* CoverFeatureFlags.swift */; };
 		F387AD69E5395A8C7F16E93E /* AppHost.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8B36B2ACD647AC3067DC2155 /* AppHost.swift */; };
 		F51F13808938D30ABCD0C190 /* Button.swift in Sources */ = {isa = PBXBuildFile; fileRef = D7A97E34F6714D55B2ED6121 /* Button.swift */; };
+		F63D716EE9C219A0C0E33B00 /* CollectorShelfViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C7281AD7B7E76D709350D98 /* CollectorShelfViews.swift */; };
 		F6A9D719B001FB418B539549 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 51E656E584201333675159E7 /* Assets.xcassets */; };
 		F79EDB3B261ED6E9DF624801 /* ShellThemes.swift in Sources */ = {isa = PBXBuildFile; fileRef = EBFCD24F74EE4522EAE30B33 /* ShellThemes.swift */; };
 		F93E44807879255BA51E06C3 /* Header.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAF6A9A7B47722A9EEE63EDF /* Header.swift */; };
@@ -183,12 +185,14 @@
 		74BECED9B221104E4F9B3DD8 /* Colors.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Colors.swift; sourceTree = "<group>"; };
 		76F9B895A2EADF68D6D81078 /* Model.xcdatamodel */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcdatamodel; path = Model.xcdatamodel; sourceTree = "<group>"; };
 		7BC15F83843091487D6BA3FF /* GameLibraryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameLibraryView.swift; sourceTree = "<group>"; };
+		7C7281AD7B7E76D709350D98 /* CollectorShelfViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CollectorShelfViews.swift; sourceTree = "<group>"; };
 		7CD8EC90E1B08EEC7D2AE206 /* CoreDataMigration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoreDataMigration.swift; sourceTree = "<group>"; };
 		867BF8EE76C4FEC72E94EBDC /* EmulatorSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmulatorSession.swift; sourceTree = "<group>"; };
 		87CAE0469FD01C9174AA65D6 /* MetalView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MetalView.swift; sourceTree = "<group>"; };
 		88DDD3778774BBD64E787BDF /* AudioEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioEngine.swift; sourceTree = "<group>"; };
 		8B36B2ACD647AC3067DC2155 /* AppHost.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppHost.swift; sourceTree = "<group>"; };
 		8DEADAF875199419D6BDC89A /* SaveStateStorage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SaveStateStorage.swift; sourceTree = "<group>"; };
+		914F519ECF129B08271F903E /* CollectorShelfGrouping.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CollectorShelfGrouping.swift; sourceTree = "<group>"; };
 		9360EC40197B186BF8A999A9 /* SettingsHeader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsHeader.swift; sourceTree = "<group>"; };
 		9485665368CFC41E8D938D95 /* InputBus.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InputBus.swift; sourceTree = "<group>"; };
 		96F1A1D00DFF45550E90A3CF /* SQLiteCoverMetadataMatcher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SQLiteCoverMetadataMatcher.swift; sourceTree = "<group>"; };
@@ -314,6 +318,8 @@
 		2957041B76FDED93F7E4B07A /* Home */ = {
 			isa = PBXGroup;
 			children = (
+				914F519ECF129B08271F903E /* CollectorShelfGrouping.swift */,
+				7C7281AD7B7E76D709350D98 /* CollectorShelfViews.swift */,
 				7BC15F83843091487D6BA3FF /* GameLibraryView.swift */,
 				D009E6F2DF5E69D7593C1965 /* HomeView.swift */,
 				EA48E5CBB14313449118F633 /* PlayerStatsView.swift */,
@@ -757,6 +763,8 @@
 				FCF665150656D5E24E64FFEA /* Card.swift in Sources */,
 				39DFE30FF1B43900CCBEDF00 /* Checkbox.swift in Sources */,
 				54DFBEB1573942E3E97F3869 /* CollectorDesignSystem.swift in Sources */,
+				EF9BD5A516293B07C8E53DEB /* CollectorShelfGrouping.swift in Sources */,
+				F63D716EE9C219A0C0E33B00 /* CollectorShelfViews.swift in Sources */,
 				70867E22BC48F79CF384061E /* Colors.swift in Sources */,
 				C046D641921D13E2DE0FFB1E /* CommonTypes.swift in Sources */,
 				9C8E274F1B14843796776B82 /* CompatibilityDataStore.swift in Sources */,
