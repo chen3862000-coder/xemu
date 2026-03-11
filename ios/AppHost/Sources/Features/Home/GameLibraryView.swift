@@ -236,6 +236,9 @@ struct GameLibraryView: View {
     @State private var showConsoleFilters: Bool = true
     @State private var activeAlert: LibraryAlertState?
     @State private var coverEditorEntry: ROMLibraryEntry?
+    @State private var renameEntry: ROMLibraryEntry?
+    @State private var renameTitle = ""
+    @State private var detailEntry: ROMLibraryEntry?
 
     private var heavyUIEffectsEnabled: Bool {
         performanceProfiler.currentQualityProfile.heavyUIEffects
@@ -347,6 +350,18 @@ struct GameLibraryView: View {
                 )
             }
         }
+        .alert("Rename Game", isPresented: renameDialogPresented) {
+            TextField("Game title", text: $renameTitle)
+            Button("Cancel", role: .cancel) {
+                clearRenameDraft()
+            }
+            Button("Save") {
+                commitRename()
+            }
+            .disabled(renameTitle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+        } message: {
+            Text("Enter a new display title for this game.")
+        }
         .onAppear {
             loadGames()
         }
@@ -360,6 +375,13 @@ struct GameLibraryView: View {
         .sheet(item: $coverEditorEntry) { entry in
             CoverEditorSheet(entry: entry) {
                 loadGames()
+            }
+        }
+        .sheet(item: $detailEntry) { entry in
+            NavigationStack {
+                RomDetailView(rom: entry) {
+                    detailEntry = nil
+                }
             }
         }
 #endif
@@ -731,7 +753,7 @@ struct GameLibraryView: View {
                         Label("Play", systemImage: "play.fill")
                     }
                     Button {
-                        showComingSoon("Rename game")
+                        beginRename(entry)
                     } label: {
                         Label("Rename", systemImage: "pencil")
                     }
@@ -747,7 +769,7 @@ struct GameLibraryView: View {
                     }
                     .disabled(!hasCustomCover(entry))
                     Button {
-                        showComingSoon("Game details")
+                        showDetails(entry)
                     } label: {
                         Label("Details", systemImage: "info.circle")
                     }
@@ -800,7 +822,7 @@ struct GameLibraryView: View {
                         Label("Play", systemImage: "play.fill")
                     }
                     Button {
-                        showComingSoon("Rename game")
+                        beginRename(entry)
                     } label: {
                         Label("Rename", systemImage: "pencil")
                     }
@@ -816,7 +838,7 @@ struct GameLibraryView: View {
                     }
                     .disabled(!hasCustomCover(entry))
                     Button {
-                        showComingSoon("Game details")
+                        showDetails(entry)
                     } label: {
                         Label("Details", systemImage: "info.circle")
                     }
@@ -913,6 +935,45 @@ struct GameLibraryView: View {
 
     private func showComingSoon(_ feature: String) {
         activeAlert = LibraryAlertState(kind: .launchError("\(feature) is coming soon."))
+    }
+
+    private var renameDialogPresented: Binding<Bool> {
+        Binding(
+            get: { renameEntry != nil },
+            set: { isPresented in
+                if !isPresented {
+                    clearRenameDraft()
+                }
+            }
+        )
+    }
+
+    private func beginRename(_ entry: ROMLibraryEntry) {
+        renameEntry = entry
+        renameTitle = entry.title ?? ""
+    }
+
+    private func clearRenameDraft() {
+        renameEntry = nil
+        renameTitle = ""
+    }
+
+    private func commitRename() {
+        guard let entry = renameEntry else { return }
+        do {
+            try GameRenameService.shared.rename(entry: entry, to: renameTitle, in: viewContext)
+#if os(iOS)
+            UINotificationFeedbackGenerator().notificationOccurred(.success)
+#endif
+            clearRenameDraft()
+            loadGames()
+        } catch {
+            activeAlert = LibraryAlertState(kind: .launchError("Could not rename game: \(error.localizedDescription)"))
+        }
+    }
+
+    private func showDetails(_ entry: ROMLibraryEntry) {
+        detailEntry = entry
     }
 
     private func editCover(_ entry: ROMLibraryEntry) {

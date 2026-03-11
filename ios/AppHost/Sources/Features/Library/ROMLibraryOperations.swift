@@ -49,6 +49,17 @@ enum GameDeletionMode {
     }
 }
 
+enum GameRenameError: LocalizedError, Equatable {
+    case emptyTitle
+
+    var errorDescription: String? {
+        switch self {
+        case .emptyTitle:
+            return "Game title cannot be empty."
+        }
+    }
+}
+
 @MainActor
 final class ROMCompatibilityService {
     static let shared = ROMCompatibilityService()
@@ -172,5 +183,33 @@ final class GameDeletionService {
         for case let object as NSManagedObject in objects {
             context.delete(object)
         }
+    }
+}
+
+@MainActor
+final class GameRenameService {
+    static let shared = GameRenameService()
+
+    private init() {}
+
+    @discardableResult
+    func rename(entry: ROMLibraryEntry, to proposedTitle: String, in context: NSManagedObjectContext) throws -> String {
+        let normalizedTitle = proposedTitle.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !normalizedTitle.isEmpty else {
+            throw GameRenameError.emptyTitle
+        }
+
+        guard entry.title != normalizedTitle else {
+            return normalizedTitle
+        }
+
+        entry.title = normalizedTitle
+
+        if context.hasChanges {
+            try context.save()
+        }
+
+        NotificationCenter.default.post(name: .romLibraryDidChange, object: nil)
+        return normalizedTitle
     }
 }

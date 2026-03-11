@@ -22,10 +22,8 @@ class GamePlayViewModel: ObservableObject {
     @Published var statusMessage = ""
     @Published var currentFPS = 0
     @Published var saveStateDebugLine = ""
-    @Published var dynamicShellLightingColor: Color = .clear
     @Published var latestUnlockedAchievement: PlayerAchievementUnlock?
     @AppStorage("audioQuality") private var audioQuality = 1
-    @AppStorage("dynamicConsoleLightingEnabled") private var dynamicConsoleLightingEnabled = true
 
     private var emulatorSession: EmulatorSession?
     private(set) var metalRenderer: MetalRenderer?
@@ -60,8 +58,6 @@ class GamePlayViewModel: ObservableObject {
     private var ndsTouchIsPressed = false
     private var ndsTouchPressedAtNs: UInt64 = 0
     private var pendingNDSTouchReleaseTask: Task<Void, Never>?
-    private var lastDynamicLightingSampleTime: CFTimeInterval = 0
-    private var smoothedDynamicLightingRGB = SIMD3<Double>(repeating: 0)
     #if canImport(UIKit)
     private var lifecycleObservers: [NSObjectProtocol] = []
     #endif
@@ -299,9 +295,6 @@ class GamePlayViewModel: ObservableObject {
             isStateLoadInProgress = false
             ndsTouchIsPressed = false
             ndsTouchPressedAtNs = 0
-            lastDynamicLightingSampleTime = 0
-            smoothedDynamicLightingRGB = SIMD3<Double>(repeating: 0)
-            dynamicShellLightingColor = .clear
             latestUnlockedAchievement = nil
         }
         
@@ -912,89 +905,6 @@ class GamePlayViewModel: ObservableObject {
         }
     }
 
-    private func updateDynamicLightingIfNeeded(frameData: Data,
-                                               width: Int,
-                                               height: Int,
-                                               bytesPerRow: Int,
-                                               now: CFTimeInterval) {
-        guard dynamicConsoleLightingEnabled else {
-            if dynamicShellLightingColor != .clear {
-                dynamicShellLightingColor = .clear
-            }
-            smoothedDynamicLightingRGB = SIMD3<Double>(repeating: 0)
-            return
-        }
-        guard now - lastDynamicLightingSampleTime >= 0.20 else { return }
-        lastDynamicLightingSampleTime = now
-
-        guard let sampled = sampledAverageRGB(from: frameData, width: width, height: height, bytesPerRow: bytesPerRow) else {
-            return
-        }
-
-        let muted = desaturate(sampled, saturation: 0.28)
-        let smoothing: Double = smoothedDynamicLightingRGB == SIMD3<Double>(repeating: 0) ? 0.42 : 0.14
-        smoothedDynamicLightingRGB += (muted - smoothedDynamicLightingRGB) * smoothing
-
-        let rgb = clampRGB(smoothedDynamicLightingRGB)
-        dynamicShellLightingColor = Color(red: rgb.x, green: rgb.y, blue: rgb.z)
-    }
-
-    private func sampledAverageRGB(from data: Data,
-                                   width: Int,
-                                   height: Int,
-                                   bytesPerRow: Int) -> SIMD3<Double>? {
-        guard width > 0, height > 0, bytesPerRow >= width * 4 else { return nil }
-
-        let sampleColumns = 8
-        let sampleRows = 8
-        let stepX = max(1, width / sampleColumns)
-        let stepY = max(1, height / sampleRows)
-        let startX = stepX / 2
-        let startY = stepY / 2
-
-        var rTotal: Double = 0
-        var gTotal: Double = 0
-        var bTotal: Double = 0
-        var sampleCount = 0
-
-        data.withUnsafeBytes { raw in
-            guard let base = raw.baseAddress?.assumingMemoryBound(to: UInt8.self) else { return }
-
-            for y in stride(from: startY, to: height, by: stepY) {
-                for x in stride(from: startX, to: width, by: stepX) {
-                    let index = (y * bytesPerRow) + (x * 4)
-                    if index + 2 >= data.count { continue }
-                    let b = Double(base[index]) / 255.0
-                    let g = Double(base[index + 1]) / 255.0
-                    let r = Double(base[index + 2]) / 255.0
-
-                    rTotal += r
-                    gTotal += g
-                    bTotal += b
-                    sampleCount += 1
-                }
-            }
-        }
-
-        guard sampleCount > 0 else { return nil }
-        let inv = 1.0 / Double(sampleCount)
-        return SIMD3<Double>(rTotal * inv, gTotal * inv, bTotal * inv)
-    }
-
-    private func desaturate(_ rgb: SIMD3<Double>, saturation: Double) -> SIMD3<Double> {
-        let gray = (rgb.x * 0.299) + (rgb.y * 0.587) + (rgb.z * 0.114)
-        let luminance = SIMD3<Double>(repeating: gray)
-        return luminance + ((rgb - luminance) * saturation)
-    }
-
-    private func clampRGB(_ rgb: SIMD3<Double>) -> SIMD3<Double> {
-        SIMD3<Double>(
-            min(1.0, max(0.0, rgb.x)),
-            min(1.0, max(0.0, rgb.y)),
-            min(1.0, max(0.0, rgb.z))
-        )
-    }
-
     private func applyPerformanceProfileIfNeeded(_ profile: PerfQualityProfile) {
         guard let renderer = metalRenderer else { return }
         guard lastAppliedQualityProfile != profile else { return }
@@ -1026,15 +936,7 @@ extension GamePlayViewModel: EmulatorRenderDelegate {
 
             metalRenderer?.enqueueFrame(data, width: width, height: height, bytesPerRow: pitch)
             performanceProfiler.recordFrame()
-            
             let now = CACurrentMediaTime()
-            updateDynamicLightingIfNeeded(
-                frameData: data,
-                width: width,
-                height: height,
-                bytesPerRow: pitch,
-                now: now
-            )
             if now - lastFPSTime > 0.5 {
                 let fps = Int(emulatorSession?.currentFrameRate ?? 0)
                 self.currentFPS = fps

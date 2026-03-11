@@ -24,6 +24,9 @@ struct HomeView: View {
     @State private var selectedPlatform: EmulatorPlatform?
     @State private var selectedGame: Game?
     @State private var activeAlert: HomeAlertState?
+    @State private var renameEntry: ROMLibraryEntry?
+    @State private var renameTitle = ""
+    @State private var detailEntry: ROMLibraryEntry?
     @State private var lastInteractionAt = Date()
     @State private var isIdle = false
     @State private var idleBreathing = false
@@ -128,6 +131,13 @@ struct HomeView: View {
                 selectedGame = nil
             }
         }
+        .sheet(item: $detailEntry) { entry in
+            NavigationStack {
+                RomDetailView(rom: entry) {
+                    detailEntry = nil
+                }
+            }
+        }
         #endif
         .alert(item: $activeAlert) { state in
             switch state.kind {
@@ -156,6 +166,18 @@ struct HomeView: View {
                     secondaryButton: .cancel()
                 )
             }
+        }
+        .alert("Rename Game", isPresented: renameDialogPresented) {
+            TextField("Game title", text: $renameTitle)
+            Button("Cancel", role: .cancel) {
+                clearRenameDraft()
+            }
+            Button("Save") {
+                commitRename()
+            }
+            .disabled(renameTitle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+        } message: {
+            Text("Enter a new display title for this game.")
         }
         .onAppear {
             refreshHome()
@@ -598,6 +620,18 @@ struct HomeView: View {
     @ViewBuilder
     private func recentGameContextMenu(_ game: RecentGame) -> some View {
         if let entry = viewModel.entry(for: game.gameId) {
+            Button {
+                beginRename(entry)
+            } label: {
+                Label("Rename", systemImage: "pencil")
+            }
+
+            Button {
+                showDetails(entry)
+            } label: {
+                Label("Details", systemImage: "info.circle")
+            }
+
             Button(role: .destructive) {
                 activeAlert = HomeAlertState(kind: .confirmDelete(HomeDeleteCandidate(entry: entry, mode: .removeROMOnly)))
             } label: {
@@ -610,6 +644,45 @@ struct HomeView: View {
                 Label("Remove", systemImage: "trash")
             }
         }
+    }
+
+    private var renameDialogPresented: Binding<Bool> {
+        Binding(
+            get: { renameEntry != nil },
+            set: { isPresented in
+                if !isPresented {
+                    clearRenameDraft()
+                }
+            }
+        )
+    }
+
+    private func beginRename(_ entry: ROMLibraryEntry) {
+        renameEntry = entry
+        renameTitle = entry.title ?? ""
+    }
+
+    private func clearRenameDraft() {
+        renameEntry = nil
+        renameTitle = ""
+    }
+
+    private func commitRename() {
+        guard let entry = renameEntry else { return }
+        do {
+            try GameRenameService.shared.rename(entry: entry, to: renameTitle, in: viewContext)
+#if os(iOS)
+            UINotificationFeedbackGenerator().notificationOccurred(.success)
+#endif
+            clearRenameDraft()
+            refreshHome()
+        } catch {
+            activeAlert = HomeAlertState(kind: .launchError("Could not rename game: \(error.localizedDescription)"))
+        }
+    }
+
+    private func showDetails(_ entry: ROMLibraryEntry) {
+        detailEntry = entry
     }
 
     private func launchRecentGame(_ recent: RecentGame) {
@@ -866,19 +939,19 @@ struct RecentGameCard: View {
     private var recentCardArtwork: some View {
         let artworkHeight: CGFloat = variant == .featured ? 152 : 126
         #if os(iOS)
-        if let screenshotData = game.screenshotData, let uiImage = UIImage(data: screenshotData) {
-            Image(uiImage: uiImage)
-                .resizable()
-                .aspectRatio(contentMode: .fill)
-                .frame(maxWidth: .infinity, minHeight: artworkHeight, maxHeight: artworkHeight)
-                .overlay(Color.white.opacity(0.12))
-                .clipShape(RoundedRectangle(cornerRadius: 12))
-        } else if let coverData = game.coverData, let uiImage = UIImage(data: coverData) {
+        if let coverData = game.coverData, let uiImage = UIImage(data: coverData) {
             Image(uiImage: uiImage)
                 .resizable()
                 .aspectRatio(contentMode: .fill)
                 .frame(maxWidth: .infinity, minHeight: artworkHeight, maxHeight: artworkHeight)
                 .overlay(Color.white.opacity(0.16))
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+        } else if let screenshotData = game.screenshotData, let uiImage = UIImage(data: screenshotData) {
+            Image(uiImage: uiImage)
+                .resizable()
+                .aspectRatio(contentMode: .fill)
+                .frame(maxWidth: .infinity, minHeight: artworkHeight, maxHeight: artworkHeight)
+                .overlay(Color.white.opacity(0.12))
                 .clipShape(RoundedRectangle(cornerRadius: 12))
         } else if let imageUrl = game.image, let url = URL(string: imageUrl) {
             AsyncImage(url: url) { image in

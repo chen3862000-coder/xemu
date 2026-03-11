@@ -27,6 +27,9 @@ struct GameListView: View {
     @State private var selectedGame: Game?
     @State private var showAllGames = false
     @State private var activeAlert: GameListAlertState?
+    @State private var renameEntry: ROMLibraryEntry?
+    @State private var renameTitle = ""
+    @State private var detailEntry: ROMLibraryEntry?
 
     private var heavyUIEffectsEnabled: Bool {
         performanceProfiler.currentQualityProfile.heavyUIEffects
@@ -131,6 +134,18 @@ struct GameListView: View {
                 )
             }
         }
+        .alert("Rename Game", isPresented: renameDialogPresented) {
+            TextField("Game title", text: $renameTitle)
+            Button("Cancel", role: .cancel) {
+                clearRenameDraft()
+            }
+            Button("Save") {
+                commitRename()
+            }
+            .disabled(renameTitle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+        } message: {
+            Text("Enter a new display title for this game.")
+        }
         #if os(iOS)
         .fullScreenCover(item: $selectedGame) { game in
             GamePlayView(game: game, onExit: {
@@ -138,6 +153,13 @@ struct GameListView: View {
             })
             .swipeBack {
                 selectedGame = nil
+            }
+        }
+        .sheet(item: $detailEntry) { entry in
+            NavigationStack {
+                RomDetailView(rom: entry) {
+                    detailEntry = nil
+                }
             }
         }
         #else
@@ -707,6 +729,18 @@ struct GameListView: View {
     @ViewBuilder
     private func deletionMenu(for game: Game) -> some View {
         if let entry = viewModel.entry(for: game.id) {
+            Button {
+                beginRename(entry)
+            } label: {
+                Label("Rename", systemImage: "pencil")
+            }
+
+            Button {
+                showDetails(entry)
+            } label: {
+                Label("Details", systemImage: "info.circle")
+            }
+
             Button(role: .destructive) {
                 activeAlert = GameListAlertState(kind: .confirmDelete(GameDeleteCandidate(entry: entry, mode: .removeROMOnly)))
             } label: {
@@ -719,6 +753,45 @@ struct GameListView: View {
                 Label("Remove", systemImage: "trash")
             }
         }
+    }
+
+    private var renameDialogPresented: Binding<Bool> {
+        Binding(
+            get: { renameEntry != nil },
+            set: { isPresented in
+                if !isPresented {
+                    clearRenameDraft()
+                }
+            }
+        )
+    }
+
+    private func beginRename(_ entry: ROMLibraryEntry) {
+        renameEntry = entry
+        renameTitle = entry.title ?? ""
+    }
+
+    private func clearRenameDraft() {
+        renameEntry = nil
+        renameTitle = ""
+    }
+
+    private func commitRename() {
+        guard let entry = renameEntry else { return }
+        do {
+            try GameRenameService.shared.rename(entry: entry, to: renameTitle, in: viewContext)
+#if os(iOS)
+            UINotificationFeedbackGenerator().notificationOccurred(.success)
+#endif
+            clearRenameDraft()
+            viewModel.loadGames(for: platform, in: viewContext)
+        } catch {
+            presentLaunchError("Could not rename game: \(error.localizedDescription)")
+        }
+    }
+
+    private func showDetails(_ entry: ROMLibraryEntry) {
+        detailEntry = entry
     }
 
     private func performDeletion(_ candidate: GameDeleteCandidate) {

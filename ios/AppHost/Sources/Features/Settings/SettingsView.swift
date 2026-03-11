@@ -19,7 +19,6 @@ struct SettingsView: View {
     @AppStorage("performanceMode") private var performanceModeRaw = PerformanceMode.auto.rawValue
     @AppStorage("showFPSMeter") private var showFPSMeter = false
     @AppStorage("showCartridgeLaunchIntro") private var showCartridgeLaunchIntro = true
-    @AppStorage("dynamicConsoleLightingEnabled") private var dynamicConsoleLightingEnabled = true
 
     @AppStorage("settings.devModeUnlocked") private var devModeUnlocked = false
     @AppStorage("proUnlocked") private var proUnlocked = false
@@ -53,7 +52,6 @@ struct SettingsView: View {
         NavigationStack {
             List {
                 appearanceSection
-                visualEffectsSection
                 performanceSection
                 controlsSection
                 accountSection
@@ -136,16 +134,6 @@ struct SettingsView: View {
                 title: "Retro Boot Experience",
                 subtitle: "Cartridge insert + console startup before game launch",
                 isOn: hapticBinding($showCartridgeLaunchIntro)
-            )
-        }
-    }
-
-    private var visualEffectsSection: some View {
-        Section(header: SettingsSectionHeader("Visual Effects")) {
-            ToggleSettingsRow(
-                title: "Dynamic Console Lighting",
-                subtitle: "Subtle shell tint reacts to game colors",
-                isOn: hapticBinding($dynamicConsoleLightingEnabled)
             )
         }
     }

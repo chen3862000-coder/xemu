@@ -17,6 +17,9 @@ struct RecentlyPlayedView: View {
     @State private var showEarlier = false
     @State private var sortMode: RecentSortMode = .recent
     @State private var coverEditorEntry: ROMLibraryEntry?
+    @State private var renameEntry: ROMLibraryEntry?
+    @State private var renameTitle = ""
+    @State private var detailEntry: ROMLibraryEntry?
 
     private var heavyUIEffectsEnabled: Bool {
         performanceProfiler.currentQualityProfile.heavyUIEffects
@@ -116,6 +119,18 @@ struct RecentlyPlayedView: View {
                 )
             }
         }
+        .alert("Rename Game", isPresented: renameDialogPresented) {
+            TextField("Game title", text: $renameTitle)
+            Button("Cancel", role: .cancel) {
+                clearRenameDraft()
+            }
+            Button("Save") {
+                commitRename()
+            }
+            .disabled(renameTitle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+        } message: {
+            Text("Enter a new display title for this game.")
+        }
         .onAppear(perform: loadGames)
         .onReceive(NotificationCenter.default.publisher(for: .romLibraryDidChange)) { _ in
             loadGames()
@@ -127,6 +142,13 @@ struct RecentlyPlayedView: View {
         .sheet(item: $coverEditorEntry) { entry in
             CoverEditorSheet(entry: entry) {
                 loadGames()
+            }
+        }
+        .sheet(item: $detailEntry) { entry in
+            NavigationStack {
+                RomDetailView(rom: entry) {
+                    detailEntry = nil
+                }
             }
         }
 #endif
@@ -407,9 +429,19 @@ struct RecentlyPlayedView: View {
             Label("Play", systemImage: "play.fill")
         }
         Button {
+            beginRename(entry)
+        } label: {
+            Label("Rename", systemImage: "pencil")
+        }
+        Button {
             editCover(entry)
         } label: {
             Label("Edit Cover", systemImage: "photo")
+        }
+        Button {
+            showDetails(entry)
+        } label: {
+            Label("Details", systemImage: "info.circle")
         }
         Button(role: .destructive) {
             resetCover(entry)
@@ -455,6 +487,45 @@ struct RecentlyPlayedView: View {
         }
         guard let game = entry.toGame() else { return }
         selectedGame = game
+    }
+
+    private var renameDialogPresented: Binding<Bool> {
+        Binding(
+            get: { renameEntry != nil },
+            set: { isPresented in
+                if !isPresented {
+                    clearRenameDraft()
+                }
+            }
+        )
+    }
+
+    private func beginRename(_ entry: ROMLibraryEntry) {
+        renameEntry = entry
+        renameTitle = entry.title ?? ""
+    }
+
+    private func clearRenameDraft() {
+        renameEntry = nil
+        renameTitle = ""
+    }
+
+    private func commitRename() {
+        guard let entry = renameEntry else { return }
+        do {
+            try GameRenameService.shared.rename(entry: entry, to: renameTitle, in: viewContext)
+#if os(iOS)
+            UINotificationFeedbackGenerator().notificationOccurred(.success)
+#endif
+            clearRenameDraft()
+            loadGames()
+        } catch {
+            activeAlert = .launchError("Could not rename game: \(error.localizedDescription)")
+        }
+    }
+
+    private func showDetails(_ entry: ROMLibraryEntry) {
+        detailEntry = entry
     }
 
     private func performDeletion(_ candidate: RecentDeleteCandidate) {
@@ -691,13 +762,13 @@ private struct RecentResumeCard: View {
                     )
                 )
 #if os(iOS)
-            if let screenshotData = SaveStateStorage.shared.latestScreenshot(for: entry.checksum ?? ""),
-               let uiImage = UIImage(data: screenshotData) {
+            if let resolved = CoverArtService.shared.resolve(for: entry),
+               let uiImage = UIImage(data: resolved.data) {
                 Image(uiImage: uiImage)
                     .resizable()
                     .scaledToFill()
-            } else if let resolved = CoverArtService.shared.resolve(for: entry),
-                      let uiImage = UIImage(data: resolved.data) {
+            } else if let screenshotData = SaveStateStorage.shared.latestScreenshot(for: entry.checksum ?? ""),
+                      let uiImage = UIImage(data: screenshotData) {
                 Image(uiImage: uiImage)
                     .resizable()
                     .scaledToFill()
@@ -773,13 +844,13 @@ private struct RecentRow: View {
                     )
                 )
 #if os(iOS)
-            if let screenshotData = SaveStateStorage.shared.latestScreenshot(for: entry.checksum ?? ""),
-               let uiImage = UIImage(data: screenshotData) {
+            if let resolved = CoverArtService.shared.resolve(for: entry),
+               let uiImage = UIImage(data: resolved.data) {
                 Image(uiImage: uiImage)
                     .resizable()
                     .scaledToFill()
-            } else if let resolved = CoverArtService.shared.resolve(for: entry),
-                      let uiImage = UIImage(data: resolved.data) {
+            } else if let screenshotData = SaveStateStorage.shared.latestScreenshot(for: entry.checksum ?? ""),
+                      let uiImage = UIImage(data: screenshotData) {
                 Image(uiImage: uiImage)
                     .resizable()
                     .scaledToFill()

@@ -46,7 +46,6 @@ struct GamePlayView: View {
     @AppStorage("resumeLaunchPolicy") private var resumeLaunchPolicyRaw = ResumeLaunchPolicy.autoResumeLatest.rawValue
     @AppStorage("showFPSMeter") private var showFPSMeter = false
     @AppStorage("showCartridgeLaunchIntro") private var showCartridgeLaunchIntro = true
-    @AppStorage("dynamicConsoleLightingEnabled") private var dynamicConsoleLightingEnabled = true
     @StateObject private var performanceProfiler = PerformanceProfiler.shared
     #if DEBUG
     @AppStorage("showPerformanceHUD") private var showPerformanceHUD = false
@@ -74,10 +73,6 @@ struct GamePlayView: View {
                         .environment(\.emulatorShellTheme, resolvedShellTheme)
                 } else {
                     standardGameLayout(in: geometry)
-                }
-
-                if shouldShowDynamicConsoleLighting {
-                    dynamicShellLightingOverlay(in: geometry)
                 }
 
                 if showCartridgeIntro {
@@ -210,65 +205,6 @@ struct GamePlayView: View {
 
     private var heavyUIEffectsEnabled: Bool {
         performanceProfiler.currentQualityProfile.heavyUIEffects
-    }
-
-    private var shouldShowDynamicConsoleLighting: Bool {
-        dynamicConsoleLightingEnabled && heavyUIEffectsEnabled && viewModel.isRunning
-    }
-
-    private var consoleLightingBiasColor: Color {
-        switch game.gamePlatform {
-        case .GB, .GBC:
-            return Color(red: 0.63, green: 0.80, blue: 0.45)
-        case .GBA:
-            return Color(red: 0.55, green: 0.42, blue: 0.92)
-        case .NDS:
-            return Color(red: 0.45, green: 0.65, blue: 0.98)
-        default:
-            return Color(red: 0.62, green: 0.50, blue: 0.90)
-        }
-    }
-
-    @ViewBuilder
-    private func dynamicShellLightingOverlay(in geometry: GeometryProxy) -> some View {
-        let extent = max(geometry.size.width, geometry.size.height)
-        let primaryRadius = max(120, extent * 0.30)
-        let secondaryRadius = max(220, extent * 0.50)
-        let gameColor = viewModel.dynamicShellLightingColor
-
-        ZStack {
-            RadialGradient(
-                colors: [
-                    gameColor.opacity(0.32),
-                    gameColor.opacity(0.15),
-                    .clear
-                ],
-                center: .top,
-                startRadius: 10,
-                endRadius: primaryRadius
-            )
-            .blendMode(.screen)
-
-            RadialGradient(
-                colors: [
-                    consoleLightingBiasColor.opacity(0.10),
-                    .clear
-                ],
-                center: .top,
-                startRadius: 24,
-                endRadius: secondaryRadius
-            )
-            .blendMode(.overlay)
-        }
-        .opacity(0.78)
-        .mask(
-            LinearGradient(
-                colors: [Color.white.opacity(0.95), Color.white.opacity(0.62), .clear],
-                startPoint: .top,
-                endPoint: .bottom
-            )
-        )
-        .allowsHitTesting(false)
     }
 
     private func beginLaunchSequence(allowResumeFlow: Bool) {
@@ -2874,6 +2810,64 @@ struct GamePlayView: View {
         .frame(height: 44)
     }
 
+    private func gbaLandscapeSelectStartRow(
+        theme: ShellSystemButtonTheme,
+        onSelectPress: @escaping (Bool) -> Void,
+        onStartPress: @escaping (Bool) -> Void
+    ) -> some View {
+        HStack(spacing: 18) {
+            ShellSystemButton(
+                theme: theme,
+                label: "SELECT",
+                minWidth: 70,
+                controlHeight: 28,
+                fontSize: 11,
+                knobDiameter: 0,
+                horizontalPadding: 12,
+                showsKnob: false
+            ) {
+                onSelectPress(true)
+            } onRelease: {
+                onSelectPress(false)
+            }
+            ShellSystemButton(
+                theme: theme,
+                label: "START",
+                minWidth: 70,
+                controlHeight: 28,
+                fontSize: 11,
+                knobDiameter: 0,
+                horizontalPadding: 12,
+                showsKnob: false
+            ) {
+                onStartPress(true)
+            } onRelease: {
+                onStartPress(false)
+            }
+        }
+        .frame(height: 28)
+    }
+
+    private func gbaLandscapeUtilityTray(iconSize: CGFloat) -> some View {
+        HStack(spacing: 14) {
+            gbUtilityIcon(systemName: "square.and.arrow.down.fill", tint: .green, customSize: iconSize) {
+                viewModel.quickSave()
+            }
+            gbUtilityIcon(systemName: "square.and.arrow.up.fill", tint: .orange, customSize: iconSize) {
+                viewModel.quickLoad()
+            }
+            gbUtilityIcon(systemName: "forward.fill", tint: .yellow, customSize: iconSize) {
+                fastForwardSpeed = fastForwardSpeed == 2 ? 1 : 2
+                viewModel.setFastForward(fastForwardSpeed)
+            }
+            gbUtilityIcon(systemName: "speaker.wave.2.fill", tint: .cyan, customSize: iconSize) {}
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 8)
+        .background(.ultraThinMaterial, in: Capsule(style: .continuous))
+        .overlay(Capsule(style: .continuous).stroke(Color.white.opacity(0.16), lineWidth: 1))
+    }
+
     private func ndsLandscapeMenuCompactButton(theme: ShellSystemButtonTheme, onMenu: @escaping () -> Void) -> some View {
         HStack {
             ShellSystemButton(
@@ -2935,41 +2929,59 @@ struct GamePlayView: View {
         guard hasUsableGeometry(geometry) else { return AnyView(Color.black) }
         let safeLeading = geometry.safeAreaInsets.leading
         let safeTrailing = geometry.safeAreaInsets.trailing
-        let gbScreenScale = (game.gamePlatform == .GBC) ? 0.66 : 0.74
+        let outerHorizontalMargin: CGFloat = 8
         let gbDPadScale: CGFloat = (game.gamePlatform == .GBC) ? 0.72 : 0.76
         let gbFaceScale: CGFloat = (game.gamePlatform == .GBC) ? 0.70 : 0.74
-        let shellWidth = safeFrameValue(max(520, min(geometry.size.width - safeLeading - safeTrailing - 18, 900.0)), fallback: 520)
-        let shellHeight = safeFrameValue(max(260, min(geometry.size.height - 18, 430.0)), fallback: 260)
-        let innerWidth = safeFrameValue(shellWidth - 28, fallback: 492)
-        let columnGap: CGFloat = 12
+        let shellWidth = safeFrameValue(max(560, min(geometry.size.width - safeLeading - safeTrailing - (outerHorizontalMargin * 2), 980.0)), fallback: 560)
+        let shellHeight = safeFrameValue(max(286, min(geometry.size.height - 8, 438.0)), fallback: 286)
+        let innerWidth = safeFrameValue(shellWidth - 18, fallback: 542)
+        let columnGap: CGFloat = 10
         let dpadSize = 182 * gbDPadScale
         let faceSize = 190 * gbFaceScale
-        let leftControlMinWidth = max(dpadSize + 8, 170)
-        let rightControlMinWidth = max(faceSize + 8, 170)
-        let minDisplayPanelWidth: CGFloat = 320
-        let maxDisplayPanelWidth: CGFloat = 430
-        let maxSideColumnWidth = safeFrameValue(max(220, (innerWidth - minDisplayPanelWidth - (columnGap * 2)) / 2), fallback: 220)
+        let leftControlMinWidth = max(dpadSize + 2, 156)
+        let rightControlMinWidth = max(faceSize + 2, 156)
+        let minDisplayPanelWidth: CGFloat = 340
+        let maxDisplayPanelWidth: CGFloat = 460
+        let maxSideColumnWidth = safeFrameValue(max(164, (innerWidth - minDisplayPanelWidth - (columnGap * 2)) / 2), fallback: 164)
         let sideColumnWidth = safeFrameValue(min(max(leftControlMinWidth, rightControlMinWidth), maxSideColumnWidth), fallback: 180)
-        let leftPanelWidth = safeFrameValue(min(
+        let centerPanelWidth = safeFrameValue(min(
             maxDisplayPanelWidth,
             max(minDisplayPanelWidth, innerWidth - (sideColumnWidth * 2) - (columnGap * 2))
         ), fallback: minDisplayPanelWidth)
-        let screenWidth = safeFrameValue(min(leftPanelWidth - 20, leftPanelWidth * gbScreenScale), fallback: 180)
-        let screenHeight = safeFrameValue(min(screenWidth * (144.0 / 160.0), shellHeight * 0.62), fallback: 120)
-        let centerModuleHeight = safeFrameValue((shellHeight * 0.72) + 46, fallback: 200)
+        let portraitReferenceShellWidth = safeFrameValue(max(220, min(geometry.size.height - 18, 430.0)), fallback: 220)
+        let portraitReferenceDisplayWidth = safeFrameValue(portraitReferenceShellWidth - 28, fallback: 180)
+        let portraitMatchedScreenWidth = safeFrameValue(
+            min(
+                portraitReferenceDisplayWidth - 8,
+                portraitReferenceDisplayWidth * ((game.gamePlatform == .GBC) ? 0.70 : 0.77)
+            ),
+            fallback: 120
+        )
+        let screenWidth = safeFrameValue(min(centerPanelWidth - 18, portraitMatchedScreenWidth), fallback: 180)
+        let screenHeight = safeFrameValue(screenWidth * (144.0 / 160.0), fallback: 120)
+        let screenSafeInset: CGFloat = 16
+        let screenPanelTopInset: CGFloat = 10
+        let mainControlHeight = safeFrameValue(max(screenHeight + 18, max(dpadSize, faceSize) + 34), fallback: 190)
+        let screenBottomAlignment = safeFrameValue(screenPanelTopInset + screenHeight, fallback: screenHeight)
+        let controlBottomInset = safeFrameValue(max(0, mainControlHeight - screenBottomAlignment), fallback: 0)
+        let dpadTopInset = safeFrameValue(max(0, screenBottomAlignment - dpadSize), fallback: 0)
+        let faceTopInset = safeFrameValue(max(0, screenBottomAlignment - faceSize), fallback: 0)
+        let lowerBandTopSpacing: CGFloat = 16
+        let utilityIconSize: CGFloat = 36
+        let centerSafeWidth = safeFrameValue(max(centerPanelWidth, screenWidth + (screenSafeInset * 2)), fallback: centerPanelWidth)
 
         return AnyView(
         VStack(spacing: 0) {
             HStack {
                 Text(game.title ?? "Game Boy")
-                    .font(.system(size: 15, weight: .semibold))
+                    .font(.system(size: 14, weight: .semibold))
                     .foregroundColor(.white.opacity(0.92))
                     .lineLimit(1)
                 Spacer()
             }
-            .padding(.horizontal, 12)
-            .padding(.top, 4)
-            .padding(.bottom, 8)
+            .padding(.horizontal, 10)
+            .padding(.top, 2)
+            .padding(.bottom, 4)
 
             ZStack {
                 RoundedRectangle(cornerRadius: 30, style: .continuous)
@@ -3003,103 +3015,103 @@ struct GamePlayView: View {
                     )
                     .shadow(color: Color.purple.opacity(0.18), radius: 20, x: 0, y: 8)
 
-                HStack(spacing: columnGap) {
-                    VStack {
-                        Spacer(minLength: 0)
-                        GBDPadView { button, pressed in
-                            viewModel.handleButtonPress(button, pressed: pressed)
-                        }
-                        .scaleEffect(gbDPadScale)
-                        .frame(width: dpadSize, height: dpadSize)
-                        Spacer(minLength: 0)
-                        shellLandscapeMenuButton(theme: .neoGlass) {
-                            showPauseMenu = true
-                        }
-                        .frame(width: sideColumnWidth - 4, alignment: .leading)
-                    }
-                    .frame(width: sideColumnWidth, height: centerModuleHeight)
-                    .frame(width: sideColumnWidth)
-                    .frame(maxHeight: .infinity, alignment: .center)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-
-                    VStack(spacing: 0) {
-                            ZStack(alignment: .top) {
-                                RoundedRectangle(cornerRadius: 20, style: .continuous)
-                                    .fill(Color(red: 0.07, green: 0.09, blue: 0.14))
-                                    .overlay(
-                                        RoundedRectangle(cornerRadius: 20, style: .continuous)
-                                            .stroke(Color.white.opacity(0.06), lineWidth: 1)
-                                    )
-                                emulatorDisplayView
-                                    .frame(width: screenWidth, height: screenHeight)
-                                    .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-                                    .overlay(
-                                        RoundedRectangle(cornerRadius: 10, style: .continuous)
-                                            .stroke(
-                                                LinearGradient(
-                                                    colors: [Color.white.opacity(0.08), Color.black.opacity(0.25)],
-                                                    startPoint: .topLeading,
-                                                    endPoint: .bottomTrailing
-                                                ),
-                                                lineWidth: 1
-                                            )
-                                    )
-                                    .padding(.top, 14)
-                        }
-                        .frame(width: leftPanelWidth, height: safeFrameValue(shellHeight * 0.72, fallback: 180))
-
-                        HStack(spacing: 10) {
-                            gbUtilityIcon(systemName: "square.and.arrow.down.fill", tint: .green) { viewModel.quickSave() }
-                            gbUtilityIcon(systemName: "square.and.arrow.up.fill", tint: .orange) { viewModel.quickLoad() }
-                            Spacer()
-                            gbUtilityIcon(systemName: "forward.fill", tint: .yellow) {
-                                fastForwardSpeed = fastForwardSpeed == 2 ? 1 : 2
-                                viewModel.setFastForward(fastForwardSpeed)
+                VStack(spacing: 0) {
+                    HStack(spacing: columnGap) {
+                        VStack(spacing: 0) {
+                            Spacer(minLength: dpadTopInset)
+                            GBDPadView { button, pressed in
+                                viewModel.handleButtonPress(button, pressed: pressed)
                             }
-                            gbUtilityIcon(systemName: "speaker.wave.2.fill", tint: .cyan) {}
+                            .scaleEffect(gbDPadScale)
+                            .frame(width: dpadSize, height: dpadSize)
+                            Spacer(minLength: controlBottomInset)
                         }
-                        .padding(.horizontal, 14)
-                        .frame(height: 46)
-                        .background(Color(red: 0.07, green: 0.09, blue: 0.14))
-                        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-                    }
-                    .frame(width: leftPanelWidth)
-                    .frame(maxHeight: .infinity, alignment: .center)
+                        .frame(width: sideColumnWidth, height: mainControlHeight)
+                        .frame(maxWidth: .infinity, alignment: .leading)
 
-                    VStack {
-                        Spacer(minLength: 0)
-                        GBFaceButtonsView { button, pressed in
-                            viewModel.handleButtonPress(button, pressed: pressed)
+                        ZStack(alignment: .top) {
+                            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                                .fill(Color(red: 0.07, green: 0.09, blue: 0.14))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 20, style: .continuous)
+                                        .stroke(Color.white.opacity(0.06), lineWidth: 1)
+                                )
+                            emulatorDisplayView
+                                .frame(width: screenWidth, height: screenHeight)
+                                .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                        .stroke(
+                                            LinearGradient(
+                                                colors: [Color.white.opacity(0.08), Color.black.opacity(0.25)],
+                                                startPoint: .topLeading,
+                                                endPoint: .bottomTrailing
+                                            ),
+                                            lineWidth: 1
+                                        )
+                                )
+                                .padding(.top, screenPanelTopInset)
                         }
-                        .scaleEffect(gbFaceScale)
-                        .frame(width: faceSize, height: faceSize)
+                        .frame(width: centerPanelWidth, height: mainControlHeight)
+
+                        VStack(spacing: 0) {
+                            Spacer(minLength: faceTopInset)
+                            GBFaceButtonsView { button, pressed in
+                                viewModel.handleButtonPress(button, pressed: pressed)
+                            }
+                            .scaleEffect(gbFaceScale)
+                            .frame(width: faceSize, height: faceSize)
+                            .frame(maxWidth: .infinity, alignment: .trailing)
+                            Spacer(minLength: controlBottomInset)
+                        }
+                        .frame(width: sideColumnWidth, height: mainControlHeight)
                         .frame(maxWidth: .infinity, alignment: .trailing)
-                        Spacer(minLength: 0)
-                        shellLandscapeSelectStartRow(theme: .neoGlass) { pressed in
-                            viewModel.handleButtonPress(.select, pressed: pressed)
-                        } onStartPress: { pressed in
-                            viewModel.handleButtonPress(.start, pressed: pressed)
-                        }
-                        .frame(width: sideColumnWidth - 4, alignment: .trailing)
                     }
-                    .frame(width: sideColumnWidth, height: centerModuleHeight)
-                    .frame(width: sideColumnWidth)
-                    .padding(.vertical, 10)
-                    .frame(maxHeight: .infinity, alignment: .center)
+                    .frame(height: mainControlHeight)
+
+                    Spacer(minLength: lowerBandTopSpacing)
+
+                    HStack(alignment: .bottom, spacing: columnGap) {
+                        VStack {
+                            Spacer(minLength: 0)
+                            shellLandscapeMenuButton(theme: .neoGlass) {
+                                showPauseMenu = true
+                            }
+                            .frame(width: sideColumnWidth - 12, alignment: .leading)
+                        }
+                        .frame(width: sideColumnWidth, alignment: .leading)
+
+                        VStack(spacing: 18) {
+                            gbaLandscapeSelectStartRow(theme: .neoGlass) { pressed in
+                                viewModel.handleButtonPress(.select, pressed: pressed)
+                            } onStartPress: { pressed in
+                                viewModel.handleButtonPress(.start, pressed: pressed)
+                            }
+
+                            gbaLandscapeUtilityTray(iconSize: utilityIconSize)
+                        }
+                        .frame(width: centerSafeWidth)
+                        .frame(maxHeight: .infinity, alignment: .bottom)
+
+                        Color.clear
+                            .frame(width: sideColumnWidth, height: 1)
+                    }
+                    .frame(maxHeight: .infinity, alignment: .bottom)
                 }
-                .padding(.horizontal, 14)
-                .padding(.vertical, 10)
+                .padding(.horizontal, 10)
+                .padding(.top, 20)
+                .padding(.bottom, 8)
             }
             .frame(width: shellWidth, height: shellHeight)
-            .padding(.bottom, 6)
+            .padding(.bottom, 4)
 
             statusBar
                 .padding(.horizontal, 8)
-                .padding(.bottom, 4)
+                .padding(.bottom, 2)
         }
         .padding(.leading, safeLeading)
         .padding(.trailing, safeTrailing)
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
         )
     }
 
@@ -3107,40 +3119,56 @@ struct GamePlayView: View {
     private func gbaConsoleLayoutLandscape(in geometry: GeometryProxy) -> some View {
         let safeLeading = geometry.safeAreaInsets.leading
         let safeTrailing = geometry.safeAreaInsets.trailing
-        let gbaScreenScale: CGFloat = 0.78
-        let gbaDPadScale: CGFloat = 0.72
-        let gbaFaceScale: CGFloat = 0.72
-        let shellWidth = safeFrameValue(max(520, min(geometry.size.width - safeLeading - safeTrailing - 18, 900.0)), fallback: 520)
-        let shellHeight = safeFrameValue(max(260, min(geometry.size.height - 18, 430.0)), fallback: 260)
-        let innerWidth = safeFrameValue(shellWidth - 28, fallback: 492)
-        let columnGap: CGFloat = 12
+        let outerHorizontalMargin: CGFloat = 8
+        let shellWidth = safeFrameValue(max(560, min(geometry.size.width - safeLeading - safeTrailing - (outerHorizontalMargin * 2), 980.0)), fallback: 560)
+        let shellHeight = safeFrameValue(max(286, min(geometry.size.height - 8, 438.0)), fallback: 286)
+        let layoutScale = safeFrameValue(min(1.0, max(0.86, (shellHeight - 250.0) / 120.0)), fallback: 1.0)
+        let gbaDPadScale: CGFloat = 0.72 * layoutScale
+        let gbaFaceScale: CGFloat = 0.72 * layoutScale
+        let innerWidth = safeFrameValue(shellWidth - 18, fallback: 542)
+        let columnGap: CGFloat = 10
         let dpadSize = 182 * gbaDPadScale
         let faceSize = 190 * gbaFaceScale
-        let leftControlMinWidth = max(dpadSize + 8, 170)
-        let rightControlMinWidth = max(faceSize + 8, 170)
-        let minDisplayPanelWidth: CGFloat = 320
-        let maxDisplayPanelWidth: CGFloat = 460
-        let maxSideColumnWidth = max(180, (innerWidth - minDisplayPanelWidth - (columnGap * 2)) / 2)
+        let leftControlMinWidth = max(dpadSize + 2, 156)
+        let rightControlMinWidth = max(faceSize + 2, 156)
+        let minDisplayPanelWidth: CGFloat = 360
+        let maxDisplayPanelWidth: CGFloat = 540
+        let maxSideColumnWidth = max(164, (innerWidth - minDisplayPanelWidth - (columnGap * 2)) / 2)
         let sideColumnWidth = safeFrameValue(min(max(leftControlMinWidth, rightControlMinWidth), maxSideColumnWidth), fallback: 180)
         let displayPanelWidth = safeFrameValue(min(
             maxDisplayPanelWidth,
             max(minDisplayPanelWidth, innerWidth - (sideColumnWidth * 2) - (columnGap * 2))
         ), fallback: minDisplayPanelWidth)
-        let screenWidth = safeFrameValue(min(displayPanelWidth - 24, displayPanelWidth * gbaScreenScale), fallback: 180)
-        let screenHeight = safeFrameValue(min(screenWidth * (160.0 / 240.0), shellHeight * 0.45), fallback: 120)
-        let centerModuleHeight = safeFrameValue((shellHeight * 0.55) + 46, fallback: 180)
+        let screenSafeInset: CGFloat = 16
+        let portraitReferenceShellWidth = safeFrameValue(max(220, min(geometry.size.height - 18, 430.0)), fallback: 220)
+        let portraitMatchedScreenWidth = safeFrameValue(
+            min(portraitReferenceShellWidth - 16, portraitReferenceShellWidth * 0.84),
+            fallback: 120
+        )
+        let screenWidth = safeFrameValue(min(displayPanelWidth - 18, portraitMatchedScreenWidth), fallback: 180)
+        let screenHeight = safeFrameValue(screenWidth * (160.0 / 240.0), fallback: 120)
+        let mainControlHeight = safeFrameValue(max(screenHeight + 16, max(dpadSize, faceSize) + 34), fallback: 184)
+        let lowerBandTopSpacing = safeFrameValue(max(14, 18 * layoutScale), fallback: 16)
+        let systemToUtilitySpacing = safeFrameValue(max(14, 20 * layoutScale), fallback: 18)
+        let utilityIconSize = safeFrameValue(max(34, min(38, 36 * layoutScale + 1)), fallback: 36)
+        let centerSafeWidth = safeFrameValue(max(displayPanelWidth, screenWidth + (screenSafeInset * 2)), fallback: displayPanelWidth)
+        let screenPanelTopInset: CGFloat = 36
+        let screenBottomAlignment = safeFrameValue(screenPanelTopInset + screenHeight, fallback: screenHeight)
+        let controlBottomInset = safeFrameValue(max(0, mainControlHeight - screenBottomAlignment), fallback: 0)
+        let dpadTopInset = safeFrameValue(max(0, screenBottomAlignment - dpadSize), fallback: 0)
+        let faceTopInset = safeFrameValue(max(0, screenBottomAlignment - faceSize), fallback: 0)
 
         VStack(spacing: 0) {
             HStack {
                 Text(game.title ?? "Game Boy Advance")
-                    .font(.system(size: 15, weight: .semibold))
+                    .font(.system(size: 14, weight: .semibold))
                     .foregroundColor(.white.opacity(0.92))
                     .lineLimit(1)
                 Spacer()
             }
-            .padding(.horizontal, 12)
-            .padding(.top, 4)
-            .padding(.bottom, 8)
+            .padding(.horizontal, 10)
+            .padding(.top, 2)
+            .padding(.bottom, 4)
 
             ZStack {
                 RoundedRectangle(cornerRadius: 28, style: .continuous)
@@ -3172,109 +3200,105 @@ struct GamePlayView: View {
                             viewModel.handleButtonPress(.r1, pressed: true)
                         } onRelease: { viewModel.handleButtonPress(.r1, pressed: false) }
                     }
-                    .padding(.horizontal, 18)
-                    .padding(.top, 8)
+                    .padding(.horizontal, 16)
+                    .padding(.top, 6)
                     Spacer()
                 }
 
-                HStack(spacing: columnGap) {
-                    VStack {
-                        Spacer(minLength: 0)
-                        GBALightDPadView { button, pressed in
-                            viewModel.handleButtonPress(button, pressed: pressed)
-                        }
-                        .scaleEffect(gbaDPadScale)
-                        .frame(width: dpadSize, height: dpadSize)
-                        Spacer(minLength: 0)
-                        shellLandscapeMenuButton(theme: .darkPurple) {
-                            showPauseMenu = true
-                        }
-                        .frame(width: sideColumnWidth - 4, alignment: .leading)
-                    }
-                    .frame(width: sideColumnWidth, height: centerModuleHeight)
-                    .frame(width: sideColumnWidth)
-                    .frame(maxHeight: .infinity, alignment: .center)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-
-                    VStack(spacing: 8) {
+                VStack(spacing: 0) {
+                    HStack(spacing: columnGap) {
                         VStack(spacing: 0) {
-                            ZStack(alignment: .top) {
-                                Color.black.opacity(0.95)
-                                    .overlay(
-                                        RoundedRectangle(cornerRadius: 12)
-                                            .stroke(Color.white.opacity(0.04), lineWidth: 1)
-                                            .padding(2)
-                                    )
-                                emulatorDisplayView
-                                    .frame(width: screenWidth, height: screenHeight)
-                                    .clipShape(RoundedRectangle(cornerRadius: 4, style: .continuous))
-                                    .overlay(
-                                        RoundedRectangle(cornerRadius: 4, style: .continuous)
-                                            .stroke(Color.white.opacity(0.07), lineWidth: 1)
-                                    )
-                                    .padding(.top, 26)
-                                Capsule()
-                                    .fill(Color.white.opacity(0.18))
-                                    .frame(width: safeFrameValue(screenWidth - 10, fallback: 1), height: 1)
-                                    .padding(.top, 14)
+                            Spacer(minLength: dpadTopInset)
+                            GBALightDPadView { button, pressed in
+                                viewModel.handleButtonPress(button, pressed: pressed)
                             }
-                            .frame(width: displayPanelWidth, height: shellHeight * 0.55)
+                            .scaleEffect(gbaDPadScale)
+                            .frame(width: dpadSize, height: dpadSize)
+                            Spacer(minLength: controlBottomInset)
+                        }
+                        .frame(width: sideColumnWidth, height: mainControlHeight)
+                        .frame(maxWidth: .infinity, alignment: .leading)
 
-                            HStack(spacing: 12) {
-                                gbUtilityIcon(systemName: "square.and.arrow.down.fill", tint: .green) { viewModel.quickSave() }
-                                gbUtilityIcon(systemName: "square.and.arrow.up.fill", tint: .orange) { viewModel.quickLoad() }
-                                Spacer()
-                                gbUtilityIcon(systemName: "forward.fill", tint: .yellow) {
-                                    fastForwardSpeed = fastForwardSpeed == 2 ? 1 : 2
-                                    viewModel.setFastForward(fastForwardSpeed)
-                                }
-                                gbUtilityIcon(systemName: "speaker.wave.2.fill", tint: .cyan) {}
+                        ZStack(alignment: .top) {
+                            Color.black.opacity(0.95)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 12)
+                                        .stroke(Color.white.opacity(0.04), lineWidth: 1)
+                                        .padding(2)
+                                )
+                            emulatorDisplayView
+                                .frame(width: screenWidth, height: screenHeight)
+                                .clipShape(RoundedRectangle(cornerRadius: 4, style: .continuous))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 4, style: .continuous)
+                                        .stroke(Color.white.opacity(0.07), lineWidth: 1)
+                                )
+                                .padding(.top, screenPanelTopInset)
+                            Capsule()
+                                .fill(Color.white.opacity(0.18))
+                                .frame(width: safeFrameValue(screenWidth - 10, fallback: 1), height: 1)
+                                .padding(.top, 14)
+                        }
+                        .frame(width: displayPanelWidth, height: mainControlHeight)
+
+                        VStack(spacing: 0) {
+                            Spacer(minLength: faceTopInset)
+                            GBAFaceButtonsView { button, pressed in
+                                viewModel.handleButtonPress(button, pressed: pressed)
                             }
-                            .padding(.horizontal, 14)
-                            .frame(height: 46)
-                            .background(Color.black.opacity(0.98))
+                            .scaleEffect(gbaFaceScale)
+                            .frame(width: faceSize, height: faceSize)
+                            .frame(maxWidth: .infinity, alignment: .trailing)
+                            Spacer(minLength: controlBottomInset)
                         }
-                        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
-
-                    }
-                    .frame(width: displayPanelWidth)
-                    .frame(maxHeight: .infinity, alignment: .center)
-
-                    VStack {
-                        Spacer(minLength: 0)
-                        GBAFaceButtonsView { button, pressed in
-                            viewModel.handleButtonPress(button, pressed: pressed)
-                        }
-                        .scaleEffect(gbaFaceScale)
-                        .frame(width: faceSize, height: faceSize)
+                        .frame(width: sideColumnWidth, height: mainControlHeight)
                         .frame(maxWidth: .infinity, alignment: .trailing)
-                        Spacer(minLength: 0)
-                        shellLandscapeSelectStartRow(theme: .darkPurple) { pressed in
-                            viewModel.handleButtonPress(.select, pressed: pressed)
-                        } onStartPress: { pressed in
-                            viewModel.handleButtonPress(.start, pressed: pressed)
-                        }
-                        .frame(width: sideColumnWidth - 4, alignment: .trailing)
                     }
-                    .frame(width: sideColumnWidth, height: centerModuleHeight)
-                    .frame(width: sideColumnWidth)
-                    .padding(.vertical, 8)
-                    .frame(maxHeight: .infinity, alignment: .center)
+                    .frame(height: mainControlHeight)
+
+                    Spacer(minLength: lowerBandTopSpacing)
+
+                    HStack(alignment: .bottom, spacing: columnGap) {
+                        VStack {
+                            Spacer(minLength: 0)
+                            shellLandscapeMenuButton(theme: .darkPurple) {
+                                showPauseMenu = true
+                            }
+                            .frame(width: sideColumnWidth - 12, alignment: .leading)
+                        }
+                        .frame(width: sideColumnWidth, alignment: .leading)
+
+                        VStack(spacing: systemToUtilitySpacing) {
+                            gbaLandscapeSelectStartRow(theme: .darkPurple) { pressed in
+                                viewModel.handleButtonPress(.select, pressed: pressed)
+                            } onStartPress: { pressed in
+                                viewModel.handleButtonPress(.start, pressed: pressed)
+                            }
+
+                            gbaLandscapeUtilityTray(iconSize: utilityIconSize)
+                        }
+                        .frame(width: centerSafeWidth)
+                        .frame(maxHeight: .infinity, alignment: .bottom)
+
+                        Color.clear
+                            .frame(width: sideColumnWidth, height: 1)
+                    }
+                    .frame(maxHeight: .infinity, alignment: .bottom)
                 }
-                .padding(.horizontal, 14)
-                .padding(.top, 28)
-                .padding(.bottom, 10)
+                .padding(.horizontal, 10)
+                .padding(.top, 22)
+                .padding(.bottom, 8)
             }
             .frame(width: shellWidth, height: shellHeight)
-            .padding(.bottom, 6)
+            .padding(.bottom, 4)
 
             statusBar
                 .padding(.horizontal, 8)
-                .padding(.bottom, 4)
+                .padding(.bottom, 2)
         }
         .padding(.leading, safeLeading)
         .padding(.trailing, safeTrailing)
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
     }
 
     private var emulatorDisplayView: some View {
@@ -3293,19 +3317,6 @@ struct GamePlayView: View {
                 retroMindPlaceholderView
             }
         }
-        .overlay {
-            if shouldShowDynamicConsoleLighting {
-                RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    .stroke(viewModel.dynamicShellLightingColor.opacity(0.16), lineWidth: 1)
-                    .blur(radius: 0.5)
-            }
-        }
-        .shadow(
-            color: shouldShowDynamicConsoleLighting ? viewModel.dynamicShellLightingColor.opacity(0.20) : .clear,
-            radius: 14,
-            x: 0,
-            y: 0
-        )
     }
 
     private var retroMindPlaceholderView: some View {
@@ -4361,37 +4372,30 @@ struct GamePlayView: View {
             saveSlotThumbnail(summary)
                 .frame(width: mode == .launchPicker ? 96 : 112, height: mode == .launchPicker ? 60 : 72)
 
-            VStack(alignment: .leading, spacing: 6) {
-                HStack(spacing: 8) {
-                    Text(summary.isQuickSlot ? "Quick Save" : "Slot \(summary.displayName)")
-                        .font(.system(size: mode == .launchPicker ? 15 : 15, weight: .semibold))
-                        .foregroundColor(AppColors.textPrimary)
-                        .lineLimit(1)
-                        .layoutPriority(1)
-                    if mode == .pauseMenu {
-                        Text(summary.isEmpty ? "Empty" : "Saved")
-                            .font(.system(size: 10, weight: .semibold))
-                            .foregroundColor(summary.isEmpty ? AppColors.textMuted : AppColors.primary)
-                            .padding(.horizontal, 7)
-                            .padding(.vertical, 3)
-                            .background(Capsule().fill(AppColors.surfaceLight.opacity(summary.isEmpty ? 0.35 : 0.55)))
-                    } else if isRecommended {
-                        Text("Recommended")
-                            .font(.system(size: 10, weight: .semibold))
-                            .foregroundColor(AppColors.primary)
-                            .padding(.horizontal, 7)
-                            .padding(.vertical, 3)
-                            .background(Capsule().fill(AppColors.primary.opacity(0.10)))
-                    }
-                }
-                Text(summary.metadata?.createdAt.formatted(date: .abbreviated, time: .shortened) ?? "No save yet")
-                    .font(.system(size: 12))
-                    .foregroundColor(AppColors.textMuted)
-                    .lineLimit(1)
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-
             if mode == .launchPicker {
+                VStack(alignment: .leading, spacing: 6) {
+                    HStack(spacing: 8) {
+                        Text(summary.isQuickSlot ? "Quick Save" : "Slot \(summary.displayName)")
+                            .font(.system(size: 15, weight: .semibold))
+                            .foregroundColor(AppColors.textPrimary)
+                            .lineLimit(1)
+                            .layoutPriority(1)
+                        if isRecommended {
+                            Text("Recommended")
+                                .font(.system(size: 10, weight: .semibold))
+                                .foregroundColor(AppColors.primary)
+                                .padding(.horizontal, 7)
+                                .padding(.vertical, 3)
+                                .background(Capsule().fill(AppColors.primary.opacity(0.10)))
+                        }
+                    }
+                    Text(summary.metadata?.createdAt.formatted(date: .abbreviated, time: .shortened) ?? "No save yet")
+                        .font(.system(size: 12))
+                        .foregroundColor(AppColors.textMuted)
+                        .lineLimit(1)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+
                 Image(systemName: "play.fill")
                     .font(.system(size: 15, weight: .semibold))
                     .foregroundColor(AppColors.primary)
@@ -4399,19 +4403,42 @@ struct GamePlayView: View {
                     .background(AppColors.surfaceLight.opacity(0.45))
                     .clipShape(Circle())
             } else {
-                HStack(spacing: 8) {
-                    compactSlotIconButton(systemImage: "square.and.arrow.down") {
-                        if summary.isQuickSlot {
-                            viewModel.quickSave()
-                        } else {
-                            viewModel.saveState(slot: summary.slot)
-                        }
-                        saveSlotSummaries = viewModel.saveSlotSummaries()
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack(spacing: 8) {
+                        Text(summary.isQuickSlot ? "Quick Save" : "Slot \(summary.displayName)")
+                            .font(.system(size: 15, weight: .semibold))
+                            .foregroundColor(AppColors.textPrimary)
+                            .lineLimit(1)
+                            .layoutPriority(1)
+
+                        Text(summary.isEmpty ? "Empty" : "Saved")
+                            .font(.system(size: 10, weight: .semibold))
+                            .foregroundColor(summary.isEmpty ? AppColors.textMuted : AppColors.primary)
+                            .padding(.horizontal, 7)
+                            .padding(.vertical, 3)
+                            .background(Capsule().fill(AppColors.surfaceLight.opacity(summary.isEmpty ? 0.35 : 0.55)))
                     }
-                    compactSlotIconButton(systemImage: "play.fill", disabled: summary.isEmpty) {
-                        viewModel.loadSlotSummary(summary)
+
+                    Text(summary.metadata?.createdAt.formatted(date: .abbreviated, time: .shortened) ?? "No save yet")
+                        .font(.system(size: 12))
+                        .foregroundColor(AppColors.textMuted)
+                        .lineLimit(1)
+
+                    HStack(spacing: 8) {
+                        compactSlotIconButton(systemImage: "square.and.arrow.down") {
+                            if summary.isQuickSlot {
+                                viewModel.quickSave()
+                            } else {
+                                viewModel.saveState(slot: summary.slot)
+                            }
+                            saveSlotSummaries = viewModel.saveSlotSummaries()
+                        }
+                        compactSlotIconButton(systemImage: "play.fill", disabled: summary.isEmpty) {
+                            viewModel.loadSlotSummary(summary)
+                        }
                     }
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
         .padding(10)
@@ -5574,6 +5601,7 @@ private struct ShellSystemButton: View {
     let fontSize: CGFloat
     let knobDiameter: CGFloat
     let horizontalPadding: CGFloat
+    let showsKnob: Bool
     let onPress: () -> Void
     let onRelease: () -> Void
 
@@ -5586,6 +5614,7 @@ private struct ShellSystemButton: View {
         fontSize: CGFloat = 8,
         knobDiameter: CGFloat = 22,
         horizontalPadding: CGFloat = 6,
+        showsKnob: Bool = true,
         onPress: @escaping () -> Void,
         onRelease: @escaping () -> Void = {}
     ) {
@@ -5597,6 +5626,7 @@ private struct ShellSystemButton: View {
         self.fontSize = fontSize
         self.knobDiameter = knobDiameter
         self.horizontalPadding = horizontalPadding
+        self.showsKnob = showsKnob
         self.onPress = onPress
         self.onRelease = onRelease
     }
@@ -5611,19 +5641,21 @@ private struct ShellSystemButton: View {
                     .minimumScaleFactor(0.7)
                     .allowsTightening(false)
 
-                Circle()
-                    .fill(theme.knobFill.opacity(isPressed ? 0.80 : 1.0))
-                    .frame(width: knobDiameter, height: knobDiameter)
-                    .overlay(
-                        Group {
-                            if let icon {
-                                Image(systemName: icon)
-                                    .font(.system(size: max(11.0, knobDiameter * 0.50), weight: .semibold))
-                                    .foregroundColor(Color.black.opacity(0.28))
+                if showsKnob {
+                    Circle()
+                        .fill(theme.knobFill.opacity(isPressed ? 0.80 : 1.0))
+                        .frame(width: knobDiameter, height: knobDiameter)
+                        .overlay(
+                            Group {
+                                if let icon {
+                                    Image(systemName: icon)
+                                        .font(.system(size: max(11.0, knobDiameter * 0.50), weight: .semibold))
+                                        .foregroundColor(Color.black.opacity(0.28))
+                                }
                             }
-                        }
-                    )
-                    .overlay(Circle().stroke(theme.knobStroke, lineWidth: 1.5))
+                        )
+                        .overlay(Circle().stroke(theme.knobStroke, lineWidth: 1.5))
+                }
             }
             .padding(.horizontal, horizontalPadding)
             .frame(minWidth: minWidth)

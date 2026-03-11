@@ -19,9 +19,7 @@ struct CoverEditorSheet: View {
     @State private var errorMessage: String?
 
     @State private var scale: CGFloat = 1.0
-    @State private var lastScale: CGFloat = 1.0
     @State private var offset: CGSize = .zero
-    @State private var lastOffset: CGSize = .zero
 
     private let minScale: CGFloat = 0.5
     private let maxScale: CGFloat = 3.0
@@ -320,8 +318,19 @@ struct TransformableImage: View {
     let minScale: CGFloat
     let maxScale: CGFloat
 
-    @State private var lastScale: CGFloat = 1.0
-    @State private var lastOffset: CGSize = .zero
+    @GestureState private var dragTranslation: CGSize = .zero
+    @GestureState private var gestureScale: CGFloat = 1.0
+
+    private var displayedScale: CGFloat {
+        clampedScale(scale * gestureScale)
+    }
+
+    private var displayedOffset: CGSize {
+        CGSize(
+            width: offset.width + dragTranslation.width,
+            height: offset.height + dragTranslation.height
+        )
+    }
 
     var body: some View {
         GeometryReader { geometry in
@@ -330,32 +339,39 @@ struct TransformableImage: View {
                 .drawingGroup()
                 .scaledToFill()
                 .frame(width: geometry.size.width, height: geometry.size.height)
-                .scaleEffect(scale)
-                .offset(offset)
-                .gesture(
-                    MagnificationGesture()
-                        .onChanged { value in
-                            let newScale = lastScale * value
-                            scale = min(max(newScale, minScale), maxScale)
-                        }
-                        .onEnded { _ in
-                            lastScale = scale
-                        }
-                )
-                .gesture(
-                    DragGesture()
-                        .onChanged { value in
-                            offset = CGSize(
-                                width: lastOffset.width + value.translation.width,
-                                height: lastOffset.height + value.translation.height
-                            )
-                        }
-                        .onEnded { _ in
-                            lastOffset = offset
-                        }
-                )
+                .scaleEffect(displayedScale)
+                .offset(displayedOffset)
+                .simultaneousGesture(dragGesture)
+                .simultaneousGesture(magnificationGesture)
                 .clipped()
         }
+    }
+
+    private var dragGesture: some Gesture {
+        DragGesture(minimumDistance: 0)
+            .updating($dragTranslation) { value, state, _ in
+                state = value.translation
+            }
+            .onEnded { value in
+                offset = CGSize(
+                    width: offset.width + value.translation.width,
+                    height: offset.height + value.translation.height
+                )
+            }
+    }
+
+    private var magnificationGesture: some Gesture {
+        MagnifyGesture()
+            .updating($gestureScale) { value, state, _ in
+                state = value.magnification
+            }
+            .onEnded { value in
+                scale = clampedScale(scale * value.magnification)
+            }
+    }
+
+    private func clampedScale(_ value: CGFloat) -> CGFloat {
+        min(max(value, minScale), maxScale)
     }
 }
 #endif
