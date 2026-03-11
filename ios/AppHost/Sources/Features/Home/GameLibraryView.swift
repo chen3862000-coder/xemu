@@ -788,16 +788,6 @@ struct GameLibraryView: View {
                 selectedSystemFilter = filter
             }
 
-            if !continuePlayingEntries.isEmpty {
-                CollectorShelfSectionView(
-                    title: "Continue Playing",
-                    subtitle: "\(continuePlayingEntries.count) recent",
-                    entries: continuePlayingEntries
-                ) { entry in
-                    collectorShelfBox(entry, metadata: shelfLastPlayedLabel(for: entry), progress: shelfProgress(for: entry), showsMetadataByDefault: true)
-                }
-            }
-
             ForEach(collectorSections, id: \.key) { section in
                 CollectorShelfSectionView(
                     title: section.title,
@@ -847,21 +837,6 @@ struct GameLibraryView: View {
         .frame(maxWidth: .infinity)
         .padding(.vertical, 40)
         .allGamesCard(cornerRadius: 16, elevated: false)
-    }
-
-    private var continuePlayingEntries: [ROMLibraryEntry] {
-        filteredGames
-            .filter { $0.lastPlayedAt != nil }
-            .sorted {
-                let lhs = $0.lastPlayedAt ?? Date.distantPast
-                let rhs = $1.lastPlayedAt ?? Date.distantPast
-                if lhs != rhs {
-                    return lhs > rhs
-                }
-                return stableOrderingKey($0) < stableOrderingKey($1)
-            }
-            .prefix(8)
-            .map { $0 }
     }
 
     private var collectorSections: [(key: String, title: String, entries: [ROMLibraryEntry])] {

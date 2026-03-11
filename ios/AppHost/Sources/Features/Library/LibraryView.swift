@@ -1017,9 +1017,14 @@ final class LibraryViewModel: ObservableObject {
     @Published var isLoading = false
     @Published var filteredEntries: [ROMLibraryEntry] = []
 
+    private let tierResolver: (String) -> Tier
     private var allEntries: [ROMLibraryEntry] = []
     private var fetchedResultsController: NSFetchedResultsController<ROMLibraryEntry>?
     private weak var viewContext: NSManagedObjectContext?
+
+    init(tierResolver: @escaping (String) -> Tier = LibraryViewModel.defaultTierResolver) {
+        self.tierResolver = tierResolver
+    }
 
     func loadEntries(in context: NSManagedObjectContext) {
         isLoading = true
@@ -1042,16 +1047,10 @@ final class LibraryViewModel: ObservableObject {
             allEntries = fetchedResultsController?.fetchedObjects ?? []
             filteredEntries = allEntries
         } catch {
-            print("Failed to fetch ROMs: \(error)")
             filteredEntries = []
         }
 
         isLoading = false
-    }
-
-    func refreshEntries() {
-        guard let fetchedObjects = fetchedResultsController?.fetchedObjects else { return }
-        allEntries = fetchedObjects
     }
 
     func applyFilter(_ filter: LibraryFilter) {
@@ -1068,10 +1067,44 @@ final class LibraryViewModel: ObservableObject {
             filteredEntries = allEntries.filter { entry in
                 entry.isFavorite
             }
-        case .stable, .experimental:
-            // Tier filtering not implemented - show all games
-            filteredEntries = allEntries
+        case .stable:
+            let tiersByChecksum = Self.compatibilityTiersByChecksum()
+            filteredEntries = allEntries.filter { entry in
+                guard let checksum = entry.checksum, !checksum.isEmpty else { return false }
+                return tiersByChecksum[checksum] == .stable || tierResolver(checksum) == .stable
+            }
+        case .experimental:
+            let tiersByChecksum = Self.compatibilityTiersByChecksum()
+            filteredEntries = allEntries.filter { entry in
+                guard let checksum = entry.checksum, !checksum.isEmpty else { return false }
+                return tiersByChecksum[checksum] == .experimental || tierResolver(checksum) == .experimental
+            }
         }
+    }
+
+    private static func compatibilityTiersByChecksum() -> [String: Tier] {
+        var tiersByChecksum = Dictionary(
+            uniqueKeysWithValues: CompatibilityDataStore.shared.getAllROMs().map { ($0.romHash, $0.tier) }
+        )
+
+        if tiersByChecksum.isEmpty,
+           let fallbackEntries = try? AzureApiStub.shared.fetchCompatibilityMatrix() {
+            for entry in fallbackEntries {
+                tiersByChecksum[entry.romHash] = Tier(rawValue: entry.tier.lowercased()) ?? .unknown
+            }
+        }
+        return tiersByChecksum
+    }
+
+    private static func defaultTierResolver(for checksum: String) -> Tier {
+        let cachedTier = CompatibilityDataStore.shared.getTier(for: checksum)
+        if cachedTier != .unknown {
+            return cachedTier
+        }
+        if let fallback = try? AzureApiStub.shared.fetchCompatibilityMatrix().first(where: { $0.romHash == checksum }) {
+            return Tier(rawValue: fallback.tier.lowercased()) ?? .unknown
+        }
+        return .unknown
     }
 }
 

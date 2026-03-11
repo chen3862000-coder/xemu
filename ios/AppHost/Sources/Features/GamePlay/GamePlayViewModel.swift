@@ -71,7 +71,9 @@ class GamePlayViewModel: ObservableObject {
                 object: nil,
                 queue: .main
             ) { [weak self] _ in
-                self?.persistNativeSaveIfNeeded(force: true)
+                Task { @MainActor [weak self] in
+                    self?.persistNativeSaveIfNeeded(force: true)
+                }
             }
         )
         lifecycleObservers.append(
@@ -80,7 +82,9 @@ class GamePlayViewModel: ObservableObject {
                 object: nil,
                 queue: .main
             ) { [weak self] _ in
-                self?.persistNativeSaveIfNeeded(force: true)
+                Task { @MainActor [weak self] in
+                    self?.persistNativeSaveIfNeeded(force: true)
+                }
             }
         )
         #endif

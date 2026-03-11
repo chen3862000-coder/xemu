@@ -804,6 +804,12 @@ struct LandscapeGameRow: View {
                         .aspectRatio(contentMode: .fill)
                         .frame(width: 160, height: 90)
                         .clipShape(RoundedRectangle(cornerRadius: 10))
+                } else if let coverData = game.coverData, let uiImage = UIImage(data: coverData) {
+                    Image(uiImage: uiImage)
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                        .frame(width: 160, height: 90)
+                        .clipShape(RoundedRectangle(cornerRadius: 10))
                 } else {
                     placeholderImage
                 }
@@ -1410,21 +1416,19 @@ struct RomImportView: View {
                 for url in urls {
                     do {
                         _ = try await self.coordinator.importROM(from: url)
-                        await MainActor.run {
-                            print("ROM imported successfully: \(url.lastPathComponent)")
-                        }
                         successCount += 1
                     } catch {
                         let detail = error.localizedDescription
                         failures.append("\(url.lastPathComponent): \(detail)")
-                        print("Import error for \(url.lastPathComponent): \(detail)")
                     }
                 }
+                let didImportAny = successCount > 0
+                let firstFailure = failures.first
                 await MainActor.run {
                     self.coordinator.isImporting = false
-                    if successCount > 0 {
+                    if didImportAny {
                         self.dismiss()
-                    } else if let firstFailure = failures.first {
+                    } else if let firstFailure {
                         self.importErrorMessage = firstFailure
                     }
                 }
@@ -1484,7 +1488,6 @@ final class HomeViewModel: ObservableObject {
             updateStats(from: entries)
             loadEmulators(from: entries)
         } catch {
-            print("Failed to fetch: \(error)")
         }
     }
     
@@ -1552,14 +1555,6 @@ final class HomeViewModel: ObservableObject {
         ].filter { $0.gamesCount > 0 || ["GB/GBC", "GBA", "NDS"].contains($0.shortName) }
     }
     
-    func playGame(_ game: RecentGame) {
-        // Handle play action
-    }
-    
-    func selectEmulator(_ emulator: EmulatorInfo) {
-        // Handle emulator selection
-    }
-
     func entry(for id: UUID) -> ROMLibraryEntry? {
         entriesByID[id]
     }

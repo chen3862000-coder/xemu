@@ -81,12 +81,32 @@ final class SaveStateStorageTests: XCTestCase {
 
         let stateData = Data("save_state_data".utf8)
 
-        let url = try await storage.persist(data: stateData, metadata: metadata, screenshotData: nil)
-        XCTAssertNotNil(url)
+        try await storage.persist(data: stateData, metadata: metadata, screenshotData: nil)
 
         let loaded = try storage.load(slot: 1)
         XCTAssertEqual(loaded.0, stateData)
         XCTAssertEqual(loaded.1.romHash, "test_rom_hash")
+    }
+
+    func testPersistRejectsInvalidSlot() async {
+        let metadata = SaveStateMetadata(
+            slot: SaveStateStorage.maxSlots,
+            romHash: "invalid_slot_rom",
+            platform: "NES",
+            createdAt: Date(),
+            gameTitle: "Broken Slot",
+            emulatorVersion: "1.0.0",
+            screenshotData: nil
+        )
+
+        do {
+            try await storage.persist(data: Data("bad".utf8), metadata: metadata, screenshotData: nil)
+            XCTFail("Expected invalidSlot error")
+        } catch {
+            guard case SaveStateStorage.StorageError.invalidSlot = error else {
+                return XCTFail("Expected invalidSlot error, got \(error)")
+            }
+        }
     }
 
     func testLoadInvalidSlot() {

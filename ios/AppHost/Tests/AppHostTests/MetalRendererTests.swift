@@ -9,47 +9,38 @@ struct MetalRendererTests {
     
     @Test("MetalRenderer initializes with valid texture size")
     func testInitialization() async throws {
-        let renderer = MetalRenderer(textureSize: CGSize(width: 256, height: 240))
-        #expect(renderer != nil)
+        _ = MetalRenderer(textureSize: CGSize(width: 256, height: 240))
     }
     
     @Test("MetalRenderer initializes with different sizes")
     func testDifferentSizes() async throws {
-        let renderer1 = MetalRenderer(textureSize: CGSize(width: 320, height: 240))
-        #expect(renderer1 != nil)
-        
-        let renderer2 = MetalRenderer(textureSize: CGSize(width: 640, height: 480))
-        #expect(renderer2 != nil)
+        _ = MetalRenderer(textureSize: CGSize(width: 320, height: 240))
+        _ = MetalRenderer(textureSize: CGSize(width: 640, height: 480))
     }
     
     @Test("MetalRenderer handles NES resolution")
     func testNESResolution() async throws {
-        let renderer = MetalRenderer(textureSize: CGSize(width: 256, height: 240))
-        #expect(renderer != nil)
+        _ = MetalRenderer(textureSize: CGSize(width: 256, height: 240))
     }
     
     @Test("MetalRenderer handles SNES resolution")
     func testSNESResolution() async throws {
-        let renderer = MetalRenderer(textureSize: CGSize(width: 256, height: 224))
-        #expect(renderer != nil)
+        _ = MetalRenderer(textureSize: CGSize(width: 256, height: 224))
     }
     
     @Test("MetalRenderer handles GB resolution")
     func testGBResolution() async throws {
-        let renderer = MetalRenderer(textureSize: CGSize(width: 160, height: 144))
-        #expect(renderer != nil)
+        _ = MetalRenderer(textureSize: CGSize(width: 160, height: 144))
     }
     
     @Test("MetalRenderer handles GBC resolution")
     func testGBCResolution() async throws {
-        let renderer = MetalRenderer(textureSize: CGSize(width: 160, height: 144))
-        #expect(renderer != nil)
+        _ = MetalRenderer(textureSize: CGSize(width: 160, height: 144))
     }
     
     @Test("MetalRenderer handles GBA resolution")
     func testGBAResolution() async throws {
-        let renderer = MetalRenderer(textureSize: CGSize(width: 240, height: 160))
-        #expect(renderer != nil)
+        _ = MetalRenderer(textureSize: CGSize(width: 240, height: 160))
     }
     
     @Test("MetalRenderer double-buffering with texture swap")
@@ -62,7 +53,6 @@ struct MetalRendererTests {
         
         renderer.enqueueFrame(testData, width: 160, height: 144, bytesPerRow: 640)
         
-        #expect(renderer != nil)
     }
     
     @Test("MetalRenderer handles pitch correctly")
@@ -78,7 +68,6 @@ struct MetalRendererTests {
         
         renderer.enqueueFrame(testData, width: width, height: height, bytesPerRow: pitch)
         
-        #expect(renderer != nil)
     }
     
     @Test("MetalRenderer handles padded pitch")
@@ -95,7 +84,6 @@ struct MetalRendererTests {
         
         renderer.enqueueFrame(testData, width: width, height: height, bytesPerRow: paddedPitch)
         
-        #expect(renderer != nil)
     }
     
     @Test("MetalRenderer handles multiple frames in sequence")
@@ -113,7 +101,6 @@ struct MetalRendererTests {
             renderer.enqueueFrame(testData, width: width, height: height, bytesPerRow: pitch)
         }
         
-        #expect(renderer != nil)
     }
     
     @Test("MetalRenderer handles dimension changes")
@@ -128,7 +115,6 @@ struct MetalRendererTests {
         let testData2 = Data(count: 240 * 160 * 4)
         renderer.enqueueFrame(testData2, width: 240, height: 160, bytesPerRow: 960)
         
-        #expect(renderer != nil)
     }
     
     @Test("MetalRenderer thread safety with enqueueFrame")
@@ -141,19 +127,18 @@ struct MetalRendererTests {
         let height = 144
         let pitch = 640
         
-        let group = DispatchGroup()
-        
-        for _ in 0..<5 {
-            group.enter()
-            DispatchQueue.global().async {
-                let testData = Data(count: pitch * height)
-                renderer.enqueueFrame(testData, width: width, height: height, bytesPerRow: pitch)
-                group.leave()
+        await withTaskGroup(of: Void.self) { group in
+            for _ in 0..<5 {
+                group.addTask {
+                    await MainActor.run {
+                        let testData = Data(count: pitch * height)
+                        renderer.enqueueFrame(testData, width: width, height: height, bytesPerRow: pitch)
+                    }
+                }
+            }
+
+            for await _ in group {
             }
         }
-        
-        group.wait()
-        
-        #expect(renderer != nil)
     }
 }

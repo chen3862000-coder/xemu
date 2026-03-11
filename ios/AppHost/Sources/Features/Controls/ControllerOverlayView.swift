@@ -11,8 +11,8 @@ final class ControllerOverlayViewModel: ObservableObject {
 
     private let profileStore: ControllerProfileStore
 
-    init(profileStore: ControllerProfileStore = .shared) {
-        self.profileStore = profileStore
+    init(profileStore: ControllerProfileStore? = nil) {
+        self.profileStore = profileStore ?? .shared
         loadProfiles()
     }
 
@@ -308,12 +308,18 @@ final class ControllerProfileStore {
     }
 
     func saveProfile(_ profile: ControllerProfile) {
+        let fileURL = self.fileURL
+        let encoder = self.encoder
+        let decoder = self.decoder
+        let fallbackProfiles = defaultProfiles()
         queue.async {
-            var profiles = self.loadProfiles()
+            let profilesData = try? Data(contentsOf: fileURL)
+            var profiles = profilesData.flatMap { try? decoder.decode([ControllerProfile].self, from: $0) }
+                ?? fallbackProfiles
             profiles.append(profile)
 
-            guard let data = try? self.encoder.encode(profiles) else { return }
-            try? data.write(to: self.fileURL, options: .atomic)
+            guard let data = try? encoder.encode(profiles) else { return }
+            try? data.write(to: fileURL, options: .atomic)
         }
     }
 

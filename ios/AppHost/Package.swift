@@ -42,7 +42,8 @@ let package = Package(
                 "XemuCores"
             ],
             resources: [
-                .process("Features/Covers/Resources")
+                .process("Features/Covers/Resources"),
+                .process("../Resources/MockData")
             ],
             linkerSettings: [
                 .linkedLibrary("c++"),

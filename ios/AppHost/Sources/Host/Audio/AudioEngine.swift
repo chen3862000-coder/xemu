@@ -2,7 +2,6 @@ import Foundation
 import AVFoundation
 
 public final class AudioEngine {
-    
     private let engine: AVAudioEngine
     private let playerNode: AVAudioPlayerNode
     private let queue = DispatchQueue(label: "com.xemu.audio", qos: .userInteractive)
@@ -10,6 +9,7 @@ public final class AudioEngine {
     private var isPlaying = false
     private var queuedFrames: UInt32 = 0
     private var pendingPCM = Data()
+    private var pendingPCMReadOffset = 0
     private let sampleRate: Double
     private let channels: AVAudioChannelCount
     private let outputFormat: AVAudioFormat
@@ -150,8 +150,11 @@ public final class AudioEngine {
             }
 
             let chunkBytes = chunkFrames * bytesPerFrame
-            let chunk = pendingPCM.prefix(chunkBytes)
-            pendingPCM.removeFirst(chunkBytes)
+            let chunkStart = pendingPCMReadOffset
+            let chunkEnd = chunkStart + chunkBytes
+            let chunk = pendingPCM[chunkStart..<chunkEnd]
+            pendingPCMReadOffset = chunkEnd
+            compactPendingPCMIfNeeded()
 
             if let buffer = makePCMBuffer(from: Data(chunk), bytesPerFrame: bytesPerFrame) {
                 playBufferOnQueue(buffer)
@@ -186,7 +189,6 @@ public final class AudioEngine {
             do {
                 try engine.start()
             } catch {
-                NSLog("[AudioEngine] Failed to start engine: %@", error.localizedDescription)
                 return
             }
         }
@@ -222,6 +224,7 @@ public final class AudioEngine {
             self?.isPlaying = false
             self?.queuedFrames = 0
             self?.pendingPCM.removeAll(keepingCapacity: false)
+            self?.pendingPCMReadOffset = 0
         }
     }
     
@@ -255,6 +258,7 @@ public final class AudioEngine {
             self.playerNode.reset()
             self.queuedFrames = 0
             self.pendingPCM.removeAll(keepingCapacity: true)
+            self.pendingPCMReadOffset = 0
             self.isPlaying = false
 
             let silenceSeconds = max(0.0, Double(silenceMs) / 1000.0)
@@ -313,9 +317,7 @@ public final class AudioEngine {
             let targetBufferDuration = 0.04
             try session.setPreferredIOBufferDuration(targetBufferDuration)
             try session.setActive(true)
-            NSLog("[AudioEngine] Configured session: sampleRate=\(sampleRate), actualRate=\(session.sampleRate), bufferDuration=\(session.ioBufferDuration)")
         } catch {
-            NSLog("[AudioEngine] Failed to configure audio session: %@", error.localizedDescription)
         }
         #endif
     }
@@ -332,5 +334,21 @@ public final class AudioEngine {
     
     public var isPlayingAudio: Bool {
         return isPlaying && engine.isRunning
+    }
+
+    private func compactPendingPCMIfNeeded() {
+        guard pendingPCMReadOffset > 0 else { return }
+        if pendingPCMReadOffset == pendingPCM.count {
+            pendingPCM.removeAll(keepingCapacity: true)
+            pendingPCMReadOffset = 0
+            return
+        }
+
+        let consumedEnoughToCompact = pendingPCMReadOffset >= 16_384
+        let consumedMostOfBuffer = pendingPCMReadOffset * 2 >= pendingPCM.count
+        guard consumedEnoughToCompact || consumedMostOfBuffer else { return }
+
+        pendingPCM.removeSubrange(0..<pendingPCMReadOffset)
+        pendingPCMReadOffset = 0
     }
 }

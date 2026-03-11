@@ -9,14 +9,12 @@ struct AudioEngineTests {
     @Test("AudioEngine initializes with default parameters")
     func testDefaultInitialization() async throws {
         let audioEngine = AudioEngine()
-        #expect(audioEngine != nil)
         #expect(!audioEngine.isPlayingAudio)
     }
     
     @Test("AudioEngine initializes with custom parameters")
     func testCustomInitialization() async throws {
         let audioEngine = AudioEngine(sampleRate: 48000, channels: 1)
-        #expect(audioEngine != nil)
         #expect(!audioEngine.isPlayingAudio)
     }
     

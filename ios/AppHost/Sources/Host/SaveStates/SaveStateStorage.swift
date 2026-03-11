@@ -26,7 +26,6 @@ struct SaveStateSlotSummary: Identifiable {
 
 @MainActor
 final class SaveStateStorage {
-    private static let saveLogEnabled = true
     enum StorageError: Error {
         case metadataEncodingFailed
         case metadataDecodingFailed
@@ -48,7 +47,6 @@ final class SaveStateStorage {
     static let maxSlots = 11
 
     private let directory: URL
-    private let workQueue = DispatchQueue(label: "com.xemu.savestates", qos: .utility)
     private let encoder = JSONEncoder()
     private let decoder = JSONDecoder()
     private let viewContext: NSManagedObjectContext
@@ -100,7 +98,6 @@ final class SaveStateStorage {
             try FileManager.default.removeItem(at: screenshotURL)
         }
 
-        log("persist slot=\(metadata.slot) rom=\(metadata.romHash) raw=\(data.count) compressed=\(compressed.count) path=\(slotDirectory.path)")
     }
 
     func load(slot: Int, romHash: String? = nil) throws -> (Data, SaveStateMetadata, Data?) {
@@ -111,14 +108,12 @@ final class SaveStateStorage {
         if let romHash {
             let slotDirectory = slotDirectoryURL(slot: slot, romHash: romHash)
             if let result = try loadFromDisk(slotDirectory: slotDirectory) {
-                log("load slot=\(slot) rom=\(romHash) source=disk payload=\(result.0.count)")
                 return result
             }
         }
 
         let legacyDirectory = directory.appendingPathComponent(String(slot), isDirectory: true)
         if let result = try loadFromDisk(slotDirectory: legacyDirectory) {
-            log("load slot=\(slot) rom=\(romHash ?? "") source=legacy-disk payload=\(result.0.count)")
             return result
         }
 
@@ -138,7 +133,6 @@ final class SaveStateStorage {
                 emulatorVersion: "1.0.0",
                 screenshotData: saveState.screenshotData
             )
-            log("load slot=\(slot) rom=\(romHash ?? "") source=coredata payload=\(decompressed.count)")
             return (decompressed, metadata, saveState.screenshotData)
         }
 
@@ -288,8 +282,7 @@ final class SaveStateStorage {
         guard let data = saveState.data else {
             throw StorageError.dataNotFound
         }
-        let decompressed = try decompress(data: data)
-        print("Loading save state: \(saveState.slotIndex), size: \(decompressed.count) bytes")
+        _ = try decompress(data: data)
     }
 
     func validate(saveState: SaveState) -> Bool {
@@ -374,13 +367,11 @@ final class SaveStateStorage {
             }
             return existing
         }
-        let state = SaveState(context: context)
+        guard let entity = NSEntityDescription.entity(forEntityName: "SaveState", in: context) else {
+            throw StorageError.dataNotFound
+        }
+        let state = SaveState(entity: entity, insertInto: context)
         state.setValue(UUID(), forKey: "id")
         return state
-    }
-
-    private func log(_ message: String) {
-        guard Self.saveLogEnabled else { return }
-        NSLog("[SaveStateStorage] %@", message)
     }
 }

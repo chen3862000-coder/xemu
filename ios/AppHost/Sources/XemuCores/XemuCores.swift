@@ -113,9 +113,7 @@ public class XemuCores {
         if useRealCores {
             isAvailable = true
             usingRealCores = true
-            print("[XemuCores] Using REAL cores (direct linking)")
         } else {
-            print("[XemuCores] Using MOCK cores")
             isAvailable = true
             usingRealCores = false
         }
