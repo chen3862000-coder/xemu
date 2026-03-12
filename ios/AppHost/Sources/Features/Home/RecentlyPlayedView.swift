@@ -68,13 +68,9 @@ struct RecentlyPlayedView: View {
                         if filteredAndSortedGames.isEmpty {
                             emptyState
                         } else {
-                            if isCollectorMode {
-                                collectorGridSection
-                            } else {
-                                continuePlayingSection
-                                recentlyPlayedSection
-                                earlierSection
-                            }
+                            continuePlayingSection
+                            recentlyPlayedSection
+                            earlierSection
                         }
                     }
                     .padding(.horizontal, 20)
@@ -177,7 +173,7 @@ struct RecentlyPlayedView: View {
     }
 
     private var resumeGames: [ROMLibraryEntry] {
-        Array(filteredAndSortedGames.prefix(4))
+        Array(filteredAndSortedGames.prefix(5))
     }
 
     private var activeListGames: [ROMLibraryEntry] {
@@ -293,18 +289,21 @@ struct RecentlyPlayedView: View {
 
     private var continuePlayingSection: some View {
         VStack(alignment: .leading, spacing: 14) {
-            Text("Continue Playing")
+            Text("Active Sessions")
                 .font(SubpageUI.Font.sectionTitle)
                 .foregroundColor(AppColors.textPrimary)
 
             ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 16) {
-                    ForEach(resumeGames) { entry in
-                        RecentResumeCard(entry: entry) {
-                            launchGame(entry)
+                LazyHStack(spacing: 16) {
+                    ForEach(resumeSessionCards) { game in
+                        RecentGameCard(game: game, variant: .standard) {
+                            launchRecentGame(game)
                         }
+                        .frame(width: 280)
                         .contextMenu {
-                            recentContextMenu(entry)
+                            if let entry = entry(for: game.gameId) {
+                                recentContextMenu(entry)
+                            }
                         }
                     }
                 }
@@ -315,7 +314,7 @@ struct RecentlyPlayedView: View {
 
     private var recentlyPlayedSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Recently Played")
+            Text("Play History")
                 .font(SubpageUI.Font.sectionTitle)
                 .foregroundColor(AppColors.textPrimary)
 
@@ -329,23 +328,6 @@ struct RecentlyPlayedView: View {
                     }
                 }
             }
-        }
-    }
-
-    private var collectorGridSection: some View {
-        LazyVGrid(columns: collectorGridColumns, spacing: 16) {
-            ForEach(filteredAndSortedGames) { entry in
-                RecentCollectorCard(entry: entry) {
-                    launchGame(entry)
-                }
-                .frame(maxWidth: .infinity, alignment: .topLeading)
-                .contextMenu {
-                    recentContextMenu(entry)
-                }
-            }
-        }
-        .transaction { transaction in
-            transaction.animation = nil
         }
     }
 
@@ -479,6 +461,25 @@ struct RecentlyPlayedView: View {
         }
     }
 
+    private var resumeSessionCards: [RecentGame] {
+        resumeGames.map { entry in
+            RecentGame(
+                id: "recent-\(entry.objectID.uriRepresentation().absoluteString)",
+                title: entry.title ?? "Unknown",
+                console: entry.system?.uppercased() ?? "Unknown",
+                lastPlayed: entry.lastPlayedAt,
+                progress: 0,
+                image: nil,
+                screenshotData: SaveStateStorage.shared.latestScreenshot(for: entry.checksum ?? ""),
+                coverData: CoverArtService.shared.resolve(for: entry)?.data,
+                totalPlaySeconds: Int(entry.playtimeTotal),
+                playableGame: entry.toGame(),
+                gameId: entry.id,
+                launchIssue: ROMCompatibilityService.shared.compatibility(for: entry).issue
+            )
+        }
+    }
+
     private func launchGame(_ entry: ROMLibraryEntry) {
         let compatibility = ROMCompatibilityService.shared.compatibility(for: entry)
         if let issue = compatibility.issue {
@@ -487,6 +488,20 @@ struct RecentlyPlayedView: View {
         }
         guard let game = entry.toGame() else { return }
         selectedGame = game
+    }
+
+    private func launchRecentGame(_ recent: RecentGame) {
+        if let issue = recent.launchIssue {
+            activeAlert = .launchError(issue.message)
+            return
+        }
+        if let playableGame = recent.playableGame {
+            selectedGame = playableGame
+        }
+    }
+
+    private func entry(for id: UUID) -> ROMLibraryEntry? {
+        games.first(where: { $0.id == id })
     }
 
     private var renameDialogPresented: Binding<Bool> {

@@ -559,12 +559,19 @@ struct HomeView: View {
                 )
                 .clipShape(RoundedRectangle(cornerRadius: 16))
             } else {
-                LazyVStack(spacing: 12) {
-                    ForEach(Array(viewModel.recentGames.prefix(2).enumerated()), id: \.element.id) { index, game in
-                        LandscapeGameRow(game: game) {
-                            launchRecentGame(game)
+                ScrollView(.horizontal, showsIndicators: false) {
+                    LazyHStack(spacing: 16) {
+                        ForEach(Array(viewModel.recentGames.prefix(4)), id: \.id) { game in
+                            RecentGameCard(game: game, variant: .standard) {
+                                launchRecentGame(game)
+                            }
+                            .frame(width: 280)
+                            .contextMenu {
+                                recentGameContextMenu(game)
+                            }
                         }
                     }
+                    .padding(.horizontal, 2)
                 }
                 .zIndex(0)
             }
@@ -945,19 +952,19 @@ struct RecentGameCard: View {
     private var recentCardArtwork: some View {
         let artworkHeight: CGFloat = variant == .featured ? 152 : 126
         #if os(iOS)
-        if let coverData = game.coverData, let uiImage = UIImage(data: coverData) {
-            Image(uiImage: uiImage)
-                .resizable()
-                .aspectRatio(contentMode: .fill)
-                .frame(maxWidth: .infinity, minHeight: artworkHeight, maxHeight: artworkHeight)
-                .overlay(Color.white.opacity(0.16))
-                .clipShape(RoundedRectangle(cornerRadius: 12))
-        } else if let screenshotData = game.screenshotData, let uiImage = UIImage(data: screenshotData) {
+        if let screenshotData = game.screenshotData, let uiImage = UIImage(data: screenshotData) {
             Image(uiImage: uiImage)
                 .resizable()
                 .aspectRatio(contentMode: .fill)
                 .frame(maxWidth: .infinity, minHeight: artworkHeight, maxHeight: artworkHeight)
                 .overlay(Color.white.opacity(0.12))
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+        } else if let coverData = game.coverData, let uiImage = UIImage(data: coverData) {
+            Image(uiImage: uiImage)
+                .resizable()
+                .aspectRatio(contentMode: .fill)
+                .frame(maxWidth: .infinity, minHeight: artworkHeight, maxHeight: artworkHeight)
+                .overlay(Color.white.opacity(0.16))
                 .clipShape(RoundedRectangle(cornerRadius: 12))
         } else if let imageUrl = game.image, let url = URL(string: imageUrl) {
             AsyncImage(url: url) { image in
