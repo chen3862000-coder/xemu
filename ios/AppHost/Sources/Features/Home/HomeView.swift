@@ -614,9 +614,6 @@ struct HomeView: View {
     }
 
     private func platform(for shortName: String) -> EmulatorPlatform? {
-        if shortName == "GB/GBC" {
-            return .gameBoy
-        }
         return EmulatorPlatform.allCases.first { $0.shortName == shortName }
     }
 
@@ -1048,12 +1045,7 @@ struct EmulatorCard: View {
     @State private var isHovered = false
 
     private var consoleAssetName: String? {
-        switch shortName {
-        case "GB/GBC": return "ConsoleGBGBC"
-        case "GBA": return "ConsoleGBA"
-        case "NDS": return "ConsoleNDS"
-        default: return nil
-        }
+        ConsoleIdentity.resolve(systemRaw: shortName)?.assetName
     }
     
     var body: some View {
@@ -1163,12 +1155,7 @@ private struct CollectorSystemTile: View {
     let onTap: () -> Void
 
     private var consoleAssetName: String? {
-        switch emulator.shortName {
-        case "GB/GBC": return "ConsoleGBGBC"
-        case "GBA": return "ConsoleGBA"
-        case "NDS": return "ConsoleNDS"
-        default: return nil
-        }
+        ConsoleIdentity.resolve(systemRaw: emulator.shortName)?.assetName
     }
 
     var body: some View {
@@ -1508,10 +1495,11 @@ final class HomeViewModel: ObservableObject {
         
         let recentEntries = entries.filter { $0.lastPlayedAt != nil }.prefix(5)
         recentGames = recentEntries.map { entry in
-            RecentGame(
+            let console = entry.consoleIdentity?.systemCode ?? entry.system?.uppercased() ?? "Unknown"
+            return RecentGame(
                 id: entry.objectID.uriRepresentation().absoluteString,
                 title: entry.title ?? "Unknown",
-                console: entry.system?.uppercased() ?? "Unknown",
+                console: console,
                 lastPlayed: entry.lastPlayedAt,
                 progress: 0,
                 image: nil,
@@ -1533,10 +1521,11 @@ final class HomeViewModel: ObservableObject {
             .prefix(8)
 
         recentlyAddedGames = addedEntries.map { entry in
-            RecentGame(
+            let console = entry.consoleIdentity?.systemCode ?? entry.system?.uppercased() ?? "Unknown"
+            return RecentGame(
                 id: "added-\(entry.objectID.uriRepresentation().absoluteString)",
                 title: entry.title ?? "Unknown",
-                console: entry.system?.uppercased() ?? "Unknown",
+                console: console,
                 lastPlayed: entry.dateAdded ?? entry.lastPlayedAt,
                 progress: 0,
                 image: nil,
@@ -1552,14 +1541,15 @@ final class HomeViewModel: ObservableObject {
     
     private func loadEmulators(from entries: [ROMLibraryEntry]) {
         let countsBySystem = Dictionary(grouping: entries) {
-            ($0.system ?? "").trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+            $0.resolvedSystemCode
         }.mapValues(\.count)
 
         emulators = [
-            EmulatorInfo(name: "Game Boy + Color", shortName: "GB/GBC", gamesCount: countsBySystem["gb", default: 0] + countsBySystem["gbc", default: 0], gradient: [Color.purple, Color.blue], icon: "🎮"),
+            EmulatorInfo(name: "Game Boy", shortName: "GB", gamesCount: countsBySystem["gb", default: 0], gradient: [Color(hex: "B7D6A4"), Color(hex: "7D9A52")], icon: "🎮"),
+            EmulatorInfo(name: "Game Boy Color", shortName: "GBC", gamesCount: countsBySystem["gbc", default: 0], gradient: [Color(hex: "B597F5"), Color(hex: "7A4BC2")], icon: "🌈"),
             EmulatorInfo(name: "Game Boy Advance", shortName: "GBA", gamesCount: countsBySystem["gba", default: 0], gradient: [Color.purple, Color.indigo], icon: "⚡"),
             EmulatorInfo(name: "Nintendo DS", shortName: "NDS", gamesCount: countsBySystem["nds", default: 0], gradient: [Color.cyan, Color.blue], icon: "📱"),
-        ].filter { $0.gamesCount > 0 || ["GB/GBC", "GBA", "NDS"].contains($0.shortName) }
+        ].filter { $0.gamesCount > 0 || ["GB", "GBC", "GBA", "NDS"].contains($0.shortName) }
     }
     
     func entry(for id: UUID) -> ROMLibraryEntry? {

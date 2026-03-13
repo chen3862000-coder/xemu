@@ -97,16 +97,7 @@ struct StandardGameRow: View {
     }
     
     private var placeholderColor: Color {
-        switch entry.system?.uppercased() {
-        case "GB", "GBC":
-            return Color(hue: 0.42, saturation: 0.25, brightness: 0.90)
-        case "GBA":
-            return Color(hue: 0.75, saturation: 0.30, brightness: 0.78)
-        case "NDS":
-            return Color(hue: 0.58, saturation: 0.18, brightness: 0.85)
-        default:
-            return Color(hue: 0.70, saturation: 0.22, brightness: 0.82)
-        }
+        entry.consoleIdentity?.accentColor ?? Color(hue: 0.70, saturation: 0.22, brightness: 0.82)
     }
     
     private var lastPlayedText: String {

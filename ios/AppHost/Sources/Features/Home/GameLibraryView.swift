@@ -86,10 +86,10 @@ private enum AllGamesTokens {
     }
 
     static func placeholderGlyph(for system: String?) -> String {
-        switch (system ?? "").uppercased() {
-        case "GB", "GBC", "GB/GBC": return "rectangle.3.group.bubble"
-        case "GBA": return "bolt.fill"
-        case "NDS": return "rectangle.split.2x1"
+        switch ConsoleIdentity.resolve(systemRaw: system) {
+        case .gb, .gbc: return "rectangle.portrait.fill"
+        case .gba: return "bolt.fill"
+        case .nds: return "rectangle.split.2x1"
         default: return "gamecontroller.fill"
         }
     }
@@ -191,6 +191,7 @@ enum LibrarySortOption: String, CaseIterable, Identifiable {
 
 enum LibrarySystemFilter: String, CaseIterable, Identifiable {
     case all = "all"
+    case gb = "gb"
     case gbc = "gbc"
     case gba = "gba"
     case nds = "nds"
@@ -200,10 +201,21 @@ enum LibrarySystemFilter: String, CaseIterable, Identifiable {
     init?(rawValue: String) {
         switch rawValue {
         case "all": self = .all
+        case "gb": self = .gb
         case "gbc": self = .gbc
         case "gba": self = .gba
         case "nds": self = .nds
         default: return nil
+        }
+    }
+
+    var label: String {
+        switch self {
+        case .all: return "All"
+        case .gb: return "Game Boy"
+        case .gbc: return "Game Boy Color"
+        case .gba: return "Game Boy Advance"
+        case .nds: return "Nintendo DS"
         }
     }
 }
@@ -394,16 +406,18 @@ struct GameLibraryView: View {
 
         let filteredBySystem = games.filter { entry in
             guard selectedSystemFilter != .all else { return true }
-            let system = (entry.system ?? "").uppercased()
+            let system = entry.resolvedSystemCode
             switch selectedSystemFilter {
             case .all:
                 return true
+            case .gb:
+                return system == "gb"
             case .gbc:
-                return system == "GB" || system == "GBC" || system == "GB/GBC"
+                return system == "gbc"
             case .gba:
-                return system == "GBA"
+                return system == "gba"
             case .nds:
-                return system == "NDS"
+                return system == "nds"
             }
         }
 
@@ -698,7 +712,7 @@ struct GameLibraryView: View {
                                         selectedSystemFilter = filter
                                     }
                                 } label: {
-                                    Text(filter.rawValue)
+                                    Text(filter.label)
                                         .font(.system(size: 12, weight: .semibold))
                                         .foregroundColor(selectedSystemFilter == filter ? Color.white : AllGamesTokens.textSecondary)
                                         .padding(.horizontal, 12)
@@ -841,10 +855,10 @@ struct GameLibraryView: View {
 
     private var collectorSections: [(key: String, title: String, entries: [ROMLibraryEntry])] {
         let grouped = Dictionary(grouping: filteredGames) { entry in
-            CollectorShelfGrouping.sectionKey(for: entry.system)
+            CollectorShelfGrouping.sectionKey(for: entry.resolvedSystemCode)
         }
 
-        return CollectorShelfGrouping.orderedSectionKeys(for: filteredGames.map(\.system)).compactMap { key in
+        return CollectorShelfGrouping.orderedSectionKeys(for: filteredGames.map(\.resolvedSystemCode)).compactMap { key in
             guard let entries = grouped[key], !entries.isEmpty else { return nil }
             return (
                 key: key,
@@ -857,16 +871,20 @@ struct GameLibraryView: View {
     private var shelfCounts: [LibrarySystemFilter: Int] {
         [
             .all: games.count,
+            .gb: games.filter {
+                let key = CollectorShelfGrouping.sectionKey(for: $0.resolvedSystemCode)
+                return key == "gb"
+            }.count,
             .gbc: games.filter {
-                let key = CollectorShelfGrouping.sectionKey(for: $0.system)
+                let key = CollectorShelfGrouping.sectionKey(for: $0.resolvedSystemCode)
                 return key == "gbc"
             }.count,
             .gba: games.filter {
-                let key = CollectorShelfGrouping.sectionKey(for: $0.system)
+                let key = CollectorShelfGrouping.sectionKey(for: $0.resolvedSystemCode)
                 return key == "gba"
             }.count,
             .nds: games.filter {
-                let key = CollectorShelfGrouping.sectionKey(for: $0.system)
+                let key = CollectorShelfGrouping.sectionKey(for: $0.resolvedSystemCode)
                 return key == "nds"
             }.count
         ]
@@ -1203,8 +1221,9 @@ struct AllGamesCard: View {
     var body: some View {
         let issue = ROMCompatibilityService.shared.compatibility(for: entry).issue
         let metadata = issue?.title ?? lastPlayedLabel
-        let shouldShowBadge = !(entry.system?.lowercased().contains("gba") == true &&
+        let shouldShowBadge = !(entry.resolvedSystemCode == "gba" &&
                               selectedSystemFilter == .gba)
+        let platformTag = entry.consoleIdentity?.systemCode ?? (entry.system ?? "UNK").uppercased()
         let progress: CGFloat? = entry.playtimeTotal > 0 ? max(0.08, min(1.0, CGFloat(entry.playtimeTotal) / CGFloat(4 * 3600))) : nil
         let content = Button(action: onTap) {
             CollectorGameCard(
@@ -1212,7 +1231,7 @@ struct AllGamesCard: View {
                 title: displayTitle(entry.title),
                 metadataPrimary: metadata,
                 metadataSecondary: entry.playtimeTotal > 0 ? playtimeBadge : nil,
-                platformTag: shouldShowBadge ? (entry.system ?? "UNK").uppercased() : nil,
+                platformTag: shouldShowBadge ? platformTag : nil,
                 launchIssueIconName: issue?.iconName,
                 progress: progress
             ) {
@@ -1271,12 +1290,12 @@ struct AllGamesCard: View {
             }
         }
         .overlay(alignment: .bottomTrailing) {
-            let shouldShowBadge = !(entry.system?.lowercased().contains("gba") == true &&
+            let shouldShowBadge = !(entry.resolvedSystemCode == "gba" &&
                                   selectedSystemFilter == .gba)
             if shouldShowBadge {
                 AllGamesConsoleBadge(
-                    text: (entry.system ?? "UNK").uppercased(),
-                    backgroundColor: SubpageUI.CollectorIdentity.accent(forSystem: entry.system)
+                    text: entry.consoleIdentity?.systemCode ?? (entry.system ?? "UNK").uppercased(),
+                    backgroundColor: SubpageUI.CollectorIdentity.accent(forSystem: entry.resolvedSystemCode)
                 )
                     .padding(collectorMode ? 6 : 8)
             }

@@ -56,8 +56,10 @@ class GamePlayViewModel: ObservableObject {
     private var audioResamplerPosition: Double = 0
     private var audioResamplerCarryFrame: (Int16, Int16)?
     private var ndsTouchIsPressed = false
+    private var requestedNDSScreenLayout: NDSScreenLayout = .stacked
     private var ndsTouchPressedAtNs: UInt64 = 0
     private var pendingNDSTouchReleaseTask: Task<Void, Never>?
+    @Published private(set) var currentNDSDisplayLayout: NDSScreenLayout = .stacked
     #if canImport(UIKit)
     private var lifecycleObservers: [NSObjectProtocol] = []
     #endif
@@ -138,15 +140,17 @@ class GamePlayViewModel: ObservableObject {
                 frameWidth = 240
                 frameHeight = 160
             case .NDS:
-                frameWidth = 256
-                frameHeight = 384
+                let frameSize = Self.ndsFrameDimensions(for: requestedNDSScreenLayout)
+                frameWidth = frameSize.width
+                frameHeight = frameSize.height
+                currentNDSDisplayLayout = requestedNDSScreenLayout
             default:
                 frameWidth = 160
                 frameHeight = 144
             }
 
             if platform == .NDS, let ndsCore = core as? NDSCore {
-                _ = ndsCore.setScreenLayout(.stacked)
+                _ = applyNDSScreenLayout(requestedNDSScreenLayout, to: ndsCore)
             }
             
             // NDS native saves are file-backed sidecars and must be materialized
@@ -179,7 +183,7 @@ class GamePlayViewModel: ObservableObject {
             case .GBA:
                 textureSize = CGSize(width: 240, height: 160)
             case .NDS:
-                textureSize = CGSize(width: 256, height: 384)
+                textureSize = CGSize(width: frameWidth, height: frameHeight)
             default:
                 textureSize = CGSize(width: 160, height: 144)
             }
@@ -659,25 +663,54 @@ class GamePlayViewModel: ObservableObject {
     }
 
     func setNDSScreenLayout(_ layout: NDSScreenLayout) {
+        requestedNDSScreenLayout = layout
+        let frameSize = Self.ndsFrameDimensions(for: layout)
+        frameWidth = frameSize.width
+        frameHeight = frameSize.height
+        currentNDSDisplayLayout = layout
         guard let ndsCore = activeCore as? NDSCore else { return }
-        guard ndsCore.setScreenLayout(layout) else { return }
-
-        switch layout {
-        case .stacked:
-            frameWidth = 256
-            frameHeight = 384
-        case .sideBySide:
-            frameWidth = 512
-            frameHeight = 192
-        case .topOnly, .bottomOnly:
-            frameWidth = 256
-            frameHeight = 192
-        }
+        _ = applyNDSScreenLayout(layout, to: ndsCore)
     }
 
     func getNDSScreenLayout() -> NDSScreenLayout {
         guard let ndsCore = activeCore as? NDSCore else { return .stacked }
         return ndsCore.getScreenLayout()
+    }
+
+    static func ndsFrameDimensions(for layout: NDSScreenLayout) -> (width: Int, height: Int) {
+        switch layout {
+        case .stacked:
+            return (256, 384)
+        case .sideBySide:
+            return (512, 192)
+        case .topOnly, .bottomOnly:
+            return (256, 192)
+        }
+    }
+
+    static func resolvedNDSDisplayLayout(
+        renderedWidth: Int,
+        renderedHeight: Int,
+        fallback: NDSScreenLayout
+    ) -> NDSScreenLayout {
+        guard renderedWidth > 0, renderedHeight > 0 else { return fallback }
+        if renderedHeight > renderedWidth {
+            return .stacked
+        }
+        if renderedWidth >= (renderedHeight * 2) {
+            return .sideBySide
+        }
+        return fallback
+    }
+
+    @discardableResult
+    private func applyNDSScreenLayout(_ layout: NDSScreenLayout, to ndsCore: NDSCore) -> Bool {
+        guard ndsCore.setScreenLayout(layout) else { return false }
+        let frameSize = Self.ndsFrameDimensions(for: layout)
+        frameWidth = frameSize.width
+        frameHeight = frameSize.height
+        currentNDSDisplayLayout = layout
+        return true
     }
 
     func setNDSTouchNormalized(x: CGFloat, y: CGFloat, pressed: Bool) {
@@ -933,6 +966,13 @@ extension GamePlayViewModel: EmulatorRenderDelegate {
             let neededSize = pitch * height
             guard data.count >= neededSize, width > 0, height > 0, pitch > 0 else {
                 return
+            }
+            if currentPlatform == .NDS {
+                currentNDSDisplayLayout = Self.resolvedNDSDisplayLayout(
+                    renderedWidth: width,
+                    renderedHeight: height,
+                    fallback: requestedNDSScreenLayout
+                )
             }
             lastFrameSnapshot = (data: data, width: width, height: height, bytesPerRow: pitch)
             let qualityProfile = performanceProfiler.currentQualityProfile

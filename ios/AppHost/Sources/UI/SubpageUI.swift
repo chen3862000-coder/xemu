@@ -26,35 +26,27 @@ enum SubpageUI {
     static let cardShadowOpacity: Double = 0.08
 
     enum CollectorIdentity {
-        static let gbHex = "B7D6A4"
+        static let gbHex = "7D9A52"
+        static let gbcHex = "7A4BC2"
         static let gbaHex = "6C5CE7"
         static let ndsHex = "1F2A44"
         static let fallbackHex = "8B3DFF"
 
         static let gb = Color(hex: gbHex)
+        static let gbc = Color(hex: gbcHex)
         static let gba = Color(hex: gbaHex)
         static let nds = Color(hex: ndsHex)
         static let fallback = Color(hex: fallbackHex)
 
         static func normalizedSystemCode(_ raw: String?) -> String {
-            let code = (raw ?? "")
-                .trimmingCharacters(in: .whitespacesAndNewlines)
-                .lowercased()
-            switch code {
-            case "gb", "gbc", "gb/gbc", "game boy", "game boy + color":
-                return "gbc"
-            case "gba", "game boy advance":
-                return "gba"
-            case "nds", "nintendo ds":
-                return "nds"
-            default:
-                return code
-            }
+            ConsoleIdentity.resolve(systemRaw: raw)?.rawValue
+                ?? (raw ?? "").trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         }
 
         static func accentHex(forSystem raw: String?) -> String {
             switch normalizedSystemCode(raw) {
-            case "gbc": return gbHex
+            case "gb": return gbHex
+            case "gbc": return gbcHex
             case "gba": return gbaHex
             case "nds": return ndsHex
             default: return fallbackHex

@@ -7,26 +7,25 @@ enum CollectorCardVariant {
 }
 
 enum CollectorPlatformStyle {
+    case gb
     case gbc
     case gba
     case nds
     case neutral
 
     init(systemTag: String?) {
-        let value = (systemTag ?? "").trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
-        if value.contains("GB") || value.contains("GBC") {
-            self = .gbc
-        } else if value.contains("GBA") {
-            self = .gba
-        } else if value.contains("NDS") || value.contains("DS") {
-            self = .nds
-        } else {
-            self = .neutral
+        switch ConsoleIdentity.resolve(systemRaw: systemTag) {
+        case .gb: self = .gb
+        case .gbc: self = .gbc
+        case .gba: self = .gba
+        case .nds: self = .nds
+        default: self = .neutral
         }
     }
 
     var badgeColor: Color {
         switch self {
+        case .gb: return Color(hex: "7D9A52")
         case .gbc: return Color(red: 0.52, green: 0.31, blue: 0.88)
         case .gba: return Color(red: 0.49, green: 0.28, blue: 0.88)
         case .nds: return Color(red: 0.37, green: 0.52, blue: 0.88)
@@ -36,9 +35,15 @@ enum CollectorPlatformStyle {
 
     var shelfGradient: LinearGradient {
         switch self {
+        case .gb:
+            return LinearGradient(
+                colors: [Color(red: 0.84, green: 0.90, blue: 0.78), Color(red: 0.76, green: 0.84, blue: 0.66)],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
         case .gbc:
             return LinearGradient(
-                colors: [Color(red: 0.77, green: 0.90, blue: 0.83), Color(red: 0.86, green: 0.93, blue: 0.88)],
+                colors: [Color(red: 0.86, green: 0.82, blue: 0.96), Color(red: 0.75, green: 0.67, blue: 0.95)],
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
             )

@@ -2,11 +2,11 @@ import XCTest
 @testable import Xemu
 
 final class CollectorIdentityTests: XCTestCase {
-    func testNormalizedSystemCodeMapsGameBoyAliasesToGBC() {
-        let aliases = ["gb", "GBC", " GB/GBC ", "game boy", "Game Boy + Color"]
-        for alias in aliases {
-            XCTAssertEqual(SubpageUI.CollectorIdentity.normalizedSystemCode(alias), "gbc")
-        }
+    func testNormalizedSystemCodeSeparatesGameBoyAndGameBoyColor() {
+        XCTAssertEqual(SubpageUI.CollectorIdentity.normalizedSystemCode("gb"), "gb")
+        XCTAssertEqual(SubpageUI.CollectorIdentity.normalizedSystemCode("game boy"), "gb")
+        XCTAssertEqual(SubpageUI.CollectorIdentity.normalizedSystemCode("GBC"), "gbc")
+        XCTAssertEqual(SubpageUI.CollectorIdentity.normalizedSystemCode("game boy color"), "gbc")
     }
 
     func testNormalizedSystemCodeMapsGBAAndNDSAliases() {
@@ -21,6 +21,7 @@ final class CollectorIdentityTests: XCTestCase {
 
     func testAccentHexReturnsExpectedPaletteValues() {
         XCTAssertEqual(SubpageUI.CollectorIdentity.accentHex(forSystem: "gb"), SubpageUI.CollectorIdentity.gbHex)
+        XCTAssertEqual(SubpageUI.CollectorIdentity.accentHex(forSystem: "gbc"), SubpageUI.CollectorIdentity.gbcHex)
         XCTAssertEqual(SubpageUI.CollectorIdentity.accentHex(forSystem: "GBA"), SubpageUI.CollectorIdentity.gbaHex)
         XCTAssertEqual(SubpageUI.CollectorIdentity.accentHex(forSystem: "nds"), SubpageUI.CollectorIdentity.ndsHex)
     }
@@ -38,14 +39,16 @@ final class CollectorIdentityTests: XCTestCase {
         let systems = ["nds", "gba", "gb", "ps1", "gbc"]
         XCTAssertEqual(
             CollectorShelfGrouping.orderedSectionKeys(for: systems),
-            ["gbc", "gba", "nds", "ps1"]
+            ["gb", "gbc", "gba", "nds", "ps1"]
         )
     }
 
     func testCollectorShelfGroupingMapsAliasesToFriendlyTitles() {
-        XCTAssertEqual(CollectorShelfGrouping.sectionKey(for: "Game Boy"), "gbc")
+        XCTAssertEqual(CollectorShelfGrouping.sectionKey(for: "Game Boy"), "gb")
+        XCTAssertEqual(CollectorShelfGrouping.sectionKey(for: "Game Boy Color"), "gbc")
         XCTAssertEqual(CollectorShelfGrouping.sectionKey(for: "Game Boy Advance"), "gba")
-        XCTAssertEqual(CollectorShelfGrouping.sectionTitle(for: "gbc"), "Game Boy + Color Collection")
+        XCTAssertEqual(CollectorShelfGrouping.sectionTitle(for: "gb"), "Game Boy Collection")
+        XCTAssertEqual(CollectorShelfGrouping.sectionTitle(for: "gbc"), "Game Boy Color Collection")
         XCTAssertEqual(CollectorShelfGrouping.sectionTitle(for: "nds"), "Nintendo DS Collection")
     }
 }

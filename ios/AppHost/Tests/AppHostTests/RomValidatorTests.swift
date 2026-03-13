@@ -8,6 +8,18 @@ final class RomValidatorTests: XCTestCase {
         defer { try? FileManager.default.removeItem(at: url) }
 
         let result = try RomValidator.validate(at: url)
+        XCTAssertEqual(result.system, .gb)
+        XCTAssertFalse(result.checksum.isEmpty)
+    }
+
+    func testValidateAcceptsWellFormedGBCROM() throws {
+        var romData = makeValidGBROM()
+        romData[0x143] = 0x80
+        romData[0x14D] = recomputeGBChecksum(romData)
+        let url = try writeTempFile(data: romData, ext: "gbc")
+        defer { try? FileManager.default.removeItem(at: url) }
+
+        let result = try RomValidator.validate(at: url)
         XCTAssertEqual(result.system, .gbc)
         XCTAssertFalse(result.checksum.isEmpty)
     }
@@ -83,6 +95,14 @@ final class RomValidatorTests: XCTestCase {
         return rom
     }
 
+    private func recomputeGBChecksum(_ rom: Data) -> UInt8 {
+        var checksum: UInt8 = 0
+        for i in 0x134...0x14C {
+            checksum = checksum &- rom[i] &- 1
+        }
+        return checksum
+    }
+
     private func writeTempFile(data: Data, ext: String) throws -> URL {
         let url = FileManager.default.temporaryDirectory
             .appendingPathComponent(UUID().uuidString)
@@ -91,4 +111,3 @@ final class RomValidatorTests: XCTestCase {
         return url
     }
 }
-

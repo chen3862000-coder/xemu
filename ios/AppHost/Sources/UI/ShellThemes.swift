@@ -203,7 +203,7 @@ final class ShellThemeManager: ObservableObject {
            let decoded = try? JSONDecoder().decode([ShellConsoleKind: String].self, from: data) {
             self.perConsoleSelectedThemeIDs = decoded
         } else {
-            self.perConsoleSelectedThemeIDs = [.gbc: "gbc-modern-minimal"]
+            self.perConsoleSelectedThemeIDs = [.gb: "gb-classic-dmg", .gbc: "gbc-modern-minimal"]
         }
         let stored = UserDefaults.standard.string(forKey: Self.selectedThemeKey)
         self.selectedThemeID = stored ?? Self.defaultThemes().first?.id ?? "classic-neon"
@@ -263,7 +263,7 @@ final class ShellThemeManager: ObservableObject {
     }
 
     private static func defaultThemes() -> [EmulatorShellTheme] {
-        [classicNeonTheme, gbcModernMinimalTheme, gbaModernMinimalTheme, ndsModernMinimalTheme, minimalGlassTheme, retroMonoTheme]
+        [classicNeonTheme, gbClassicDMGTheme, gbcModernMinimalTheme, gbaModernMinimalTheme, ndsModernMinimalTheme, minimalGlassTheme, retroMonoTheme]
     }
 
     private func persistPerConsoleSelections() {
@@ -412,6 +412,50 @@ private extension ShellThemeManager {
         theme.animationStyle.hapticProfile = .subtle
 
         theme.consoleOverrides[.gbc] = .init(utilityButtonSize: 34, dpadScaleMultiplier: 0.90, faceButtonScaleMultiplier: 0.90)
+        return theme
+    }
+
+    nonisolated static var gbClassicDMGTheme: EmulatorShellTheme {
+        var theme = classicNeonTheme
+        theme.id = "gb-classic-dmg"
+        theme.displayName = "GB Classic DMG"
+        theme.supportedConsoles = [.gb]
+        theme.colorPalette.shellBaseTop = .init(r: 0.79, g: 0.81, b: 0.77, a: 0.98)
+        theme.colorPalette.shellBaseBottom = .init(r: 0.67, g: 0.70, b: 0.64, a: 0.98)
+        theme.colorPalette.shellAccent = .init(r: 0.49, g: 0.61, b: 0.32, a: 1)
+        theme.colorPalette.shellAccentSecondary = .init(r: 0.71, g: 0.84, b: 0.54, a: 1)
+        theme.colorPalette.shellStroke = .init(r: 0.25, g: 0.29, b: 0.24, a: 0.28)
+        theme.colorPalette.shellHighlight = .init(r: 1, g: 1, b: 1, a: 0.16)
+        theme.colorPalette.shellShadow = .init(r: 0.08, g: 0.11, b: 0.07, a: 0.16)
+
+        theme.colorPalette.screenFrameTop = .init(r: 0.29, g: 0.33, b: 0.26, a: 1)
+        theme.colorPalette.screenFrameBottom = .init(r: 0.17, g: 0.20, b: 0.15, a: 1)
+        theme.colorPalette.screenStroke = .init(r: 0.73, g: 0.84, b: 0.57, a: 0.20)
+        theme.colorPalette.screenInnerStroke = .init(r: 0.63, g: 0.74, b: 0.48, a: 0.18)
+
+        theme.colorPalette.controlSurfaceTop = .init(r: 0.44, g: 0.46, b: 0.42, a: 0.98)
+        theme.colorPalette.controlSurfaceBottom = .init(r: 0.30, g: 0.31, b: 0.29, a: 0.98)
+        theme.colorPalette.controlStroke = .init(r: 0.08, g: 0.08, b: 0.08, a: 0.68)
+        theme.colorPalette.controlIcon = .init(r: 0.95, g: 0.97, b: 0.90, a: 0.94)
+
+        theme.colorPalette.faceButtonAStart = .init(r: 0.43, g: 0.43, b: 0.48, a: 0.98)
+        theme.colorPalette.faceButtonAEnd = .init(r: 0.25, g: 0.25, b: 0.29, a: 0.98)
+        theme.colorPalette.faceButtonBStart = .init(r: 0.43, g: 0.43, b: 0.48, a: 0.98)
+        theme.colorPalette.faceButtonBEnd = .init(r: 0.25, g: 0.25, b: 0.29, a: 0.98)
+        theme.colorPalette.faceButtonGlow = .init(r: 0.51, g: 0.66, b: 0.33, a: 0.14)
+
+        theme.colorPalette.utilityFillStart = .init(r: 0.59, g: 0.61, b: 0.58, a: 0.94)
+        theme.colorPalette.utilityFillEnd = .init(r: 0.42, g: 0.44, b: 0.40, a: 0.98)
+        theme.colorPalette.utilityStroke = .init(r: 0.14, g: 0.15, b: 0.12, a: 0.58)
+        theme.colorPalette.utilityIcon = .init(r: 0.93, g: 0.95, b: 0.88, a: 0.92)
+        theme.colorPalette.utilityGlow = .init(r: 0.51, g: 0.66, b: 0.33, a: 0.10)
+
+        theme.controlStyle.materialType = .solid
+        theme.controlStyle.glowEnabled = false
+        theme.controlStyle.idleOpacity = 0.95
+        theme.controlStyle.pressScale = 0.95
+        theme.layoutStyle.landscapeBehavior = .hardwareLocked
+        theme.consoleOverrides[.gb] = .init(dpadScaleMultiplier: 0.96, faceButtonScaleMultiplier: 0.92)
         return theme
     }
 

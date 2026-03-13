@@ -1610,6 +1610,18 @@ struct GamePlayView: View {
 
                         VStack(spacing: 8) {
                             HStack(spacing: 12) {
+                                let upperTransform = ndsLandscapeScreenTransform(
+                                    visibleWidth: screenWidth,
+                                    visibleHeight: screenHeight,
+                                    interScreenSpacing: 12,
+                                    isTouchScreen: false
+                                )
+                                let lowerTransform = ndsLandscapeScreenTransform(
+                                    visibleWidth: screenWidth,
+                                    visibleHeight: screenHeight,
+                                    interScreenSpacing: 12,
+                                    isTouchScreen: true
+                                )
                                 ndsMinimalScreenCard(
                                     width: screenWidth,
                                     height: screenHeight,
@@ -1619,8 +1631,8 @@ struct GamePlayView: View {
                                     highlight: .clear
                                 ) {
                                     emulatorDisplayView
-                                        .frame(width: centerWidth, height: screenHeight)
-                                        .offset(x: centerWidth / 4 + 6)
+                                        .frame(width: upperTransform.sourceWidth, height: upperTransform.sourceHeight)
+                                        .offset(x: upperTransform.xOffset, y: upperTransform.yOffset)
                                 }
 
                                 ndsMinimalScreenCard(
@@ -1633,8 +1645,8 @@ struct GamePlayView: View {
                                 ) {
                                     ZStack {
                                         emulatorDisplayView
-                                            .frame(width: centerWidth, height: screenHeight)
-                                            .offset(x: -(centerWidth / 4 + 6))
+                                            .frame(width: lowerTransform.sourceWidth, height: lowerTransform.sourceHeight)
+                                            .offset(x: lowerTransform.xOffset, y: lowerTransform.yOffset)
 
                                         NDSTouchScreenOverlayView { normalizedX, normalizedY, pressed in
                                             if pressed {
@@ -1729,14 +1741,14 @@ struct GamePlayView: View {
         let safeLeading = geometry.safeAreaInsets.leading
         let safeTrailing = geometry.safeAreaInsets.trailing
         // Landscape-only layout rules (independent from portrait control rules).
-        let cameraSideExclusionInset: CGFloat = 20
+        let cameraSideExclusionInset: CGFloat = 34
         let cameraOnLeadingSide = safeLeading > safeTrailing
         let cameraLeadingInset = cameraOnLeadingSide ? cameraSideExclusionInset : 0
         let cameraTrailingInset = cameraOnLeadingSide ? 0 : cameraSideExclusionInset
 
         let availableWidth = geometry.size.width - safeLeading - safeTrailing - cameraLeadingInset - cameraTrailingInset
-        let shellWidth = safeFrameValue(max(560, min(availableWidth * 0.995, 1120.0)), fallback: 560)
-        let shellHeight = safeFrameValue(max(320, min(geometry.size.height * 0.88, 470.0)), fallback: 320)
+        let shellWidth = safeFrameValue(max(760, min(availableWidth - 2, 1320.0)), fallback: 760)
+        let shellHeight = safeFrameValue(max(340, min(geometry.size.height * 0.92, 500.0)), fallback: 340)
 
         return AnyView(
             ndsLandscapeShellBody(
@@ -1758,7 +1770,13 @@ struct GamePlayView: View {
         cameraLeadingInset: CGFloat,
         cameraTrailingInset: CGFloat
     ) -> some View {
-        VStack(spacing: 0) {
+        let shellHorizontalOffset = ndsLandscapeHorizontalOffset(
+            safeLeading: safeLeading,
+            safeTrailing: safeTrailing,
+            cameraLeadingInset: cameraLeadingInset,
+            cameraTrailingInset: cameraTrailingInset
+        )
+        return VStack(spacing: 0) {
             ndsTopBar
                 .padding(.horizontal, 12)
                 .padding(.top, 4)
@@ -1796,12 +1814,11 @@ struct GamePlayView: View {
                     ndsLandscapeDeckLayer(metrics: metrics)
                         .frame(width: deckGeo.size.width, height: deckGeo.size.height)
                 }
-                .padding(.horizontal, 28)
+                .padding(.horizontal, 10)
                 .padding(.top, 10)
                 .padding(.bottom, 20)
             }
             .frame(width: shellWidth, height: shellHeight)
-            .offset(y: -8)
             .padding(.bottom, 6)
 
             statusBar
@@ -1810,7 +1827,17 @@ struct GamePlayView: View {
         }
         .padding(.leading, safeLeading + cameraLeadingInset)
         .padding(.trailing, safeTrailing + cameraTrailingInset)
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        .offset(x: shellHorizontalOffset)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+    }
+
+    private func ndsLandscapeHorizontalOffset(
+        safeLeading: CGFloat,
+        safeTrailing: CGFloat,
+        cameraLeadingInset: CGFloat,
+        cameraTrailingInset: CGFloat
+    ) -> CGFloat {
+        (((safeLeading + cameraLeadingInset) - (safeTrailing + cameraTrailingInset)) / 2) - 48
     }
 
     private struct NDSLandscapeLayoutMetrics {
@@ -1830,22 +1857,35 @@ struct GamePlayView: View {
         let centerY: CGFloat
         let dpadX: CGFloat
         let abxyX: CGFloat
+        let dpadSize: CGFloat
+        let faceButtonDiameter: CGFloat
+        let faceButtonSpacing: CGFloat
+        let faceClusterHitSize: CGFloat
     }
 
     private func ndsLandscapeMetrics(contentWidth: CGFloat, contentHeight: CGFloat) -> NDSLandscapeLayoutMetrics {
-        let deckWidth = min(contentWidth * 0.88, 1000)
-        let deckHeight = min(contentHeight * 0.62, 376)
-        let deckTop: CGFloat = -12
+        let deckWidth = min(contentWidth * 0.88, 1040)
+        let deckHeight = min(contentHeight * 0.58, 352)
+        let deckTop: CGFloat = 8
         let shoulderWidth: CGFloat = 34
         let shoulderHeight: CGFloat = 96
-        // Keep shoulders in the upper half, aligned near the deck midline.
-        let shoulderY = deckTop + (deckHeight * 0.64)
+        let dpadSize: CGFloat = 126
+        let faceButtonDiameter: CGFloat = 50
+        let faceButtonSpacing: CGFloat = 10
+        let faceClusterHitSize: CGFloat = 66
+        let faceClusterHalfWidth = faceButtonSpacing + faceButtonDiameter
+        let deckMinX = deckMinX(for: contentWidth, deckWidth: deckWidth)
+        let deckMaxX = deckMaxX(for: contentWidth, deckWidth: deckWidth)
+        let controlToDeckGap: CGFloat = 24
+        let shellSideInset: CGFloat = 18
+        let controlVerticalOffset: CGFloat = 14
+        let shoulderY = deckTop + (deckHeight * 0.46)
         let utilityWidth = min(340, deckWidth * 0.36)
         let utilityHeight: CGFloat = 40
         let utilityY = deckTop + deckHeight + 8 + (utilityHeight / 2)
         let lowerTop = utilityY + (utilityHeight / 2) + 6
         let lowerHeight = max(112, contentHeight - lowerTop - 14)
-        let dpadY = min(contentHeight - 64, lowerTop + (lowerHeight * 0.34))
+        let dpadY = min(contentHeight - 56, lowerTop + (lowerHeight * 0.34) + controlVerticalOffset)
         let abxyY = dpadY
         let centerY = min(contentHeight - 34, lowerTop + (lowerHeight * 0.60))
         return NDSLandscapeLayoutMetrics(
@@ -1863,9 +1903,24 @@ struct GamePlayView: View {
             dpadY: dpadY,
             abxyY: abxyY,
             centerY: centerY,
-            dpadX: contentWidth * 0.15,
-            abxyX: contentWidth * 0.85
+            dpadX: max((dpadSize / 2) + shellSideInset, deckMinX - (dpadSize / 2) - controlToDeckGap),
+            abxyX: min(
+                contentWidth - faceClusterHalfWidth - shellSideInset,
+                deckMaxX + faceClusterHalfWidth + controlToDeckGap
+            ),
+            dpadSize: dpadSize,
+            faceButtonDiameter: faceButtonDiameter,
+            faceButtonSpacing: faceButtonSpacing,
+            faceClusterHitSize: faceClusterHitSize
         )
+    }
+
+    private func deckMinX(for contentWidth: CGFloat, deckWidth: CGFloat) -> CGFloat {
+        (contentWidth - deckWidth) / 2
+    }
+
+    private func deckMaxX(for contentWidth: CGFloat, deckWidth: CGFloat) -> CGFloat {
+        deckMinX(for: contentWidth, deckWidth: deckWidth) + deckWidth
     }
 
     private func ndsLandscapeDeckLayer(metrics: NDSLandscapeLayoutMetrics) -> some View {
@@ -1881,7 +1936,7 @@ struct GamePlayView: View {
             }
             .frame(width: metrics.shoulderWidth, height: metrics.shoulderHeight)
             .position(
-                x: deckMinX - (metrics.shoulderWidth / 2) - 6,
+                x: max((metrics.shoulderWidth / 2) + 20, deckMinX - (metrics.shoulderWidth / 2) - 12),
                 y: metrics.shoulderY
             )
 
@@ -1892,14 +1947,17 @@ struct GamePlayView: View {
             }
             .frame(width: metrics.shoulderWidth, height: metrics.shoulderHeight)
             .position(
-                x: deckMaxX + (metrics.shoulderWidth / 2) + 6,
+                x: min(
+                    metrics.contentWidth - (metrics.shoulderWidth / 2) - 20,
+                    deckMaxX + (metrics.shoulderWidth / 2) + 12
+                ),
                 y: metrics.shoulderY
             )
 
             ndsLandscapeUtilityTray(width: metrics.utilityWidth, height: metrics.utilityHeight)
                 .position(x: metrics.contentWidth * 0.5, y: metrics.utilityY)
 
-            NDSDPadView(size: 98) { button, pressed in
+            NDSDPadView(size: metrics.dpadSize) { button, pressed in
                 viewModel.handleButtonPress(button, pressed: pressed)
             }
             .position(x: metrics.dpadX, y: metrics.dpadY)
@@ -1908,10 +1966,10 @@ struct GamePlayView: View {
                 onButton: { button, pressed in
                     viewModel.handleButtonPress(button, pressed: pressed)
                 },
-                buttonDiameter: 40,
-                buttonSpacing: 6,
+                buttonDiameter: metrics.faceButtonDiameter,
+                buttonSpacing: metrics.faceButtonSpacing,
                 showsBasePlate: false,
-                minHitSize: 52
+                minHitSize: metrics.faceClusterHitSize
             )
             .position(x: metrics.abxyX, y: metrics.abxyY)
 
@@ -1948,14 +2006,12 @@ struct GamePlayView: View {
         let dividerWidth: CGFloat = 4
         let singleWidth = (deckWidth - (innerPadding * 2) - dividerWidth) / 2
         let singleHeight = min(deckHeight - (innerPadding * 2), singleWidth * 0.92)
-        let combinedWidth = singleWidth * 2
 
         return HStack(spacing: 0) {
             ndsLandscapeSingleScreen(
                 width: singleWidth,
                 height: singleHeight,
-                combinedWidth: combinedWidth,
-                xOffset: combinedWidth / 4,
+                interScreenSpacing: dividerWidth,
                 isTouchScreen: false,
                 drivesEmulation: true
             )
@@ -1967,8 +2023,7 @@ struct GamePlayView: View {
             ndsLandscapeSingleScreen(
                 width: singleWidth,
                 height: singleHeight,
-                combinedWidth: combinedWidth,
-                xOffset: -(combinedWidth / 4),
+                interScreenSpacing: dividerWidth,
                 isTouchScreen: true,
                 drivesEmulation: false
             )
@@ -1979,17 +2034,22 @@ struct GamePlayView: View {
     private func ndsLandscapeSingleScreen(
         width: CGFloat,
         height: CGFloat,
-        combinedWidth: CGFloat,
-        xOffset: CGFloat,
+        interScreenSpacing: CGFloat,
         isTouchScreen: Bool,
         drivesEmulation: Bool
     ) -> some View {
-        ZStack {
+        let transform = ndsLandscapeScreenTransform(
+            visibleWidth: width,
+            visibleHeight: height,
+            interScreenSpacing: interScreenSpacing,
+            isTouchScreen: isTouchScreen
+        )
+        let screen = ZStack {
             RoundedRectangle(cornerRadius: 8, style: .continuous)
                 .fill(Color.black)
             emulatorDisplayView(advancesEmulation: drivesEmulation)
-                .frame(width: combinedWidth, height: height)
-                .offset(x: xOffset)
+                .frame(width: transform.sourceWidth, height: transform.sourceHeight)
+                .offset(x: transform.xOffset, y: transform.yOffset)
 
             if isTouchScreen {
                 NDSTouchScreenOverlayView { normalizedX, normalizedY, pressed in
@@ -2008,6 +2068,7 @@ struct GamePlayView: View {
             RoundedRectangle(cornerRadius: 8, style: .continuous)
                 .stroke(Color.black.opacity(0.70), lineWidth: 1.2)
         )
+        return screen
     }
 
     private func ndsLandscapeUtilityTray(width: CGFloat, height: CGFloat) -> some View {
@@ -2108,6 +2169,55 @@ struct GamePlayView: View {
         }
     }
 
+    private struct NDSLandscapeScreenTransform {
+        let sourceWidth: CGFloat
+        let sourceHeight: CGFloat
+        let xOffset: CGFloat
+        let yOffset: CGFloat
+    }
+
+    private func ndsLandscapeScreenTransform(
+        visibleWidth: CGFloat,
+        visibleHeight: CGFloat,
+        interScreenSpacing: CGFloat,
+        isTouchScreen: Bool
+    ) -> NDSLandscapeScreenTransform {
+        switch viewModel.currentNDSDisplayLayout {
+        case .stacked:
+            let sourceHeight = visibleHeight * 2
+            let yOffset = (sourceHeight - visibleHeight) / 2
+            return NDSLandscapeScreenTransform(
+                sourceWidth: visibleWidth,
+                sourceHeight: sourceHeight,
+                xOffset: 0,
+                yOffset: isTouchScreen ? -yOffset : yOffset
+            )
+        case .sideBySide:
+            let sourceWidth = (visibleWidth * 2) + interScreenSpacing
+            let xOffset = (sourceWidth - visibleWidth) / 2
+            return NDSLandscapeScreenTransform(
+                sourceWidth: sourceWidth,
+                sourceHeight: visibleHeight,
+                xOffset: isTouchScreen ? -xOffset : xOffset,
+                yOffset: 0
+            )
+        case .topOnly:
+            return NDSLandscapeScreenTransform(
+                sourceWidth: visibleWidth,
+                sourceHeight: visibleHeight,
+                xOffset: 0,
+                yOffset: 0
+            )
+        case .bottomOnly:
+            return NDSLandscapeScreenTransform(
+                sourceWidth: visibleWidth,
+                sourceHeight: visibleHeight,
+                xOffset: 0,
+                yOffset: 0
+            )
+        }
+    }
+
     private func ndsLandscapeHomeButton(onPress: @escaping () -> Void) -> some View {
         NDSPressableControl(onPress: onPress, onRelease: {}) { isPressed in
             Capsule(style: .continuous)
@@ -2134,6 +2244,11 @@ struct GamePlayView: View {
                 .overlay(
                     RoundedRectangle(cornerRadius: 16, style: .continuous)
                         .stroke(Color.black.opacity(0.38), lineWidth: 1.4)
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .stroke(Color.white.opacity(0.20), lineWidth: 1)
+                        .padding(1)
                 )
                 .overlay(
                     Text(label)
@@ -2199,9 +2314,6 @@ struct GamePlayView: View {
                     .font(.system(size: 15, weight: .semibold))
                     .foregroundColor(.white.opacity(0.92))
                     .lineLimit(1)
-                Text("NDS")
-                    .font(.system(size: 10, weight: .semibold))
-                    .foregroundColor(.white.opacity(0.58))
             }
             Spacer()
             if !viewModel.statusMessage.isEmpty {
@@ -4029,173 +4141,208 @@ struct GamePlayView: View {
     #endif
     
     private var pauseMenuOverlay: some View {
-        ZStack {
-            AppColors.background.opacity(heavyUIEffectsEnabled ? 0.42 : 0.56)
-                .ignoresSafeArea()
-                .overlay {
-                    if heavyUIEffectsEnabled {
-                        Rectangle()
-                            .fill(.ultraThinMaterial)
-                            .opacity(0.16)
-                    } else {
-                        Color.black.opacity(0.08)
-                    }
-                }
-                .onTapGesture { }
+        GeometryReader { geometry in
+            let isLandscape = geometry.size.width > geometry.size.height
+            let isNDSLandscape = game.gamePlatform == .NDS && isLandscape
+            let safeLeading = geometry.safeAreaInsets.leading
+            let safeTrailing = geometry.safeAreaInsets.trailing
 
-            VStack(spacing: 12) {
-                HStack {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("Game Paused")
-                            .font(SubpageUI.Font.title)
-                            .foregroundColor(AppColors.textPrimary)
-                        Text(game.title ?? "Current game")
-                            .font(SubpageUI.Font.subtitle)
-                            .foregroundColor(AppColors.textMuted)
-                            .lineLimit(1)
+            // For NDS landscape, position within the shell's center lane
+            let calculatedShellWidth = min(geometry.size.width - safeLeading - safeTrailing - 12, 1180.0)
+            let innerWidth = calculatedShellWidth - 28
+            let sideColumnWidth: CGFloat = 118
+            let centerGap: CGFloat = 10
+            let calculatedCenterLaneWidth = max(560, min(920, innerWidth - (sideColumnWidth * 2) - (centerGap * 2)))
+            let shellHorizontalPosition = (geometry.size.width - calculatedShellWidth) / 2
+            let centerLanePosition = shellHorizontalPosition + 14 + sideColumnWidth + centerGap
+            let ndsLandscapePauseNudge: CGFloat = isNDSLandscape ? -84 : 0
+            let centerLaneOffset = isNDSLandscape
+                ? (centerLanePosition - (geometry.size.width - calculatedCenterLaneWidth) / 2) + ndsLandscapePauseNudge
+                : 0
+            let centerLaneWidth = isNDSLandscape ? calculatedCenterLaneWidth : 560.0
+
+            let pausePanelWidth = isLandscape
+                ? safeFrameValue(
+                    max(
+                        centerLaneWidth,
+                        min(
+                            isNDSLandscape ? centerLaneWidth : geometry.size.width - ((safeLeading + safeTrailing) * 2) - 40,
+                            1180.0
+                        )
+                    ),
+                    fallback: centerLaneWidth
+                )
+                : 720
+
+            ZStack {
+                AppColors.background.opacity(heavyUIEffectsEnabled ? 0.42 : 0.56)
+                    .ignoresSafeArea()
+                    .overlay {
+                        if heavyUIEffectsEnabled {
+                            Rectangle()
+                                .fill(.ultraThinMaterial)
+                                .opacity(0.16)
+                        } else {
+                            Color.black.opacity(0.08)
+                        }
                     }
-                    Spacer()
-                    Button {
+                    .onTapGesture { }
+
+                VStack(spacing: 12) {
+                    HStack {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Game Paused")
+                                .font(SubpageUI.Font.title)
+                                .foregroundColor(AppColors.textPrimary)
+                            Text(game.title ?? "Current game")
+                                .font(SubpageUI.Font.subtitle)
+                                .foregroundColor(AppColors.textMuted)
+                                .lineLimit(1)
+                        }
+                        Spacer()
+                        Button {
+                            viewModel.resumeEmulation()
+                            showPauseMenu = false
+                        } label: {
+                            Image(systemName: "xmark")
+                                .font(.system(size: 14, weight: .bold))
+                                .foregroundColor(AppColors.textPrimary)
+                                .frame(width: 36, height: 36)
+                                .background(AppColors.surfaceLight.opacity(0.65))
+                                .clipShape(Circle())
+                        }
+                    }
+
+                    if !viewModel.statusMessage.isEmpty {
+                        Text(viewModel.statusMessage)
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundColor(AppColors.textSecondary)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(.horizontal, 2)
+                    }
+
+                    pauseActionButton(title: "Resume", icon: "play.fill", style: .primary) {
+                        triggerHaptic(.light)
                         viewModel.resumeEmulation()
                         showPauseMenu = false
-                    } label: {
-                        Image(systemName: "xmark")
-                            .font(.system(size: 14, weight: .bold))
-                            .foregroundColor(AppColors.textPrimary)
-                            .frame(width: 36, height: 36)
-                            .background(AppColors.surfaceLight.opacity(0.65))
-                            .clipShape(Circle())
                     }
-                }
 
-                if !viewModel.statusMessage.isEmpty {
-                    Text(viewModel.statusMessage)
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundColor(AppColors.textSecondary)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(.horizontal, 2)
-                }
-
-                pauseActionButton(title: "Resume", icon: "play.fill", style: .primary) {
-                    triggerHaptic(.light)
-                    viewModel.resumeEmulation()
-                    showPauseMenu = false
-                }
-
-                HStack(spacing: 10) {
-                    pauseActionButton(title: "Quick Save", icon: "square.and.arrow.down.fill") {
-                        triggerHaptic(.medium)
-                        viewModel.quickSave()
-                        saveSlotSummaries = viewModel.saveSlotSummaries()
-                    }
-                    pauseActionButton(title: "Quick Load", icon: "square.and.arrow.up.fill") {
-                        triggerHaptic(.medium)
-                        viewModel.quickLoad()
-                    }
-                }
-
-                pauseActionButton(title: "Restart Game", icon: "arrow.counterclockwise") {
-                    restartGameFromPause()
-                }
-
-                HStack(spacing: 10) {
-                    pauseActionButton(title: pauseSheetMode == .advanced ? "Back" : "Save States", icon: pauseSheetMode == .advanced ? "chevron.left" : "tray.full.fill") {
-                        withAnimation(.easeOut(duration: 0.2)) {
-                            if pauseSheetMode == .advanced {
-                                pauseSheetMode = .quick
-                                showSaveSlotsPanel = false
-                            } else {
-                                pauseSheetMode = .advanced
-                            }
+                    HStack(spacing: 10) {
+                        pauseActionButton(title: "Quick Save", icon: "square.and.arrow.down.fill") {
+                            triggerHaptic(.medium)
+                            viewModel.quickSave()
+                            saveSlotSummaries = viewModel.saveSlotSummaries()
+                        }
+                        pauseActionButton(title: "Quick Load", icon: "square.and.arrow.up.fill") {
+                            triggerHaptic(.medium)
+                            viewModel.quickLoad()
                         }
                     }
-                    HStack(spacing: 8) {
-                        ForEach([1, 2, 3, 6], id: \.self) { speed in
-                            Button {
-                                triggerHaptic(.light)
-                                fastForwardSpeed = speed
-                                viewModel.setFastForward(fastForwardSpeed)
-                            } label: {
-                                Text("\(speed)x")
-                                    .font(.system(size: 12, weight: .semibold))
-                                    .foregroundColor(fastForwardSpeed == speed ? .white : AppColors.textPrimary)
-                                    .frame(width: 44, height: 34)
-                                    .background(
-                                        RoundedRectangle(cornerRadius: 10)
-                                            .fill(fastForwardSpeed == speed ? AppColors.primary : AppColors.surfaceLight.opacity(0.55))
-                                    )
-                            }
-                            .buttonStyle(.plain)
-                        }
-                    }
-                    .padding(6)
-                    .background(AppColors.surface.opacity(0.8))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 12)
-                            .stroke(AppColors.surfaceLight.opacity(0.65), lineWidth: 1)
-                    )
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
-                }
 
-                if pauseSheetMode == .advanced {
-                    VStack(spacing: 10) {
-                        HStack(spacing: 10) {
-                            pauseActionButton(title: showSaveSlotsPanel ? "Hide Saves" : "Manage Saves", icon: "tray.full.fill") {
-                                saveSlotSummaries = viewModel.saveSlotSummaries()
-                                withAnimation(.easeOut(duration: 0.2)) {
-                                    showSaveSlotsPanel.toggle()
+                    pauseActionButton(title: "Restart Game", icon: "arrow.counterclockwise") {
+                        restartGameFromPause()
+                    }
+
+                    HStack(spacing: 10) {
+                        pauseActionButton(title: pauseSheetMode == .advanced ? "Back" : "Save States", icon: pauseSheetMode == .advanced ? "chevron.left" : "tray.full.fill") {
+                            withAnimation(.easeOut(duration: 0.2)) {
+                                if pauseSheetMode == .advanced {
+                                    pauseSheetMode = .quick
+                                    showSaveSlotsPanel = false
+                                } else {
+                                    pauseSheetMode = .advanced
                                 }
                             }
-                            pauseActionButton(title: "Controls", icon: "gamecontroller") {
-                                // Reserved for future in-game controls editor
+                        }
+                        HStack(spacing: 8) {
+                            ForEach([1, 2, 3, 6], id: \.self) { speed in
+                                Button {
+                                    triggerHaptic(.light)
+                                    fastForwardSpeed = speed
+                                    viewModel.setFastForward(fastForwardSpeed)
+                                } label: {
+                                    Text("\(speed)x")
+                                        .font(.system(size: 12, weight: .semibold))
+                                        .foregroundColor(fastForwardSpeed == speed ? .white : AppColors.textPrimary)
+                                        .frame(width: 44, height: 34)
+                                        .background(
+                                            RoundedRectangle(cornerRadius: 10)
+                                                .fill(fastForwardSpeed == speed ? AppColors.primary : AppColors.surfaceLight.opacity(0.55))
+                                        )
+                                }
+                                .buttonStyle(.plain)
                             }
                         }
+                        .padding(6)
+                        .background(AppColors.surface.opacity(0.8))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 12)
+                                .stroke(AppColors.surfaceLight.opacity(0.65), lineWidth: 1)
+                        )
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                    }
 
-                        if showSaveSlotsPanel {
-                    VStack(alignment: .leading, spacing: 10) {
-                        HStack {
-                            Text("Save States")
-                                .font(.system(size: 15, weight: .semibold))
-                                .foregroundColor(AppColors.textPrimary)
-                            Spacer()
-                            Text("Quick + 10 Slots")
-                                .font(.system(size: 11))
-                                .foregroundColor(AppColors.textMuted)
-                        }
-
-                        ScrollView {
-                            LazyVStack(spacing: 10) {
-                                ForEach(saveSlotSummaries) { summary in
-                                    saveSlotCard(summary)
+                    if pauseSheetMode == .advanced {
+                        VStack(spacing: 10) {
+                            HStack(spacing: 10) {
+                                pauseActionButton(title: showSaveSlotsPanel ? "Hide Saves" : "Manage Saves", icon: "tray.full.fill") {
+                                    saveSlotSummaries = viewModel.saveSlotSummaries()
+                                    withAnimation(.easeOut(duration: 0.2)) {
+                                        showSaveSlotsPanel.toggle()
+                                    }
+                                }
+                                pauseActionButton(title: "Controls", icon: "gamecontroller") {
+                                    // Reserved for future in-game controls editor
                                 }
                             }
-                            .padding(.top, 2)
-                        }
-                        .frame(maxHeight: 260)
-                    }
-                    .padding(14)
-                    .background(AppColors.surface.opacity(0.88))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 16)
-                            .stroke(AppColors.surfaceLight.opacity(0.75), lineWidth: 1)
-                    )
-                    .clipShape(RoundedRectangle(cornerRadius: 16))
-                    .transition(.move(edge: .bottom).combined(with: .opacity))
-                        }
-                    }
-                }
 
-                pauseActionButton(title: "Exit to Library", icon: "xmark", style: .destructive) {
-                    startTask?.cancel()
-                    startTask = nil
-                    viewModel.stopEmulation()
-                    onExit()
+                            if showSaveSlotsPanel {
+                                VStack(alignment: .leading, spacing: 10) {
+                                    HStack {
+                                        Text("Save States")
+                                            .font(.system(size: 15, weight: .semibold))
+                                            .foregroundColor(AppColors.textPrimary)
+                                        Spacer()
+                                        Text("Quick + 10 Slots")
+                                            .font(.system(size: 11))
+                                            .foregroundColor(AppColors.textMuted)
+                                    }
+
+                                    ScrollView {
+                                        LazyVStack(spacing: 10) {
+                                            ForEach(saveSlotSummaries) { summary in
+                                                saveSlotCard(summary)
+                                            }
+                                        }
+                                        .padding(.top, 2)
+                                    }
+                                    .frame(maxHeight: 260)
+                                }
+                                .padding(14)
+                                .background(AppColors.surface.opacity(0.88))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 16)
+                                        .stroke(AppColors.surfaceLight.opacity(0.75), lineWidth: 1)
+                                )
+                                .clipShape(RoundedRectangle(cornerRadius: 16))
+                                .transition(.move(edge: .bottom).combined(with: .opacity))
+                            }
+                        }
+                    }
+
+                    pauseActionButton(title: "Exit to Library", icon: "xmark", style: .destructive) {
+                        startTask?.cancel()
+                        startTask = nil
+                        viewModel.stopEmulation()
+                        onExit()
+                    }
                 }
+                .padding(16)
+                .frame(width: pausePanelWidth)
+                .subpagePopup(cornerRadius: 22)
+                .offset(x: centerLaneOffset)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
             }
-            .padding(16)
-            .frame(maxWidth: 720)
-            .subpagePopup(cornerRadius: 22)
-            .padding(.horizontal, 16)
         }
     }
 
@@ -4380,6 +4527,7 @@ struct GamePlayView: View {
                             .foregroundColor(AppColors.textPrimary)
                             .lineLimit(1)
                             .layoutPriority(1)
+                        consoleIdentityBadge
                         if isRecommended {
                             Text("Recommended")
                                 .font(.system(size: 10, weight: .semibold))
@@ -4392,6 +4540,11 @@ struct GamePlayView: View {
                     Text(summary.metadata?.createdAt.formatted(date: .abbreviated, time: .shortened) ?? "No save yet")
                         .font(.system(size: 12))
                         .foregroundColor(AppColors.textMuted)
+                        .lineLimit(1)
+
+                    Text(game.title ?? "Unknown Game")
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundColor(AppColors.textSecondary)
                         .lineLimit(1)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -4410,6 +4563,7 @@ struct GamePlayView: View {
                             .foregroundColor(AppColors.textPrimary)
                             .lineLimit(1)
                             .layoutPriority(1)
+                        consoleIdentityBadge
 
                         Text(summary.isEmpty ? "Empty" : "Saved")
                             .font(.system(size: 10, weight: .semibold))
@@ -4422,6 +4576,11 @@ struct GamePlayView: View {
                     Text(summary.metadata?.createdAt.formatted(date: .abbreviated, time: .shortened) ?? "No save yet")
                         .font(.system(size: 12))
                         .foregroundColor(AppColors.textMuted)
+                        .lineLimit(1)
+
+                    Text(game.title ?? "Unknown Game")
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundColor(AppColors.textSecondary)
                         .lineLimit(1)
 
                     HStack(spacing: 8) {
@@ -4448,6 +4607,18 @@ struct GamePlayView: View {
                 .stroke(AppColors.surfaceLight.opacity(0.7), lineWidth: 1)
         )
         .clipShape(RoundedRectangle(cornerRadius: 14))
+    }
+
+    @ViewBuilder
+    private var consoleIdentityBadge: some View {
+        if let console = game.consoleIdentity {
+            Text(console.systemCode)
+                .font(.system(size: 10, weight: .bold))
+                .foregroundColor(.white)
+                .padding(.horizontal, 7)
+                .padding(.vertical, 3)
+                .background(Capsule().fill(console.accentColor))
+        }
     }
 
     @ViewBuilder

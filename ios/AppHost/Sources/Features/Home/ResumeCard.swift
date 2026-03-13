@@ -110,23 +110,14 @@ struct ResumeCard: View {
     }
     
     private var consoleColor: Color {
-        switch entry.system?.uppercased() {
-        case "GB", "GBC":
-            return Color(hue: 0.42, saturation: 0.25, brightness: 0.90)
-        case "GBA":
-            return Color(hue: 0.75, saturation: 0.30, brightness: 0.78)
-        case "NDS":
-            return Color(hue: 0.58, saturation: 0.18, brightness: 0.85)
-        default:
-            return Color(hue: 0.70, saturation: 0.22, brightness: 0.82)
-        }
+        entry.consoleIdentity?.accentColor ?? Color(hue: 0.70, saturation: 0.22, brightness: 0.82)
     }
     
     private var consoleBadge: some View {
         VStack {
             HStack {
                 Spacer()
-                Text(entry.system?.uppercased() ?? "")
+                Text(entry.consoleIdentity?.systemCode ?? "")
                     .font(.system(size: 11, weight: .bold))
                     .foregroundColor(.white)
                     .padding(.horizontal, 8)
@@ -139,12 +130,7 @@ struct ResumeCard: View {
     }
     
     private var consoleBadgeColor: Color {
-        switch entry.system?.uppercased() {
-        case "GBA": return Color(red: 0.55, green: 0.30, blue: 0.75)
-        case "GB", "GBC": return Color(red: 0.20, green: 0.65, blue: 0.60)
-        case "NDS": return Color(red: 0.25, green: 0.45, blue: 0.70)
-        default: return Color.gray
-        }
+        entry.consoleIdentity?.accentColor ?? .gray
     }
     
     private var lastPlayedText: String {

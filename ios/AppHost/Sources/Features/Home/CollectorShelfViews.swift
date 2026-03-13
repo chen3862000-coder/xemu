@@ -242,7 +242,8 @@ struct CollectorShelfFilterRail: View {
     private func filterLabel(_ filter: LibrarySystemFilter) -> String {
         switch filter {
         case .all: return "All Shelves"
-        case .gbc: return "GB + GBC"
+        case .gb: return "Game Boy"
+        case .gbc: return "Game Boy Color"
         case .gba: return "GBA"
         case .nds: return "NDS"
         }

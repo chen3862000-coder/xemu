@@ -4,7 +4,8 @@ import XemuCores
 #endif
 
 public final class GBCore: EmulatorCore {
-    public static let nativeAudioSampleRate = 65_536
+    // The bridge exposes GB/GBC audio as 44.1kHz stereo PCM.
+    public static let nativeAudioSampleRate = 44_100
     public var platform: Platform { .GB }
     public var isCGBModeDetected: Bool {
         coreWrapper?.currentSystem == .gameBoyColor

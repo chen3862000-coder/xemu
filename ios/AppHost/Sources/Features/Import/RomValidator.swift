@@ -3,6 +3,7 @@ import Foundation
 
 public enum ROMSystem: String, CaseIterable, Sendable {
     case nes
+    case gb
     case gbc
     case gba
     case genesis
@@ -12,7 +13,8 @@ public enum ROMSystem: String, CaseIterable, Sendable {
     var displayName: String {
         switch self {
         case .nes: return "NES"
-        case .gbc: return "GB / GBC"
+        case .gb: return "Game Boy"
+        case .gbc: return "Game Boy Color"
         case .gba: return "GBA"
         case .genesis: return "Genesis / Mega Drive"
         case .nds: return "NDS"
@@ -122,7 +124,9 @@ struct RomValidator {
 
         let ext = (fileExtension ?? "").lowercased()
         if ext == "gb" || ext == "gbc" || ext == "cgb" {
-            if try isGBROM(data) { return .gbc }
+            if try isGBROM(data) {
+                return resolvedGBSystem(for: data, fileExtension: ext)
+            }
         } else if ext == "gba" {
             if isGBAROM(data) { return .gba }
         } else if ext == "nds" {
@@ -133,7 +137,9 @@ struct RomValidator {
         
         if isNESROM(data) { return .nes }
         if matchesGBNintendoLogo(data) {
-            if try isGBROM(data) { return .gbc }
+            if try isGBROM(data) {
+                return resolvedGBSystem(for: data, fileExtension: ext)
+            }
         }
         if isGBAROM(data) { return .gba }
         if isGenesisROM(data) { return .genesis }
@@ -196,6 +202,14 @@ struct RomValidator {
         }
 
         return true
+    }
+
+    private static func resolvedGBSystem(for data: Data, fileExtension: String) -> ROMSystem {
+        let cgbFlag = data[0x143]
+        if fileExtension == "gbc" || fileExtension == "cgb" || cgbFlag == 0x80 || cgbFlag == 0xC0 {
+            return .gbc
+        }
+        return .gb
     }
     
     private static func isGBAROM(_ data: Data) -> Bool {

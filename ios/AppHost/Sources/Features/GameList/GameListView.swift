@@ -818,42 +818,39 @@ private struct PlatformDisplay {
     let consoleAssetName: String?
 
     init(platform: EmulatorPlatform) {
-        switch platform {
-        case .gameBoy:
-            displayName = "Game Boy + Color"
-            shortName = "GB/GBC"
-            emoji = "🎮"
-            consoleAssetName = "ConsoleGBGBC"
-        case .gameBoyColor:
-            displayName = "Game Boy + Color"
-            shortName = "GB/GBC"
-            emoji = "🎮"
-            consoleAssetName = "ConsoleGBGBC"
-        case .gameBoyAdvance:
-            displayName = "Game Boy Advance"
-            shortName = "GBA"
-            emoji = "⚡"
-            consoleAssetName = "ConsoleGBA"
-        case .nintendoDS:
-            displayName = "Nintendo DS"
-            shortName = "NDS"
-            emoji = "📱"
-            consoleAssetName = "ConsoleNDS"
-        case .playStation1:
-            displayName = platform.displayName
-            shortName = platform.shortName
-            emoji = "💿"
-            consoleAssetName = nil
-        case .nintendo3DS:
-            displayName = platform.displayName
-            shortName = platform.shortName
-            emoji = "🔺"
-            consoleAssetName = nil
-        case .psp:
-            displayName = platform.displayName
-            shortName = platform.shortName
-            emoji = "🎯"
-            consoleAssetName = nil
+        if let console = ConsoleIdentity.resolve(platform: platform) {
+            displayName = console.displayName
+            shortName = console.shortName
+            consoleAssetName = console.assetName
+            switch console {
+            case .gb: emoji = "🎮"
+            case .gbc: emoji = "🌈"
+            case .gba: emoji = "⚡"
+            case .nds: emoji = "📱"
+            }
+        } else {
+            switch platform {
+            case .playStation1:
+                displayName = platform.displayName
+                shortName = platform.shortName
+                emoji = "💿"
+                consoleAssetName = nil
+            case .nintendo3DS:
+                displayName = platform.displayName
+                shortName = platform.shortName
+                emoji = "🔺"
+                consoleAssetName = nil
+            case .psp:
+                displayName = platform.displayName
+                shortName = platform.shortName
+                emoji = "🎯"
+                consoleAssetName = nil
+            case .gameBoy, .gameBoyColor, .gameBoyAdvance, .nintendoDS:
+                displayName = platform.displayName
+                shortName = platform.shortName
+                emoji = "🎮"
+                consoleAssetName = nil
+            }
         }
     }
 }
@@ -1338,16 +1335,7 @@ struct GameCardRow: View {
     }
     
     private var consolePlaceholderColor: some ShapeStyle {
-        switch game.emulatorPlatform {
-        case .gameBoy, .gameBoyColor:
-            return Color(hue: 0.45, saturation: 0.18, brightness: 0.88)  // Mint/teal
-        case .gameBoyAdvance:
-            return Color(hue: 0.72, saturation: 0.25, brightness: 0.75)  // Purple-blue
-        case .nintendoDS:
-            return Color(hue: 0.58, saturation: 0.12, brightness: 0.82)  // Gray-blue
-        default:
-            return Color(hue: 0.75, saturation: 0.20, brightness: 0.80)  // Soft purple
-        }
+        game.consoleIdentity?.accentColor ?? Color(hue: 0.75, saturation: 0.20, brightness: 0.80)
     }
     
     @ViewBuilder
@@ -1413,7 +1401,7 @@ class GameListViewModel: ObservableObject {
 
         switch platform {
         case .gameBoy:
-            request.predicate = NSPredicate(format: "system IN %@", ["gb", "gbc"])
+            request.predicate = NSPredicate(format: "system == %@", "gb")
         case .gameBoyColor:
             request.predicate = NSPredicate(format: "system == %@", "gbc")
         case .gameBoyAdvance:

@@ -137,9 +137,9 @@ struct RomCard: View {
                 }
 
                 HStack {
-                    Text(entry.system ?? "Unknown")
+                    Text(entry.consoleIdentity?.systemCode ?? entry.system ?? "Unknown")
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(entry.consoleIdentity?.accentColor ?? .secondary)
 
                     Spacer()
 
@@ -198,12 +198,7 @@ struct PlatformPlaceholder: View {
     }
 
     private var platformIconAssetName: String? {
-        switch platform?.lowercased() {
-        case "gb", "gbc": return "ConsoleGBGBC"
-        case "gba": return "ConsoleGBA"
-        case "nds": return "ConsoleNDS"
-        default: return nil
-        }
+        ConsoleIdentity.resolve(systemRaw: platform)?.assetName
     }
 
     private var platformIcon: String {
@@ -913,7 +908,7 @@ extension ROMLibraryEntry {
         // Use the object's id
         let gameUUID = id
         
-        let normalizedSystem = (system ?? "").trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        let normalizedSystem = resolvedSystemCode
 
         // Extract extension from imported filename and normalize case
         let primaryExtension: String
@@ -1057,6 +1052,10 @@ final class LibraryViewModel: ObservableObject {
         switch filter {
         case .all:
             filteredEntries = allEntries
+        case .gb:
+            filteredEntries = allEntries.filter { $0.resolvedSystemCode == "gb" }
+        case .gbc:
+            filteredEntries = allEntries.filter { $0.resolvedSystemCode == "gbc" }
         case .recent:
             let oneWeekAgo = Calendar.current.date(byAdding: .day, value: -7, to: Date()) ?? Date()
             filteredEntries = allEntries.filter { entry in
@@ -1110,6 +1109,8 @@ final class LibraryViewModel: ObservableObject {
 
 enum LibraryFilter: CaseIterable {
     case all
+    case gb
+    case gbc
     case recent
     case favorites
     case stable
@@ -1118,6 +1119,8 @@ enum LibraryFilter: CaseIterable {
     var displayName: String {
         switch self {
         case .all: return "All"
+        case .gb: return "Game Boy"
+        case .gbc: return "Game Boy Color"
         case .recent: return "Recent"
         case .favorites: return "Favorites"
         case .stable: return "Stable"

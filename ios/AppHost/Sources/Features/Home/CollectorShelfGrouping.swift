@@ -3,24 +3,15 @@ import Foundation
 enum CollectorShelfGrouping {
     static func sectionKey(for system: String?) -> String {
         let normalized = SubpageUI.CollectorIdentity.normalizedSystemCode(system)
-        switch normalized {
-        case "gb", "gbc":
-            return "gbc"
-        case "gba":
-            return "gba"
-        case "nds":
-            return "nds"
-        case "":
-            return "other"
-        default:
-            return normalized
-        }
+        return normalized.isEmpty ? "other" : normalized
     }
 
     static func sectionTitle(for key: String) -> String {
         switch key {
+        case "gb":
+            return "Game Boy Collection"
         case "gbc":
-            return "Game Boy + Color Collection"
+            return "Game Boy Color Collection"
         case "gba":
             return "Game Boy Advance Collection"
         case "nds":
@@ -46,9 +37,10 @@ enum CollectorShelfGrouping {
 
     private static func rank(for key: String) -> Int {
         switch key {
-        case "gbc": return 0
-        case "gba": return 1
-        case "nds": return 2
+        case "gb": return 0
+        case "gbc": return 1
+        case "gba": return 2
+        case "nds": return 3
         case "other": return 98
         default: return 50
         }

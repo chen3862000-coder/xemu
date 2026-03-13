@@ -82,7 +82,8 @@ final class HomeViewModelTests: XCTestCase {
         XCTAssertEqual(viewModel.entry(for: gbID)?.title, "Tetris")
 
         let countsByShortName = Dictionary(uniqueKeysWithValues: viewModel.emulators.map { ($0.shortName, $0.gamesCount) })
-        XCTAssertEqual(countsByShortName["GB/GBC"], 3)
+        XCTAssertEqual(countsByShortName["GB"], 2)
+        XCTAssertEqual(countsByShortName["GBC"], 1)
         XCTAssertEqual(countsByShortName["GBA"], 2)
         XCTAssertEqual(countsByShortName["NDS"], 1)
     }
