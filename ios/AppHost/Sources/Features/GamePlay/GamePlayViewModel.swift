@@ -23,7 +23,9 @@ class GamePlayViewModel: ObservableObject {
     @Published var currentFPS = 0
     @Published var saveStateDebugLine = ""
     @Published var latestUnlockedAchievement: PlayerAchievementUnlock?
+    @Published private(set) var gameplayAnalysisSnapshot: MarioAnalysisSnapshot?
     @AppStorage("audioQuality") private var audioQuality = 1
+    @AppStorage("settings.dev.hpDeathDetection") private var hpDeathDetectionEnabled = false
 
     private var emulatorSession: EmulatorSession?
     private(set) var metalRenderer: MetalRenderer?
@@ -39,6 +41,7 @@ class GamePlayViewModel: ObservableObject {
     private var currentROMHash: String = ""
     private var currentPlatform: Platform?
     private var currentGameTitle: String = ""
+    private var frameAnalysisCoordinator: FrameAnalysisCoordinator?
     private var sessionStartedAt: Date?
     private var lastFrameSnapshot: (data: Data, width: Int, height: Int, bytesPerRow: Int)?
     private var audioDebugChunkCount: Int = 0
@@ -157,6 +160,8 @@ class GamePlayViewModel: ObservableObject {
             currentPlatform = platform
             currentGameTitle = gameTitle ?? ""
             currentROMHash = romHash ?? deriveROMHash(from: romPath)
+            print("🎮 Starting emulation - gameTitle: '\(currentGameTitle)', romHash: '\(currentROMHash)', platform: \(platform)")
+            configureGameplayAnalysisIfNeeded(platform: platform)
             
             switch platform {
             case .GB, .GBC:
@@ -315,6 +320,8 @@ class GamePlayViewModel: ObservableObject {
             currentPlatform = nil
             currentROMHash = ""
             currentGameTitle = ""
+            frameAnalysisCoordinator?.reset()
+            frameAnalysisCoordinator = nil
             sessionStartedAt = nil
             lastFrameSnapshot = nil
             hasAutoResumedStateThisSession = false
@@ -322,6 +329,7 @@ class GamePlayViewModel: ObservableObject {
             ndsTouchIsPressed = false
             ndsTouchPressedAtNs = 0
             latestUnlockedAchievement = nil
+            gameplayAnalysisSnapshot = nil
         }
         
         isRunning = false
@@ -525,6 +533,38 @@ class GamePlayViewModel: ObservableObject {
         let filename = URL(fileURLWithPath: romPath).lastPathComponent
         let hash = filename.split(separator: ".").first.map(String.init) ?? ""
         return hash.lowercased()
+    }
+
+    private func configureGameplayAnalysisIfNeeded(platform: Platform) {
+        print("🔧 configureGameplayAnalysisIfNeeded called - hpDeathDetectionEnabled: \(hpDeathDetectionEnabled), platform: \(platform)")
+        guard hpDeathDetectionEnabled else {
+            frameAnalysisCoordinator = nil
+            gameplayAnalysisSnapshot = nil
+            print("🔇 HP/Death Detection disabled in settings")
+            return
+        }
+
+        print("🔍 Gameplay Analysis: Attempting to match profile with title='\(currentGameTitle)', platform=\(platform), romHash='\(currentROMHash)'")
+        guard let profile = MarioGameProfile.activeProfile(
+            title: currentGameTitle,
+            platform: platform,
+            romHash: currentROMHash
+        ) else {
+            frameAnalysisCoordinator = nil
+            gameplayAnalysisSnapshot = nil
+            print("❌ Gameplay Analysis: No matching profile found for title='\(currentGameTitle)', platform=\(platform), romHash='\(currentROMHash)'")
+            return
+        }
+
+        print("✅ Gameplay Analysis: Profile matched - \(profile.displayName)")
+        frameAnalysisCoordinator = FrameAnalysisCoordinator(profile: profile) { [weak self] events, snapshot in
+            guard let self else { return }
+            guard self.isRunning else { return }
+            self.gameplayAnalysisSnapshot = snapshot
+            for event in events {
+                HapticManager.shared.gameplayEvent(event)
+            }
+        }
     }
 
     private func makeMetadata(slot: Int) -> SaveStateMetadata {
@@ -918,31 +958,99 @@ class GamePlayViewModel: ObservableObject {
         let height = snapshot.height
         guard width > 0, height > 0, snapshot.bytesPerRow >= width * 4 else { return nil }
 
-        let data = snapshot.data as CFData
-        guard let provider = CGDataProvider(data: data) else { return nil }
-        let colorSpace = CGColorSpaceCreateDeviceRGB()
-        let bitmapInfo = CGBitmapInfo.byteOrder32Little.union(
-            CGBitmapInfo(rawValue: CGImageAlphaInfo.premultipliedFirst.rawValue)
-        )
-        guard let cgImage = CGImage(
-            width: width,
-            height: height,
-            bitsPerComponent: 8,
-            bitsPerPixel: 32,
-            bytesPerRow: snapshot.bytesPerRow,
-            space: colorSpace,
-            bitmapInfo: bitmapInfo,
-            provider: provider,
-            decode: nil,
-            shouldInterpolate: false,
-            intent: .defaultIntent
-        ) else { return nil }
+        guard let swappedData = swapRBChannels(in: snapshot.data, width: width, height: height, bytesPerRow: snapshot.bytesPerRow) else {
+            return nil
+        }
+        
+        var mutableData = swappedData
+        let dataCount = mutableData.count
+        let result = mutableData.withUnsafeMutableBytes { ptr -> Data? in
+            guard let baseAddress = ptr.baseAddress else { return nil }
+            let cfData = CFDataCreate(nil, baseAddress.assumingMemoryBound(to: UInt8.self), dataCount)
+            guard let cfData = cfData, let provider = CGDataProvider(data: cfData) else { return nil }
+            let colorSpace = CGColorSpaceCreateDeviceRGB()
+            let bitmapInfo = CGBitmapInfo.byteOrder32Little.union(
+                CGBitmapInfo(rawValue: CGImageAlphaInfo.noneSkipFirst.rawValue)
+            )
+            guard let cgImage = CGImage(
+                width: width,
+                height: height,
+                bitsPerComponent: 8,
+                bitsPerPixel: 32,
+                bytesPerRow: snapshot.bytesPerRow,
+                space: colorSpace,
+                bitmapInfo: bitmapInfo,
+                provider: provider,
+                decode: nil,
+                shouldInterpolate: false,
+                intent: .defaultIntent
+            ) else { return nil }
 
-        return UIImage(cgImage: cgImage).jpegData(compressionQuality: 0.72)
+            var uiImage = UIImage(cgImage: cgImage)
+            
+            if currentPlatform == .GBC {
+                uiImage = applyGBCColorAdjustments(to: uiImage) ?? uiImage
+            }
+
+            return uiImage.jpegData(compressionQuality: 0.72)
+        }
+        
+        return result
         #else
         return nil
         #endif
     }
+    
+    #if canImport(UIKit)
+    private func swapRBChannels(in data: Data, width: Int, height: Int, bytesPerRow: Int) -> Data? {
+        var result = Data(count: data.count)
+        
+        for y in 0..<height {
+            for x in 0..<width {
+                let offset = y * bytesPerRow + x * 4
+                guard offset + 3 < data.count else { break }
+                
+                // BGRA -> RGBA (swap R and B)
+                let b = data[offset]
+                let g = data[offset + 1]
+                let r = data[offset + 2]
+                let a = data[offset + 3]
+                
+                result[offset] = r
+                result[offset + 1] = g
+                result[offset + 2] = b
+                result[offset + 3] = a
+            }
+        }
+        
+        return result
+    }
+    #endif
+    
+    #if canImport(UIKit)
+    private func applyGBCColorAdjustments(to image: UIImage) -> UIImage? {
+        guard let ciImage = CIImage(image: image) else { return nil }
+        
+        guard let contrastFilter = CIFilter(name: "CIColorControls") else { return nil }
+        contrastFilter.setValue(ciImage, forKey: kCIInputImageKey)
+        contrastFilter.setValue(1.10, forKey: kCIInputContrastKey)
+        contrastFilter.setValue(1.22, forKey: kCIInputSaturationKey)
+        contrastFilter.setValue(0.72, forKey: kCIInputBrightnessKey)
+        
+        guard let contrastAdjusted = contrastFilter.outputImage else { return nil }
+        
+        guard let gammaFilter = CIFilter(name: "CIGamma") else { return nil }
+        gammaFilter.setValue(contrastAdjusted, forKey: kCIInputImageKey)
+        gammaFilter.setValue(1.86, forKey: "inputPower")
+        
+        guard let gammaAdjusted = gammaFilter.outputImage else { return nil }
+        
+        let context = CIContext()
+        guard let cgOutput = context.createCGImage(gammaAdjusted, from: gammaAdjusted.extent) else { return nil }
+        
+        return UIImage(cgImage: cgOutput)
+    }
+    #endif
 
     private func applyDisplayColorAdjustments(for displayPlatform: Platform?) {
         switch displayPlatform {
@@ -997,6 +1105,7 @@ extension GamePlayViewModel: EmulatorRenderDelegate {
                 )
             }
             lastFrameSnapshot = (data: data, width: width, height: height, bytesPerRow: pitch)
+            frameAnalysisCoordinator?.enqueue(frameBufferInfo: frameBufferInfo, timestamp: Date())
             let qualityProfile = performanceProfiler.currentQualityProfile
             applyPerformanceProfileIfNeeded(qualityProfile)
 

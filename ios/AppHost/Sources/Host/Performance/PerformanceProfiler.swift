@@ -2,6 +2,7 @@ import Foundation
 import Combine
 import QuartzCore
 import Darwin.Mach
+import OSLog
 #if canImport(UIKit)
 import UIKit
 #endif
@@ -123,6 +124,7 @@ private struct PerfLogPayload: Codable {
 @MainActor
 final class PerformanceProfiler: ObservableObject {
     static let shared = PerformanceProfiler()
+    private static let developerLogger = Logger(subsystem: "com.xemu.Xemu", category: "Developer")
 
     @Published private(set) var hudSnapshot = PerfHUDSnapshot(
         fps: 0,
@@ -374,7 +376,10 @@ final class PerformanceProfiler: ObservableObject {
                 queue: .main
             ) { [weak self] _ in
                 Task { @MainActor in
-                    self?.thermalState = ProcessInfo.processInfo.thermalState
+                    self?.updateThermalState(
+                        ProcessInfo.processInfo.thermalState,
+                        source: "system_notification"
+                    )
                 }
             }
         )
@@ -386,7 +391,10 @@ final class PerformanceProfiler: ObservableObject {
                 queue: .main
             ) { [weak self] _ in
                 Task { @MainActor in
-                    self?.lowPowerModeEnabled = ProcessInfo.processInfo.isLowPowerModeEnabled
+                    self?.updateLowPowerMode(
+                        ProcessInfo.processInfo.isLowPowerModeEnabled,
+                        source: "power_state_notification"
+                    )
                 }
             }
         )
@@ -401,11 +409,43 @@ final class PerformanceProfiler: ObservableObject {
                 Task { @MainActor in
                     guard let self else { return }
                     self.memoryWarningCount += 1
-                    self.peakMemoryMB = max(self.peakMemoryMB, self.currentMemoryMB())
+                    let currentMemoryMB = self.currentMemoryMB()
+                    self.peakMemoryMB = max(self.peakMemoryMB, currentMemoryMB)
+                    if self.isMemoryMonitorEnabled {
+                        Self.developerLogger.warning(
+                            "Memory warning count=\(self.memoryWarningCount, privacy: .public) currentMB=\(currentMemoryMB, format: .fixed(precision: 1)) peakMB=\(self.peakMemoryMB, format: .fixed(precision: 1))"
+                        )
+                    }
                 }
             }
         )
         #endif
+    }
+
+    private var isMemoryMonitorEnabled: Bool {
+        settings.bool(forKey: "settings.dev.memoryMonitor")
+    }
+
+    private var isThermalLoggingEnabled: Bool {
+        settings.bool(forKey: "settings.dev.thermalLogging")
+    }
+
+    private func updateThermalState(_ newValue: ProcessInfo.ThermalState, source: StaticString) {
+        let previous = thermalState
+        thermalState = newValue
+        guard isThermalLoggingEnabled, previous != newValue else { return }
+        Self.developerLogger.notice(
+            "Thermal state \(self.thermalStateLabel(previous), privacy: .public) -> \(self.thermalStateLabel(newValue), privacy: .public) source=\(source)"
+        )
+    }
+
+    private func updateLowPowerMode(_ enabled: Bool, source: StaticString) {
+        let previous = lowPowerModeEnabled
+        lowPowerModeEnabled = enabled
+        guard isThermalLoggingEnabled, previous != enabled else { return }
+        Self.developerLogger.notice(
+            "Low power mode \(enabled ? "enabled" : "disabled", privacy: .public) source=\(source) thermal=\(self.thermalStateLabel(self.thermalState), privacy: .public)"
+        )
     }
 
     private func unregisterObservers() {

@@ -25,12 +25,14 @@ struct SettingsView: View {
     @AppStorage("proUnlocked") private var proUnlocked = false
     @AppStorage("settings.dev.memoryMonitor") private var devMemoryMonitor = false
     @AppStorage("settings.dev.thermalLogging") private var devThermalLogging = false
+    @AppStorage("settings.dev.hpDeathDetection") private var devHPDeathDetection = false
 
     @AppStorage("settings.controller.autoImmersive") private var controllerAutoImmersive = true
     @AppStorage("settings.controller.hideTouchControls") private var controllerHideTouchControls = false
     @AppStorage("settings.controller.touchFallback") private var controllerTouchFallback = TouchFallbackMode.auto.rawValue
     @AppStorage("settings.controller.stickSensitivity") private var controllerStickSensitivity = StickSensitivity.medium.rawValue
     @AppStorage("settings.controller.hapticFeedback") private var controllerHapticFeedback = true
+    @AppStorage("settings.dev.gameplayEventOverlay") private var devGameplayEventOverlay = false
 
     private let appStoreURL = URL(string: "https://apps.apple.com")
 
@@ -239,9 +241,11 @@ struct SettingsView: View {
             ToggleSettingsRow(title: L10n.string("settings.dev.fps_overlay", languageManager: languageManager), isOn: hapticBinding($showFPSMeter))
             ToggleSettingsRow(title: L10n.string("settings.dev.memory_monitor", languageManager: languageManager), isOn: hapticBinding($devMemoryMonitor))
             ToggleSettingsRow(title: L10n.string("settings.dev.thermal_logging", languageManager: languageManager), isOn: hapticBinding($devThermalLogging))
+            ToggleSettingsRow(title: "HP vibration / Death detection", subtitle: "Enable haptic feedback for Mario damage and death events", isOn: hapticBinding($devHPDeathDetection))
+            ToggleSettingsRow(title: "Gameplay event overlay", subtitle: "Show Mario damage/death detector confidence during gameplay", isOn: hapticBinding($devGameplayEventOverlay))
 
             NavigationSettingsRow(title: L10n.string("settings.dev.debug_controller_input", languageManager: languageManager)) {
-                ControllerMappingEditor(platform: .GBA)
+                ControllerInputDebugView()
             }
 
             DestructiveSettingsRow(title: L10n.string("settings.dev.reset_local_stats", languageManager: languageManager)) {
@@ -284,6 +288,7 @@ struct SettingsView: View {
         showFPSMeter = false
         devMemoryMonitor = false
         devThermalLogging = false
+        devGameplayEventOverlay = false
     }
 }
 
@@ -550,7 +555,7 @@ private struct ControllerSettingsView: View {
             if showDevAdvanced {
                 Section(header: SettingsSectionHeader(L10n.string("settings.advanced.section", fallback: "Advanced", languageManager: languageManager))) {
                     NavigationSettingsRow(title: L10n.string("settings.controller.input_debug", languageManager: languageManager)) {
-                        ControllerMappingEditor(platform: .GBA)
+                        ControllerInputDebugView()
                     }
                 }
             }

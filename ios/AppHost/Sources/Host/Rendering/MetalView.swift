@@ -153,9 +153,9 @@ public struct MetalView: NSViewRepresentable {
         mtkView.isPaused = false
         mtkView.colorPixelFormat = .bgra8Unorm
         mtkView.framebufferOnly = true
-        
+
         mtkView.delegate = context.coordinator
-        
+
         return mtkView
     }
     

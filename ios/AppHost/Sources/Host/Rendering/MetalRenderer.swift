@@ -104,21 +104,21 @@ public final class MetalRenderer {
     private func _uploadFrameInternal(_ frame: (data: Data, width: Int, height: Int, bytesPerRow: Int)) {
         let width = frame.width
         let height = frame.height
-        
+
         // Defensive: Validate dimensions
         guard width > 0 && height > 0 && frame.bytesPerRow > 0 else {
             print("[MetalRenderer] Invalid dimensions: width=\(width), height=\(height), bytesPerRow=\(frame.bytesPerRow)")
             return
         }
-        
+
         // Debug: Log actual values
         // print("[MetalRenderer] Upload: width=\(width), height=\(height), bytesPerRow=\(frame.bytesPerRow), data.count=\(frame.data.count), needed=\(frame.bytesPerRow * height)")
-        
+
         // Recreate textures if size changed
         if width != texW || height != texH {
             texW = width
             texH = height
-            
+
             let desc = MTLTextureDescriptor.texture2DDescriptor(
                 pixelFormat: .bgra8Unorm,
                 width: width,
@@ -127,13 +127,13 @@ public final class MetalRenderer {
             )
             desc.usage = [.shaderRead]
             desc.storageMode = .shared
-            
+
             frameTexture = nil
             frameTexture = device.makeTexture(descriptor: desc)
         }
 
         guard let tex = frameTexture else { return }
-        
+
         // Validate buffer size
         let needed = frame.bytesPerRow * height
         guard frame.data.count >= needed else {
@@ -142,7 +142,7 @@ public final class MetalRenderer {
         }
 
         // print("[MetalRenderer] UPLOAD: data=\(frame.data.count), needed=\(needed), w=\(width), h=\(height), pitch=\(frame.bytesPerRow)")
-        
+
         frame.data.withUnsafeBytes { rbp in
             guard let base = rbp.baseAddress else { return }
             tex.replace(

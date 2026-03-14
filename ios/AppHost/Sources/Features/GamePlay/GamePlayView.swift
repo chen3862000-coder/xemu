@@ -47,6 +47,9 @@ struct GamePlayView: View {
     @AppStorage("resumeLaunchPolicy") private var resumeLaunchPolicyRaw = ResumeLaunchPolicy.autoResumeLatest.rawValue
     @AppStorage("showFPSMeter") private var showFPSMeter = false
     @AppStorage("showCartridgeLaunchIntro") private var showCartridgeLaunchIntro = true
+    @AppStorage("settings.dev.memoryMonitor") private var devMemoryMonitor = false
+    @AppStorage("settings.dev.thermalLogging") private var devThermalLogging = false
+    @AppStorage("settings.dev.gameplayEventOverlay") private var showGameplayEventOverlay = false
     @StateObject private var performanceProfiler = PerformanceProfiler.shared
     #if DEBUG
     @AppStorage("showPerformanceHUD") private var showPerformanceHUD = false
@@ -102,6 +105,26 @@ struct GamePlayView: View {
                         .padding(.top, 12)
                         .padding(.trailing, 12)
                         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
+                }
+
+                if viewModel.isRunning && (devMemoryMonitor || devThermalLogging) {
+                    DeveloperDiagnosticsOverlay(
+                        snapshot: performanceProfiler.hudSnapshot,
+                        showMemoryMonitor: devMemoryMonitor,
+                        showThermalStatus: devThermalLogging
+                    )
+                    .padding(.top, developerDiagnosticsTopPadding)
+                    .padding(.leading, 12)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                }
+
+                if viewModel.isRunning,
+                   showGameplayEventOverlay,
+                   let gameplayAnalysisSnapshot = viewModel.gameplayAnalysisSnapshot {
+                    GameplayEventDiagnosticsOverlay(snapshot: gameplayAnalysisSnapshot)
+                        .padding(.top, developerDiagnosticsTopPadding + 76)
+                        .padding(.leading, 12)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
                 }
 
                 if let achievementToast {
@@ -203,6 +226,14 @@ struct GamePlayView: View {
 
     private var resumeLaunchPolicy: ResumeLaunchPolicy {
         ResumeLaunchPolicy(rawValue: resumeLaunchPolicyRaw) ?? .autoResumeLatest
+    }
+
+    private var developerDiagnosticsTopPadding: CGFloat {
+        #if DEBUG
+        showPerformanceHUD ? 84 : 12
+        #else
+        12
+        #endif
     }
 
     private var heavyUIEffectsEnabled: Bool {

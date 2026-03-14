@@ -93,13 +93,13 @@ private struct LegalDocumentView: View {
     #endif
 }
 
-#if os(iOS)
 private enum LegalDocumentState {
     case loading
     case loaded(String)
     case failed
 }
 
+#if os(iOS)
 private enum LegalDocumentExtractor {
     private static let marker = "data-code=\""
 
