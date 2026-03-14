@@ -2,14 +2,15 @@ import SwiftUI
 
 struct AudioQualityView: View {
     @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject private var languageManager: LanguageManager
     @Binding var audioQuality: Int
     
     var body: some View {
         List {
             Section {
                 AudioQualityRow(
-                    title: "Sound First",
-                    description: "Best audio quality, may affect frame rate",
+                    title: L10n.string("settings.audio_quality.sound_first", languageManager: languageManager),
+                    description: L10n.string("settings.audio_quality.sound_first_description", languageManager: languageManager),
                     icon: "speaker.wave.3.fill",
                     isSelected: audioQuality == 0
                 ) {
@@ -17,8 +18,8 @@ struct AudioQualityView: View {
                 }
                 
                 AudioQualityRow(
-                    title: "Balanced",
-                    description: "Good audio quality with moderate frame rate",
+                    title: L10n.string("settings.audio_quality.balanced", languageManager: languageManager),
+                    description: L10n.string("settings.audio_quality.balanced_description", languageManager: languageManager),
                     icon: "speaker.wave.2.fill",
                     isSelected: audioQuality == 1
                 ) {
@@ -26,23 +27,23 @@ struct AudioQualityView: View {
                 }
                 
                 AudioQualityRow(
-                    title: "Frame First",
-                    description: "Prioritize smooth gameplay, basic audio",
+                    title: L10n.string("settings.audio_quality.frame_first", languageManager: languageManager),
+                    description: L10n.string("settings.audio_quality.frame_first_description", languageManager: languageManager),
                     icon: "speaker.fill",
                     isSelected: audioQuality == 2
                 ) {
                     audioQuality = 2
                 }
             } header: {
-                Text("Audio Quality")
+                Text(L10n.string("settings.audio_quality.title", languageManager: languageManager))
             } footer: {
-                Text("Sound First provides the cleanest audio but may impact performance on older devices.")
+                Text(L10n.string("settings.audio_quality.footer", languageManager: languageManager))
             }
         }
-        .navigationTitle("Audio Quality")
+        .navigationTitle(L10n.string("settings.audio_quality.nav", languageManager: languageManager))
         .toolbar {
             ToolbarItem(placement: .confirmationAction) {
-                Button("Done") {
+                Button(L10n.string("common.done", languageManager: languageManager)) {
                     dismiss()
                 }
             }
@@ -92,5 +93,6 @@ struct AudioQualityRow: View {
 struct AudioQualityView_Previews: PreviewProvider {
     static var previews: some View {
         AudioQualityView(audioQuality: .constant(1))
+            .environmentObject(LanguageManager.shared)
     }
 }

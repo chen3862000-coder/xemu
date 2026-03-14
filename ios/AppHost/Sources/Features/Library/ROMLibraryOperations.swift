@@ -25,8 +25,8 @@ enum GameDeletionMode {
 
     var displayName: String {
         switch self {
-        case .removeROMOnly: return "Remove ROM Only"
-        case .removeAll: return "Remove"
+        case .removeROMOnly: return L10n.string("home.context.remove_rom_only")
+        case .removeAll: return L10n.string("home.context.remove")
         }
     }
 
@@ -55,7 +55,7 @@ enum GameRenameError: LocalizedError, Equatable {
     var errorDescription: String? {
         switch self {
         case .emptyTitle:
-            return "Game title cannot be empty."
+            return L10n.string("error.game_title_empty")
         }
     }
 }

@@ -120,6 +120,32 @@ class GamePlayViewModel: ObservableObject {
         1.0 / 60.0
     }
 
+    static func effectiveDisplayPlatform(
+        requestedPlatform: Platform,
+        isCGBModeDetected: Bool
+    ) -> Platform {
+        switch requestedPlatform {
+        case .GBC:
+            // Preserve the GBC display pipeline for explicit GBC launches even if
+            // runtime detection is late or temporarily unavailable.
+            return .GBC
+        case .GB:
+            return isCGBModeDetected ? .GBC : .GB
+        default:
+            return requestedPlatform
+        }
+    }
+
+    static func shouldEnablePostProcessing(
+        for profile: PerfQualityProfile,
+        displayPlatform: Platform?
+    ) -> Bool {
+        if displayPlatform == .GBC {
+            return true
+        }
+        return profile.shadersEnabled
+    }
+
     func startEmulation(romPath: String, platform: Platform, gameTitle: String? = nil, romHash: String? = nil) {
         if emulatorSession != nil || metalRenderer != nil || isRunning {
             stopEmulation()
@@ -188,18 +214,10 @@ class GamePlayViewModel: ObservableObject {
                 textureSize = CGSize(width: 160, height: 144)
             }
             metalRenderer = MetalRenderer(textureSize: textureSize)
-            let effectiveDisplayPlatform: Platform = {
-                switch platform {
-                case .GB, .GBC:
-                    if let gbCore = core as? GBCore, gbCore.isCGBModeDetected {
-                        return .GBC
-                    } else {
-                        return .GB
-                    }
-                default:
-                    return platform
-                }
-            }()
+            let effectiveDisplayPlatform = Self.effectiveDisplayPlatform(
+                requestedPlatform: platform,
+                isCGBModeDetected: (core as? GBCore)?.isCGBModeDetected ?? false
+            )
             activeDisplayPlatform = effectiveDisplayPlatform
             applyDisplayColorAdjustments(for: effectiveDisplayPlatform)
 
@@ -947,8 +965,12 @@ class GamePlayViewModel: ObservableObject {
         guard lastAppliedQualityProfile != profile else { return }
         lastAppliedQualityProfile = profile
         emulatorSession?.setRenderFrameSkip(max(0, profile.frameSkip))
-        renderer.setPostProcessingEnabled(profile.shadersEnabled)
-        if profile.shadersEnabled {
+        let shouldEnablePostProcessing = Self.shouldEnablePostProcessing(
+            for: profile,
+            displayPlatform: activeDisplayPlatform
+        )
+        renderer.setPostProcessingEnabled(shouldEnablePostProcessing)
+        if shouldEnablePostProcessing {
             applyDisplayColorAdjustments(for: activeDisplayPlatform)
         }
     }

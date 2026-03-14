@@ -8,6 +8,7 @@ struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var themeController: ThemeController
     @EnvironmentObject private var shellThemeManager: ShellThemeManager
+    @EnvironmentObject private var languageManager: LanguageManager
 
     @State private var showingUpgrade = false
     @State private var showingShareSheet = false
@@ -44,7 +45,7 @@ struct SettingsView: View {
 
     private var appVersionText: String {
         let short = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0"
-        return "Version \(short)"
+        return L10n.format("settings.version.format", short, languageManager: languageManager)
     }
 
     var body: some View {
@@ -58,81 +59,93 @@ struct SettingsView: View {
                 if isDeveloperModeVisible { developerSection }
             }
             .settingsListStyle()
-            .navigationTitle("Settings")
+            .navigationTitle(L10n.string("settings.title", languageManager: languageManager))
             #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)
             #endif
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Done") { dismiss() }
+                    Button(L10n.string("common.done", languageManager: languageManager)) { dismiss() }
                 }
             }
-            .alert("Reset local stats?", isPresented: $showResetStatsConfirm) {
-                Button("Cancel", role: .cancel) {}
-                Button("Reset", role: .destructive) {
+            .alert(L10n.string("settings.dev.reset_local_stats.title", languageManager: languageManager), isPresented: $showResetStatsConfirm) {
+                Button(L10n.string("common.cancel", languageManager: languageManager), role: .cancel) {}
+                Button(L10n.string("settings.dev.reset_local_stats", languageManager: languageManager), role: .destructive) {
                     resetLocalStats()
                 }
             } message: {
-                Text("This clears local developer/performance stat toggles only.")
+                Text(L10n.string("settings.dev.reset_local_stats.message", languageManager: languageManager))
             }
             #if os(iOS)
             .sheet(isPresented: $showingShareSheet) {
-                ActivityViewController(activityItems: ["Check out Xemu!", appStoreURL as Any])
+                ActivityViewController(activityItems: [L10n.string("settings.share.text", languageManager: languageManager), appStoreURL as Any])
             }
             #endif
         }
     }
 
     private var appearanceSection: some View {
-        Section(header: SettingsSectionHeader("Appearance")) {
+        Section(header: SettingsSectionHeader(L10n.string("settings.appearance.section", languageManager: languageManager))) {
             NavigationSettingsRow(
-                title: "Theme",
-                subtitle: "Light or dark",
-                value: themeController.mode == .light ? "Light" : "Dark"
+                title: L10n.string("settings.theme.title", languageManager: languageManager),
+                subtitle: L10n.string("settings.theme.subtitle", languageManager: languageManager),
+                value: themeController.mode == .light
+                    ? L10n.string("settings.theme.light", languageManager: languageManager)
+                    : L10n.string("settings.theme.dark", languageManager: languageManager)
             ) {
                 ThemeModeSelectorView()
                     .environmentObject(themeController)
+            }
+
+            NavigationSettingsRow(
+                title: L10n.string("settings.language.title", languageManager: languageManager),
+                subtitle: L10n.string("settings.language.subtitle", languageManager: languageManager),
+                value: languageSelectionLabel
+            ) {
+                LanguageSelectionView()
+                    .environmentObject(languageManager)
             }
         }
     }
 
     private var performanceSection: some View {
-        Section(header: SettingsSectionHeader("Performance")) {
+        Section(header: SettingsSectionHeader(L10n.string("settings.performance.section", languageManager: languageManager))) {
             NavigationSettingsRow(
-                title: "Audio Quality",
-                subtitle: "Output strategy",
+                title: L10n.string("settings.audio_quality.title", languageManager: languageManager),
+                subtitle: L10n.string("settings.audio_quality.subtitle", languageManager: languageManager),
                 value: audioQualityLabel(audioQuality)
             ) {
                 AudioQualityView(audioQuality: $audioQuality)
+                    .environmentObject(languageManager)
             }
 
             NavigationSettingsRow(
-                title: "Performance Mode",
-                subtitle: "Balance quality and battery",
+                title: L10n.string("settings.performance_mode.title", languageManager: languageManager),
+                subtitle: L10n.string("settings.performance_mode.subtitle", languageManager: languageManager),
                 value: performanceMode.title
             ) {
                 PerformanceModeSelectorView(selection: $performanceModeRaw)
             }
 
             ToggleSettingsRow(
-                title: "Respect Low Power Mode",
-                subtitle: "Reduce heavy effects in battery saver",
+                title: L10n.string("settings.low_power.title", languageManager: languageManager),
+                subtitle: L10n.string("settings.low_power.subtitle", languageManager: languageManager),
                 isOn: hapticBinding($respectLowPowerMode)
             )
 
             ToggleSettingsRow(
-                title: "Retro Boot Experience",
-                subtitle: "Cartridge insert + console startup before game launch",
+                title: L10n.string("settings.boot_intro.title", languageManager: languageManager),
+                subtitle: L10n.string("settings.boot_intro.subtitle", languageManager: languageManager),
                 isOn: hapticBinding($showCartridgeLaunchIntro)
             )
         }
     }
 
     private var controlsSection: some View {
-        Section(header: SettingsSectionHeader("Controls")) {
+        Section(header: SettingsSectionHeader(L10n.string("settings.controls.section", languageManager: languageManager))) {
             NavigationSettingsRow(
-                title: "Controller",
-                subtitle: "Connection, behavior and layout"
+                title: L10n.string("settings.controller.title", languageManager: languageManager),
+                subtitle: L10n.string("settings.controller.subtitle", languageManager: languageManager)
             ) {
                 ControllerSettingsView(
                     autoImmersive: $controllerAutoImmersive,
@@ -147,17 +160,17 @@ struct SettingsView: View {
     }
 
     private var accountSection: some View {
-        Section(header: SettingsSectionHeader("Account")) {
+        Section(header: SettingsSectionHeader(L10n.string("settings.account.section", languageManager: languageManager))) {
             NavigationSettingsRow(
-                title: "Status",
+                title: L10n.string("settings.controller.status", languageManager: languageManager),
                 subtitle: "Subscription and entitlement state"
             ) {
                 EntitlementStatusView()
             }
 
             NavigationSettingsRow(
-                title: "Upgrade",
-                subtitle: "Unlock Pro features"
+                title: L10n.string("settings.upgrade.title", languageManager: languageManager),
+                subtitle: L10n.string("settings.upgrade.subtitle", languageManager: languageManager)
             ) {
                 UpgradeView()
             }
@@ -166,8 +179,8 @@ struct SettingsView: View {
                 showingShareSheet = true
             } label: {
                 SettingsTextStack(
-                    title: "Share App",
-                    subtitle: "Tell a friend"
+                    title: L10n.string("settings.share.title", languageManager: languageManager),
+                    subtitle: L10n.string("settings.share.subtitle", languageManager: languageManager)
                 )
                 .frame(maxWidth: .infinity, minHeight: SettingsTokens.rowHeight, alignment: .leading)
                 .contentShape(Rectangle())
@@ -182,8 +195,8 @@ struct SettingsView: View {
                 }
             } label: {
                 SettingsTextStack(
-                    title: "Support",
-                    subtitle: "FAQ and help resources"
+                    title: L10n.string("settings.support.title", languageManager: languageManager),
+                    subtitle: L10n.string("settings.support.subtitle", languageManager: languageManager)
                 )
                 .frame(maxWidth: .infinity, minHeight: SettingsTokens.rowHeight, alignment: .leading)
                 .contentShape(Rectangle())
@@ -193,8 +206,8 @@ struct SettingsView: View {
     }
 
     private var infoSection: some View {
-        Section(header: SettingsSectionHeader("Info")) {
-            InfoSettingsRow(title: "App", value: appVersionText)
+        Section(header: SettingsSectionHeader(L10n.string("settings.info.section", languageManager: languageManager))) {
+            InfoSettingsRow(title: L10n.string("app.brand.title", languageManager: languageManager), value: appVersionText)
                 .contentShape(Rectangle())
                 .onTapGesture {
                     versionTapCount += 1
@@ -206,16 +219,16 @@ struct SettingsView: View {
     }
 
     private var developerSection: some View {
-        Section(header: SettingsSectionHeader("Developer")) {
-            ToggleSettingsRow(title: "FPS Overlay", isOn: hapticBinding($showFPSMeter))
-            ToggleSettingsRow(title: "Memory Monitor", isOn: hapticBinding($devMemoryMonitor))
-            ToggleSettingsRow(title: "Thermal Logging", isOn: hapticBinding($devThermalLogging))
+        Section(header: SettingsSectionHeader(L10n.string("settings.developer.section", languageManager: languageManager))) {
+            ToggleSettingsRow(title: L10n.string("settings.dev.fps_overlay", languageManager: languageManager), isOn: hapticBinding($showFPSMeter))
+            ToggleSettingsRow(title: L10n.string("settings.dev.memory_monitor", languageManager: languageManager), isOn: hapticBinding($devMemoryMonitor))
+            ToggleSettingsRow(title: L10n.string("settings.dev.thermal_logging", languageManager: languageManager), isOn: hapticBinding($devThermalLogging))
 
-            NavigationSettingsRow(title: "Debug Controller Input") {
+            NavigationSettingsRow(title: L10n.string("settings.dev.debug_controller_input", languageManager: languageManager)) {
                 ControllerMappingEditor(platform: .GBA)
             }
 
-            DestructiveSettingsRow(title: "Reset Local Stats") {
+            DestructiveSettingsRow(title: L10n.string("settings.dev.reset_local_stats", languageManager: languageManager)) {
                 showResetStatsConfirm = true
             }
         }
@@ -223,10 +236,19 @@ struct SettingsView: View {
 
     private func audioQualityLabel(_ value: Int) -> String {
         switch value {
-        case 0: return "Sound First"
-        case 1: return "Balanced"
-        case 2: return "Frame First"
-        default: return "Balanced"
+        case 0: return L10n.string("settings.audio_quality.sound_first", languageManager: languageManager)
+        case 1: return L10n.string("settings.audio_quality.balanced", languageManager: languageManager)
+        case 2: return L10n.string("settings.audio_quality.frame_first", languageManager: languageManager)
+        default: return L10n.string("settings.audio_quality.balanced", languageManager: languageManager)
+        }
+    }
+
+    private var languageSelectionLabel: String {
+        switch languageManager.currentLanguage {
+        case .system:
+            return L10n.string("settings.follow_system", languageManager: languageManager)
+        default:
+            return languageManager.currentLanguage.nativeDisplayName
         }
     }
 
@@ -261,7 +283,7 @@ private struct SettingsSectionHeader: View {
     }
 
     var body: some View {
-        Text(text.uppercased())
+        Text(text)
             .font(.system(size: 13, weight: .regular))
             .foregroundStyle(.tertiary)
     }
@@ -384,16 +406,17 @@ private struct DestructiveSettingsRow: View {
 
 private struct ThemeModeSelectorView: View {
     @EnvironmentObject private var themeController: ThemeController
+    @EnvironmentObject private var languageManager: LanguageManager
 
     var body: some View {
         List {
             Section {
-                themeModeButton(.light, title: "Light")
-                themeModeButton(.dark, title: "Dark")
+                themeModeButton(.light, title: L10n.string("settings.theme.light", languageManager: languageManager))
+                themeModeButton(.dark, title: L10n.string("settings.theme.dark", languageManager: languageManager))
             }
         }
         .settingsListStyle()
-        .navigationTitle("Theme")
+        .navigationTitle(L10n.string("settings.theme.nav", languageManager: languageManager))
         #if os(iOS)
         .navigationBarTitleDisplayMode(.inline)
         #endif
@@ -419,6 +442,7 @@ private struct ThemeModeSelectorView: View {
 }
 
 private struct PerformanceModeSelectorView: View {
+    @EnvironmentObject private var languageManager: LanguageManager
     @Binding var selection: String
 
     var body: some View {
@@ -430,7 +454,7 @@ private struct PerformanceModeSelectorView: View {
             }
         }
         .settingsListStyle()
-        .navigationTitle("Performance Mode")
+        .navigationTitle(L10n.string("settings.performance_mode.nav", languageManager: languageManager))
         #if os(iOS)
         .navigationBarTitleDisplayMode(.inline)
         #endif
@@ -456,6 +480,7 @@ private struct PerformanceModeSelectorView: View {
 }
 
 private struct ControllerSettingsView: View {
+    @EnvironmentObject private var languageManager: LanguageManager
     @Binding var autoImmersive: Bool
     @Binding var hideTouchControls: Bool
     @Binding var touchFallbackRaw: String
@@ -464,7 +489,9 @@ private struct ControllerSettingsView: View {
     let showDevAdvanced: Bool
 
     private var controllerStatus: String {
-        InputBus.shared.isControllerConnected() ? "Connected" : "Not Connected"
+        InputBus.shared.isControllerConnected()
+            ? L10n.string("settings.connected", languageManager: languageManager)
+            : L10n.string("settings.not_connected", languageManager: languageManager)
     }
 
     private var controllerName: String {
@@ -473,31 +500,31 @@ private struct ControllerSettingsView: View {
 
     var body: some View {
         List {
-            Section(header: SettingsSectionHeader("Connection")) {
-                InfoSettingsRow(title: "Status", value: controllerStatus)
-                InfoSettingsRow(title: "Name", value: controllerName)
+            Section(header: SettingsSectionHeader(L10n.string("settings.connection.section", languageManager: languageManager))) {
+                InfoSettingsRow(title: L10n.string("settings.controller.status", languageManager: languageManager), value: controllerStatus)
+                InfoSettingsRow(title: L10n.string("settings.controller.name", languageManager: languageManager), value: controllerName)
             }
 
-            Section(header: SettingsSectionHeader("Behavior")) {
-                ToggleSettingsRow(title: "Auto Switch to Immersive", isOn: $autoImmersive)
-                ToggleSettingsRow(title: "Hide Touch Controls", isOn: $hideTouchControls)
-                ToggleSettingsRow(title: "Haptic Feedback", isOn: $hapticFeedback)
+            Section(header: SettingsSectionHeader(L10n.string("settings.behavior.section", fallback: "Behavior", languageManager: languageManager))) {
+                ToggleSettingsRow(title: L10n.string("settings.controller.auto_immersive", languageManager: languageManager), isOn: $autoImmersive)
+                ToggleSettingsRow(title: L10n.string("settings.controller.hide_touch_controls", languageManager: languageManager), isOn: $hideTouchControls)
+                ToggleSettingsRow(title: L10n.string("settings.controller.haptic_feedback", languageManager: languageManager), isOn: $hapticFeedback)
 
                 NavigationSettingsRow(
-                    title: "Touch Fallback",
+                    title: L10n.string("settings.controller.touch_fallback", languageManager: languageManager),
                     value: TouchFallbackMode(rawValue: touchFallbackRaw)?.title ?? TouchFallbackMode.auto.title
                 ) {
                     TouchFallbackSelectorView(selection: $touchFallbackRaw)
                 }
             }
 
-            Section(header: SettingsSectionHeader("Layout")) {
-                NavigationSettingsRow(title: "Button Mapping") {
+            Section(header: SettingsSectionHeader(L10n.string("settings.layout.section", languageManager: languageManager))) {
+                NavigationSettingsRow(title: L10n.string("settings.controller.button_mapping", languageManager: languageManager)) {
                     ControllerMappingEditor(platform: .GBA)
                 }
 
                 NavigationSettingsRow(
-                    title: "Stick Sensitivity",
+                    title: L10n.string("settings.controller.stick_sensitivity", languageManager: languageManager),
                     value: StickSensitivity(rawValue: stickSensitivityRaw)?.title ?? StickSensitivity.medium.title
                 ) {
                     StickSensitivitySelectorView(selection: $stickSensitivityRaw)
@@ -505,15 +532,15 @@ private struct ControllerSettingsView: View {
             }
 
             if showDevAdvanced {
-                Section(header: SettingsSectionHeader("Advanced")) {
-                    NavigationSettingsRow(title: "Input Debug") {
+                Section(header: SettingsSectionHeader(L10n.string("settings.advanced.section", fallback: "Advanced", languageManager: languageManager))) {
+                    NavigationSettingsRow(title: L10n.string("settings.controller.input_debug", languageManager: languageManager)) {
                         ControllerMappingEditor(platform: .GBA)
                     }
                 }
             }
         }
         .settingsListStyle()
-        .navigationTitle("Controller")
+        .navigationTitle(L10n.string("settings.controller.nav", languageManager: languageManager))
         #if os(iOS)
         .navigationBarTitleDisplayMode(.inline)
         #endif
@@ -527,14 +554,15 @@ private enum TouchFallbackMode: String, CaseIterable {
 
     var title: String {
         switch self {
-        case .auto: return "Auto"
-        case .alwaysOn: return "Always On"
-        case .alwaysOff: return "Always Off"
+        case .auto: return L10n.string("settings.touch_fallback.auto")
+        case .alwaysOn: return L10n.string("settings.touch_fallback.always_on")
+        case .alwaysOff: return L10n.string("settings.touch_fallback.always_off")
         }
     }
 }
 
 private struct TouchFallbackSelectorView: View {
+    @EnvironmentObject private var languageManager: LanguageManager
     @Binding var selection: String
 
     var body: some View {
@@ -546,7 +574,7 @@ private struct TouchFallbackSelectorView: View {
             }
         }
         .settingsListStyle()
-        .navigationTitle("Touch Fallback")
+        .navigationTitle(L10n.string("settings.controller.touch_fallback", languageManager: languageManager))
         #if os(iOS)
         .navigationBarTitleDisplayMode(.inline)
         #endif
@@ -578,14 +606,15 @@ private enum StickSensitivity: String, CaseIterable {
 
     var title: String {
         switch self {
-        case .low: return "Low"
-        case .medium: return "Medium"
-        case .high: return "High"
+        case .low: return L10n.string("settings.stick_sensitivity.low")
+        case .medium: return L10n.string("settings.stick_sensitivity.medium")
+        case .high: return L10n.string("settings.stick_sensitivity.high")
         }
     }
 }
 
 private struct StickSensitivitySelectorView: View {
+    @EnvironmentObject private var languageManager: LanguageManager
     @Binding var selection: String
 
     var body: some View {
@@ -597,7 +626,7 @@ private struct StickSensitivitySelectorView: View {
             }
         }
         .settingsListStyle()
-        .navigationTitle("Stick Sensitivity")
+        .navigationTitle(L10n.string("settings.controller.stick_sensitivity", languageManager: languageManager))
         #if os(iOS)
         .navigationBarTitleDisplayMode(.inline)
         #endif
@@ -714,10 +743,10 @@ private struct ShellSkinsView: View {
 private extension ShellConsoleKind {
     var displayName: String {
         switch self {
-        case .gb: return "Game Boy"
-        case .gbc: return "Game Boy Color"
-        case .gba: return "Game Boy Advance"
-        case .nds: return "Nintendo DS"
+        case .gb: return L10n.string("console.gb")
+        case .gbc: return L10n.string("console.gbc")
+        case .gba: return L10n.string("console.gba")
+        case .nds: return L10n.string("console.nds")
         }
     }
 
@@ -756,29 +785,81 @@ private struct ActivityViewController: UIViewControllerRepresentable {
 
 struct UpgradeView: View {
     @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject private var languageManager: LanguageManager
 
     var body: some View {
         List {
-            Section(header: SettingsSectionHeader("Upgrade")) {
-                Text("Unlock cloud saves, advanced controls and premium features.")
+            Section(header: SettingsSectionHeader(L10n.string("settings.upgrade.title", languageManager: languageManager))) {
+                Text(L10n.string("settings.upgrade.description", languageManager: languageManager))
                     .font(.system(size: 15, weight: .regular))
                     .foregroundStyle(.secondary)
                     .frame(minHeight: SettingsTokens.rowHeight, alignment: .leading)
 
-                Button("Subscribe") {
+                Button(L10n.string("settings.upgrade.subscribe", languageManager: languageManager)) {
                     dismiss()
                 }
                 .frame(minHeight: SettingsTokens.rowHeight, alignment: .leading)
             }
         }
         .settingsListStyle()
-        .navigationTitle("Upgrade")
+        .navigationTitle(L10n.string("settings.upgrade.nav", languageManager: languageManager))
         #if os(iOS)
         .navigationBarTitleDisplayMode(.inline)
         #endif
     }
 }
 
+private struct LanguageSelectionView: View {
+    @EnvironmentObject private var languageManager: LanguageManager
+
+    var body: some View {
+        List {
+            Section {
+                ForEach(SupportedLanguage.allCases) { language in
+                    languageButton(language)
+                }
+            } footer: {
+                Text(L10n.string("settings.language.restart_note", languageManager: languageManager))
+            }
+        }
+        .settingsListStyle()
+        .navigationTitle(L10n.string("settings.language.nav", languageManager: languageManager))
+        #if os(iOS)
+        .navigationBarTitleDisplayMode(.inline)
+        #endif
+    }
+
+    private func languageButton(_ language: SupportedLanguage) -> some View {
+        Button {
+            languageManager.setLanguage(language)
+        } label: {
+            HStack {
+                Text(title(for: language))
+                Spacer()
+                if languageManager.currentLanguage == language {
+                    Image(systemName: "checkmark")
+                        .foregroundColor(.accentColor)
+                }
+            }
+            .frame(maxWidth: .infinity, minHeight: SettingsTokens.rowHeight, alignment: .leading)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func title(for language: SupportedLanguage) -> String {
+        switch language {
+        case .system:
+            return L10n.string("settings.follow_system", languageManager: languageManager)
+        default:
+            return language.nativeDisplayName
+        }
+    }
+}
+
 #Preview {
     SettingsView()
+        .environmentObject(ThemeController.shared)
+        .environmentObject(ShellThemeManager.shared)
+        .environmentObject(LanguageManager.shared)
 }

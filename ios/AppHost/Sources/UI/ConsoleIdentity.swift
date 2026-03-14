@@ -12,10 +12,10 @@ enum ConsoleIdentity: String, CaseIterable, Identifiable {
 
     var displayName: String {
         switch self {
-        case .gb: return "Game Boy"
-        case .gbc: return "Game Boy Color"
-        case .gba: return "Game Boy Advance"
-        case .nds: return "Nintendo DS"
+        case .gb: return L10n.string("console.gb")
+        case .gbc: return L10n.string("console.gbc")
+        case .gba: return L10n.string("console.gba")
+        case .nds: return L10n.string("console.nds")
         }
     }
 

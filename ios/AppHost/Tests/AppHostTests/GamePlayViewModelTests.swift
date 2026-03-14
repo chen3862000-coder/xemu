@@ -46,4 +46,49 @@ final class GamePlayViewModelTests: XCTestCase {
 
         XCTAssertEqual(resolved, .bottomOnly)
     }
+
+    func testEffectiveDisplayPlatformPreservesExplicitGBCLaunches() {
+        let resolved = GamePlayViewModel.effectiveDisplayPlatform(
+            requestedPlatform: .GBC,
+            isCGBModeDetected: false
+        )
+
+        XCTAssertEqual(resolved, .GBC)
+    }
+
+    func testEffectiveDisplayPlatformUpgradesGBLaunchesWhenCGBModeIsDetected() {
+        let resolved = GamePlayViewModel.effectiveDisplayPlatform(
+            requestedPlatform: .GB,
+            isCGBModeDetected: true
+        )
+
+        XCTAssertEqual(resolved, .GBC)
+    }
+
+    func testEffectiveDisplayPlatformKeepsPlainGBLaunchesAsGB() {
+        let resolved = GamePlayViewModel.effectiveDisplayPlatform(
+            requestedPlatform: .GB,
+            isCGBModeDetected: false
+        )
+
+        XCTAssertEqual(resolved, .GB)
+    }
+
+    func testShouldEnablePostProcessingKeepsGBCCorrectionInReducedProfiles() {
+        let enabled = GamePlayViewModel.shouldEnablePostProcessing(
+            for: .fair,
+            displayPlatform: .GBC
+        )
+
+        XCTAssertTrue(enabled)
+    }
+
+    func testShouldEnablePostProcessingRespectsProfileForNonGBCSystems() {
+        let enabled = GamePlayViewModel.shouldEnablePostProcessing(
+            for: .fair,
+            displayPlatform: .GBA
+        )
+
+        XCTAssertFalse(enabled)
+    }
 }

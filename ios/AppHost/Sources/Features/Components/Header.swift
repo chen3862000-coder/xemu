@@ -1,6 +1,8 @@
 import SwiftUI
 
 struct Header: View {
+    @EnvironmentObject private var languageManager: LanguageManager
+
     let onAddTapped: () -> Void
     let onSettingsTapped: () -> Void
 
@@ -31,11 +33,11 @@ struct Header: View {
                     }
 
                     VStack(alignment: .leading, spacing: 6) {
-                        Text("RetroMind")
+                        Text(L10n.string("app.brand.title", languageManager: languageManager))
                             .font(RMTypeScale.sectionTitle)
                             .foregroundStyle(AppColors.Text.primary)
 
-                        Text("Classic Gaming Hub")
+                        Text(L10n.string("app.brand.subtitle", languageManager: languageManager))
                             .font(RMTypeScale.meta)
                             .foregroundStyle(AppColors.Text.tertiary)
                     }
@@ -49,12 +51,14 @@ struct Header: View {
                             .font(.system(size: 15, weight: .medium))
                     }
                     .buttonStyle(RMIconCircleButtonStyle())
+                    .accessibilityLabel(L10n.string("header.add_game", languageManager: languageManager))
 
                     Button(action: onSettingsTapped) {
                         Image(systemName: "gearshape.fill")
                             .font(.system(size: 15, weight: .medium))
                     }
                     .buttonStyle(RMIconCircleButtonStyle())
+                    .accessibilityLabel(L10n.string("header.open_settings", languageManager: languageManager))
                 }
             }
             .padding(.horizontal, RMSpacing.screenMargin)
@@ -127,5 +131,6 @@ private struct XemuBrandIconGlyph: View {
         onAddTapped: {},
         onSettingsTapped: {}
     )
+    .environmentObject(LanguageManager.shared)
     .background(AppColors.background)
 }

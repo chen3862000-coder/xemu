@@ -13,9 +13,9 @@ enum PerformanceMode: String, CaseIterable {
 
     var title: String {
         switch self {
-        case .auto: return "Auto"
-        case .quality: return "Quality"
-        case .battery: return "Battery"
+        case .auto: return L10n.string("settings.performance_mode.auto")
+        case .quality: return L10n.string("settings.performance_mode.quality")
+        case .battery: return L10n.string("settings.performance_mode.battery")
         }
     }
 }

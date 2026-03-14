@@ -8,6 +8,7 @@ struct RecentlyPlayedView: View {
     @Environment(\.managedObjectContext) private var viewContext
     @Environment(\.dismiss) private var dismiss
     @Environment(\.verticalSizeClass) private var verticalSizeClass
+    @EnvironmentObject private var languageManager: LanguageManager
 
     @StateObject private var performanceProfiler = PerformanceProfiler.shared
     @State private var games: [ROMLibraryEntry] = []
@@ -91,41 +92,41 @@ struct RecentlyPlayedView: View {
             switch state {
             case .launchError(let message):
                 return Alert(
-                    title: Text("Unable to Open Game"),
+                    title: Text(L10n.string("home.alert.launch_failed", languageManager: languageManager)),
                     message: Text(message),
-                    dismissButton: .cancel(Text("OK"))
+                    dismissButton: .cancel(Text(L10n.string("common.ok", languageManager: languageManager)))
                 )
             case .confirmDelete(let candidate):
                 return Alert(
                     title: Text(candidate.mode.displayName),
                     message: Text(candidate.mode.firstConfirmation),
-                    primaryButton: .default(Text("Continue")) {
+                    primaryButton: .default(Text(L10n.string("common.continue", languageManager: languageManager))) {
                         activeAlert = .confirmFinalDelete(candidate)
                     },
                     secondaryButton: .cancel()
                 )
             case .confirmFinalDelete(let candidate):
                 return Alert(
-                    title: Text("Final Confirmation"),
+                    title: Text(L10n.string("home.alert.final_confirmation", languageManager: languageManager)),
                     message: Text(candidate.mode.secondConfirmation),
-                    primaryButton: .destructive(Text("Delete")) {
+                    primaryButton: .destructive(Text(L10n.string("common.delete", languageManager: languageManager))) {
                         performDeletion(candidate)
                     },
                     secondaryButton: .cancel()
                 )
             }
         }
-        .alert("Rename Game", isPresented: renameDialogPresented) {
-            TextField("Game title", text: $renameTitle)
-            Button("Cancel", role: .cancel) {
+        .alert(L10n.string("common.rename_game", languageManager: languageManager), isPresented: renameDialogPresented) {
+            TextField(L10n.string("common.game_title", languageManager: languageManager), text: $renameTitle)
+            Button(L10n.string("common.cancel", languageManager: languageManager), role: .cancel) {
                 clearRenameDraft()
             }
-            Button("Save") {
+            Button(L10n.string("common.save", languageManager: languageManager)) {
                 commitRename()
             }
             .disabled(renameTitle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
         } message: {
-            Text("Enter a new display title for this game.")
+            Text(L10n.string("home.rename_game.message", languageManager: languageManager))
         }
         .onAppear(perform: loadGames)
         .onReceive(NotificationCenter.default.publisher(for: .romLibraryDidChange)) { _ in
@@ -215,14 +216,14 @@ struct RecentlyPlayedView: View {
                 }
 
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("Recently Played")
+                    Text(L10n.string("recent.title", table: "Screens", languageManager: languageManager))
                         .font(isCollectorMode ? .system(size: 22, weight: .bold) : SubpageUI.Font.heroTitle)
                         .lineLimit(1)
                         .minimumScaleFactor(0.8)
                         .allowsTightening(true)
                         .layoutPriority(1)
                         .foregroundColor(AppColors.textPrimary)
-                    Text("\(games.count) games")
+                    Text(L10n.format("common.games_count", Int64(games.count), table: "Screens", languageManager: languageManager))
                         .font(SubpageUI.Font.subtitle)
                         .foregroundColor(isCollectorMode ? AppColors.textSecondary : AppColors.primary)
                 }
@@ -265,7 +266,7 @@ struct RecentlyPlayedView: View {
                     .font(.system(size: 14, weight: .medium))
                     .foregroundColor(AppColors.textMuted)
 
-                TextField("Search recently played...", text: $searchText)
+                TextField(L10n.string("recent.search_placeholder", table: "Screens", languageManager: languageManager), text: $searchText)
 #if os(iOS)
                     .textInputAutocapitalization(.never)
                     .autocorrectionDisabled()
@@ -289,7 +290,7 @@ struct RecentlyPlayedView: View {
 
     private var continuePlayingSection: some View {
         VStack(alignment: .leading, spacing: 14) {
-            Text("Active Sessions")
+            Text(L10n.string("recent.section.active_sessions", table: "Screens", languageManager: languageManager))
                 .font(SubpageUI.Font.sectionTitle)
                 .foregroundColor(AppColors.textPrimary)
 
@@ -314,7 +315,7 @@ struct RecentlyPlayedView: View {
 
     private var recentlyPlayedSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Play History")
+            Text(L10n.string("recent.section.play_history", table: "Screens", languageManager: languageManager))
                 .font(SubpageUI.Font.sectionTitle)
                 .foregroundColor(AppColors.textPrimary)
 
@@ -341,7 +342,7 @@ struct RecentlyPlayedView: View {
                     }
                 } label: {
                     HStack {
-                        Text("Earlier")
+                        Text(L10n.string("recent.section.earlier", table: "Screens", languageManager: languageManager))
                             .font(SubpageUI.Font.sectionTitle)
                         Spacer()
                         Image(systemName: showEarlier ? "chevron.up" : "chevron.down")
@@ -373,11 +374,19 @@ struct RecentlyPlayedView: View {
                 .font(.system(size: 30, weight: .medium))
                 .foregroundColor(AppColors.textMuted)
 
-            Text(searchText.isEmpty ? "No Recently Played Games" : "No Matching Games")
+            Text(
+                searchText.isEmpty
+                    ? L10n.string("recent.empty.none", table: "Screens", languageManager: languageManager)
+                    : L10n.string("common.no_matching_games", table: "Screens", languageManager: languageManager)
+            )
                 .font(.system(size: 17, weight: .semibold))
                 .foregroundColor(AppColors.textPrimary)
 
-            Text(searchText.isEmpty ? "Start playing to build your resume queue." : "Try another search term.")
+            Text(
+                searchText.isEmpty
+                    ? L10n.string("recent.empty.none_hint", table: "Screens", languageManager: languageManager)
+                    : L10n.string("common.try_different_search", table: "Screens", languageManager: languageManager)
+            )
                 .font(.system(size: 13))
                 .foregroundColor(AppColors.textMuted)
                 .multilineTextAlignment(.center)
@@ -386,7 +395,7 @@ struct RecentlyPlayedView: View {
                 Button {
                     searchText = ""
                 } label: {
-                    Text("Clear Search")
+                    Text(L10n.string("common.clear_search", table: "Screens", languageManager: languageManager))
                         .font(.system(size: 12, weight: .semibold))
                         .foregroundColor(.white)
                         .padding(.horizontal, 12)
@@ -408,45 +417,45 @@ struct RecentlyPlayedView: View {
         Button {
             launchGame(entry)
         } label: {
-            Label("Play", systemImage: "play.fill")
+            Label(L10n.string("common.play", table: "Screens", languageManager: languageManager), systemImage: "play.fill")
         }
         Button {
             beginRename(entry)
         } label: {
-            Label("Rename", systemImage: "pencil")
+            Label(L10n.string("home.context.rename", languageManager: languageManager), systemImage: "pencil")
         }
         Button {
             editCover(entry)
         } label: {
-            Label("Edit Cover", systemImage: "photo")
+            Label(L10n.string("common.edit_cover", table: "Screens", languageManager: languageManager), systemImage: "photo")
         }
         Button {
             showDetails(entry)
         } label: {
-            Label("Details", systemImage: "info.circle")
+            Label(L10n.string("home.context.details", languageManager: languageManager), systemImage: "info.circle")
         }
         Button(role: .destructive) {
             resetCover(entry)
         } label: {
-            Label("Reset Cover", systemImage: "arrow.counterclockwise")
+            Label(L10n.string("common.reset_cover", table: "Screens", languageManager: languageManager), systemImage: "arrow.counterclockwise")
         }
         .disabled(!hasCustomCover(entry))
 #if os(iOS)
         if let shareURL = shareableROMURL(for: entry) {
             ShareLink(item: shareURL) {
-                Label("Share", systemImage: "square.and.arrow.up")
+                Label(L10n.string("common.share", table: "Screens", languageManager: languageManager), systemImage: "square.and.arrow.up")
             }
         }
 #endif
         Button(role: .destructive) {
             activeAlert = .confirmDelete(RecentDeleteCandidate(entry: entry, mode: .removeROMOnly))
         } label: {
-            Label("Remove ROM Only", systemImage: "eject")
+            Label(L10n.string("home.context.remove_rom_only", languageManager: languageManager), systemImage: "eject")
         }
         Button(role: .destructive) {
             activeAlert = .confirmDelete(RecentDeleteCandidate(entry: entry, mode: .removeAll))
         } label: {
-            Label("Remove", systemImage: "trash")
+            Label(L10n.string("home.context.remove", languageManager: languageManager), systemImage: "trash")
         }
     }
 
@@ -465,8 +474,8 @@ struct RecentlyPlayedView: View {
         resumeGames.map { entry in
             RecentGame(
                 id: "recent-\(entry.objectID.uriRepresentation().absoluteString)",
-                title: entry.title ?? "Unknown",
-                console: entry.system?.uppercased() ?? "Unknown",
+                title: entry.title ?? L10n.string("common.unknown_game", table: "Screens", languageManager: languageManager),
+                console: entry.system?.uppercased() ?? L10n.string("common.unknown", table: "Screens", languageManager: languageManager),
                 lastPlayed: entry.lastPlayedAt,
                 progress: 0,
                 image: nil,
@@ -535,7 +544,14 @@ struct RecentlyPlayedView: View {
             clearRenameDraft()
             loadGames()
         } catch {
-            activeAlert = .launchError("Could not rename game: \(error.localizedDescription)")
+            activeAlert = .launchError(
+                L10n.format(
+                    "recent.error.rename_failed",
+                    error.localizedDescription,
+                    table: "Screens",
+                    languageManager: languageManager
+                )
+            )
         }
     }
 
@@ -548,7 +564,14 @@ struct RecentlyPlayedView: View {
             try GameDeletionService.shared.delete(entry: candidate.entry, mode: candidate.mode, in: viewContext)
             loadGames()
         } catch {
-            activeAlert = .launchError("Could not delete game: \(error.localizedDescription)")
+            activeAlert = .launchError(
+                L10n.format(
+                    "recent.error.delete_failed",
+                    error.localizedDescription,
+                    table: "Screens",
+                    languageManager: languageManager
+                )
+            )
         }
     }
 
@@ -570,7 +593,14 @@ struct RecentlyPlayedView: View {
 #endif
             loadGames()
         } catch {
-            activeAlert = .launchError("Could not reset cover: \(error.localizedDescription)")
+            activeAlert = .launchError(
+                L10n.format(
+                    "recent.error.reset_cover_failed",
+                    error.localizedDescription,
+                    table: "Screens",
+                    languageManager: languageManager
+                )
+            )
         }
     }
 
@@ -669,16 +699,15 @@ private struct RecentCollectorCard: View {
 
     private var playtimeLabel: String? {
         if entry.playtimeTotal > 0 {
-            let h = max(0, Int(entry.playtimeTotal) / 3600)
-            return h > 0 ? "\(h)h" : "\(max(1, Int(entry.playtimeTotal) / 60))m"
+            return LocaleFormatting.shortDuration(seconds: Int(entry.playtimeTotal), minimumMinutes: 1)
         }
         return nil
     }
 
     private var lastPlayedLabel: String {
-        guard let date = entry.lastPlayedAt else { return "Never played" }
-        if Calendar.current.isDateInToday(date) { return "Today" }
-        if Calendar.current.isDateInYesterday(date) { return "Yesterday" }
+        guard let date = entry.lastPlayedAt else {
+            return L10n.string("common.never_played", table: "Screens")
+        }
         let formatter = RelativeDateTimeFormatter()
         formatter.unitsStyle = .short
         return formatter.localizedString(for: date, relativeTo: Date())
@@ -756,13 +785,12 @@ private struct RecentResumeCard: View {
     }
 
     private var lastPlayedLabel: String {
-        guard let date = entry.lastPlayedAt else { return "Never played" }
-        let now = Date()
-        let delta = max(0, Int(now.timeIntervalSince(date)))
-        if delta < 60 { return "Just now" }
-        if delta < 3600 { return "\(delta / 60)m ago" }
-        if delta < 86_400 { return "\(delta / 3600)h ago" }
-        return date.formatted(.dateTime.month(.abbreviated).day())
+        guard let date = entry.lastPlayedAt else {
+            return L10n.string("common.never_played", table: "Screens")
+        }
+        let formatter = RelativeDateTimeFormatter()
+        formatter.unitsStyle = .short
+        return formatter.localizedString(for: date, relativeTo: Date())
     }
 
     @ViewBuilder
@@ -813,6 +841,7 @@ private struct RecentCardPressStyle: ButtonStyle {
 private struct RecentRow: View {
     let entry: ROMLibraryEntry
     let onTap: () -> Void
+    @EnvironmentObject private var languageManager: LanguageManager
 
     var body: some View {
         Button(action: onTap) {
@@ -885,26 +914,26 @@ private struct RecentRow: View {
 
     private var metaLine: String {
         let timePart: String = {
-            guard let date = entry.lastPlayedAt else { return "Never" }
-            let now = Date()
-            let delta = max(0, Int(now.timeIntervalSince(date)))
-            if delta < 60 { return "Just now" }
-            if delta < 3600 { return "\(delta / 60)m ago" }
-            if delta < 86_400 { return "\(delta / 3600)h ago" }
-            if Calendar.current.isDateInToday(date) { return "Today" }
-            if Calendar.current.isDateInYesterday(date) { return "Yesterday" }
-            return date.formatted(.dateTime.month(.abbreviated).day())
+            guard let date = entry.lastPlayedAt else {
+                return L10n.string("common.never", table: "Screens")
+            }
+            let formatter = RelativeDateTimeFormatter()
+            formatter.unitsStyle = .short
+            return formatter.localizedString(for: date, relativeTo: Date())
         }()
 
         if entry.playtimeTotal <= 0 {
-            return "Opened \(timePart.lowercased())"
+            return L10n.format("recent.opened_format", timePart.lowercased(), table: "Screens", languageManager: languageManager)
         }
-        let hours = max(0, Int(entry.playtimeTotal) / 3600)
-        if hours > 0 {
-            return "\(timePart) • \(hours)h total"
+        let duration = LocaleFormatting.shortDuration(
+            seconds: Int(entry.playtimeTotal),
+            minimumMinutes: 1,
+            languageManager: languageManager
+        )
+        if Int(entry.playtimeTotal) >= 3600 {
+            return L10n.format("common.total_hours_format", timePart, duration, table: "Screens", languageManager: languageManager)
         }
-        let mins = max(1, Int(entry.playtimeTotal) / 60)
-        return "\(timePart) • \(mins)m total"
+        return L10n.format("common.total_minutes_format", timePart, duration, table: "Screens", languageManager: languageManager)
     }
 }
 
@@ -938,17 +967,17 @@ private enum RecentSortMode: CaseIterable {
 
     var title: String {
         switch self {
-        case .recent: return "Recent"
-        case .mostPlayed: return "Most Played"
-        case .alphabetical: return "Alphabetical"
+        case .recent: return L10n.string("common.sort_recent", table: "Screens")
+        case .mostPlayed: return L10n.string("common.sort_most_played", table: "Screens")
+        case .alphabetical: return L10n.string("common.sort_alphabetical", table: "Screens")
         }
     }
 
     var shortTitle: String {
         switch self {
-        case .recent: return "Recent"
-        case .mostPlayed: return "Played"
-        case .alphabetical: return "A–Z"
+        case .recent: return L10n.string("common.sort_recent", table: "Screens")
+        case .mostPlayed: return L10n.string("common.sort_played_short", table: "Screens")
+        case .alphabetical: return L10n.string("common.sort_a_to_z", table: "Screens")
         }
     }
 }

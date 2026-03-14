@@ -9,17 +9,29 @@ import UIKit
 
 struct GameListView: View {
     private enum GameListSortOption: String, CaseIterable, Identifiable {
-        case recent = "Recent"
-        case alphabetical = "A-Z"
-        case mostPlayed = "Most Played"
+        case recent
+        case alphabetical
+        case mostPlayed
 
         var id: String { rawValue }
+
+        var title: String {
+            switch self {
+            case .recent:
+                L10n.string("common.sort_recent", table: "Screens")
+            case .alphabetical:
+                L10n.string("common.sort_a_to_z", table: "Screens")
+            case .mostPlayed:
+                L10n.string("common.sort_most_played", table: "Screens")
+            }
+        }
     }
 
     let platform: EmulatorPlatform
     @Environment(\.managedObjectContext) private var viewContext
     @Environment(\.dismiss) private var dismiss
     @Environment(\.verticalSizeClass) private var verticalSizeClass
+    @EnvironmentObject private var languageManager: LanguageManager
     @StateObject private var viewModel = GameListViewModel()
     @StateObject private var performanceProfiler = PerformanceProfiler.shared
     @State private var searchText = ""
@@ -110,41 +122,41 @@ struct GameListView: View {
             switch state.kind {
             case .launchError(let message):
                 return Alert(
-                    title: Text("Unable to Open Game"),
+                    title: Text(L10n.string("home.alert.launch_failed", languageManager: languageManager)),
                     message: Text(message),
-                    dismissButton: .cancel(Text("OK"))
+                    dismissButton: .cancel(Text(L10n.string("common.ok", languageManager: languageManager)))
                 )
             case .confirmDelete(let candidate):
                 return Alert(
                     title: Text(candidate.mode.displayName),
                     message: Text(candidate.mode.firstConfirmation),
-                    primaryButton: .default(Text("Continue")) {
+                    primaryButton: .default(Text(L10n.string("common.continue", languageManager: languageManager))) {
                         activeAlert = GameListAlertState(kind: .confirmFinalDelete(candidate))
                     },
                     secondaryButton: .cancel()
                 )
             case .confirmFinalDelete(let candidate):
                 return Alert(
-                    title: Text("Final Confirmation"),
+                    title: Text(L10n.string("home.alert.final_confirmation", languageManager: languageManager)),
                     message: Text(candidate.mode.secondConfirmation),
-                    primaryButton: .destructive(Text("Delete")) {
+                    primaryButton: .destructive(Text(L10n.string("common.delete", languageManager: languageManager))) {
                         performDeletion(candidate)
                     },
                     secondaryButton: .cancel()
                 )
             }
         }
-        .alert("Rename Game", isPresented: renameDialogPresented) {
-            TextField("Game title", text: $renameTitle)
-            Button("Cancel", role: .cancel) {
+        .alert(L10n.string("common.rename_game", languageManager: languageManager), isPresented: renameDialogPresented) {
+            TextField(L10n.string("common.game_title", languageManager: languageManager), text: $renameTitle)
+            Button(L10n.string("common.cancel", languageManager: languageManager), role: .cancel) {
                 clearRenameDraft()
             }
-            Button("Save") {
+            Button(L10n.string("common.save", languageManager: languageManager)) {
                 commitRename()
             }
             .disabled(renameTitle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
         } message: {
-            Text("Enter a new display title for this game.")
+            Text(L10n.string("home.rename_game.message", languageManager: languageManager))
         }
         #if os(iOS)
         .fullScreenCover(item: $selectedGame) { game in
@@ -224,7 +236,7 @@ struct GameListView: View {
                     Text(platformDisplay.displayName)
                         .font(isCollectorMode ? .system(size: 20, weight: .bold) : SubpageUI.Font.title)
                         .foregroundColor(AppColors.Text.primary)
-                    Text("\(sortedFilteredGames.count) games")
+                    Text(L10n.format("common.games_count", Int64(sortedFilteredGames.count), table: "Screens", languageManager: languageManager))
                         .font(SubpageUI.Font.subtitle)
                         .foregroundColor(isCollectorMode ? AppColors.Text.secondary : AppColors.Text.accent)
                 }
@@ -259,7 +271,7 @@ struct GameListView: View {
                         .font(.system(size: 13, weight: .medium))
                         .foregroundColor(AppColors.textMuted)
 
-                    TextField("Search games...", text: $searchText)
+                    TextField(L10n.string("gamelist.search_placeholder", table: "Screens", languageManager: languageManager), text: $searchText)
 #if os(iOS)
                         .textInputAutocapitalization(.never)
                         .autocorrectionDisabled()
@@ -274,7 +286,7 @@ struct GameListView: View {
                             selectedSort = option
                         } label: {
                             HStack {
-                                Text(option.rawValue)
+                                Text(option.title)
                                 if selectedSort == option {
                                     Image(systemName: "checkmark")
                                 }
@@ -283,9 +295,9 @@ struct GameListView: View {
                     }
                 } label: {
                     HStack(spacing: 6) {
-                        Text("Sort")
+                        Text(L10n.string("gamelist.sort", table: "Screens", languageManager: languageManager))
                             .font(.system(size: 12, weight: .semibold))
-                        Text(selectedSort.rawValue)
+                        Text(selectedSort.title)
                             .font(.system(size: 12, weight: .semibold))
                         Image(systemName: "chevron.down")
                             .font(.system(size: 10, weight: .semibold))
@@ -345,7 +357,7 @@ struct GameListView: View {
                             accent: true,
                             imageInset: 6
                         )
-                        Text("Quick Stats")
+                        Text(L10n.string("gamelist.quick_stats", table: "Screens", languageManager: languageManager))
                             .font(RMTypeScale.cardTitle)
                             .foregroundColor(AppColors.Text.primary)
                     }
@@ -368,9 +380,9 @@ struct GameListView: View {
                 }
 
                 HStack(spacing: RMSpacing.md) {
-                    StatBadge(value: "\(viewModel.totalGames)", label: "Games")
-                    StatBadge(value: "\(viewModel.playedGames)", label: "Played")
-                    StatBadge(value: "\(viewModel.favoriteGames)", label: "Favorites")
+                    StatBadge(value: "\(viewModel.totalGames)", label: L10n.string("gamelist.stats.games", table: "Screens", languageManager: languageManager))
+                    StatBadge(value: "\(viewModel.playedGames)", label: L10n.string("gamelist.stats.played", table: "Screens", languageManager: languageManager))
+                    StatBadge(value: "\(viewModel.favoriteGames)", label: L10n.string("gamelist.stats.favorites", table: "Screens", languageManager: languageManager))
                 }
             }
             .padding(16)
@@ -381,7 +393,7 @@ struct GameListView: View {
         Group {
             if !viewModel.continueGames.isEmpty {
                 VStack(alignment: .leading, spacing: 10) {
-                    sectionHeader("Continue on \(platformDisplay.shortName)", trailing: nil)
+                    sectionHeader(L10n.format("gamelist.continue_on", platformDisplay.shortName, table: "Screens", languageManager: languageManager), trailing: nil)
 
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: 12) {
@@ -411,14 +423,14 @@ struct GameListView: View {
 
     private var consoleStatsSection: some View {
         VStack(alignment: .leading, spacing: 10) {
-            sectionHeader("Your Stats", trailing: nil)
+            sectionHeader(L10n.string("gamelist.your_stats", table: "Screens", languageManager: languageManager), trailing: nil)
 
             VStack(spacing: RMSpacing.md) {
-                ConsoleStatRow(label: "Total Hours", value: formatHoursShort(viewModel.totalPlayTimeSeconds))
-                ConsoleStatRow(label: "Sessions", value: "\(viewModel.estimatedSessionCount)")
-                ConsoleStatRow(label: "Avg Session", value: formatMinutesShort(viewModel.averageSessionLengthEstimate))
+                ConsoleStatRow(label: L10n.string("gamelist.total_hours", table: "Screens", languageManager: languageManager), value: formatHoursShort(viewModel.totalPlayTimeSeconds))
+                ConsoleStatRow(label: L10n.string("gamelist.sessions", table: "Screens", languageManager: languageManager), value: "\(viewModel.estimatedSessionCount)")
+                ConsoleStatRow(label: L10n.string("gamelist.avg_session", table: "Screens", languageManager: languageManager), value: formatMinutesShort(viewModel.averageSessionLengthEstimate))
                 ConsoleStatRow(
-                    label: "Most Played",
+                    label: L10n.string("gamelist.most_played", table: "Screens", languageManager: languageManager),
                     value: viewModel.mostPlayedGameTitle.map { "\($0) · \(formatHoursShort(viewModel.mostPlayedGameSeconds))" } ?? "—"
                 )
             }
@@ -429,7 +441,10 @@ struct GameListView: View {
 
     private var achievementsSection: some View {
         VStack(alignment: .leading, spacing: 10) {
-            sectionHeader("Achievements", trailing: viewModel.achievements.count > 4 ? "View All" : nil)
+            sectionHeader(
+                L10n.string("gamelist.achievements", table: "Screens", languageManager: languageManager),
+                trailing: viewModel.achievements.count > 4 ? L10n.string("home.view_all", languageManager: languageManager) : nil
+            )
 
             LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 10), count: 2), spacing: 10) {
                 ForEach(Array(viewModel.achievements.prefix(4))) { achievement in
@@ -443,7 +458,7 @@ struct GameListView: View {
         Group {
             if !viewModel.topPlayedGames.isEmpty {
                 VStack(alignment: .leading, spacing: 10) {
-                    sectionHeader("Most Played", trailing: nil)
+                    sectionHeader(L10n.string("gamelist.most_played_section", table: "Screens", languageManager: languageManager), trailing: nil)
 
                     VStack(spacing: 10) {
                         ForEach(Array(viewModel.topPlayedGames.prefix(3).enumerated()), id: \.element.id) { idx, game in
@@ -471,7 +486,7 @@ struct GameListView: View {
         Group {
             if !viewModel.recentlyAddedGames.isEmpty {
                 VStack(alignment: .leading, spacing: 10) {
-                    sectionHeader("Recently Added", trailing: nil)
+                    sectionHeader(L10n.string("gamelist.recently_added", table: "Screens", languageManager: languageManager), trailing: nil)
 
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: 12) {
@@ -482,7 +497,7 @@ struct GameListView: View {
                                     SystemHubGameCard(
                                         game: game,
                                         platformText: platformDisplay.shortName,
-                                        subtitle: "New import",
+                                        subtitle: L10n.string("gamelist.new_import", table: "Screens", languageManager: languageManager),
                                         launchIssue: viewModel.compatibilityIssue(for: game),
                                         variant: .recentlyAdded
                                     )
@@ -507,7 +522,11 @@ struct GameListView: View {
                 }
             } label: {
                 HStack {
-                    Text(showAllGames ? "Hide Games" : "Open Game Library (\(viewModel.totalGames))")
+                    Text(
+                        showAllGames
+                            ? L10n.string("gamelist.hide_games", table: "Screens", languageManager: languageManager)
+                            : L10n.format("gamelist.open_library", Int64(viewModel.totalGames), table: "Screens", languageManager: languageManager)
+                    )
                         .font(.system(size: 15, weight: .semibold))
                         .foregroundColor(AppColors.textPrimary)
                     Spacer()
@@ -540,14 +559,18 @@ struct GameListView: View {
                     Image(systemName: searchText.isEmpty ? "gamecontroller" : "magnifyingglass")
                         .font(.system(size: 26, weight: .medium))
                         .foregroundColor(AppColors.textMuted)
-                    Text(searchText.isEmpty ? "No Games Yet" : "No Matching Games")
+                    Text(
+                        searchText.isEmpty
+                            ? L10n.string("gamelist.no_games_yet", table: "Screens", languageManager: languageManager)
+                            : L10n.string("common.no_matching_games", table: "Screens", languageManager: languageManager)
+                    )
                         .font(.system(size: 16, weight: .semibold))
                         .foregroundColor(AppColors.textPrimary)
                     if !searchText.isEmpty {
                         Button {
                             searchText = ""
                         } label: {
-                            Text("Clear Search")
+                            Text(L10n.string("common.clear_search", table: "Screens", languageManager: languageManager))
                                 .font(.system(size: 12, weight: .semibold))
                                 .foregroundColor(.white)
                                 .padding(.horizontal, 12)
@@ -603,13 +626,13 @@ struct GameListView: View {
     private var gamesSection: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack {
-                Text("Game Library")
+                Text(L10n.string("gamelist.game_library", table: "Screens", languageManager: languageManager))
                     .font(.system(size: 16, weight: .semibold))
                     .foregroundColor(AppColors.textPrimary)
 
                 Spacer()
 
-                Text(selectedSort.rawValue)
+                Text(selectedSort.title)
                     .font(.system(size: 12, weight: .semibold))
                     .foregroundColor(AppColors.textMuted)
                     .padding(.horizontal, 10)
@@ -625,11 +648,15 @@ struct GameListView: View {
                     Image(systemName: "magnifyingglass")
                         .font(.system(size: 22, weight: .medium))
                         .foregroundColor(AppColors.textMuted)
-                    Text(searchText.isEmpty ? "No games available" : "No matching games")
+                    Text(
+                        searchText.isEmpty
+                            ? L10n.string("gamelist.no_games_available", table: "Screens", languageManager: languageManager)
+                            : L10n.string("common.no_matching_games", table: "Screens", languageManager: languageManager)
+                    )
                         .font(.system(size: 14, weight: .medium))
                         .foregroundColor(AppColors.textPrimary)
                     if !searchText.isEmpty {
-                        Text("Try a different search term")
+                        Text(L10n.string("common.try_different_search", table: "Screens", languageManager: languageManager))
                             .font(.system(size: 12))
                             .foregroundColor(AppColors.textMuted)
                     }
@@ -657,9 +684,16 @@ struct GameListView: View {
         let gameCount = viewModel.totalGames
         let hoursText = formatHoursShort(viewModel.totalPlayTimeSeconds)
         if let firstDate = viewModel.firstConsoleDate {
-            return "\(gameCount) games · \(hoursText) played · Since \(firstDate.formatted(date: .abbreviated, time: .omitted))"
+            return L10n.format(
+                "gamelist.identity_with_since",
+                Int64(gameCount),
+                hoursText,
+                firstDate.formatted(date: .abbreviated, time: .omitted),
+                table: "Screens",
+                languageManager: languageManager
+            )
         }
-        return "\(gameCount) games · \(hoursText) played"
+        return L10n.format("gamelist.identity_no_since", Int64(gameCount), hoursText, table: "Screens", languageManager: languageManager)
     }
 
     private func sectionHeader(_ title: String, trailing: String?) -> some View {
@@ -674,32 +708,21 @@ struct GameListView: View {
         if game.totalPlayTime > 0 {
             pieces.append(formatHoursShort(game.totalPlayTime))
         }
-        return pieces.isEmpty ? "Ready to play" : pieces.joined(separator: " • ")
+        return pieces.isEmpty ? L10n.string("common.ready_to_play", table: "Screens", languageManager: languageManager) : pieces.joined(separator: " • ")
     }
 
     private func relativeDateString(_ date: Date) -> String {
-        if Calendar.current.isDateInToday(date) { return "Today" }
-        if Calendar.current.isDateInYesterday(date) { return "Yesterday" }
         let formatter = RelativeDateTimeFormatter()
         formatter.unitsStyle = .short
         return formatter.localizedString(for: date, relativeTo: Date())
     }
 
     private func formatHoursShort(_ seconds: Int) -> String {
-        let hours = max(0, seconds / 3600)
-        let minutes = max(0, (seconds % 3600) / 60)
-        if hours == 0 { return "\(minutes)m" }
-        return minutes > 0 ? "\(hours)h \(minutes)m" : "\(hours)h"
+        LocaleFormatting.shortDuration(seconds: seconds, languageManager: languageManager)
     }
 
     private func formatMinutesShort(_ seconds: Int) -> String {
-        let minutes = max(0, seconds / 60)
-        if minutes >= 60 {
-            let h = minutes / 60
-            let m = minutes % 60
-            return m > 0 ? "\(h)h \(m)m" : "\(h)h"
-        }
-        return "\(minutes)m"
+        LocaleFormatting.shortDuration(seconds: seconds, languageManager: languageManager)
     }
 
     private var platformDisplay: PlatformDisplay {
@@ -708,15 +731,15 @@ struct GameListView: View {
 
     private func launchGame(_ game: Game) {
         guard let romPath = game.romPath, !romPath.isEmpty else {
-            presentLaunchError("ROM file path is missing for this game.")
+            presentLaunchError(L10n.string("gamelist.error.rom_missing", table: "Screens", languageManager: languageManager))
             return
         }
         guard FileManager.default.fileExists(atPath: romPath) else {
-            presentLaunchError("ROM file could not be found. Try re-importing the game.")
+            presentLaunchError(L10n.string("gamelist.error.rom_not_found", table: "Screens", languageManager: languageManager))
             return
         }
         guard game.gamePlatform != nil else {
-            presentLaunchError("This game platform is not supported for direct launch.")
+            presentLaunchError(L10n.string("gamelist.error.unsupported_platform", table: "Screens", languageManager: languageManager))
             return
         }
         if let issue = viewModel.compatibilityIssue(for: game) {
@@ -732,25 +755,25 @@ struct GameListView: View {
             Button {
                 beginRename(entry)
             } label: {
-                Label("Rename", systemImage: "pencil")
+                Label(L10n.string("home.context.rename", languageManager: languageManager), systemImage: "pencil")
             }
 
             Button {
                 showDetails(entry)
             } label: {
-                Label("Details", systemImage: "info.circle")
+                Label(L10n.string("home.context.details", languageManager: languageManager), systemImage: "info.circle")
             }
 
             Button(role: .destructive) {
                 activeAlert = GameListAlertState(kind: .confirmDelete(GameDeleteCandidate(entry: entry, mode: .removeROMOnly)))
             } label: {
-                Label("Remove ROM Only", systemImage: "eject")
+                Label(L10n.string("home.context.remove_rom_only", languageManager: languageManager), systemImage: "eject")
             }
 
             Button(role: .destructive) {
                 activeAlert = GameListAlertState(kind: .confirmDelete(GameDeleteCandidate(entry: entry, mode: .removeAll)))
             } label: {
-                Label("Remove", systemImage: "trash")
+                Label(L10n.string("home.context.remove", languageManager: languageManager), systemImage: "trash")
             }
         }
     }
@@ -786,7 +809,7 @@ struct GameListView: View {
             clearRenameDraft()
             viewModel.loadGames(for: platform, in: viewContext)
         } catch {
-            presentLaunchError("Could not rename game: \(error.localizedDescription)")
+            presentLaunchError(L10n.format("gamelist.error.rename_failed", error.localizedDescription, table: "Screens", languageManager: languageManager))
         }
     }
 
@@ -802,7 +825,7 @@ struct GameListView: View {
             }
             viewModel.loadGames(for: platform, in: viewContext)
         } catch {
-            presentLaunchError("Could not delete game: \(error.localizedDescription)")
+            presentLaunchError(L10n.format("gamelist.error.delete_failed", error.localizedDescription, table: "Screens", languageManager: languageManager))
         }
     }
 
@@ -979,10 +1002,7 @@ private struct MostPlayedBarRow: View {
     }
 
     private static func format(seconds: Int) -> String {
-        let h = max(0, seconds / 3600)
-        let m = max(0, (seconds % 3600) / 60)
-        if h == 0 { return "\(m)m" }
-        return m > 0 ? "\(h)h \(m)m" : "\(h)h"
+        LocaleFormatting.shortDuration(seconds: seconds)
     }
 }
 
@@ -1220,7 +1240,7 @@ struct GameCardRow: View {
                     .truncationMode(.tail)
 
                 if launchIssue != nil {
-                    Label("Unsupported Mapper", systemImage: "exclamationmark.triangle.fill")
+                    Label(L10n.string("common.unsupported_mapper", table: "Screens"), systemImage: "exclamationmark.triangle.fill")
                         .font(.system(size: 10, weight: .semibold))
                         .foregroundColor(.orange)
                 }
@@ -1350,12 +1370,7 @@ struct GameCardRow: View {
     }
     
     private func formatPlayTime(_ seconds: Int) -> String {
-        let hours = seconds / 3600
-        let minutes = (seconds % 3600) / 60
-        if hours > 0 {
-            return "\(hours)h \(minutes)m"
-        }
-        return "\(minutes)m"
+        LocaleFormatting.shortDuration(seconds: seconds, minimumMinutes: 1)
     }
     
     private func formatDate(_ date: Date) -> String {
@@ -1471,7 +1486,7 @@ class GameListViewModel: ObservableObject {
             .sorted { $0.totalPlayTime > $1.totalPlayTime }
 
         if let top = topPlayedGames.first {
-            mostPlayedGameTitle = top.title ?? "Unknown"
+            mostPlayedGameTitle = top.title ?? L10n.string("common.unknown_game", table: "Screens")
             mostPlayedGameSeconds = top.totalPlayTime
         } else {
             mostPlayedGameTitle = nil
@@ -1504,10 +1519,42 @@ class GameListViewModel: ObservableObject {
 
         let saveStateCountEstimate = entries.filter { ($0.lastPlayedAt != nil) || $0.playtimeTotal > 0 }.count * 2
         achievements = [
-            ConsoleHubAchievement(id: "first-hour", title: "First Hour", subtitle: totalPlayTimeSeconds >= 3600 ? "Unlocked" : "1h total play", isUnlocked: totalPlayTimeSeconds >= 3600, iconName: "clock.fill"),
-            ConsoleHubAchievement(id: "ten-hours", title: "10h Milestone", subtitle: totalPlayTimeSeconds >= 36_000 ? "Unlocked" : "Reach 10h", isUnlocked: totalPlayTimeSeconds >= 36_000, iconName: "timer"),
-            ConsoleHubAchievement(id: "five-games", title: "5 Games Played", subtitle: uniquePlayedGames.count >= 5 ? "Unlocked" : "\(uniquePlayedGames.count)/5", isUnlocked: uniquePlayedGames.count >= 5, iconName: "square.grid.2x2.fill"),
-            ConsoleHubAchievement(id: "save-master", title: "Save Master", subtitle: saveStateCountEstimate >= 10 ? "Unlocked" : "10 saves", isUnlocked: saveStateCountEstimate >= 10, iconName: "externaldrive.fill.badge.checkmark")
+            ConsoleHubAchievement(
+                id: "first-hour",
+                title: L10n.string("gamelist.achievement.first_hour.title", table: "Screens"),
+                subtitle: totalPlayTimeSeconds >= 3600
+                    ? L10n.string("gamelist.achievement.unlocked", table: "Screens")
+                    : L10n.string("gamelist.achievement.first_hour.locked", table: "Screens"),
+                isUnlocked: totalPlayTimeSeconds >= 3600,
+                iconName: "clock.fill"
+            ),
+            ConsoleHubAchievement(
+                id: "ten-hours",
+                title: L10n.string("gamelist.achievement.ten_hours.title", table: "Screens"),
+                subtitle: totalPlayTimeSeconds >= 36_000
+                    ? L10n.string("gamelist.achievement.unlocked", table: "Screens")
+                    : L10n.string("gamelist.achievement.ten_hours.locked", table: "Screens"),
+                isUnlocked: totalPlayTimeSeconds >= 36_000,
+                iconName: "timer"
+            ),
+            ConsoleHubAchievement(
+                id: "five-games",
+                title: L10n.string("gamelist.achievement.five_games.title", table: "Screens"),
+                subtitle: uniquePlayedGames.count >= 5
+                    ? L10n.string("gamelist.achievement.unlocked", table: "Screens")
+                    : "\(uniquePlayedGames.count)/5",
+                isUnlocked: uniquePlayedGames.count >= 5,
+                iconName: "square.grid.2x2.fill"
+            ),
+            ConsoleHubAchievement(
+                id: "save-master",
+                title: L10n.string("gamelist.achievement.save_master.title", table: "Screens"),
+                subtitle: saveStateCountEstimate >= 10
+                    ? L10n.string("gamelist.achievement.unlocked", table: "Screens")
+                    : L10n.string("gamelist.achievement.save_master.locked", table: "Screens"),
+                isUnlocked: saveStateCountEstimate >= 10,
+                iconName: "externaldrive.fill.badge.checkmark"
+            )
         ]
     }
 }

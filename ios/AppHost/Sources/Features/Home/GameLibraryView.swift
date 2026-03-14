@@ -211,11 +211,11 @@ enum LibrarySystemFilter: String, CaseIterable, Identifiable {
 
     var label: String {
         switch self {
-        case .all: return "All"
-        case .gb: return "Game Boy"
-        case .gbc: return "Game Boy Color"
-        case .gba: return "Game Boy Advance"
-        case .nds: return "Nintendo DS"
+        case .all: return L10n.string("library.filter.all", table: "Screens")
+        case .gb: return L10n.string("console.gb")
+        case .gbc: return L10n.string("console.gbc")
+        case .gba: return L10n.string("console.gba")
+        case .nds: return L10n.string("console.nds")
         }
     }
 }
@@ -238,6 +238,7 @@ struct GameLibraryView: View {
     @Environment(\.managedObjectContext) private var viewContext
     @Environment(\.dismiss) private var dismiss
     @Environment(\.verticalSizeClass) private var verticalSizeClass
+    @EnvironmentObject private var languageManager: LanguageManager
     @StateObject private var performanceProfiler = PerformanceProfiler.shared
     @State private var games: [ROMLibraryEntry] = []
     @State private var selectedGame: Game?
@@ -340,41 +341,41 @@ struct GameLibraryView: View {
             switch state.kind {
             case .launchError(let message):
                 return Alert(
-                    title: Text("Unable to Open Game"),
+                    title: Text(L10n.string("playerstats.error.title", table: "Screens", languageManager: languageManager)),
                     message: Text(message),
-                    dismissButton: .cancel(Text("OK"))
+                    dismissButton: .cancel(Text(L10n.string("common.ok", languageManager: languageManager)))
                 )
             case .confirmDelete(let candidate):
                 return Alert(
                     title: Text(candidate.mode.displayName),
                     message: Text(candidate.mode.firstConfirmation),
-                    primaryButton: .default(Text("Continue")) {
+                    primaryButton: .default(Text(L10n.string("common.continue", languageManager: languageManager))) {
                         activeAlert = LibraryAlertState(kind: .confirmFinalDelete(candidate))
                     },
                     secondaryButton: .cancel()
                 )
             case .confirmFinalDelete(let candidate):
                 return Alert(
-                    title: Text("Final Confirmation"),
+                    title: Text(L10n.string("home.alert.final_confirmation", languageManager: languageManager)),
                     message: Text(candidate.mode.secondConfirmation),
-                    primaryButton: .destructive(Text("Delete")) {
+                    primaryButton: .destructive(Text(L10n.string("common.delete", languageManager: languageManager))) {
                         performDeletion(candidate)
                     },
                     secondaryButton: .cancel()
                 )
             }
         }
-        .alert("Rename Game", isPresented: renameDialogPresented) {
-            TextField("Game title", text: $renameTitle)
-            Button("Cancel", role: .cancel) {
+        .alert(L10n.string("common.rename_game", languageManager: languageManager), isPresented: renameDialogPresented) {
+            TextField(L10n.string("common.game_title", languageManager: languageManager), text: $renameTitle)
+            Button(L10n.string("common.cancel", languageManager: languageManager), role: .cancel) {
                 clearRenameDraft()
             }
-            Button("Save") {
+            Button(L10n.string("common.save", languageManager: languageManager)) {
                 commitRename()
             }
             .disabled(renameTitle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
         } message: {
-            Text("Enter a new display title for this game.")
+            Text(L10n.string("home.rename_game.message", languageManager: languageManager))
         }
         .onAppear {
             loadGames()
@@ -509,13 +510,13 @@ struct GameLibraryView: View {
                 .buttonStyle(RMIconCircleButtonStyle())
 
                 VStack(alignment: .leading, spacing: 1) {
-                    Text("Game Library")
+                    Text(L10n.string("gamelist.game_library", table: "Screens", languageManager: languageManager))
                         .font(isCollectorMode ? .system(size: 20, weight: .bold) : SubpageUI.Font.title)
                         .lineLimit(1)
                         .minimumScaleFactor(0.9)
                         .allowsTightening(true)
                         .foregroundColor(AllGamesTokens.textPrimary)
-                    Text("\(games.count) games total")
+                    Text(L10n.format("library.games_total", Int64(games.count), table: "Screens", languageManager: languageManager))
                         .font(SubpageUI.Font.subtitle)
                         .foregroundColor(AllGamesTokens.textSecondary)
                 }
@@ -530,7 +531,7 @@ struct GameLibraryView: View {
                             .font(.system(size: 13))
                             .foregroundColor(AllGamesTokens.textTertiary)
 
-                        TextField("Search games...", text: $searchText)
+                        TextField(L10n.string("gamelist.search_placeholder", table: "Screens", languageManager: languageManager), text: $searchText)
 #if os(iOS)
                             .textInputAutocapitalization(.never)
                             .autocorrectionDisabled()
@@ -559,7 +560,7 @@ struct GameLibraryView: View {
 
                     Spacer()
 
-                    RMChip(title: "\(filteredGames.count) on shelf", style: .compact)
+                    RMChip(title: L10n.format("library.on_shelf", Int64(filteredGames.count), table: "Screens", languageManager: languageManager), style: .compact)
                 }
             } else {
                 HStack(spacing: RMSpacing.sm) {
@@ -567,7 +568,7 @@ struct GameLibraryView: View {
                         .font(.system(size: 13))
                         .foregroundColor(AllGamesTokens.textTertiary)
 
-                    TextField("Search games...", text: $searchText)
+                    TextField(L10n.string("gamelist.search_placeholder", table: "Screens", languageManager: languageManager), text: $searchText)
 #if os(iOS)
                         .textInputAutocapitalization(.never)
                         .autocorrectionDisabled()
@@ -719,7 +720,7 @@ struct GameLibraryView: View {
 #if os(iOS)
                     if let shareURL = shareableROMURL(for: entry) {
                         ShareLink(item: shareURL) {
-                            Label("Share", systemImage: "square.and.arrow.up")
+                            Label(L10n.string("common.share", table: "Screens", languageManager: languageManager), systemImage: "square.and.arrow.up")
                         }
                         .tint(.blue)
                     }
@@ -729,7 +730,7 @@ struct GameLibraryView: View {
                     Button(role: .destructive) {
                         activeAlert = LibraryAlertState(kind: .confirmDelete(LibraryDeleteCandidate(entry: entry, mode: .removeAll)))
                     } label: {
-                        Label("Delete", systemImage: "trash")
+                        Label(L10n.string("common.delete", languageManager: languageManager), systemImage: "trash")
                     }
                 }
                 .contextMenu { gameActionsMenu(for: entry) }
@@ -752,7 +753,7 @@ struct GameLibraryView: View {
             ForEach(collectorSections, id: \.key) { section in
                 CollectorShelfSectionView(
                     title: section.title,
-                    subtitle: "\(section.entries.count) games",
+                    subtitle: L10n.format("common.games_count", Int64(section.entries.count), table: "Screens", languageManager: languageManager),
                     entries: section.entries
                 ) { entry in
                     collectorShelfBox(entry, metadata: shelfMetadata(for: entry), progress: nil, showsMetadataByDefault: false)
@@ -767,11 +768,19 @@ struct GameLibraryView: View {
                 .font(.system(size: 28, weight: .medium))
                 .foregroundColor(AllGamesTokens.textTertiary)
 
-            Text(searchText.isEmpty ? "No Games Yet" : "No Matching Games")
+            Text(
+                searchText.isEmpty
+                    ? L10n.string("gamelist.no_games_yet", table: "Screens", languageManager: languageManager)
+                    : L10n.string("common.no_matching_games", table: "Screens", languageManager: languageManager)
+            )
                 .font(.system(size: 16, weight: .semibold))
                 .foregroundColor(AllGamesTokens.textPrimary)
 
-            Text(searchText.isEmpty ? "Import some ROMs to get started!" : "Try a different search term.")
+            Text(
+                searchText.isEmpty
+                    ? L10n.string("library.empty_hint", table: "Screens", languageManager: languageManager)
+                    : L10n.string("common.try_different_search", table: "Screens", languageManager: languageManager)
+            )
                 .font(.system(size: 12))
                 .foregroundColor(AllGamesTokens.textSecondary)
                 .multilineTextAlignment(.center)
@@ -783,7 +792,7 @@ struct GameLibraryView: View {
                         selectedSystemFilter = .all
                     }
                 } label: {
-                    Text("Clear Filter")
+                    Text(L10n.string("library.clear_filter", table: "Screens", languageManager: languageManager))
                         .font(.system(size: 12, weight: .semibold))
                         .foregroundColor(.white)
                         .padding(.horizontal, 12)
@@ -899,7 +908,7 @@ struct GameLibraryView: View {
             return
         }
         guard let game = entry.toGame() else {
-            activeAlert = LibraryAlertState(kind: .launchError("ROM file could not be found. Try re-importing the game."))
+            activeAlert = LibraryAlertState(kind: .launchError(L10n.string("gamelist.error.rom_missing", table: "Screens", languageManager: languageManager)))
             return
         }
         selectedGame = game
@@ -910,38 +919,38 @@ struct GameLibraryView: View {
         Button {
             launchGame(entry)
         } label: {
-            Label("Play", systemImage: "play.fill")
+            Label(L10n.string("common.play", table: "Screens", languageManager: languageManager), systemImage: "play.fill")
         }
         Button {
             beginRename(entry)
         } label: {
-            Label("Rename", systemImage: "pencil")
+            Label(L10n.string("home.context.rename", languageManager: languageManager), systemImage: "pencil")
         }
         Button {
             editCover(entry)
         } label: {
-            Label("Edit Cover", systemImage: "photo")
+            Label(L10n.string("common.edit_cover", table: "Screens", languageManager: languageManager), systemImage: "photo")
         }
         Button(role: .destructive) {
             resetCover(entry)
         } label: {
-            Label("Reset Cover", systemImage: "arrow.counterclockwise")
+            Label(L10n.string("common.reset_cover", table: "Screens", languageManager: languageManager), systemImage: "arrow.counterclockwise")
         }
         .disabled(!hasCustomCover(entry))
         Button {
             showDetails(entry)
         } label: {
-            Label("Details", systemImage: "info.circle")
+            Label(L10n.string("home.context.details", languageManager: languageManager), systemImage: "info.circle")
         }
         Button(role: .destructive) {
             activeAlert = LibraryAlertState(kind: .confirmDelete(LibraryDeleteCandidate(entry: entry, mode: .removeROMOnly)))
         } label: {
-            Label("Remove ROM Only", systemImage: "eject")
+            Label(L10n.string("home.context.remove_rom_only", languageManager: languageManager), systemImage: "eject")
         }
         Button(role: .destructive) {
             activeAlert = LibraryAlertState(kind: .confirmDelete(LibraryDeleteCandidate(entry: entry, mode: .removeAll)))
         } label: {
-            Label("Remove", systemImage: "trash")
+            Label(L10n.string("home.context.remove", languageManager: languageManager), systemImage: "trash")
         }
     }
 
@@ -950,7 +959,7 @@ struct GameLibraryView: View {
             try GameDeletionService.shared.delete(entry: candidate.entry, mode: candidate.mode, in: viewContext)
             loadGames()
         } catch {
-            activeAlert = LibraryAlertState(kind: .launchError("Could not delete game: \(error.localizedDescription)"))
+            activeAlert = LibraryAlertState(kind: .launchError(L10n.format("library.error.delete_failed", error.localizedDescription, table: "Screens", languageManager: languageManager)))
         }
     }
 
@@ -989,7 +998,7 @@ struct GameLibraryView: View {
             clearRenameDraft()
             loadGames()
         } catch {
-            activeAlert = LibraryAlertState(kind: .launchError("Could not rename game: \(error.localizedDescription)"))
+            activeAlert = LibraryAlertState(kind: .launchError(L10n.format("library.error.rename_failed", error.localizedDescription, table: "Screens", languageManager: languageManager)))
         }
     }
 
@@ -1018,7 +1027,7 @@ struct GameLibraryView: View {
 #endif
             loadGames()
         } catch {
-            activeAlert = LibraryAlertState(kind: .launchError("Could not reset cover: \(error.localizedDescription)"))
+            activeAlert = LibraryAlertState(kind: .launchError(L10n.format("library.error.reset_cover_failed", error.localizedDescription, table: "Screens", languageManager: languageManager)))
         }
     }
 
@@ -1108,7 +1117,7 @@ struct GameLibraryView: View {
         if let issue = ROMCompatibilityService.shared.compatibility(for: entry).issue {
             return issue.title
         }
-        return "Ready"
+        return L10n.string("common.ready_to_play", table: "Screens", languageManager: languageManager)
     }
 
     private func shelfLastPlayedLabel(for entry: ROMLibraryEntry) -> String {
@@ -1124,11 +1133,7 @@ struct GameLibraryView: View {
     }
 
     private func playtimeLabel(for entry: ROMLibraryEntry) -> String {
-        let minutes = Int(entry.playtimeTotal) / 60
-        if minutes < 60 {
-            return "\(max(minutes, 1))m"
-        }
-        return "\(minutes / 60)h"
+        LocaleFormatting.shortDuration(seconds: Int(entry.playtimeTotal), minimumMinutes: 1, languageManager: languageManager)
     }
 
     private func displayTitle(_ title: String?) -> String {
@@ -1137,9 +1142,9 @@ struct GameLibraryView: View {
 
     private func sortLabel(_ option: LibrarySortOption) -> String {
         switch option {
-        case .recent: return "Recent"
-        case .alphabetical: return "A-Z"
-        case .mostPlayed: return "Most Played"
+        case .recent: return L10n.string("common.sort_recent", table: "Screens", languageManager: languageManager)
+        case .alphabetical: return L10n.string("common.sort_a_to_z", table: "Screens", languageManager: languageManager)
+        case .mostPlayed: return L10n.string("common.sort_most_played", table: "Screens", languageManager: languageManager)
         }
     }
 }
@@ -1151,6 +1156,7 @@ struct AllGamesCard: View {
     let collectorMode: Bool
     let selectedSystemFilter: LibrarySystemFilter
     let onTap: () -> Void
+    @EnvironmentObject private var languageManager: LanguageManager
 
     private let coverCornerRadius: CGFloat = 18
 
@@ -1366,19 +1372,14 @@ struct AllGamesCard: View {
     }
 
     private var lastPlayedLabel: String {
-        guard let lastPlayed = entry.lastPlayedAt else { return "Never played" }
+        guard let lastPlayed = entry.lastPlayedAt else { return L10n.string("common.never_played", table: "Screens", languageManager: languageManager) }
         let formatter = RelativeDateTimeFormatter()
         formatter.unitsStyle = .abbreviated
         return formatter.localizedString(for: lastPlayed, relativeTo: Date())
     }
 
     private var playtimeBadge: String {
-        let minutes = Int(entry.playtimeTotal) / 60
-        if minutes < 60 {
-            return "\(max(minutes, 1))m"
-        }
-        let hours = minutes / 60
-        return "\(hours)h"
+        LocaleFormatting.shortDuration(seconds: Int(entry.playtimeTotal), minimumMinutes: 1, languageManager: languageManager)
     }
 
     private func displayTitle(_ title: String?) -> String {
@@ -1389,6 +1390,7 @@ struct AllGamesCard: View {
 private struct AllGamesListRow: View {
     let entry: ROMLibraryEntry
     let onTap: () -> Void
+    @EnvironmentObject private var languageManager: LanguageManager
 
     var body: some View {
         Button(action: onTap) {
@@ -1475,7 +1477,7 @@ private struct AllGamesListRow: View {
     }
 
     private var lastPlayedLabel: String {
-        guard let lastPlayed = entry.lastPlayedAt else { return "Never played" }
+        guard let lastPlayed = entry.lastPlayedAt else { return L10n.string("common.never_played", table: "Screens", languageManager: languageManager) }
         let formatter = RelativeDateTimeFormatter()
         formatter.unitsStyle = .short
         return formatter.localizedString(for: lastPlayed, relativeTo: Date())

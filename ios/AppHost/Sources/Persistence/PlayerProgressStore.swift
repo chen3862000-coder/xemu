@@ -25,6 +25,30 @@ struct PlayerAchievementDefinition: Identifiable, Equatable {
     let target: Int
 }
 
+extension PlayerAchievementDefinition {
+    var localizedTitle: String {
+        switch id {
+        case "power-on": return L10n.string("achievement.power_on.title", table: "Screens")
+        case "first-hour": return L10n.string("achievement.first_hour.title", table: "Screens")
+        case "retro-fan": return L10n.string("achievement.retro_fan.title", table: "Screens")
+        case "dedicated-player": return L10n.string("achievement.dedicated_player.title", table: "Screens")
+        case "game-sampler": return L10n.string("achievement.game_sampler.title", table: "Screens")
+        default: return title
+        }
+    }
+
+    var localizedDetail: String {
+        switch id {
+        case "power-on": return L10n.string("achievement.power_on.detail", table: "Screens")
+        case "first-hour": return L10n.string("achievement.first_hour.detail", table: "Screens")
+        case "retro-fan": return L10n.string("achievement.retro_fan.detail", table: "Screens")
+        case "dedicated-player": return L10n.string("achievement.dedicated_player.detail", table: "Screens")
+        case "game-sampler": return L10n.string("achievement.game_sampler.detail", table: "Screens")
+        default: return detail
+        }
+    }
+}
+
 struct PlayerAchievementUnlock: Identifiable, Equatable {
     let id: String
     let title: String
@@ -124,7 +148,7 @@ final class PlayerProgressStore {
             let session = PlayerHistorySession(
                 id: UUID(),
                 gameID: normalizedGameID,
-                gameTitle: gameTitle.isEmpty ? "Unknown Game" : gameTitle,
+                gameTitle: gameTitle.isEmpty ? L10n.string("common.unknown_game", table: "Screens") : gameTitle,
                 system: system.trimmingCharacters(in: .whitespacesAndNewlines).lowercased(),
                 startTime: safeStart,
                 endTime: safeEnd,
@@ -182,8 +206,8 @@ final class PlayerProgressStore {
             newUnlocks.append(
                 PlayerAchievementUnlock(
                     id: definition.id,
-                    title: definition.title,
-                    detail: definition.detail,
+                    title: definition.localizedTitle,
+                    detail: definition.localizedDetail,
                     unlockedAt: now
                 )
             )
