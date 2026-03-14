@@ -20,6 +20,9 @@ struct LibraryView: View {
         .onAppear {
             viewModel.loadEntries(in: viewContext)
         }
+        .onReceive(NotificationCenter.default.publisher(for: .coverArtDidChange)) { _ in
+            viewModel.loadEntries(in: viewContext)
+        }
         .sheet(item: $selectedRom) { rom in
             RomDetailView(rom: rom) {
                 viewModel.loadEntries(in: viewContext)
@@ -106,38 +109,37 @@ struct RomCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             ZStack {
-                Rectangle()
-                    .fill(Color.gray.opacity(0.3))
-                    .aspectRatio(3/4, contentMode: .fit)
-                    .cornerRadius(12)
-
-                if let coverData = entry.coverImageData,
+                if let coverData = CoverArtService.shared.resolve(for: entry)?.data,
                    let coverImage = Image(data: coverData) {
                     coverImage
                         .resizable()
                         .aspectRatio(contentMode: .fill)
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 150)
-                        .cornerRadius(12)
                 } else {
                     PlatformPlaceholder(platform: entry.system)
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 150)
-                        .cornerRadius(12)
                 }
-
-
             }
+            .frame(maxWidth: .infinity)
+            .frame(height: 150)
+            .clipped()
+            .clipShape(RoundedRectangle(cornerRadius: 12))
 
             VStack(alignment: .leading, spacing: 4) {
-                Text(entry.title ?? "Unknown")
+                Text(GameCardTitleFormatter.format(entry.title, maxWords: 7))
                     .font(.headline)
                     .lineLimit(2)
+                    .truncationMode(.tail)
+                    .frame(height: 44, alignment: .topLeading)
+
+                if ROMCompatibilityService.shared.compatibility(for: entry).issue != nil {
+                    Label("Unsupported Mapper", systemImage: "exclamationmark.triangle.fill")
+                        .font(.caption2.weight(.semibold))
+                        .foregroundColor(.orange)
+                }
 
                 HStack {
-                    Text(entry.system ?? "Unknown")
+                    Text(entry.consoleIdentity?.systemCode ?? entry.system ?? "Unknown")
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(entry.consoleIdentity?.accentColor ?? .secondary)
 
                     Spacer()
 
@@ -181,11 +183,22 @@ struct PlatformPlaceholder: View {
     var body: some View {
         ZStack {
             Color.gray.opacity(0.3)
-
-            Text(platformIcon)
-                .font(.system(size: 48))
-                .foregroundColor(.white.opacity(0.5))
+            if let assetName = platformIconAssetName {
+                Image(assetName)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 72, height: 72)
+                    .opacity(0.65)
+            } else {
+                Text(platformIcon)
+                    .font(.system(size: 48))
+                    .foregroundColor(.white.opacity(0.5))
+            }
         }
+    }
+
+    private var platformIconAssetName: String? {
+        ConsoleIdentity.resolve(systemRaw: platform)?.assetName
     }
 
     private var platformIcon: String {
@@ -203,6 +216,25 @@ struct PlatformPlaceholder: View {
     }
 }
 
+private enum RomDetailLayout {
+    static let pagePadding: CGFloat = 20
+    static let sectionSpacing: CGFloat = 22
+    static let cardSpacing: CGFloat = 18
+    static let cardPadding: CGFloat = 18
+    static let cardCornerRadius: CGFloat = 20
+    static let heroCornerRadius: CGFloat = 32
+    static let actionCornerRadius: CGFloat = 18
+    static let actionHeight: CGFloat = 50
+    static let heroTopInset: CGFloat = 60
+    static let heroBottomInset: CGFloat = 28
+    static let heroCoverSize = CGSize(width: 168, height: 210)
+    static let heroMinHeight: CGFloat = 500
+    static let titleToBadgesSpacing: CGFloat = 8
+    static let closeTopPadding: CGFloat = 10
+    static let detailLabelWidth: CGFloat = 120
+    static let rowVerticalPadding: CGFloat = 6
+}
+
 struct RomDetailView: View {
     let rom: ROMLibraryEntry
     let onDismiss: () -> Void
@@ -211,26 +243,49 @@ struct RomDetailView: View {
     @Environment(\.managedObjectContext) private var viewContext
     @State private var isLaunching = false
     @State private var adShouldShow = false
+    @State private var launchErrorMessage: String?
+    @State private var heroCoverSettled = false
+    @State private var isShowingSaveStates = false
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 20) {
-                artworkSection
-                titleSection
-                metadataSection
+        ScrollView(showsIndicators: false) {
+            VStack(alignment: .leading, spacing: RomDetailLayout.sectionSpacing) {
+                heroSection
                 statsSection
-                actionsSection
+                collectorDataSection
+                fileDetailsSection
             }
-            .padding()
+            .padding(.horizontal, RomDetailLayout.pagePadding)
+            .padding(.top, 12)
+            .padding(.bottom, 42)
         }
-        .navigationTitle(rom.title ?? "ROM Details")
-        .toolbar {
-            ToolbarItem(placement: .cancellationAction) {
-                Button("Close") {
-                    dismiss()
-                    onDismiss()
+        .background(backgroundLayer.ignoresSafeArea())
+#if os(iOS)
+        .toolbar(.hidden, for: .navigationBar)
+#endif
+        .overlay(alignment: .topLeading) {
+            Button {
+                dismiss()
+                onDismiss()
+            } label: {
+                HStack(spacing: 8) {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 12, weight: .bold))
+                    Text("Close")
+                        .font(.system(size: 14, weight: .semibold))
                 }
+                .foregroundColor(.white)
+                .padding(.horizontal, 14)
+                .frame(height: 40)
+                .background(.ultraThinMaterial.opacity(0.88))
+                .overlay(
+                    Capsule()
+                        .stroke(Color.white.opacity(0.18), lineWidth: 1)
+                )
+                .clipShape(Capsule())
             }
+            .padding(.leading, RomDetailLayout.pagePadding)
+            .padding(.top, RomDetailLayout.closeTopPadding)
         }
         .sheet(isPresented: $isLaunching) {
             Group {
@@ -258,94 +313,373 @@ struct RomDetailView: View {
                 dismissButton: .default(Text("OK"))
             )
         }
+        .alert("Unable to Open Game", isPresented: Binding(
+            get: { launchErrorMessage != nil },
+            set: { if !$0 { launchErrorMessage = nil } }
+        )) {
+            Button("OK", role: .cancel) { launchErrorMessage = nil }
+        } message: {
+            Text(launchErrorMessage ?? "This game cannot be launched right now.")
+        }
+        .sheet(isPresented: $isShowingSaveStates) {
+            SaveStatesView(rom: rom)
+        }
+        .onAppear {
+            withAnimation(.spring(response: 0.6, dampingFraction: 0.82)) {
+                heroCoverSettled = true
+            }
+        }
     }
 
-    private var artworkSection: some View {
+    private var backgroundLayer: some View {
         ZStack {
-            Rectangle()
-                .fill(Color.gray.opacity(0.3))
-                .aspectRatio(3/4, contentMode: .fit)
-                .cornerRadius(16)
+            AppColors.background
 
-            if let coverData = rom.coverImageData,
+            RoundedRectangle(cornerRadius: 220, style: .continuous)
+                .fill(
+                    LinearGradient(
+                        colors: [accentColor.opacity(0.22), AppColors.accent.opacity(0.16)],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+                .blur(radius: 80)
+                .offset(x: 120, y: -180)
+
+            RoundedRectangle(cornerRadius: 220, style: .continuous)
+                .fill(
+                    LinearGradient(
+                        colors: [AppColors.primary.opacity(0.14), Color.clear],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+                .blur(radius: 90)
+                .offset(x: -140, y: 260)
+        }
+    }
+
+    private var heroSection: some View {
+        ZStack(alignment: .topLeading) {
+            RoundedRectangle(cornerRadius: RomDetailLayout.heroCornerRadius, style: .continuous)
+                .fill(AppColors.surface)
+                .overlay(heroBackground)
+                .overlay(
+                    LinearGradient(
+                        colors: [Color.clear, Color.black.opacity(0.58)],
+                        startPoint: .center,
+                        endPoint: .bottom
+                    )
+                    .clipShape(RoundedRectangle(cornerRadius: RomDetailLayout.heroCornerRadius, style: .continuous))
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: RomDetailLayout.heroCornerRadius, style: .continuous)
+                        .stroke(Color.white.opacity(0.10), lineWidth: 1)
+                )
+                .shadow(color: accentColor.opacity(0.16), radius: 24, x: 0, y: 14)
+
+            VStack(alignment: .leading, spacing: 14) {
+                heroCover
+                    .frame(
+                        width: RomDetailLayout.heroCoverSize.width,
+                        height: RomDetailLayout.heroCoverSize.height
+                    )
+                    .scaleEffect(heroCoverSettled ? 1.0 : 0.92)
+                    .rotation3DEffect(.degrees(heroCoverSettled ? 0 : -8), axis: (x: 1, y: 0, z: 0))
+                    .shadow(color: Color.black.opacity(0.22), radius: 20, x: 0, y: 12)
+                    .frame(maxWidth: .infinity, alignment: .center)
+
+                VStack(alignment: .leading, spacing: RomDetailLayout.titleToBadgesSpacing) {
+                    Text(rom.title ?? "Unknown Title")
+                        .font(.system(size: 30, weight: .bold, design: .rounded))
+                        .tracking(0.3)
+                        .foregroundColor(.white)
+                        .lineLimit(2)
+                        .minimumScaleFactor(0.75)
+
+                    HStack(spacing: 10) {
+                        Text(systemBadgeText)
+                            .font(.system(size: 12, weight: .bold, design: .rounded))
+                            .foregroundColor(accentColor)
+                            .padding(.horizontal, 12)
+                            .frame(height: 28)
+                            .background(accentColor.opacity(0.20))
+                            .clipShape(Capsule())
+
+                        Text(regionBadgeText)
+                            .font(.system(size: 12, weight: .bold, design: .rounded))
+                            .foregroundColor(.white.opacity(0.92))
+                            .padding(.horizontal, 12)
+                            .frame(height: 28)
+                            .background(Color.white.opacity(0.14))
+                            .clipShape(Capsule())
+                    }
+
+                    Button(action: launchGame) {
+                        HStack(spacing: 10) {
+                            Image(systemName: "play.fill")
+                                .font(.system(size: 14, weight: .bold))
+                            Text(isLaunching ? "Launching…" : "Play Game")
+                                .font(.system(size: 16, weight: .bold, design: .rounded))
+                            Spacer()
+                            Text(systemBadgeText)
+                                .font(.system(size: 11, weight: .bold, design: .rounded))
+                                .padding(.horizontal, 10)
+                                .frame(height: 26)
+                                .background(Color.white.opacity(0.18))
+                                .clipShape(Capsule())
+                        }
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 16)
+                        .frame(height: RomDetailLayout.actionHeight)
+                        .background(
+                            LinearGradient(
+                                colors: [AppColors.primary, AppColors.accent],
+                                startPoint: .leading,
+                                endPoint: .trailing
+                            )
+                        )
+                        .overlay(
+                            RoundedRectangle(cornerRadius: RomDetailLayout.actionCornerRadius, style: .continuous)
+                                .stroke(Color.white.opacity(0.14), lineWidth: 1)
+                        )
+                        .clipShape(RoundedRectangle(cornerRadius: RomDetailLayout.actionCornerRadius, style: .continuous))
+                        .shadow(color: AppColors.primary.opacity(0.28), radius: 14, x: 0, y: 8)
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(isLaunching)
+
+                    deluxeActionRow
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .padding(.top, RomDetailLayout.heroTopInset)
+            .padding(.horizontal, RomDetailLayout.pagePadding)
+            .padding(.bottom, RomDetailLayout.heroBottomInset)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        }
+        .frame(minHeight: RomDetailLayout.heroMinHeight)
+    }
+
+    private var heroBackground: some View {
+        ZStack {
+            if let coverData = CoverArtService.shared.resolve(for: rom)?.data,
                let coverImage = Image(data: coverData) {
                 coverImage
                     .resizable()
-                    .aspectRatio(contentMode: .fill)
-                    .frame(maxWidth: .infinity)
-                    .cornerRadius(16)
+                    .scaledToFill()
+                    .blur(radius: 50)
+                    .opacity(0.35)
+                    .overlay(accentColor.opacity(0.20))
+            } else {
+                LinearGradient(
+                    colors: [accentColor.opacity(0.9), AppColors.accent.opacity(0.65), AppColors.surface],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+                .overlay(
+                    PlatformPlaceholder(platform: rom.system)
+                        .opacity(0.18)
+                        .padding(28)
+                )
+            }
+        }
+        .clipShape(RoundedRectangle(cornerRadius: RomDetailLayout.heroCornerRadius, style: .continuous))
+    }
+
+    private var heroCover: some View {
+        Group {
+            if let coverData = CoverArtService.shared.resolve(for: rom)?.data,
+               let coverImage = Image(data: coverData) {
+                coverImage
+                    .resizable()
+                    .scaledToFill()
             } else {
                 PlatformPlaceholder(platform: rom.system)
-                    .frame(maxWidth: .infinity)
-                    .cornerRadius(16)
             }
         }
-        .frame(height: 300)
-    }
-
-    private var titleSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(rom.title ?? "Unknown Title")
-                .font(.title2)
-                .fontWeight(.bold)
-
-            HStack(spacing: 12) {
-                Text(rom.system ?? "Unknown Platform")
-                    .font(.subheadline)
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 6)
-                    .background(Color.blue.opacity(0.2))
-                    .foregroundColor(.blue)
-                    .cornerRadius(8)
-            }
-        }
-    }
-
-    private var metadataSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Details")
-                .font(.headline)
-
-            DetailRow(label: "System", value: rom.system ?? "Unknown")
-            DetailRow(label: "Checksum", value: String(rom.checksum?.prefix(16) ?? "Unknown"))
-            DetailRow(label: "Last Played", value: rom.lastPlayedAt?.formatted(date: .abbreviated, time: .shortened) ?? "Never")
-        }
-        .padding()
-        .background(Color.gray.opacity(0.1))
-        .cornerRadius(12)
+        .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 28, style: .continuous)
+                .stroke(Color.white.opacity(0.24), lineWidth: 1)
+        )
     }
 
     private var statsSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Statistics")
-                .font(.headline)
+        CollectorInfoCard(title: "Statistics", icon: "chart.bar.xaxis") {
+            VStack(alignment: .leading, spacing: 18) {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Play Time")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundColor(AppColors.textSecondary)
+                    Text(formatPlaytime(rom.playtimeTotal))
+                        .font(.system(size: 28, weight: .bold, design: .rounded))
+                        .foregroundColor(AppColors.textPrimary)
+                }
 
-            DetailRow(label: "Play Time", value: formatPlaytime(rom.playtimeTotal))
+                GeometryReader { proxy in
+                    ZStack(alignment: .leading) {
+                        Capsule()
+                            .fill(AppColors.surfaceLight.opacity(0.85))
+                        Capsule()
+                            .fill(
+                                LinearGradient(
+                                    colors: [AppColors.primary, AppColors.accent],
+                                    startPoint: .leading,
+                                    endPoint: .trailing
+                                )
+                            )
+                            .frame(width: max(proxy.size.width * animatedPlaytimeProgress, 18))
+                            .animation(.easeInOut(duration: 0.7), value: animatedPlaytimeProgress)
+                    }
+                }
+                .frame(height: 10)
+
+                HStack(spacing: 12) {
+                    deluxeStatPill(title: "Sessions", value: sessionCountText)
+                    deluxeStatPill(title: "Status", value: rom.lastPlayedAt == nil ? "Fresh import" : "Played")
+                }
+
+                if let lastPlayedText {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Last Session")
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundColor(AppColors.textSecondary)
+                        Text(lastPlayedText)
+                            .font(.system(size: 15, weight: .semibold))
+                            .foregroundColor(accentColor)
+                    }
+                }
+            }
         }
-        .padding()
-        .background(Color.gray.opacity(0.1))
-        .cornerRadius(12)
     }
 
-    private var actionsSection: some View {
-        VStack(spacing: 12) {
-            Button(action: launchGame) {
-                HStack {
-                    Image(systemName: "play.fill")
-                    Text("Play")
-                }
-                .font(.headline)
-                .foregroundColor(.white)
-                .frame(maxWidth: .infinity)
-                .padding()
-                .background(Color.blue)
-                .cornerRadius(12)
-            }
-            .disabled(isLaunching)
+    private var collectorDataSection: some View {
+        CollectorInfoCard(title: "Collector Data", icon: "shippingbox.fill") {
+            DetailRow(label: "Region", value: regionDetailText)
+            DetailRow(label: "ROM Size", value: formatFileSize(rom.fileSize))
+            DetailRow(label: "Save Type", value: inferredSaveType)
+            DetailRow(label: "Media", value: mediaFormat)
+            DetailRow(label: "Catalog ID", value: catalogReferenceText)
         }
+    }
+
+    private var fileDetailsSection: some View {
+        CollectorInfoCard(title: "File Details", icon: "doc.text.magnifyingglass") {
+            DetailRow(label: "SHA-1", value: shortSHA1)
+            DetailRow(label: "Checksum", value: shortChecksum)
+            DetailRow(label: "Added", value: addedDateText)
+            DetailRow(label: "File", value: rom.fileName ?? "Unknown")
+            DetailRow(label: "Path", value: rom.romPath ?? "Unavailable")
+        }
+    }
+
+    private var accentColor: Color {
+        SubpageUI.CollectorIdentity.accent(forSystem: rom.system)
+    }
+
+    private var systemBadgeText: String {
+        (rom.system ?? "Unknown").uppercased()
+    }
+
+    private var lastPlayedText: String? {
+        rom.lastPlayedAt?.formatted(date: .abbreviated, time: .omitted)
+    }
+
+    private var addedDateText: String {
+        rom.dateAdded?.formatted(date: .abbreviated, time: .omitted) ?? "Unknown"
+    }
+
+    private var regionBadgeText: String {
+        inferredRegion.shortCode
+    }
+
+    private var regionDetailText: String {
+        inferredRegion.displayName
+    }
+
+    private var shortChecksum: String {
+        guard let checksum = rom.checksum, !checksum.isEmpty else { return "Unavailable" }
+        return "\(checksum.prefix(8))…\(checksum.suffix(6))"
+    }
+
+    private var shortSHA1: String {
+        guard let sha1 = rom.romSha1, !sha1.isEmpty else { return "Unavailable" }
+        return "\(sha1.prefix(8))…\(sha1.suffix(6))"
+    }
+
+    private var playtimeProgress: CGFloat {
+        let twelveHours: Double = 12 * 60 * 60
+        let progress = min(max(Double(rom.playtimeTotal) / twelveHours, 0), 1)
+        return CGFloat(progress)
+    }
+
+    private var animatedPlaytimeProgress: CGFloat {
+        heroCoverSettled ? playtimeProgress : 0.02
+    }
+
+    private var inferredRegion: CollectorRegion {
+        let haystacks = [rom.title ?? "", rom.fileName ?? "", rom.canonicalTitleID ?? ""]
+            .map { $0.lowercased() }
+            .joined(separator: " ")
+
+        if haystacks.contains("japan") || haystacks.contains("(jp") || haystacks.contains("(j)") {
+            return .japan
+        }
+        if haystacks.contains("europe") || haystacks.contains("(eu") || haystacks.contains("(e)") {
+            return .europe
+        }
+        if haystacks.contains("usa") || haystacks.contains("us)") || haystacks.contains("(u)") || haystacks.contains("north america") {
+            return .usa
+        }
+        if haystacks.contains("world") || haystacks.contains("intl") || haystacks.contains("international") {
+            return .international
+        }
+        return .unknown
+    }
+
+    private var inferredSaveType: String {
+        switch SubpageUI.CollectorIdentity.normalizedSystemCode(rom.system) {
+        case "gbc":
+            return "Battery-backed"
+        case "gba":
+            return "SRAM / Flash"
+        case "nds":
+            return "EEPROM / Flash"
+        default:
+            return "Unknown"
+        }
+    }
+
+    private var mediaFormat: String {
+        let ext = (rom.fileName as NSString?)?.pathExtension.uppercased() ?? ""
+        guard !ext.isEmpty else { return "ROM image" }
+        return "\(ext) cartridge image"
+    }
+
+    private var catalogReferenceText: String {
+        if let canonicalTitleID = rom.canonicalTitleID, !canonicalTitleID.isEmpty {
+            return canonicalTitleID.uppercased()
+        }
+        return shortChecksum.replacingOccurrences(of: "…", with: "-")
+    }
+
+    private var collectorStatusText: String {
+        rom.isFavorite ? "Featured" : (rom.lastPlayedAt == nil ? "Archived" : "Active")
+    }
+
+    private var sessionCountText: String {
+        let minutes = max(Int(rom.playtimeTotal / 60), 0)
+        let estimatedSessions = max(rom.lastPlayedAt == nil ? 0 : 1, Int(ceil(Double(minutes) / 35.0)))
+        return "\(estimatedSessions)"
     }
 
     private func launchGame() {
+        let compatibility = ROMCompatibilityService.shared.compatibility(for: rom)
+        if let issue = compatibility.issue {
+            launchErrorMessage = issue.message
+            return
+        }
         isLaunching = true
         updateLastPlayed()
     }
@@ -360,16 +694,177 @@ struct RomDetailView: View {
         }
     }
 
+    private func toggleFavorite() {
+        rom.isFavorite.toggle()
+
+        do {
+            try viewContext.save()
+            NotificationCenter.default.post(name: .romLibraryDidChange, object: nil)
+        } catch {
+            rom.isFavorite.toggle()
+            launchErrorMessage = "Could not update favorite status: \(error.localizedDescription)"
+        }
+    }
+
     private func formatPlaytime(_ seconds: Int64) -> String {
         let minutes = seconds / 60
         if minutes < 60 {
-            return "\(minutes)m"
+            return "\(minutes) min"
         }
         let hours = minutes / 60
-        return "\(hours)h"
+        let remainingMinutes = minutes % 60
+        return remainingMinutes == 0 ? "\(hours) hr" : "\(hours) hr \(remainingMinutes) min"
     }
 
-    private let camelCaseToWords = try! NSRegularExpression(pattern: "([a-z])([A-Z])")
+    private func formatFileSize(_ bytes: Int64) -> String {
+        let formatter = ByteCountFormatter()
+        formatter.countStyle = .file
+        return formatter.string(fromByteCount: bytes)
+    }
+
+    @ViewBuilder
+    private var deluxeActionRow: some View {
+        HStack(spacing: 10) {
+            Button(action: toggleFavorite) {
+                deluxeActionButtonLabel(
+                    title: rom.isFavorite ? "Saved" : "Favorite",
+                    subtitle: collectorStatusText,
+                    icon: rom.isFavorite ? "heart.fill" : "heart"
+                )
+            }
+            .buttonStyle(.plain)
+
+            Button {
+                isShowingSaveStates = true
+            } label: {
+                deluxeActionButtonLabel(
+                    title: "Save States",
+                    subtitle: "Quick save",
+                    icon: "internaldrive.fill"
+                )
+            }
+            .buttonStyle(.plain)
+
+            if let shareURL = rom.romPath.map(URL.init(fileURLWithPath:)) {
+                ShareLink(item: shareURL) {
+                    deluxeActionButtonLabel(
+                        title: "Share",
+                        subtitle: "ROM file",
+                        icon: "square.and.arrow.up"
+                    )
+                }
+                .buttonStyle(.plain)
+            } else {
+                deluxeActionButtonLabel(
+                    title: "Share",
+                    subtitle: "Unavailable",
+                    icon: "square.and.arrow.up"
+                )
+                .opacity(0.55)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func deluxeActionButtonLabel(title: String, subtitle: String, icon: String) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Image(systemName: icon)
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundColor(accentColor)
+
+            Text(title)
+                .font(.system(size: 13, weight: .bold, design: .rounded))
+                .foregroundColor(.white)
+                .lineLimit(1)
+
+            Text(subtitle)
+                .font(.system(size: 11, weight: .medium))
+                .foregroundColor(.white.opacity(0.72))
+                .lineLimit(1)
+        }
+        .frame(maxWidth: .infinity, minHeight: 72, alignment: .topLeading)
+        .padding(14)
+        .background(.ultraThinMaterial.opacity(0.82))
+        .overlay(
+            RoundedRectangle(cornerRadius: RomDetailLayout.actionCornerRadius, style: .continuous)
+                .stroke(Color.white.opacity(0.14), lineWidth: 1)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: RomDetailLayout.actionCornerRadius, style: .continuous))
+    }
+
+    @ViewBuilder
+    private func deluxeStatPill(title: String, value: String) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(title)
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundColor(AppColors.textSecondary)
+            Text(value)
+                .font(.system(size: 18, weight: .bold, design: .rounded))
+                .foregroundColor(AppColors.textPrimary)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(14)
+        .background(AppColors.surfaceLight.opacity(0.56))
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+    }
+}
+
+private enum CollectorRegion {
+    case usa
+    case europe
+    case japan
+    case international
+    case unknown
+
+    var shortCode: String {
+        switch self {
+        case .usa: return "USA"
+        case .europe: return "EUR"
+        case .japan: return "JPN"
+        case .international: return "INTL"
+        case .unknown: return "UNK"
+        }
+    }
+
+    var displayName: String {
+        switch self {
+        case .usa: return "USA / North America"
+        case .europe: return "Europe"
+        case .japan: return "Japan"
+        case .international: return "International"
+        case .unknown: return "Unknown"
+        }
+    }
+}
+
+private struct CollectorInfoCard<Content: View>: View {
+    let title: String
+    let icon: String
+    @ViewBuilder let content: Content
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack(spacing: 10) {
+                Image(systemName: icon)
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundColor(AppColors.primary)
+                Text(title)
+                    .font(.title3.weight(.semibold))
+                    .foregroundColor(AppColors.textPrimary)
+            }
+
+            content
+        }
+        .padding(RomDetailLayout.cardPadding)
+        .background(AppColors.surface.opacity(0.92))
+        .overlay(.ultraThinMaterial.opacity(0.08))
+        .overlay(
+            RoundedRectangle(cornerRadius: RomDetailLayout.cardCornerRadius, style: .continuous)
+                .stroke(AppColors.surfaceLight.opacity(0.78), lineWidth: 1)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: RomDetailLayout.cardCornerRadius, style: .continuous))
+        .shadow(color: .black.opacity(0.08), radius: 10, x: 0, y: 6)
+    }
 }
 
 struct DetailRow: View {
@@ -379,13 +874,18 @@ struct DetailRow: View {
     var body: some View {
         HStack {
             Text(label)
-                .foregroundColor(.secondary)
-                .frame(maxWidth: .infinity, alignment: .leading)
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundColor(AppColors.textSecondary)
+                .frame(width: RomDetailLayout.detailLabelWidth, alignment: .leading)
 
+            Spacer(minLength: 12)
             Text(value)
-                .fontWeight(.medium)
-                .frame(maxWidth: .infinity, alignment: .trailing)
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundColor(AppColors.textPrimary)
+                .multilineTextAlignment(.trailing)
+                .frame(alignment: .trailing)
         }
+        .padding(.vertical, RomDetailLayout.rowVerticalPadding)
     }
 }
 
@@ -408,7 +908,7 @@ extension ROMLibraryEntry {
         // Use the object's id
         let gameUUID = id
         
-        let normalizedSystem = (system ?? "").trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        let normalizedSystem = resolvedSystemCode
 
         // Extract extension from imported filename and normalize case
         let primaryExtension: String
@@ -475,7 +975,7 @@ extension ROMLibraryEntry {
             id: gameUUID,
             title: title,
             platform: platformString,
-            coverImage: nil,
+            coverImage: CoverArtService.shared.resolve(for: self)?.data,
             rating: 0.0,
             lastPlayedDate: lastPlayedAt,
             totalPlayTime: Int(playtimeTotal),
@@ -496,21 +996,30 @@ class ROMLibraryEntry: NSManagedObject {
     @NSManaged var fileName: String?
     @NSManaged var fileSize: Int64
     @NSManaged var coverImageData: Data?
+    @NSManaged var customCoverURL: String?
     @NSManaged var system: String?
     @NSManaged var lastPlayedAt: Date?
     @NSManaged var playtimeTotal: Int64
     @NSManaged var isFavorite: Bool
     @NSManaged var dateAdded: Date?
     @NSManaged var checksum: String?
+    @NSManaged var romSha1: String?
+    @NSManaged var defaultCoverKey: String?
+    @NSManaged var canonicalTitleID: String?
 }
 
 final class LibraryViewModel: ObservableObject {
     @Published var isLoading = false
     @Published var filteredEntries: [ROMLibraryEntry] = []
 
+    private let tierResolver: (String) -> Tier
     private var allEntries: [ROMLibraryEntry] = []
     private var fetchedResultsController: NSFetchedResultsController<ROMLibraryEntry>?
     private weak var viewContext: NSManagedObjectContext?
+
+    init(tierResolver: @escaping (String) -> Tier = LibraryViewModel.defaultTierResolver) {
+        self.tierResolver = tierResolver
+    }
 
     func loadEntries(in context: NSManagedObjectContext) {
         isLoading = true
@@ -533,22 +1042,20 @@ final class LibraryViewModel: ObservableObject {
             allEntries = fetchedResultsController?.fetchedObjects ?? []
             filteredEntries = allEntries
         } catch {
-            print("Failed to fetch ROMs: \(error)")
             filteredEntries = []
         }
 
         isLoading = false
     }
 
-    func refreshEntries() {
-        guard let fetchedObjects = fetchedResultsController?.fetchedObjects else { return }
-        allEntries = fetchedObjects
-    }
-
     func applyFilter(_ filter: LibraryFilter) {
         switch filter {
         case .all:
             filteredEntries = allEntries
+        case .gb:
+            filteredEntries = allEntries.filter { $0.resolvedSystemCode == "gb" }
+        case .gbc:
+            filteredEntries = allEntries.filter { $0.resolvedSystemCode == "gbc" }
         case .recent:
             let oneWeekAgo = Calendar.current.date(byAdding: .day, value: -7, to: Date()) ?? Date()
             filteredEntries = allEntries.filter { entry in
@@ -559,15 +1066,51 @@ final class LibraryViewModel: ObservableObject {
             filteredEntries = allEntries.filter { entry in
                 entry.isFavorite
             }
-        case .stable, .experimental:
-            // Tier filtering not implemented - show all games
-            filteredEntries = allEntries
+        case .stable:
+            let tiersByChecksum = Self.compatibilityTiersByChecksum()
+            filteredEntries = allEntries.filter { entry in
+                guard let checksum = entry.checksum, !checksum.isEmpty else { return false }
+                return tiersByChecksum[checksum] == .stable || tierResolver(checksum) == .stable
+            }
+        case .experimental:
+            let tiersByChecksum = Self.compatibilityTiersByChecksum()
+            filteredEntries = allEntries.filter { entry in
+                guard let checksum = entry.checksum, !checksum.isEmpty else { return false }
+                return tiersByChecksum[checksum] == .experimental || tierResolver(checksum) == .experimental
+            }
         }
+    }
+
+    private static func compatibilityTiersByChecksum() -> [String: Tier] {
+        var tiersByChecksum = Dictionary(
+            uniqueKeysWithValues: CompatibilityDataStore.shared.getAllROMs().map { ($0.romHash, $0.tier) }
+        )
+
+        if tiersByChecksum.isEmpty,
+           let fallbackEntries = try? AzureApiStub.shared.fetchCompatibilityMatrix() {
+            for entry in fallbackEntries {
+                tiersByChecksum[entry.romHash] = Tier(rawValue: entry.tier.lowercased()) ?? .unknown
+            }
+        }
+        return tiersByChecksum
+    }
+
+    private static func defaultTierResolver(for checksum: String) -> Tier {
+        let cachedTier = CompatibilityDataStore.shared.getTier(for: checksum)
+        if cachedTier != .unknown {
+            return cachedTier
+        }
+        if let fallback = try? AzureApiStub.shared.fetchCompatibilityMatrix().first(where: { $0.romHash == checksum }) {
+            return Tier(rawValue: fallback.tier.lowercased()) ?? .unknown
+        }
+        return .unknown
     }
 }
 
 enum LibraryFilter: CaseIterable {
     case all
+    case gb
+    case gbc
     case recent
     case favorites
     case stable
@@ -576,6 +1119,8 @@ enum LibraryFilter: CaseIterable {
     var displayName: String {
         switch self {
         case .all: return "All"
+        case .gb: return "Game Boy"
+        case .gbc: return "Game Boy Color"
         case .recent: return "Recent"
         case .favorites: return "Favorites"
         case .stable: return "Stable"

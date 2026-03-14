@@ -35,6 +35,8 @@ final class PersistenceController: @unchecked Sendable {
         let savePath = PersistenceController.getOrCreateDir(name: "savestates")
         romDirectory = romPath
         saveStateDirectory = savePath
+
+        runCoverDataMigrationIfNeeded(skipPersistenceFlag: inMemory)
     }
 
     nonisolated var viewContext: NSManagedObjectContext {
@@ -73,6 +75,45 @@ final class PersistenceController: @unchecked Sendable {
         }
 
         return directory
+    }
+
+    private func runCoverDataMigrationIfNeeded(skipPersistenceFlag: Bool) {
+        let defaultsKey = "cover-data-migration-v1"
+        if !skipPersistenceFlag, UserDefaults.standard.bool(forKey: defaultsKey) {
+            return
+        }
+
+        container.performBackgroundTask { context in
+            let request = NSFetchRequest<ROMLibraryEntry>(entityName: "ROMLibraryEntry")
+            var didMutate = false
+
+            do {
+                let entries = try context.fetch(request)
+                for entry in entries {
+                    if (entry.customCoverURL ?? "").isEmpty, CoverArtService.shared.customCoverExists(for: entry.id) {
+                        entry.customCoverURL = CoverArtService.shared.customCoverURL(for: entry.id).path
+                        didMutate = true
+                    }
+
+                    let hasEmbedded = !(entry.coverImageData?.isEmpty ?? true)
+                    let hasCustom = !((entry.customCoverURL ?? "").isEmpty) || CoverArtService.shared.customCoverExists(for: entry.id)
+                    if !hasEmbedded, !hasCustom {
+                        CoverArtService.shared.assignDeterministicPlaceholderIfNeeded(to: entry)
+                        didMutate = true
+                    }
+                }
+
+                if context.hasChanges {
+                    try context.save()
+                }
+
+                if didMutate || !skipPersistenceFlag {
+                    UserDefaults.standard.set(true, forKey: defaultsKey)
+                }
+            } catch {
+                print("Cover migration failed: \\(error)")
+            }
+        }
     }
 }
 
@@ -142,9 +183,30 @@ private func createManagedObjectModel() -> NSManagedObjectModel {
     checksumAttr.attributeType = .stringAttributeType
     checksumAttr.isOptional = true
 
+    let gameRomSha1Attr = NSAttributeDescription()
+    gameRomSha1Attr.name = "romSha1"
+    gameRomSha1Attr.attributeType = .stringAttributeType
+    gameRomSha1Attr.isOptional = true
+
+    let defaultCoverKeyAttr = NSAttributeDescription()
+    defaultCoverKeyAttr.name = "defaultCoverKey"
+    defaultCoverKeyAttr.attributeType = .stringAttributeType
+    defaultCoverKeyAttr.isOptional = true
+
+    let canonicalTitleIDAttr = NSAttributeDescription()
+    canonicalTitleIDAttr.name = "canonicalTitleID"
+    canonicalTitleIDAttr.attributeType = .stringAttributeType
+    canonicalTitleIDAttr.isOptional = true
+
+    let customCoverURLAttr = NSAttributeDescription()
+    customCoverURLAttr.name = "customCoverURL"
+    customCoverURLAttr.attributeType = .stringAttributeType
+    customCoverURLAttr.isOptional = true
+
     gameEntity.properties = [
         idAttr, titleAttr, fileNameAttr, fileSizeAttr, coverImageDataAttr,
-        systemAttr, lastPlayedAttr, playTimeAttr, isFavoriteAttr, dateAddedAttr, checksumAttr
+        systemAttr, lastPlayedAttr, playTimeAttr, isFavoriteAttr, dateAddedAttr, checksumAttr,
+        gameRomSha1Attr, defaultCoverKeyAttr, canonicalTitleIDAttr, customCoverURLAttr
     ]
 
     let entitlementEntity = NSEntityDescription()
@@ -254,9 +316,30 @@ private func createManagedObjectModel() -> NSManagedObjectModel {
     romChecksumAttr.attributeType = .stringAttributeType
     romChecksumAttr.isOptional = true
 
+    let romSha1Attr = NSAttributeDescription()
+    romSha1Attr.name = "romSha1"
+    romSha1Attr.attributeType = .stringAttributeType
+    romSha1Attr.isOptional = true
+
+    let romDefaultCoverKeyAttr = NSAttributeDescription()
+    romDefaultCoverKeyAttr.name = "defaultCoverKey"
+    romDefaultCoverKeyAttr.attributeType = .stringAttributeType
+    romDefaultCoverKeyAttr.isOptional = true
+
+    let romCanonicalTitleIDAttr = NSAttributeDescription()
+    romCanonicalTitleIDAttr.name = "canonicalTitleID"
+    romCanonicalTitleIDAttr.attributeType = .stringAttributeType
+    romCanonicalTitleIDAttr.isOptional = true
+
+    let romCustomCoverURLAttr = NSAttributeDescription()
+    romCustomCoverURLAttr.name = "customCoverURL"
+    romCustomCoverURLAttr.attributeType = .stringAttributeType
+    romCustomCoverURLAttr.isOptional = true
+
     romEntryEntity.properties = [
         romIdAttr, romTitleAttr, romFileNameAttr, romFileSizeAttr, romCoverImageDataAttr,
-        romSystemAttr, romPlatformRawAttr, romLastPlayedAtAttr, romPlaytimeTotalAttr, romIsFavoriteAttr, romDateAddedAttr, romChecksumAttr
+        romSystemAttr, romPlatformRawAttr, romLastPlayedAtAttr, romPlaytimeTotalAttr, romIsFavoriteAttr, romDateAddedAttr, romChecksumAttr,
+        romSha1Attr, romDefaultCoverKeyAttr, romCanonicalTitleIDAttr, romCustomCoverURLAttr
     ]
 
     let saveStateEntity = NSEntityDescription()

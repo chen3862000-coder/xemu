@@ -80,6 +80,10 @@ public protocol EmulatorCore: AnyObject {
     /// Get audio samples for the current frame
     /// - Returns: Raw audio samples (16-bit signed, stereo)
     func getAudioSamples() -> Data?
+
+    /// Get the current audio sample rate reported by the core.
+    /// - Returns: Sample rate in Hz (e.g. 32768, 44100).
+    func getAudioSampleRate() -> Int
     
     /// Get current save state data
     /// - Returns: Serialized emulator state
@@ -89,6 +93,15 @@ public protocol EmulatorCore: AnyObject {
     /// - Parameter state: Serialized emulator state to restore
     /// - Returns: true if state loaded successfully
     func loadState(_ state: Data) -> Bool
+
+    /// Export native in-game battery save RAM.
+    /// - Returns: Raw battery save payload (.sav-style), or nil when unsupported.
+    func exportBatterySave() -> Data?
+
+    /// Restore native in-game battery save RAM.
+    /// - Parameter data: Raw battery save payload.
+    /// - Returns: true when applied successfully.
+    func importBatterySave(_ data: Data) -> Bool
     
     /// Set input state for the current frame
     /// - Parameter inputType: Type of input (button, axis, etc.)
@@ -111,8 +124,11 @@ extension EmulatorCore {
     public func getFrameBuffer() -> Data? { nil }
     public func getFrameBufferInfo() -> FrameBufferInfo? { nil }
     public func getAudioSamples() -> Data? { nil }
+    public func getAudioSampleRate() -> Int { 44_100 }
     public func saveState() -> Data? { nil }
     public func loadState(_ state: Data) -> Bool { false }
+    public func exportBatterySave() -> Data? { nil }
+    public func importBatterySave(_ data: Data) -> Bool { false }
     public func setInput(_ inputType: Int, value: Float) {}
     public func reset() {}
 }

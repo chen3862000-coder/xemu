@@ -2,7 +2,6 @@ import Foundation
 import AVFoundation
 
 public final class AudioEngine {
-    
     private let engine: AVAudioEngine
     private let playerNode: AVAudioPlayerNode
     private let queue = DispatchQueue(label: "com.xemu.audio", qos: .userInteractive)
@@ -10,39 +9,49 @@ public final class AudioEngine {
     private var isPlaying = false
     private var queuedFrames: UInt32 = 0
     private var pendingPCM = Data()
+    private var pendingPCMReadOffset = 0
     private let sampleRate: Double
     private let channels: AVAudioChannelCount
     private let outputFormat: AVAudioFormat
     private let maxQueuedFrames: UInt32
     private let minStartQueuedFrames: UInt32
     private let hardResetQueuedFrames: UInt32
+    private let softLatencyCapFrames: UInt32
     private let preferredScheduleFrames: UInt32
     private let minPartialScheduleFrames: UInt32
-    private let softLatencyCapFrames: UInt32
-    
-    public init(sampleRate: Double = 44100,
-                channels: AVAudioChannelCount = 2) {
+    private var postLoadSilenceUntil: CFTimeInterval = 0
+    private var postLoadFadeStart: CFTimeInterval = 0
+    private var postLoadFadeUntil: CFTimeInterval = 0
+    private var consecutiveSilentFrames: Int = 0
+    private let noiseGateThreshold: Int32 = 28000
+
+    public init(sampleRate: Double = 48_000.0, channels: Int = 2, volume: Float = 1.0) {
         self.sampleRate = sampleRate
-        self.channels = channels
+        self.channels = AVAudioChannelCount(channels)
+        self.engine = AVAudioEngine()
+        self.playerNode = AVAudioPlayerNode()
         
-        guard let format = AVAudioFormat(commonFormat: .pcmFormatInt16,
-                                         sampleRate: sampleRate,
-                                         channels: channels,
-                                         interleaved: true) else {
-            fatalError("Failed to create AVAudioFormat")
-        }
-
-        outputFormat = format
-        maxQueuedFrames = UInt32(sampleRate * 0.22)
-        minStartQueuedFrames = UInt32(sampleRate * 0.035)
-        hardResetQueuedFrames = UInt32(sampleRate * 0.55)
-        preferredScheduleFrames = max(768, UInt32(sampleRate / 30.0))
-        minPartialScheduleFrames = 256
-        softLatencyCapFrames = UInt32(sampleRate * 0.14)
-        engine = AVAudioEngine()
-        playerNode = AVAudioPlayerNode()
-
+        let targetFPS: Double = 60.0
+        let secondsPerFrame = 1.0 / targetFPS
+        maxQueuedFrames = UInt32(sampleRate * 0.35)
+        minStartQueuedFrames = UInt32(sampleRate * secondsPerFrame * 2.0)
+        hardResetQueuedFrames = UInt32(sampleRate * 0.90)
+        softLatencyCapFrames = UInt32(sampleRate * 0.20)
+        // Keep scheduling cadence aligned to one emulation frame of audio.
+        // A fixed 800-frame target starves 44.1kHz streams (~735-739 frames/tick).
+        let framesPerTick = max(1, Int((sampleRate / targetFPS).rounded()))
+        preferredScheduleFrames = UInt32(framesPerTick)
+        // Allow smaller partial chunks to reduce underrun risk when cores emit
+        // variable audio batch sizes (observed on NDS/libretro).
+        minPartialScheduleFrames = UInt32(max(128, Int(Double(framesPerTick) * 0.25)))
+        
+        outputFormat = AVAudioFormat(commonFormat: .pcmFormatInt16,
+                                     sampleRate: sampleRate,
+                                     channels: self.channels,
+                                     interleaved: true)!
+        
         setupEngine()
+        setVolume(volume)
     }
     
     private func setupEngine() {
@@ -68,29 +77,89 @@ public final class AudioEngine {
 
         queue.async { [weak self] in
             guard let self else { return }
+            let now = CACurrentMediaTime()
 
-            self.pendingPCM.append(samples)
-
-            let chunkBytes = Int(self.preferredScheduleFrames) * bytesPerFrame
-            while self.pendingPCM.count >= chunkBytes {
-                let chunk = self.pendingPCM.prefix(chunkBytes)
-                if let buffer = self.makePCMBuffer(from: chunk, bytesPerFrame: bytesPerFrame) {
-                    self.playBufferOnQueue(buffer)
-                }
-                self.pendingPCM.removeFirst(chunkBytes)
+            if now < self.postLoadSilenceUntil {
+                return
             }
 
-            // If audio is starving, schedule a partial chunk, but avoid very tiny buffers
-            // because they increase scheduling jitter and can produce audible crackle.
-            let minPartialBytes = Int(self.minPartialScheduleFrames) * bytesPerFrame
-            let shouldDrainPartial =
-                self.pendingPCM.count >= minPartialBytes &&
-                (self.queuedFrames == 0 || (!self.isPlaying && self.queuedFrames < self.minStartQueuedFrames))
+            var workingSamples = samples
+            if now < self.postLoadFadeUntil {
+                workingSamples = self.applyPostLoadFade(to: samples, atTime: now, bytesPerFrame: bytesPerFrame)
+            }
 
-            if shouldDrainPartial,
-               let buffer = self.makePCMBuffer(from: self.pendingPCM, bytesPerFrame: bytesPerFrame) {
-                self.pendingPCM.removeAll(keepingCapacity: true)
-                self.playBufferOnQueue(buffer)
+            if !self.isAudioValid(workingSamples) {
+                self.consecutiveSilentFrames += 1
+                if self.consecutiveSilentFrames < 3 {
+                    return
+                }
+            } else {
+                self.consecutiveSilentFrames = 0
+            }
+
+            // Accumulate incoming PCM and drain in bounded chunks to avoid
+            // dropping whole packets when queue pressure is transient.
+            self.pendingPCM.append(workingSamples)
+            self.drainPendingPCM(bytesPerFrame: bytesPerFrame)
+        }
+    }
+
+    private func isAudioValid(_ samples: Data) -> Bool {
+        let threshold = noiseGateThreshold
+        let checkCount = min(samples.count / 2, 64)
+        var loudCount = 0
+
+        samples.withUnsafeBytes { raw in
+            let pcm = raw.bindMemory(to: Int16.self)
+            for i in 0..<checkCount {
+                let sample = abs(Int32(pcm[i]))
+                if sample > threshold {
+                    loudCount += 1
+                }
+            }
+        }
+
+        if loudCount > checkCount / 2 {
+            return false
+        }
+        return true
+    }
+
+    private func drainPendingPCM(bytesPerFrame: Int) {
+        guard bytesPerFrame > 0 else { return }
+        while queuedFrames < maxQueuedFrames {
+            let availableFrames = pendingPCM.count / bytesPerFrame
+            if availableFrames == 0 { return }
+
+            let chunkFrames: Int
+            if availableFrames >= Int(preferredScheduleFrames) {
+                chunkFrames = Int(preferredScheduleFrames)
+            } else if availableFrames >= Int(minPartialScheduleFrames),
+                      (!isPlaying || queuedFrames <= (minStartQueuedFrames / 2)) {
+                // When queue depth is low, accept smaller chunks to avoid bursty
+                // enqueue patterns that can underrun on variable-size core audio.
+                chunkFrames = availableFrames
+            } else if queuedFrames == 0 {
+                // Recover quickly from underrun even if we're already marked as playing.
+                chunkFrames = availableFrames
+            } else if !isPlaying && queuedFrames == 0 {
+                // Kickstart playback with whatever we have.
+                chunkFrames = availableFrames
+            } else {
+                return
+            }
+
+            let chunkBytes = chunkFrames * bytesPerFrame
+            let chunkStart = pendingPCMReadOffset
+            let chunkEnd = chunkStart + chunkBytes
+            let chunk = pendingPCM[chunkStart..<chunkEnd]
+            pendingPCMReadOffset = chunkEnd
+            compactPendingPCMIfNeeded()
+
+            if let buffer = makePCMBuffer(from: Data(chunk), bytesPerFrame: bytesPerFrame) {
+                playBufferOnQueue(buffer)
+            } else {
+                return
             }
         }
     }
@@ -120,7 +189,6 @@ public final class AudioEngine {
             do {
                 try engine.start()
             } catch {
-                NSLog("[AudioEngine] Failed to start engine: %@", error.localizedDescription)
                 return
             }
         }
@@ -131,16 +199,6 @@ public final class AudioEngine {
             queuedFrames = 0
             isPlaying = false
             pendingPCM.removeAll(keepingCapacity: true)
-        }
-
-        if queuedFrames > maxQueuedFrames {
-            return
-        }
-
-        // Keep latency bounded: if playback is already comfortably ahead, drop new chunks
-        // rather than extending audible delay.
-        if isPlaying && queuedFrames > softLatencyCapFrames {
-            return
         }
 
         let frames = buffer.frameLength
@@ -166,6 +224,7 @@ public final class AudioEngine {
             self?.isPlaying = false
             self?.queuedFrames = 0
             self?.pendingPCM.removeAll(keepingCapacity: false)
+            self?.pendingPCMReadOffset = 0
         }
     }
     
@@ -188,17 +247,75 @@ public final class AudioEngine {
     public func setVolume(_ volume: Float) {
         engine.mainMixerNode.outputVolume = max(0.0, min(1.0, volume))
     }
-    
+
+    /// Flush queued audio and quarantine output briefly after state restore,
+    /// then fade-in to avoid audible glitches from transient bad core samples.
+    public func quarantineAfterStateLoad(silenceMs: Int = 350, fadeInMs: Int = 150) {
+        queue.async { [weak self] in
+            guard let self else { return }
+            let now = CACurrentMediaTime()
+            self.playerNode.stop()
+            self.playerNode.reset()
+            self.queuedFrames = 0
+            self.pendingPCM.removeAll(keepingCapacity: true)
+            self.pendingPCMReadOffset = 0
+            self.isPlaying = false
+
+            let silenceSeconds = max(0.0, Double(silenceMs) / 1000.0)
+            let fadeSeconds = max(0.0, Double(fadeInMs) / 1000.0)
+            self.postLoadSilenceUntil = now + silenceSeconds
+            self.postLoadFadeStart = self.postLoadSilenceUntil
+            self.postLoadFadeUntil = self.postLoadFadeStart + fadeSeconds
+        }
+    }
+
+    private func applyPostLoadFade(to samples: Data, atTime now: CFTimeInterval, bytesPerFrame: Int) -> Data {
+        guard bytesPerFrame > 0 else { return samples }
+        let fadeDuration = max(postLoadFadeUntil - postLoadFadeStart, 0.001)
+        let startProgress = max(0.0, min(1.0, (now - postLoadFadeStart) / fadeDuration))
+        if startProgress >= 0.999 {
+            return samples
+        }
+
+        var output = samples
+        let frameCount = max(0, output.count / bytesPerFrame)
+        if frameCount == 0 {
+            return output
+        }
+        let endTime = now + (Double(frameCount) / sampleRate)
+        let endProgress = max(0.0, min(1.0, (min(endTime, postLoadFadeUntil) - postLoadFadeStart) / fadeDuration))
+
+        output.withUnsafeMutableBytes { raw in
+            let pcm = raw.bindMemory(to: Int16.self)
+            guard !pcm.isEmpty else { return }
+
+            let channelsPerFrame = max(1, Int(channels))
+            let frameTotal = pcm.count / channelsPerFrame
+            guard frameTotal > 0 else { return }
+
+            for frame in 0..<frameTotal {
+                let t = frameTotal > 1 ? Double(frame) / Double(frameTotal - 1) : 0.0
+                let gain = Float(startProgress + (endProgress - startProgress) * t)
+                for ch in 0..<channelsPerFrame {
+                    let idx = frame * channelsPerFrame + ch
+                    let scaled = Float(pcm[idx]) * gain
+                    let clipped = max(Float(Int16.min), min(Float(Int16.max), scaled))
+                    pcm[idx] = Int16(clipped.rounded())
+                }
+            }
+        }
+
+        return output
+    }
+
     public func configureAudioSession() {
         #if os(iOS)
         do {
             let session = AVAudioSession.sharedInstance()
-            // Use a neutral playback mode for emulator audio. `.moviePlayback` can make
-            // game audio feel softer/processed on some devices.
-            try session.setCategory(.playback, mode: .default, options: [])
-            // Prefer the core's native sample rate when possible to reduce resampling.
+            try session.setCategory(.playback, mode: .default, options: [.mixWithOthers])
             try session.setPreferredSampleRate(sampleRate)
-            try session.setPreferredIOBufferDuration(0.008)
+            let targetBufferDuration = 0.04
+            try session.setPreferredIOBufferDuration(targetBufferDuration)
             try session.setActive(true)
         } catch {
         }
@@ -217,5 +334,21 @@ public final class AudioEngine {
     
     public var isPlayingAudio: Bool {
         return isPlaying && engine.isRunning
+    }
+
+    private func compactPendingPCMIfNeeded() {
+        guard pendingPCMReadOffset > 0 else { return }
+        if pendingPCMReadOffset == pendingPCM.count {
+            pendingPCM.removeAll(keepingCapacity: true)
+            pendingPCMReadOffset = 0
+            return
+        }
+
+        let consumedEnoughToCompact = pendingPCMReadOffset >= 16_384
+        let consumedMostOfBuffer = pendingPCMReadOffset * 2 >= pendingPCM.count
+        guard consumedEnoughToCompact || consumedMostOfBuffer else { return }
+
+        pendingPCM.removeSubrange(0..<pendingPCMReadOffset)
+        pendingPCMReadOffset = 0
     }
 }

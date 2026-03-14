@@ -188,7 +188,7 @@ private struct ButtonActionView<Label: View>: View {
     let onPress: () -> Void
     let onRelease: () -> Void
     let label: (Bool) -> Label
-    @State private var isPressed = false
+    @State private var pressTracker = TouchPressTracker()
     
     init(
         onPress: @escaping () -> Void,
@@ -201,26 +201,20 @@ private struct ButtonActionView<Label: View>: View {
     }
     
     var body: some View {
-        label(isPressed)
+        label(pressTracker.isPressed)
             .contentShape(Rectangle())
-            .highPriorityGesture(
-                DragGesture(minimumDistance: 0)
-                    .onChanged { _ in
-                        if !isPressed {
-                            isPressed = true
-                            onPress()
-                        }
-                    }
-                    .onEnded { _ in
-                        if isPressed {
-                            isPressed = false
-                            onRelease()
-                        }
-                    }
-            )
+            .onLongPressGesture(minimumDuration: 0, maximumDistance: .infinity, pressing: { pressing in
+                switch pressTracker.transition(for: pressing) {
+                case .pressed:
+                    onPress()
+                case .released:
+                    onRelease()
+                case .none:
+                    break
+                }
+            }, perform: {})
             .onDisappear {
-                if isPressed {
-                    isPressed = false
+                if pressTracker.reset() {
                     onRelease()
                 }
             }

@@ -60,28 +60,21 @@ final class StableSystemsCoordinator {
             throw CoreError.coreNotLoaded
         }
 
-        do {
-            if let data = try core.saveState() {
-                // TODO: Implement saveStateStorage.save when SaveStateStorage API is ready
-                // try saveStateStorage.save(data: data, for: url, slot: slot)
-            }
-        } catch {
+        guard core.saveState() != nil else {
             throw CoreError.saveStateFailed
         }
+
+        // TODO: Persist state payload once StableSystemsCoordinator is wired to a ROM identity.
+        _ = slot
     }
 
     func loadState(from slot: Int) throws {
-        guard let core = activeCore else {
+        guard activeCore != nil else {
             throw CoreError.coreNotLoaded
         }
 
-        do {
-            // TODO: Implement saveStateStorage.load when SaveStateStorage API is ready
-            // let data = try saveStateStorage.load(for: url, slot: slot)
-            // try core.loadState(from: data)
-        } catch {
-            throw CoreError.loadStateFailed
-        }
+        // TODO: Load a previously persisted state once slot-to-ROM lookup exists here.
+        _ = slot
     }
 
     func getCurrentCore() -> (any EmulatorCore)? {
@@ -100,12 +93,8 @@ final class StableSystemsCoordinator {
         }
     }
 
-    private var url: URL {
-        URL(fileURLWithPath: "")
-    }
-
     private func setupInputHandling(for core: any EmulatorCore) {
-        inputBus.addListener { [weak self] event in
+        _ = inputBus.addListener { [weak self] event in
             guard let self = self else { return }
             Task { @MainActor [weak self] in
                 guard let self = self, let core = self.activeCore else { return }

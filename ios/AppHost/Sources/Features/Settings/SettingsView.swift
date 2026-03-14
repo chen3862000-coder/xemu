@@ -3,417 +3,781 @@ import CoreData
 #if canImport(UIKit)
 import UIKit
 #endif
-#if canImport(AppKit)
-import AppKit
-#endif
 
 struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var themeController: ThemeController
+    @EnvironmentObject private var shellThemeManager: ShellThemeManager
+
     @State private var showingUpgrade = false
-    @AppStorage("frameSkipEnabled") private var frameSkipEnabled = false
-    
-    var body: some View {
-        ZStack {
-            backgroundGradients
+    @State private var showingShareSheet = false
+    @State private var versionTapCount = 0
+    @State private var showResetStatsConfirm = false
 
-            VStack(spacing: 0) {
-                SettingsHeader {
-                    dismiss()
-                }
+    @AppStorage("audioQuality") private var audioQuality = 1
+    @AppStorage("respectLowPowerMode") private var respectLowPowerMode = true
+    @AppStorage("performanceMode") private var performanceModeRaw = PerformanceMode.auto.rawValue
+    @AppStorage("showFPSMeter") private var showFPSMeter = false
+    @AppStorage("showCartridgeLaunchIntro") private var showCartridgeLaunchIntro = true
 
-                ScrollView {
-                    VStack(spacing: 18) {
-                        appInfoCard
-                        appearanceCard
-                        settingsItems
-                        footerSection
-                    }
-                    .padding(.top, 14)
-                    .padding(.horizontal, 16)
-                    .padding(.bottom, 32)
-                }
-            }
-        }
-        .sheet(isPresented: $showingUpgrade) {
-            UpgradeView()
-        }
+    @AppStorage("settings.devModeUnlocked") private var devModeUnlocked = false
+    @AppStorage("proUnlocked") private var proUnlocked = false
+    @AppStorage("settings.dev.memoryMonitor") private var devMemoryMonitor = false
+    @AppStorage("settings.dev.thermalLogging") private var devThermalLogging = false
+
+    @AppStorage("settings.controller.autoImmersive") private var controllerAutoImmersive = true
+    @AppStorage("settings.controller.hideTouchControls") private var controllerHideTouchControls = false
+    @AppStorage("settings.controller.touchFallback") private var controllerTouchFallback = TouchFallbackMode.auto.rawValue
+    @AppStorage("settings.controller.stickSensitivity") private var controllerStickSensitivity = StickSensitivity.medium.rawValue
+    @AppStorage("settings.controller.hapticFeedback") private var controllerHapticFeedback = true
+
+    private let appStoreURL = URL(string: "https://apps.apple.com")
+
+    private var performanceMode: PerformanceMode {
+        get { PerformanceMode(rawValue: performanceModeRaw) ?? .auto }
+        set { performanceModeRaw = newValue.rawValue }
     }
-    
-    private var backgroundGradients: some View {
-        ZStack {
-            AppColors.background.ignoresSafeArea()
 
-            Circle()
-                .fill(
-                    LinearGradient(
-                        colors: [AppColors.primary.opacity(0.18), AppColors.accent.opacity(0.14)],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                )
-                .blur(radius: 120)
-                .frame(width: 380, height: 380)
-                .offset(x: 140, y: -230)
-
-            Circle()
-                .fill(
-                    LinearGradient(
-                        colors: [AppColors.accent.opacity(0.12), AppColors.primary.opacity(0.10)],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                )
-                .blur(radius: 140)
-                .frame(width: 420, height: 420)
-                .offset(x: -170, y: 320)
-        }
-    }
-    
-    private var appInfoCard: some View {
-        VStack(spacing: 14) {
-            ZStack {
-                RoundedRectangle(cornerRadius: 20)
-                    .fill(
-                        LinearGradient(
-                            colors: [AppColors.primary, AppColors.accent],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
-                    .frame(width: 80, height: 80)
-                    .shadow(color: AppColors.primary.opacity(0.35), radius: 14, x: 0, y: 8)
-
-                SettingsBrandIconGlyph()
-                    .frame(width: 54, height: 54)
-            }
-
-            VStack(spacing: 4) {
-                Text("XEmu Pro")
-                    .font(.system(size: 20, weight: .bold))
-                    .foregroundColor(AppColors.textPrimary)
-
-                Text(appVersionText)
-                    .font(.system(size: 12))
-                    .foregroundColor(AppColors.textMuted)
-            }
-
-            HStack(spacing: 8) {
-                Circle()
-                    .fill(AppColors.success)
-                    .frame(width: 8, height: 8)
-                Text("Free Plan")
-                    .font(.system(size: 12, weight: .medium))
-                    .foregroundColor(AppColors.textPrimary)
-            }
-            .padding(.horizontal, 14)
-            .padding(.vertical, 8)
-            .background(AppColors.background.opacity(0.45))
-            .overlay(
-                Capsule()
-                    .stroke(AppColors.surfaceLight.opacity(0.5), lineWidth: 1)
-            )
-            .clipShape(Capsule())
-        }
-        .padding(24)
-        .frame(maxWidth: .infinity)
-        .background(AppColors.surface)
-        .overlay(
-            RoundedRectangle(cornerRadius: 20)
-                .stroke(AppColors.surfaceLight.opacity(0.5), lineWidth: 1)
-        )
-        .clipShape(RoundedRectangle(cornerRadius: 20))
+    private var isDeveloperModeVisible: Bool {
+        devModeUnlocked || proUnlocked
     }
 
     private var appVersionText: String {
-        let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.0.0"
-        let build = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "1"
-        return "Version \(version) (\(build))"
+        let short = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0"
+        let build = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "1"
+        return "Version \(short) (\(build))"
     }
-    
-    private var settingsItems: some View {
-        VStack(spacing: 12) {
-            FigmaSettingsToggleRow(
-                icon: "gauge.with.dots.needle.67percent",
-                iconColor: AppColors.warning,
-                iconBg: AppColors.warning.opacity(0.2),
-                title: "Frame Skip",
-                description: "Skip frames on weaker devices",
-                isOn: $frameSkipEnabled
+
+    var body: some View {
+        NavigationStack {
+            List {
+                appearanceSection
+                performanceSection
+                controlsSection
+                accountSection
+                infoSection
+                if isDeveloperModeVisible { developerSection }
+            }
+            .settingsListStyle()
+            .navigationTitle("Settings")
+            #if os(iOS)
+            .navigationBarTitleDisplayMode(.inline)
+            #endif
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Done") { dismiss() }
+                }
+            }
+            .alert("Reset local stats?", isPresented: $showResetStatsConfirm) {
+                Button("Cancel", role: .cancel) {}
+                Button("Reset", role: .destructive) {
+                    resetLocalStats()
+                }
+            } message: {
+                Text("This clears local developer/performance stat toggles only.")
+            }
+            #if os(iOS)
+            .sheet(isPresented: $showingShareSheet) {
+                ActivityViewController(activityItems: ["Check out Xemu!", appStoreURL as Any])
+            }
+            #endif
+        }
+    }
+
+    private var appearanceSection: some View {
+        Section(header: SettingsSectionHeader("Appearance")) {
+            NavigationSettingsRow(
+                title: "Theme",
+                subtitle: "Light or dark",
+                value: themeController.mode == .light ? "Light" : "Dark"
+            ) {
+                ThemeModeSelectorView()
+                    .environmentObject(themeController)
+            }
+
+            NavigationSettingsRow(
+                title: "Shell Skins",
+                subtitle: "Global and per-emulator styles",
+                value: shellThemeManager.activeTheme.displayName
+            ) {
+                ShellSkinsView()
+                    .environmentObject(shellThemeManager)
+            }
+        }
+    }
+
+    private var performanceSection: some View {
+        Section(header: SettingsSectionHeader("Performance")) {
+            NavigationSettingsRow(
+                title: "Audio Quality",
+                subtitle: "Output strategy",
+                value: audioQualityLabel(audioQuality)
+            ) {
+                AudioQualityView(audioQuality: $audioQuality)
+            }
+
+            NavigationSettingsRow(
+                title: "Performance Mode",
+                subtitle: "Balance quality and battery",
+                value: performanceMode.title
+            ) {
+                PerformanceModeSelectorView(selection: $performanceModeRaw)
+            }
+
+            ToggleSettingsRow(
+                title: "Respect Low Power Mode",
+                subtitle: "Reduce heavy effects in battery saver",
+                isOn: hapticBinding($respectLowPowerMode)
             )
-            
-            SettingsItem(
-                icon: "star.fill",
+
+            ToggleSettingsRow(
+                title: "Retro Boot Experience",
+                subtitle: "Cartridge insert + console startup before game launch",
+                isOn: hapticBinding($showCartridgeLaunchIntro)
+            )
+        }
+    }
+
+    private var controlsSection: some View {
+        Section(header: SettingsSectionHeader("Controls")) {
+            NavigationSettingsRow(
+                title: "Controller",
+                subtitle: "Connection, behavior and layout"
+            ) {
+                ControllerSettingsView(
+                    autoImmersive: $controllerAutoImmersive,
+                    hideTouchControls: $controllerHideTouchControls,
+                    touchFallbackRaw: $controllerTouchFallback,
+                    stickSensitivityRaw: $controllerStickSensitivity,
+                    hapticFeedback: $controllerHapticFeedback,
+                    showDevAdvanced: isDeveloperModeVisible
+                )
+            }
+        }
+    }
+
+    private var accountSection: some View {
+        Section(header: SettingsSectionHeader("Account")) {
+            NavigationSettingsRow(
+                title: "Status",
+                subtitle: "Subscription and entitlement state"
+            ) {
+                EntitlementStatusView()
+            }
+
+            NavigationSettingsRow(
                 title: "Upgrade",
-                description: "Unlock all features and remove ads"
-                ,
-                iconColor: AppColors.warning,
-                iconBackground: AppColors.warning.opacity(0.2)
+                subtitle: "Unlock Pro features"
             ) {
-                showingUpgrade = true
+                UpgradeView()
             }
-            
-            SettingsItem(
-                icon: "square.and.arrow.up",
-                title: "Share",
-                description: "Tell your friends about the app"
-                ,
-                iconColor: AppColors.info,
-                iconBackground: AppColors.info.opacity(0.2)
-            ) {
-                shareApp()
+
+            Button {
+                showingShareSheet = true
+            } label: {
+                SettingsTextStack(
+                    title: "Share App",
+                    subtitle: "Tell a friend"
+                )
+                .frame(minHeight: SettingsTokens.rowHeight, alignment: .leading)
             }
-            
-            SettingsItem(
-                icon: "envelope",
-                title: "Feedback",
-                description: "Help us improve the app"
-                ,
-                iconColor: AppColors.success,
-                iconBackground: AppColors.success.opacity(0.2)
-            ) {
-                sendFeedback()
+            .buttonStyle(.plain)
+
+            Button {
+                if let url = appStoreURL {
+                    #if canImport(UIKit)
+                    UIApplication.shared.open(url)
+                    #endif
+                }
+            } label: {
+                SettingsTextStack(
+                    title: "Support",
+                    subtitle: "FAQ and help resources"
+                )
+                .frame(minHeight: SettingsTokens.rowHeight, alignment: .leading)
             }
-            
-            SettingsItem(
-                icon: "questionmark.circle",
-                title: "Support",
-                description: "FAQ and help resources"
-                ,
-                iconColor: AppColors.primary,
-                iconBackground: AppColors.primary.opacity(0.2)
-            ) {
-                openSupport()
+            .buttonStyle(.plain)
+        }
+    }
+
+    private var infoSection: some View {
+        Section(header: SettingsSectionHeader("Info")) {
+            InfoSettingsRow(title: "App", value: appVersionText)
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    versionTapCount += 1
+                    if versionTapCount >= 5 {
+                        devModeUnlocked = true
+                    }
+                }
+        }
+    }
+
+    private var developerSection: some View {
+        Section(header: SettingsSectionHeader("Developer")) {
+            ToggleSettingsRow(title: "FPS Overlay", isOn: hapticBinding($showFPSMeter))
+            ToggleSettingsRow(title: "Memory Monitor", isOn: hapticBinding($devMemoryMonitor))
+            ToggleSettingsRow(title: "Thermal Logging", isOn: hapticBinding($devThermalLogging))
+
+            NavigationSettingsRow(title: "Debug Controller Input") {
+                ControllerMappingEditor(platform: .GBA)
+            }
+
+            DestructiveSettingsRow(title: "Reset Local Stats") {
+                showResetStatsConfirm = true
             }
         }
     }
 
-    private var appearanceCard: some View {
-        let isLight = themeController.isLightMode
-
-        return HStack(spacing: 16) {
-            ZStack {
-                RoundedRectangle(cornerRadius: 12)
-                    .fill((isLight ? AppColors.warning : AppColors.primary).opacity(0.18))
-                    .frame(width: 48, height: 48)
-
-                Image(systemName: isLight ? "sun.max.fill" : "moon.fill")
-                    .font(.system(size: 20, weight: .semibold))
-                    .foregroundColor(isLight ? AppColors.warning : AppColors.primary)
-            }
-
-            VStack(alignment: .leading, spacing: 2) {
-                Text("Appearance")
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundColor(AppColors.textPrimary)
-
-                Text(isLight ? "Light Mode" : "Dark Mode")
-                    .font(.system(size: 12))
-                    .foregroundColor(AppColors.textMuted)
-            }
-
-            Spacer()
-
-            ThemePillToggle(isLight: isLight) {
-                themeController.toggleMode()
-            }
+    private func audioQualityLabel(_ value: Int) -> String {
+        switch value {
+        case 0: return "Sound First"
+        case 1: return "Balanced"
+        case 2: return "Frame First"
+        default: return "Balanced"
         }
-        .padding(16)
-        .background(AppColors.surface)
-        .overlay(
-            RoundedRectangle(cornerRadius: 16)
-                .stroke(AppColors.surfaceLight.opacity(0.5), lineWidth: 1)
+    }
+
+    private func hapticBinding(_ binding: Binding<Bool>) -> Binding<Bool> {
+        Binding(
+            get: { binding.wrappedValue },
+            set: { newValue in
+                binding.wrappedValue = newValue
+                #if canImport(UIKit)
+                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                #endif
+            }
         )
-        .clipShape(RoundedRectangle(cornerRadius: 16))
     }
-    
-    private var footerSection: some View {
-        VStack(spacing: 12) {
-            Text("Made with ❤️ for retro gaming")
-                .font(.system(size: 12))
-                .foregroundColor(AppColors.textMuted)
-            
-            HStack(spacing: 24) {
-                Button("Privacy Policy") {
-                    openURL("https://xemu.app/privacy")
-                }
-                .font(.system(size: 12))
-                .foregroundColor(AppColors.textMuted)
-                
-                Button("Terms of Service") {
-                    openURL("https://xemu.app/terms")
-                }
-                .font(.system(size: 12))
-                .foregroundColor(AppColors.textMuted)
-            }
-        }
-        .padding(.top, 16)
-    }
-    
-    private func shareApp() {
-        // Share functionality
-    }
-    
-    private func sendFeedback() {
-        // Feedback functionality
-    }
-    
-    private func openSupport() {
-        // Support functionality
-    }
-    
-    private func openURL(_ urlString: String) {
-        guard let url = URL(string: urlString) else { return }
-        #if canImport(UIKit)
-        UIApplication.shared.open(url)
-        #elseif canImport(AppKit)
-        NSWorkspace.shared.open(url)
-        #endif
+
+    private func resetLocalStats() {
+        showFPSMeter = false
+        devMemoryMonitor = false
+        devThermalLogging = false
     }
 }
 
-private struct ThemePillToggle: View {
-    let isLight: Bool
-    let onToggle: () -> Void
+private enum SettingsTokens {
+    static let rowHeight: CGFloat = 56
+}
+
+private struct SettingsSectionHeader: View {
+    let text: String
+
+    init(_ text: String) {
+        self.text = text
+    }
 
     var body: some View {
-        Button(action: onToggle) {
-            ZStack(alignment: .leading) {
-                Capsule(style: .continuous)
-                    .fill((isLight ? AppColors.warning : AppColors.primary).opacity(0.9))
-                    .frame(width: 52, height: 30)
+        Text(text.uppercased())
+            .font(.system(size: 13, weight: .regular))
+            .foregroundStyle(.tertiary)
+    }
+}
 
-                Circle()
-                    .fill(Color.white)
-                    .frame(width: 24, height: 24)
-                    .overlay(
-                        Image(systemName: isLight ? "sun.max.fill" : "moon.fill")
-                            .font(.system(size: 11, weight: .bold))
-                            .foregroundColor(isLight ? AppColors.warning : AppColors.primary)
-                    )
-                    .offset(x: isLight ? 26 : 2)
-                    .animation(.spring(response: 0.25, dampingFraction: 0.9), value: isLight)
+private struct SettingsTextStack: View {
+    let title: String
+    let subtitle: String?
+
+    init(title: String, subtitle: String? = nil) {
+        self.title = title
+        self.subtitle = subtitle
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: subtitle == nil ? 0 : 2) {
+            Text(title)
+                .font(.system(size: 17, weight: .semibold))
+                .foregroundStyle(.primary)
+            if let subtitle {
+                Text(subtitle)
+                    .font(.system(size: 15, weight: .regular))
+                    .foregroundStyle(.secondary)
             }
+        }
+    }
+}
+
+private struct NavigationSettingsRow<Destination: View>: View {
+    let title: String
+    let subtitle: String?
+    let value: String?
+    let destination: Destination
+
+    init(
+        title: String,
+        subtitle: String? = nil,
+        value: String? = nil,
+        @ViewBuilder destination: () -> Destination
+    ) {
+        self.title = title
+        self.subtitle = subtitle
+        self.value = value
+        self.destination = destination()
+    }
+
+    var body: some View {
+        NavigationLink {
+            destination
+        } label: {
+            HStack(spacing: 12) {
+                SettingsTextStack(title: title, subtitle: subtitle)
+                Spacer(minLength: 8)
+                if let value {
+                    Text(value)
+                        .font(.system(size: 17, weight: .regular))
+                        .foregroundStyle(.secondary)
+                }
+            }
+            .frame(minHeight: SettingsTokens.rowHeight, alignment: .leading)
+        }
+    }
+}
+
+private struct ToggleSettingsRow: View {
+    let title: String
+    let subtitle: String?
+    @Binding var isOn: Bool
+
+    init(title: String, subtitle: String? = nil, isOn: Binding<Bool>) {
+        self.title = title
+        self.subtitle = subtitle
+        self._isOn = isOn
+    }
+
+    var body: some View {
+        HStack(spacing: 12) {
+            SettingsTextStack(title: title, subtitle: subtitle)
+            Spacer(minLength: 8)
+            SwiftUI.Toggle(isOn: $isOn) { EmptyView() }
+                .labelsHidden()
+        }
+        .frame(minHeight: SettingsTokens.rowHeight, alignment: .leading)
+    }
+}
+
+private struct InfoSettingsRow: View {
+    let title: String
+    let value: String
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Text(title)
+                .font(.system(size: 17, weight: .semibold))
+                .foregroundStyle(.primary)
+            Spacer(minLength: 8)
+            Text(value)
+                .font(.system(size: 17, weight: .regular))
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.trailing)
+        }
+        .frame(minHeight: SettingsTokens.rowHeight, alignment: .leading)
+    }
+}
+
+private struct DestructiveSettingsRow: View {
+    let title: String
+    let action: () -> Void
+
+    var body: some View {
+        Button(role: .destructive, action: action) {
+            Text(title)
+                .font(.system(size: 17, weight: .semibold))
+                .frame(maxWidth: .infinity, minHeight: SettingsTokens.rowHeight, alignment: .leading)
+        }
+    }
+}
+
+private struct ThemeModeSelectorView: View {
+    @EnvironmentObject private var themeController: ThemeController
+
+    var body: some View {
+        List {
+            Section {
+                themeModeButton(.light, title: "Light")
+                themeModeButton(.dark, title: "Dark")
+            }
+        }
+        .settingsListStyle()
+        .navigationTitle("Theme")
+        #if os(iOS)
+        .navigationBarTitleDisplayMode(.inline)
+        #endif
+    }
+
+    private func themeModeButton(_ mode: AppThemeMode, title: String) -> some View {
+        Button {
+            themeController.setMode(mode)
+        } label: {
+            HStack {
+                Text(title)
+                Spacer()
+                if themeController.mode == mode {
+                    Image(systemName: "checkmark")
+                        .foregroundColor(.accentColor)
+                }
+            }
+            .frame(minHeight: SettingsTokens.rowHeight, alignment: .leading)
         }
         .buttonStyle(.plain)
     }
 }
 
-struct FigmaSettingsToggleRow: View {
-    let icon: String
-    let iconColor: Color
-    let iconBg: Color
-    let title: String
-    let description: String
-    @Binding var isOn: Bool
-    
+private struct PerformanceModeSelectorView: View {
+    @Binding var selection: String
+
     var body: some View {
-        HStack(spacing: 16) {
-            ZStack {
-                RoundedRectangle(cornerRadius: 12)
-                    .fill(iconBg)
-                    .frame(width: 48, height: 48)
-                
-                Image(systemName: icon)
-                    .font(.system(size: 20, weight: .semibold))
-                    .foregroundColor(iconColor)
+        List {
+            Section {
+                performanceButton(.auto)
+                performanceButton(.quality)
+                performanceButton(.battery)
             }
-            
-            VStack(alignment: .leading, spacing: 2) {
-                Text(title)
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundColor(AppColors.textPrimary)
-                
-                Text(description)
-                    .font(.system(size: 12))
-                    .foregroundColor(AppColors.textMuted)
-            }
-            
-            Spacer()
-            
-            SwiftUI.Toggle(isOn: $isOn) {
-                EmptyView()
-            }
-                .labelsHidden()
-                .tint(AppColors.primary)
         }
-        .padding(16)
-        .background(AppColors.surface)
-        .overlay(
-            RoundedRectangle(cornerRadius: 16)
-                .stroke(AppColors.surfaceLight.opacity(0.5), lineWidth: 1)
-        )
-        .clipShape(RoundedRectangle(cornerRadius: 16))
+        .settingsListStyle()
+        .navigationTitle("Performance Mode")
+        #if os(iOS)
+        .navigationBarTitleDisplayMode(.inline)
+        #endif
     }
-}
 
-private struct SettingsBrandIconGlyph: View {
-    var body: some View {
-        ZStack {
-            Circle()
-                .fill(Color.white.opacity(0.16))
-
-            RoundedRectangle(cornerRadius: 2)
-                .fill(Color.white.opacity(0.95))
-                .frame(width: 8, height: 20)
-                .offset(x: -14, y: 2)
-            RoundedRectangle(cornerRadius: 2)
-                .fill(Color.white.opacity(0.95))
-                .frame(width: 20, height: 8)
-                .offset(x: -14, y: 2)
-
-            Circle().fill(Color.white.opacity(0.95)).frame(width: 6, height: 6).offset(x: 10, y: -8)
-            Circle().fill(Color.white.opacity(0.95)).frame(width: 6, height: 6).offset(x: 22, y: -8)
-            Circle().fill(Color.white.opacity(0.95)).frame(width: 6, height: 6).offset(x: 10, y: 4)
-            Circle().fill(Color.white.opacity(0.95)).frame(width: 6, height: 6).offset(x: 22, y: 4)
-
-            Path { path in
-                path.move(to: CGPoint(x: 30, y: 8))
-                path.addLine(to: CGPoint(x: 24, y: 22))
-                path.addLine(to: CGPoint(x: 29, y: 22))
-                path.addLine(to: CGPoint(x: 25, y: 36))
-                path.addLine(to: CGPoint(x: 35, y: 20))
-                path.addLine(to: CGPoint(x: 29, y: 20))
-                path.closeSubpath()
-            }
-            .fill(
-                LinearGradient(
-                    colors: [Color(hex: "FBBF24"), Color(hex: "F59E0B")],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
-            )
-            .frame(width: 54, height: 54)
-        }
-    }
-}
-
-struct UpgradeView: View {
-    @Environment(\.dismiss) private var dismiss
-    
-    var body: some View {
-        NavigationStack {
-            VStack(spacing: 24) {
-                Text("Upgrade to Pro")
-                    .font(.title)
-                    .fontWeight(.bold)
-                
-                Text("Unlock all features!")
-                    .foregroundColor(.secondary)
-                
-                Button("Subscribe") {
-                    dismiss()
+    private func performanceButton(_ mode: PerformanceMode) -> some View {
+        Button {
+            selection = mode.rawValue
+        } label: {
+            HStack {
+                Text(mode.title)
+                Spacer()
+                if selection == mode.rawValue {
+                    Image(systemName: "checkmark")
+                        .foregroundColor(.accentColor)
                 }
-                .buttonStyle(.borderedProminent)
             }
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Close") {
-                        dismiss()
+            .frame(minHeight: SettingsTokens.rowHeight, alignment: .leading)
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+private struct ControllerSettingsView: View {
+    @Binding var autoImmersive: Bool
+    @Binding var hideTouchControls: Bool
+    @Binding var touchFallbackRaw: String
+    @Binding var stickSensitivityRaw: String
+    @Binding var hapticFeedback: Bool
+    let showDevAdvanced: Bool
+
+    private var controllerStatus: String {
+        InputBus.shared.isControllerConnected() ? "Connected" : "Not Connected"
+    }
+
+    private var controllerName: String {
+        InputBus.shared.getActiveControllerName() ?? "—"
+    }
+
+    var body: some View {
+        List {
+            Section(header: SettingsSectionHeader("Connection")) {
+                InfoSettingsRow(title: "Status", value: controllerStatus)
+                InfoSettingsRow(title: "Name", value: controllerName)
+            }
+
+            Section(header: SettingsSectionHeader("Behavior")) {
+                ToggleSettingsRow(title: "Auto Switch to Immersive", isOn: $autoImmersive)
+                ToggleSettingsRow(title: "Hide Touch Controls", isOn: $hideTouchControls)
+                ToggleSettingsRow(title: "Haptic Feedback", isOn: $hapticFeedback)
+
+                NavigationSettingsRow(
+                    title: "Touch Fallback",
+                    value: TouchFallbackMode(rawValue: touchFallbackRaw)?.title ?? TouchFallbackMode.auto.title
+                ) {
+                    TouchFallbackSelectorView(selection: $touchFallbackRaw)
+                }
+            }
+
+            Section(header: SettingsSectionHeader("Layout")) {
+                NavigationSettingsRow(title: "Button Mapping") {
+                    ControllerMappingEditor(platform: .GBA)
+                }
+
+                NavigationSettingsRow(
+                    title: "Stick Sensitivity",
+                    value: StickSensitivity(rawValue: stickSensitivityRaw)?.title ?? StickSensitivity.medium.title
+                ) {
+                    StickSensitivitySelectorView(selection: $stickSensitivityRaw)
+                }
+            }
+
+            if showDevAdvanced {
+                Section(header: SettingsSectionHeader("Advanced")) {
+                    NavigationSettingsRow(title: "Input Debug") {
+                        ControllerMappingEditor(platform: .GBA)
                     }
                 }
             }
         }
+        .settingsListStyle()
+        .navigationTitle("Controller")
+        #if os(iOS)
+        .navigationBarTitleDisplayMode(.inline)
+        #endif
+    }
+}
+
+private enum TouchFallbackMode: String, CaseIterable {
+    case auto
+    case alwaysOn
+    case alwaysOff
+
+    var title: String {
+        switch self {
+        case .auto: return "Auto"
+        case .alwaysOn: return "Always On"
+        case .alwaysOff: return "Always Off"
+        }
+    }
+}
+
+private struct TouchFallbackSelectorView: View {
+    @Binding var selection: String
+
+    var body: some View {
+        List {
+            Section {
+                touchFallbackButton(.auto)
+                touchFallbackButton(.alwaysOn)
+                touchFallbackButton(.alwaysOff)
+            }
+        }
+        .settingsListStyle()
+        .navigationTitle("Touch Fallback")
+        #if os(iOS)
+        .navigationBarTitleDisplayMode(.inline)
+        #endif
+    }
+
+    private func touchFallbackButton(_ mode: TouchFallbackMode) -> some View {
+        Button {
+            selection = mode.rawValue
+        } label: {
+            HStack {
+                Text(mode.title)
+                Spacer()
+                if selection == mode.rawValue {
+                    Image(systemName: "checkmark")
+                        .foregroundColor(.accentColor)
+                }
+            }
+            .frame(minHeight: SettingsTokens.rowHeight, alignment: .leading)
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+private enum StickSensitivity: String, CaseIterable {
+    case low
+    case medium
+    case high
+
+    var title: String {
+        switch self {
+        case .low: return "Low"
+        case .medium: return "Medium"
+        case .high: return "High"
+        }
+    }
+}
+
+private struct StickSensitivitySelectorView: View {
+    @Binding var selection: String
+
+    var body: some View {
+        List {
+            Section {
+                stickSensitivityButton(.low)
+                stickSensitivityButton(.medium)
+                stickSensitivityButton(.high)
+            }
+        }
+        .settingsListStyle()
+        .navigationTitle("Stick Sensitivity")
+        #if os(iOS)
+        .navigationBarTitleDisplayMode(.inline)
+        #endif
+    }
+
+    private func stickSensitivityButton(_ mode: StickSensitivity) -> some View {
+        Button {
+            selection = mode.rawValue
+        } label: {
+            HStack {
+                Text(mode.title)
+                Spacer()
+                if selection == mode.rawValue {
+                    Image(systemName: "checkmark")
+                        .foregroundColor(.accentColor)
+                }
+            }
+            .frame(minHeight: SettingsTokens.rowHeight, alignment: .leading)
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+private struct ShellSkinsView: View {
+    @EnvironmentObject private var shellThemeManager: ShellThemeManager
+
+    private let consoles: [ShellConsoleKind] = [.gb, .gbc, .gba, .nds]
+    private let globalSentinel = "__global__"
+
+    var body: some View {
+        List {
+            Section(header: SettingsSectionHeader("Global")) {
+                shellThemePickerRow(title: "Global Theme", console: nil)
+            }
+
+            Section(header: SettingsSectionHeader("Per Emulator")) {
+                ForEach(consoles, id: \.self) { console in
+                    shellThemePickerRow(title: console.displayName, console: console)
+                }
+            }
+        }
+        .settingsListStyle()
+        .navigationTitle("Shell Skins")
+        #if os(iOS)
+        .navigationBarTitleDisplayMode(.inline)
+        #endif
+    }
+
+    private func shellThemePickerRow(title: String, console: ShellConsoleKind?) -> some View {
+        let available = availableThemes(for: console)
+        let subtitle = currentThemeName(for: console)
+
+        return HStack(spacing: 12) {
+            SettingsTextStack(title: title, subtitle: subtitle)
+            Spacer(minLength: 8)
+            Picker("", selection: pickerBinding(for: console)) {
+                if console != nil {
+                    Text("Use Global").tag(globalSentinel)
+                }
+                ForEach(available) { theme in
+                    Text(theme.displayName).tag(theme.id)
+                }
+            }
+            .labelsHidden()
+            .pickerStyle(.menu)
+        }
+        .frame(minHeight: SettingsTokens.rowHeight, alignment: .leading)
+    }
+
+    private func availableThemes(for console: ShellConsoleKind?) -> [EmulatorShellTheme] {
+        if let console {
+            return shellThemeManager.availableThemes
+                .filter { $0.supportedConsoles.contains(console) }
+                .sorted { $0.displayName < $1.displayName }
+        }
+        return shellThemeManager.availableThemes.sorted { $0.displayName < $1.displayName }
+    }
+
+    private func currentThemeName(for console: ShellConsoleKind?) -> String {
+        if let console {
+            let theme = shellThemeManager.theme(for: console.platform)
+            if shellThemeManager.perConsoleSelectedThemeIDs[console] == nil {
+                return "\(theme.displayName) (Global)"
+            }
+            return theme.displayName
+        }
+        return shellThemeManager.activeTheme.displayName
+    }
+
+    private func pickerBinding(for console: ShellConsoleKind?) -> Binding<String> {
+        Binding(
+            get: {
+                if let console {
+                    return shellThemeManager.perConsoleSelectedThemeIDs[console] ?? globalSentinel
+                }
+                return shellThemeManager.selectedThemeID
+            },
+            set: { newValue in
+                if let console {
+                    if newValue == globalSentinel {
+                        shellThemeManager.clearConsoleThemeOverride(console)
+                    } else {
+                        shellThemeManager.setTheme(id: newValue, for: console)
+                    }
+                } else {
+                    shellThemeManager.setTheme(id: newValue)
+                }
+            }
+        )
+    }
+}
+
+private extension ShellConsoleKind {
+    var displayName: String {
+        switch self {
+        case .gb: return "Game Boy"
+        case .gbc: return "Game Boy Color"
+        case .gba: return "Game Boy Advance"
+        case .nds: return "Nintendo DS"
+        }
+    }
+
+    var platform: Platform {
+        switch self {
+        case .gb: return .GB
+        case .gbc: return .GBC
+        case .gba: return .GBA
+        case .nds: return .NDS
+        }
+    }
+}
+
+private extension View {
+    @ViewBuilder
+    func settingsListStyle() -> some View {
+        #if os(iOS)
+        self.listStyle(.insetGrouped)
+        #else
+        self
+        #endif
+    }
+}
+
+#if os(iOS)
+private struct ActivityViewController: UIViewControllerRepresentable {
+    let activityItems: [Any]
+
+    func makeUIViewController(context: Context) -> UIActivityViewController {
+        UIActivityViewController(activityItems: activityItems, applicationActivities: nil)
+    }
+
+    func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
+}
+#endif
+
+struct UpgradeView: View {
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        List {
+            Section(header: SettingsSectionHeader("Upgrade")) {
+                Text("Unlock cloud saves, advanced controls and premium features.")
+                    .font(.system(size: 15, weight: .regular))
+                    .foregroundStyle(.secondary)
+                    .frame(minHeight: SettingsTokens.rowHeight, alignment: .leading)
+
+                Button("Subscribe") {
+                    dismiss()
+                }
+                .frame(minHeight: SettingsTokens.rowHeight, alignment: .leading)
+            }
+        }
+        .settingsListStyle()
+        .navigationTitle("Upgrade")
+        #if os(iOS)
+        .navigationBarTitleDisplayMode(.inline)
+        #endif
     }
 }
 

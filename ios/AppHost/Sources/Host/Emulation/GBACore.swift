@@ -11,6 +11,7 @@ public final class GBACore: EmulatorCore {
     private var isPaused: Bool = false
     private var loadedROMData: Data?
     private var loadedROMPath: String?
+    private var lastAudioSampleRate: Int = 32_768
     private var inputState: [Int: Float] = [:]
     
     public init() {
@@ -106,7 +107,21 @@ public final class GBACore: EmulatorCore {
     }
     
     public func getAudioSamples() -> Data? {
-        coreWrapper?.getAudioSamplesCopy()
+        guard let info = coreWrapper?.getAudioSamples(),
+              info.sampleCount > 0,
+              let samples = info.samples else {
+            return nil
+        }
+        if info.sampleRate > 0 {
+            lastAudioSampleRate = info.sampleRate
+        }
+        let size = info.sampleCount * MemoryLayout<Int16>.size
+        guard size > 0 else { return nil }
+        return Data(bytes: samples, count: size)
+    }
+
+    public func getAudioSampleRate() -> Int {
+        max(8_000, lastAudioSampleRate)
     }
     
     public func saveState() -> Data? {
@@ -127,6 +142,23 @@ public final class GBACore: EmulatorCore {
             return true
         } catch {
             // Debug log disabled: NSLog("[GBACore] Load state failed: %@", error.localizedDescription)
+            return false
+        }
+    }
+
+    public func exportBatterySave() -> Data? {
+        do {
+            return try coreWrapper?.getBatteryData()
+        } catch {
+            return nil
+        }
+    }
+
+    public func importBatterySave(_ data: Data) -> Bool {
+        do {
+            try coreWrapper?.loadBatteryData(data)
+            return true
+        } catch {
             return false
         }
     }

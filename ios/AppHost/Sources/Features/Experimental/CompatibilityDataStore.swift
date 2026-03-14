@@ -27,14 +27,30 @@ public final class CompatibilityDataStore: @unchecked Sendable {
     }
 
     private func loadCompatibilityData() {
-        guard Bundle.main.bundleURL.path != "/" else {
-            return
-        }
-        guard let url = Bundle.main.url(forResource: "compatibility", withExtension: "json", subdirectory: "MockData"),
-              let data = try? Data(contentsOf: url) else {
+        if let url = resourceBundle.url(forResource: "compatibility", withExtension: "json", subdirectory: "MockData"),
+           let data = try? Data(contentsOf: url) {
+            decodeCompatibilityData(data)
             return
         }
 
+        let fallbackEntries = (try? AzureApiStub.shared.fetchCompatibilityMatrix()) ?? []
+        compatibilityMap = Dictionary(
+            uniqueKeysWithValues: fallbackEntries.map {
+                (
+                    $0.romHash,
+                    CompatibilityInfo(
+                        id: $0.id,
+                        romHash: $0.romHash,
+                        minDeviceTier: HardwareClass(rawValue: $0.minDeviceTier) ?? .unsupported,
+                        tier: Tier(rawValue: $0.tier.lowercased()) ?? .unknown,
+                        notes: $0.notes
+                    )
+                )
+            }
+        )
+    }
+
+    private func decodeCompatibilityData(_ data: Data) {
         do {
             let entries = try decoder.decode([CompatibilityEntry].self, from: data)
             for entry in entries {
@@ -47,9 +63,7 @@ public final class CompatibilityDataStore: @unchecked Sendable {
                 )
                 compatibilityMap[info.romHash] = info
             }
-            print("✓ CompatibilityDataStore: Loaded \(compatibilityMap.count) compatibility entries")
         } catch {
-            print("⚠️ CompatibilityDataStore: Failed to decode compatibility.json: \(error)")
         }
     }
 
@@ -89,6 +103,14 @@ public final class CompatibilityDataStore: @unchecked Sendable {
     public func reload() {
         compatibilityMap.removeAll()
         loadCompatibilityData()
+    }
+
+    private var resourceBundle: Bundle {
+        #if SWIFT_PACKAGE
+        return .module
+        #else
+        return .main
+        #endif
     }
 }
 

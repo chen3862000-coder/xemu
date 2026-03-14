@@ -4,13 +4,19 @@ import XemuCores
 #endif
 
 public final class GBCore: EmulatorCore {
+    // The bridge exposes GB/GBC audio as 44.1kHz stereo PCM.
+    public static let nativeAudioSampleRate = 44_100
     public var platform: Platform { .GB }
+    public var isCGBModeDetected: Bool {
+        coreWrapper?.currentSystem == .gameBoyColor
+    }
     
     private var coreWrapper: GBCCoreWrapper?
     private var isRunning: Bool = false
     private var isPaused: Bool = false
     private var loadedROMData: Data?
     private var loadedROMPath: String?
+    private var lastAudioSampleRate: Int = GBCore.nativeAudioSampleRate
     private var inputState: [Int: Float] = [:]
     
     public init() {}
@@ -99,7 +105,21 @@ public final class GBCore: EmulatorCore {
     }
     
     public func getAudioSamples() -> Data? {
-        coreWrapper?.getAudioSamplesCopy()
+        guard let info = coreWrapper?.getAudioSamples(),
+              info.sampleCount > 0,
+              let samples = info.samples else {
+            return nil
+        }
+        if info.sampleRate > 0 {
+            lastAudioSampleRate = info.sampleRate
+        }
+        let size = info.sampleCount * MemoryLayout<Int16>.size
+        guard size > 0 else { return nil }
+        return Data(bytes: samples, count: size)
+    }
+
+    public func getAudioSampleRate() -> Int {
+        max(8_000, lastAudioSampleRate)
     }
     
     public func saveState() -> Data? {
@@ -113,6 +133,23 @@ public final class GBCore: EmulatorCore {
     public func loadState(_ state: Data) -> Bool {
         do {
             try coreWrapper?.loadSaveStateData(state)
+            return true
+        } catch {
+            return false
+        }
+    }
+
+    public func exportBatterySave() -> Data? {
+        do {
+            return try coreWrapper?.getBatteryData()
+        } catch {
+            return nil
+        }
+    }
+
+    public func importBatterySave(_ data: Data) -> Bool {
+        do {
+            try coreWrapper?.loadBatteryData(data)
             return true
         } catch {
             return false

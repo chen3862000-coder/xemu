@@ -74,29 +74,25 @@ struct GameDetailView: View {
     
     private var titleSection: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text(game.title ?? "Unknown Title")
-                .font(.title2)
-                .fontWeight(.bold)
-            
             HStack {
-                Text(game.platform)
-                    .font(.subheadline)
-                    .foregroundColor(.white.opacity(0.8))
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
-                    .background(Color.purple.opacity(0.5))
-                    .clipShape(RoundedRectangle(cornerRadius: 4))
-                
-                Spacer()
-                
-                HStack(spacing: 2) {
-                    ForEach(0..<5) { index in
-                        Image(systemName: index < Int(game.rating) ? "star.fill" : "star")
-                            .foregroundColor(.yellow)
-                            .font(.caption)
-                    }
+                Text(game.title ?? "Unknown Title")
+                    .font(.title2)
+                    .fontWeight(.bold)
+                if let console = game.consoleIdentity {
+                    Text(console.systemCode)
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(console.accentColor)
+                        .clipShape(RoundedRectangle(cornerRadius: 6))
                 }
+                Spacer()
             }
+
+            Text(game.consoleIdentity?.displayName ?? game.platform)
+                .font(.subheadline)
+                .foregroundColor(.secondary)
         }
     }
     
@@ -139,6 +135,7 @@ struct GameDetailView: View {
                 .font(.headline)
             
             GameInfoRow(label: "Platform", value: game.platform)
+            GameInfoRow(label: "Console", value: game.consoleIdentity?.displayName ?? game.platform)
             GameInfoRow(label: "Genre", value: game.genre ?? "Unknown")
         }
     }

@@ -113,9 +113,7 @@ public class XemuCores {
         if useRealCores {
             isAvailable = true
             usingRealCores = true
-            print("[XemuCores] Using REAL cores (direct linking)")
         } else {
-            print("[XemuCores] Using MOCK cores")
             isAvailable = true
             usingRealCores = false
         }
@@ -362,10 +360,49 @@ public class GBCCoreWrapper: CEmulatorCore {
     }
     
     public func getBatteryData() throws -> Data {
-        return Data()
+        nativeLock.lock()
+        defer { nativeLock.unlock() }
+
+        guard useNative, let handle = handle, isROMLoaded else {
+            return Data()
+        }
+
+        let batterySize = xemu_gb_get_battery_save_size(handle)
+        guard batterySize > 0 else {
+            return Data()
+        }
+
+        var buffer = Data(count: batterySize)
+        var result: xemu_error_t = XEMU_ERROR_UNKNOWN
+        buffer.withUnsafeMutableBytes { raw in
+            guard let ptr = raw.baseAddress?.assumingMemoryBound(to: UInt8.self) else { return }
+            var battery = xemu_save_state_t(data: ptr, size: batterySize)
+            result = xemu_gb_save_battery(handle, &battery)
+        }
+
+        guard result == XEMU_OK else {
+            throw XemuCoresError.saveStateFailed("Failed to export GB battery save")
+        }
+
+        return buffer
     }
     
     public func loadBatteryData(_ data: Data) throws {
+        nativeLock.lock()
+        defer { nativeLock.unlock() }
+
+        guard useNative, let handle = handle, isROMLoaded else { return }
+        guard !data.isEmpty else { return }
+
+        var battery = xemu_save_state_t(
+            data: UnsafeMutablePointer<UInt8>(mutating: (data as NSData).bytes.bindMemory(to: UInt8.self, capacity: data.count)),
+            size: data.count
+        )
+
+        let result = xemu_gb_load_battery(handle, &battery)
+        guard result == XEMU_OK else {
+            throw XemuCoresError.saveStateFailed("Failed to import GB battery save")
+        }
     }
     
     public func shutdown() {
@@ -599,10 +636,49 @@ public class GBACoreWrapper: CEmulatorCore {
     }
     
     public func getBatteryData() throws -> Data {
-        return Data()
+        nativeLock.lock()
+        defer { nativeLock.unlock() }
+
+        guard useNative, let handle = handle, isROMLoaded else {
+            return Data()
+        }
+
+        let batterySize = xemu_gba_get_battery_save_size(handle)
+        guard batterySize > 0 else {
+            return Data()
+        }
+
+        var buffer = Data(count: batterySize)
+        var result: xemu_error_t = XEMU_ERROR_UNKNOWN
+        buffer.withUnsafeMutableBytes { raw in
+            guard let ptr = raw.baseAddress?.assumingMemoryBound(to: UInt8.self) else { return }
+            var battery = xemu_save_state_t(data: ptr, size: batterySize)
+            result = xemu_gba_save_battery(handle, &battery)
+        }
+
+        guard result == XEMU_OK else {
+            throw XemuCoresError.saveStateFailed("Failed to export GBA battery save")
+        }
+
+        return buffer
     }
     
     public func loadBatteryData(_ data: Data) throws {
+        nativeLock.lock()
+        defer { nativeLock.unlock() }
+
+        guard useNative, let handle = handle, isROMLoaded else { return }
+        guard !data.isEmpty else { return }
+
+        var battery = xemu_save_state_t(
+            data: UnsafeMutablePointer<UInt8>(mutating: (data as NSData).bytes.bindMemory(to: UInt8.self, capacity: data.count)),
+            size: data.count
+        )
+
+        let result = xemu_gba_load_battery(handle, &battery)
+        guard result == XEMU_OK else {
+            throw XemuCoresError.saveStateFailed("Failed to import GBA battery save")
+        }
     }
     
     public func shutdown() {

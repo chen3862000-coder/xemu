@@ -117,8 +117,10 @@ set(GAMBATTE_SOURCES
     third_party/gambatte/libgambatte/src/sound/envelope_unit.cpp
     third_party/gambatte/libgambatte/src/mem/memptrs.cpp
     third_party/gambatte/libgambatte/src/mem/cartridge.cpp
+    third_party/gambatte/libgambatte/src/mem/cartridge_libretro.cpp
     third_party/gambatte/libgambatte/src/mem/huc3.cpp
     third_party/gambatte/libgambatte/src/mem/rtc.cpp
+    src/gb/gambatte_compat/rumble_stub.cpp
 )
 
 # Gambatte include directories
@@ -127,6 +129,7 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR}/third_party/gambatte/libgambatte
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/third_party/gambatte/libgambatte/src)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/third_party/gambatte/common)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/third_party/gambatte/libgambatte/libretro)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/third_party/gambatte/libgambatte/libretro-common/include)
 
 # mGBA (GBA) - use subdirectory for complex build
 if(USE_REAL_CORES)

@@ -4,97 +4,474 @@ import CoreData
 import UIKit
 #endif
 
+private enum HomeShelfMetrics {
+    static func recentGameCardWidth(for availableWidth: CGFloat) -> CGFloat {
+        min(280, max(232, availableWidth - 36))
+    }
+
+    static func collectorRecentGameCardWidth(for availableWidth: CGFloat) -> CGFloat {
+        min(330, max(260, availableWidth - 52))
+    }
+}
+
 struct HomeView: View {
+    private enum IdleHighlightTarget {
+        case none
+        case gameStats
+        case firstContinueCard
+    }
+
     @Environment(\.managedObjectContext) private var viewContext
+    @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.verticalSizeClass) private var verticalSizeClass
     @StateObject private var viewModel = HomeViewModel()
+    @StateObject private var performanceProfiler = PerformanceProfiler.shared
     @State private var showingSettings = false
     @State private var showingImport = false
     @State private var showingGameLibrary = false
     @State private var showingRecentlyPlayed = false
+    @State private var showingPlayerStats = false
     @State private var selectedPlatform: EmulatorPlatform?
-    @State private var searchText = ""
+    @State private var selectedGame: Game?
+    @State private var activeAlert: HomeAlertState?
+    @State private var renameEntry: ROMLibraryEntry?
+    @State private var renameTitle = ""
+    @State private var detailEntry: ROMLibraryEntry?
+    @State private var lastInteractionAt = Date()
+    @State private var isIdle = false
+    @State private var idleBreathing = false
+    @State private var idleTarget: IdleHighlightTarget = .none
+    private let idleThreshold: TimeInterval = 10
+    private let idleTimer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
+
+    private var heavyUIEffectsEnabled: Bool {
+        performanceProfiler.currentQualityProfile.heavyUIEffects
+    }
+
+    private var collectorAtmosphere: some View {
+        LinearGradient(
+            colors: [Color.black.opacity(0.04), Color.clear],
+            startPoint: .top,
+            endPoint: .bottom
+        )
+        .ignoresSafeArea()
+        .allowsHitTesting(false)
+    }
+
+    private var isCollectorMode: Bool {
+#if os(iOS)
+        verticalSizeClass == .compact
+#else
+        false
+#endif
+    }
     
     var body: some View {
         ZStack {
             backgroundGradients
+            if isCollectorMode {
+                collectorAtmosphere
+            }
 
             VStack(spacing: 0) {
                 headerSection
 
                 ScrollView {
-                    VStack(spacing: 24) {
-                        statsGrid
-                        importSection
-                        recentGamesSection
-                        emulatorsSection
+                    VStack(spacing: isCollectorMode ? 18 : 24) {
+                        if isCollectorMode {
+                            collectorModeContent
+                        } else {
+                            statsGrid
+                            recentGamesSection
+                            emulatorsSection
+                        }
                     }
-                    .padding(.top, 12)
+                    .padding(.top, 8)
                     .padding(.horizontal, 16)
                     .padding(.bottom, 32)
                 }
             }
         }
-        .searchable(text: $searchText, prompt: "Search games...")
+        .animation(.easeInOut(duration: 0.28), value: isCollectorMode)
         .sheet(isPresented: $showingSettings) {
             SettingsView()
+                .swipeBack {
+                    showingSettings = false
+                }
         }
         .sheet(isPresented: $showingImport) {
             RomImportView()
+                .swipeBack {
+                    showingImport = false
+                }
         }
         .sheet(isPresented: $showingGameLibrary) {
             GameLibraryView()
+                .swipeBack {
+                    showingGameLibrary = false
+                }
         }
         .sheet(isPresented: $showingRecentlyPlayed) {
             RecentlyPlayedView()
+                .swipeBack {
+                    showingRecentlyPlayed = false
+                }
         }
+        #if os(iOS)
+        .fullScreenCover(isPresented: $showingPlayerStats) {
+            PlayerStatsView()
+        }
+        #else
+        .sheet(isPresented: $showingPlayerStats) {
+            PlayerStatsView()
+        }
+        #endif
         .sheet(item: $selectedPlatform) { platform in
             GameListView(platform: platform)
+                .swipeBack {
+                    selectedPlatform = nil
+                }
+        }
+        #if os(iOS)
+        .fullScreenCover(item: $selectedGame) { game in
+            GamePlayView(game: game, onExit: {
+                selectedGame = nil
+            })
+            .swipeBack {
+                selectedGame = nil
+            }
+        }
+        .sheet(item: $detailEntry) { entry in
+            NavigationStack {
+                RomDetailView(rom: entry) {
+                    detailEntry = nil
+                }
+            }
+        }
+        #endif
+        .alert(item: $activeAlert) { state in
+            switch state.kind {
+            case .launchError(let message):
+                return Alert(
+                    title: Text("Unable to Open Game"),
+                    message: Text(message),
+                    dismissButton: .cancel(Text("OK"))
+                )
+            case .confirmDelete(let candidate):
+                return Alert(
+                    title: Text(candidate.mode.displayName),
+                    message: Text(candidate.mode.firstConfirmation),
+                    primaryButton: .default(Text("Continue")) {
+                        activeAlert = HomeAlertState(kind: .confirmFinalDelete(candidate))
+                    },
+                    secondaryButton: .cancel()
+                )
+            case .confirmFinalDelete(let candidate):
+                return Alert(
+                    title: Text("Final Confirmation"),
+                    message: Text(candidate.mode.secondConfirmation),
+                    primaryButton: .destructive(Text("Delete")) {
+                        performDeletion(candidate)
+                    },
+                    secondaryButton: .cancel()
+                )
+            }
+        }
+        .alert("Rename Game", isPresented: renameDialogPresented) {
+            TextField("Game title", text: $renameTitle)
+            Button("Cancel", role: .cancel) {
+                clearRenameDraft()
+            }
+            Button("Save") {
+                commitRename()
+            }
+            .disabled(renameTitle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+        } message: {
+            Text("Enter a new display title for this game.")
         }
         .onAppear {
-            viewModel.loadData(in: viewContext)
+            refreshHome()
+            markInteraction()
+        }
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .active {
+                refreshHome()
+                markInteraction()
+            } else {
+                isIdle = false
+            }
+        }
+        .onChange(of: showingImport) { _, shown in if !shown { refreshHome() } }
+        .onChange(of: showingGameLibrary) { _, shown in if !shown { refreshHome() } }
+        .onChange(of: showingRecentlyPlayed) { _, shown in if !shown { refreshHome() } }
+        .onChange(of: showingPlayerStats) { _, shown in if !shown { refreshHome() } }
+        .onChange(of: showingSettings) { _, shown in if !shown { refreshHome() } }
+        .onChange(of: selectedPlatform) { _, platform in if platform == nil { refreshHome() } }
+        .onReceive(NotificationCenter.default.publisher(for: .romLibraryDidChange)) { _ in
+            refreshHome()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .coverArtDidChange)) { _ in
+            refreshHome()
+        }
+        .simultaneousGesture(
+            TapGesture().onEnded {
+                markInteraction()
+            }
+        )
+        .simultaneousGesture(
+            DragGesture(minimumDistance: 0).onChanged { _ in
+                markInteraction()
+            }
+        )
+        .onReceive(idleTimer) { now in
+            guard scenePhase == .active else {
+                if isIdle { isIdle = false }
+                return
+            }
+            let shouldIdle = now.timeIntervalSince(lastInteractionAt) >= idleThreshold
+            if shouldIdle != isIdle {
+                withAnimation(.easeInOut(duration: 0.25)) {
+                    isIdle = shouldIdle
+                }
+            }
+        }
+        .onChange(of: isIdle) { _, nowIdle in
+            if nowIdle {
+                chooseIdleTarget()
+                withAnimation(.easeInOut(duration: 1.8).repeatForever(autoreverses: true)) {
+                    idleBreathing = true
+                }
+            } else {
+                idleBreathing = false
+                idleTarget = .none
+            }
         }
     }
     
     private var backgroundGradients: some View {
         ZStack {
-            AppColors.background
-            .ignoresSafeArea()
+            AppColors.Background.appPrimary
+                .ignoresSafeArea()
 
             Circle()
                 .fill(
                     LinearGradient(
-                        colors: [AppColors.primary.opacity(0.20), AppColors.accent.opacity(0.18)],
+                        colors: [AppColors.primary.opacity(0.12), AppColors.accent.opacity(0.08)],
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing
                     )
                 )
-                .blur(radius: 120)
-                .frame(width: 380, height: 380)
-                .offset(x: 140, y: -220)
+                .blur(radius: heavyUIEffectsEnabled ? 110 : 32)
+                .frame(width: 320, height: 320)
+                .offset(x: 128, y: -228)
 
-            Circle()
-                .fill(
-                    LinearGradient(
-                        colors: [AppColors.accent.opacity(0.16), AppColors.primary.opacity(0.10)],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
+            if heavyUIEffectsEnabled {
+                Circle()
+                    .fill(
+                        LinearGradient(
+                            colors: [AppColors.accent.opacity(0.16), AppColors.primary.opacity(0.10)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
                     )
-                )
-                .blur(radius: 140)
-                .frame(width: 420, height: 420)
-                .offset(x: -160, y: 320)
+                    .blur(radius: 140)
+                    .frame(width: 420, height: 420)
+                    .offset(x: -160, y: 320)
+            }
         }
     }
     
     private var headerSection: some View {
         Header(
-            onSearchTapped: {
-                // `.searchable` remains the active search UX for now.
+            onAddTapped: {
+                showingImport = true
             },
             onSettingsTapped: {
                 showingSettings = true
             }
         )
+    }
+
+    private var collectorModeContent: some View {
+        VStack(alignment: .leading, spacing: 28) {
+            collectorActionsRow
+            collectorContinueSection
+            collectorSystemsSection
+            collectorRecentlyAddedSection
+        }
+        .padding(.horizontal, 8)
+    }
+
+    private var collectorActionsRow: some View {
+        HStack(spacing: 10) {
+            Button {
+                showingGameLibrary = true
+            } label: {
+                HStack(spacing: 6) {
+                    Image(systemName: "square.grid.2x2")
+                        .font(.system(size: 12, weight: .semibold))
+                    Text("Library")
+                        .font(.system(size: 13, weight: .semibold))
+                }
+                .foregroundStyle(AppColors.Text.primary)
+                .padding(.horizontal, 14)
+                .frame(height: 38)
+                .background(AppColors.Surface.cardElevated)
+                .overlay(Capsule().stroke(AppColors.Border.subtle, lineWidth: 1))
+                .clipShape(Capsule())
+            }
+            .buttonStyle(.plain)
+
+            Button {
+                showingPlayerStats = true
+            } label: {
+                HStack(spacing: 6) {
+                    Image(systemName: "chart.bar.fill")
+                        .font(.system(size: 12, weight: .semibold))
+                    Text("Stats")
+                        .font(.system(size: 13, weight: .semibold))
+                }
+                .foregroundStyle(AppColors.Text.primary)
+                .padding(.horizontal, 14)
+                .frame(height: 38)
+                .background(AppColors.Surface.cardElevated)
+                .overlay(Capsule().stroke(AppColors.Border.subtle, lineWidth: 1))
+                .clipShape(Capsule())
+            }
+            .buttonStyle(.plain)
+
+            Spacer()
+        }
+    }
+
+    private var collectorContinueSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Text("Continue Playing")
+                    .font(.system(size: 24, weight: .bold))
+                    .foregroundStyle(AppColors.Text.primary)
+                Spacer()
+                Button("View All") {
+                    showingRecentlyPlayed = true
+                }
+                .buttonStyle(.plain)
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundStyle(AppColors.Text.accent)
+            }
+
+            if viewModel.recentGames.isEmpty {
+                Text("No recent games")
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundStyle(AppColors.Text.tertiary)
+                    .frame(maxWidth: .infinity, minHeight: 120)
+                    .background(AppColors.Surface.cardSecondary)
+                    .overlay(RoundedRectangle(cornerRadius: 16).stroke(AppColors.Border.subtle, lineWidth: 1))
+                    .clipShape(RoundedRectangle(cornerRadius: 16))
+            } else {
+                GeometryReader { proxy in
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 20) {
+                            ForEach(viewModel.recentGames) { game in
+                                RecentGameCard(game: game, variant: .featured) {
+                                    launchRecentGame(game)
+                                }
+                                .frame(
+                                    width: HomeShelfMetrics.collectorRecentGameCardWidth(for: proxy.size.width),
+                                    height: 280
+                                )
+                                .contextMenu {
+                                    recentGameContextMenu(game)
+                                }
+                            }
+                        }
+                        .padding(.horizontal, 24)
+                    }
+                }
+                .frame(height: 280)
+#if os(iOS)
+                .scrollTargetBehavior(.viewAligned)
+#endif
+            }
+        }
+        .padding(16)
+        .background(AppColors.Surface.cardPrimary)
+        .overlay(RoundedRectangle(cornerRadius: 24, style: .continuous).stroke(AppColors.Border.subtle, lineWidth: 1))
+        .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+    }
+
+    private var collectorSystemsSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Text("Your Consoles")
+                    .font(.system(size: 24, weight: .bold))
+                    .foregroundStyle(AppColors.Text.primary)
+                Spacer()
+                Text("\(viewModel.emulators.count) systems")
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundStyle(AppColors.Text.tertiary)
+                    .padding(.horizontal, 10)
+                    .frame(height: 28)
+                    .background(AppColors.Surface.cardElevated)
+                    .clipShape(Capsule())
+            }
+
+            ScrollView(.horizontal, showsIndicators: false) {
+                LazyHStack(spacing: 20) {
+                    ForEach(viewModel.emulators) { emulator in
+                        CollectorSystemTile(emulator: emulator) {
+                            selectedPlatform = platform(for: emulator.shortName)
+                        }
+                    }
+                }
+                .scrollTargetLayout()
+                .padding(.horizontal, 24)
+            }
+#if os(iOS)
+            .scrollTargetBehavior(.viewAligned)
+#endif
+        }
+        .padding(16)
+        .background(AppColors.Surface.cardPrimary)
+        .overlay(RoundedRectangle(cornerRadius: 24, style: .continuous).stroke(AppColors.Border.subtle, lineWidth: 1))
+        .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+    }
+
+    private var collectorRecentlyAddedSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Text("Recently Added")
+                    .font(.system(size: 22, weight: .bold))
+                    .foregroundStyle(AppColors.Text.primary)
+                Spacer()
+            }
+
+            if viewModel.recentlyAddedGames.isEmpty {
+                EmptyView()
+            } else {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    LazyHStack(spacing: 16) {
+                        ForEach(viewModel.recentlyAddedGames.prefix(10)) { game in
+                            RecentGameCard(game: game, variant: .compact) {
+                                launchRecentGame(game)
+                            }
+                            .frame(width: 240)
+                            .contextMenu {
+                                recentGameContextMenu(game)
+                            }
+                        }
+                    }
+                    .padding(.horizontal, 24)
+                    .scrollTargetLayout()
+                }
+#if os(iOS)
+                .scrollTargetBehavior(.viewAligned)
+#endif
+            }
+        }
+        .padding(16)
+        .background(AppColors.Surface.cardPrimary)
+        .overlay(RoundedRectangle(cornerRadius: 24, style: .continuous).stroke(AppColors.Border.subtle, lineWidth: 1))
+        .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
     }
     
     private var statsGrid: some View {
@@ -106,23 +483,31 @@ struct HomeView: View {
                     title: "Total Games",
                     value: "\(viewModel.totalGames)",
                     icon: "gamecontroller.fill",
+                    helper: "Across \(viewModel.emulators.count) systems",
                     gradient: [AppColors.primary, AppColors.accent]
                 )
             }
             .buttonStyle(PlainButtonStyle())
             
-            StatCard(
-                title: "Hours Played",
-                value: viewModel.totalHours,
-                icon: "clock.fill",
-                gradient: [AppColors.info, AppColors.primary]
+            Button(action: {
+                showingPlayerStats = true
+            }) {
+                StatCard(
+                    title: "Game Stats",
+                    value: viewModel.totalHours,
+                    icon: "chart.bar.fill",
+                    helper: "No recent play yet",
+                    gradient: [AppColors.info, AppColors.primary]
+                )
+            }
+            .buttonStyle(PlainButtonStyle())
+            .scaleEffect(idleTarget == .gameStats ? (idleBreathing ? 1.03 : 0.985) : 1.0)
+            .shadow(
+                color: AppColors.primary.opacity(idleTarget == .gameStats ? (idleBreathing ? 0.24 : 0.12) : 0.08),
+                radius: idleTarget == .gameStats ? 16 : 8,
+                x: 0,
+                y: idleTarget == .gameStats ? 9 : 5
             )
-        }
-    }
-    
-    private var importSection: some View {
-        ImportRomsButton {
-            showingImport = true
         }
     }
     
@@ -131,19 +516,25 @@ struct HomeView: View {
             HStack {
                 HStack(spacing: 8) {
                     Image(systemName: "clock.fill")
-                        .foregroundColor(.purple)
+                        .font(.system(size: 17, weight: .semibold))
+                        .foregroundColor(AppColors.primary)
                     Text("Continue Playing")
-                        .font(.headline)
+                        .font(.system(size: 20, weight: .bold))
+                        .foregroundColor(AppColors.textPrimary)
                 }
                 
                 Spacer()
                 
                 Button("View All") {
+                    selectedGame = nil
                     showingRecentlyPlayed = true
                 }
-                .font(.subheadline)
+                .buttonStyle(.plain)
+                .font(.system(size: 16, weight: .semibold))
                 .foregroundColor(AppColors.primary)
             }
+            .contentShape(Rectangle())
+            .zIndex(2)
             
             if viewModel.recentGames.isEmpty {
                 VStack(spacing: 8) {
@@ -163,16 +554,24 @@ struct HomeView: View {
                 )
                 .clipShape(RoundedRectangle(cornerRadius: 16))
             } else {
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 12) {
-                        ForEach(viewModel.recentGames) { game in
-                            RecentGameCard(game: game) {
-                                showingRecentlyPlayed = true
+                GeometryReader { proxy in
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 16) {
+                            ForEach(Array(viewModel.recentGames.prefix(4)), id: \.id) { game in
+                                RecentGameCard(game: game, variant: .standard) {
+                                    launchRecentGame(game)
+                                }
+                                .frame(width: HomeShelfMetrics.recentGameCardWidth(for: proxy.size.width))
+                                .contextMenu {
+                                    recentGameContextMenu(game)
+                                }
                             }
                         }
+                        .padding(.horizontal, 2)
                     }
-                    .padding(.horizontal, 2)
                 }
+                .frame(height: 292)
+                .zIndex(0)
             }
         }
     }
@@ -182,18 +581,18 @@ struct HomeView: View {
             HStack {
                 HStack(spacing: 8) {
                     Image(systemName: "gamecontroller.fill")
-                        .font(.system(size: 14, weight: .semibold))
+                        .font(.system(size: 16, weight: .semibold))
                         .foregroundColor(AppColors.primary)
                     Text("All Emulators")
-                        .font(.headline)
+                        .font(.system(size: 20, weight: .bold))
                         .foregroundColor(AppColors.textPrimary)
                 }
 
                 Spacer()
 
                 Text("\(viewModel.emulators.count) systems")
-                    .font(.caption)
-                    .foregroundColor(AppColors.textMuted)
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundColor(AppColors.primary)
             }
             .padding(.top, 8)
             
@@ -213,7 +612,116 @@ struct HomeView: View {
     }
 
     private func platform(for shortName: String) -> EmulatorPlatform? {
-        EmulatorPlatform.allCases.first { $0.shortName == shortName }
+        return EmulatorPlatform.allCases.first { $0.shortName == shortName }
+    }
+
+    private func refreshHome() {
+        viewModel.loadData(in: viewContext)
+    }
+
+    @ViewBuilder
+    private func recentGameContextMenu(_ game: RecentGame) -> some View {
+        if let entry = viewModel.entry(for: game.gameId) {
+            Button {
+                beginRename(entry)
+            } label: {
+                Label("Rename", systemImage: "pencil")
+            }
+
+            Button {
+                showDetails(entry)
+            } label: {
+                Label("Details", systemImage: "info.circle")
+            }
+
+            Button(role: .destructive) {
+                activeAlert = HomeAlertState(kind: .confirmDelete(HomeDeleteCandidate(entry: entry, mode: .removeROMOnly)))
+            } label: {
+                Label("Remove ROM Only", systemImage: "eject")
+            }
+
+            Button(role: .destructive) {
+                activeAlert = HomeAlertState(kind: .confirmDelete(HomeDeleteCandidate(entry: entry, mode: .removeAll)))
+            } label: {
+                Label("Remove", systemImage: "trash")
+            }
+        }
+    }
+
+    private var renameDialogPresented: Binding<Bool> {
+        Binding(
+            get: { renameEntry != nil },
+            set: { isPresented in
+                if !isPresented {
+                    clearRenameDraft()
+                }
+            }
+        )
+    }
+
+    private func beginRename(_ entry: ROMLibraryEntry) {
+        renameEntry = entry
+        renameTitle = entry.title ?? ""
+    }
+
+    private func clearRenameDraft() {
+        renameEntry = nil
+        renameTitle = ""
+    }
+
+    private func commitRename() {
+        guard let entry = renameEntry else { return }
+        do {
+            try GameRenameService.shared.rename(entry: entry, to: renameTitle, in: viewContext)
+#if os(iOS)
+            UINotificationFeedbackGenerator().notificationOccurred(.success)
+#endif
+            clearRenameDraft()
+            refreshHome()
+        } catch {
+            activeAlert = HomeAlertState(kind: .launchError("Could not rename game: \(error.localizedDescription)"))
+        }
+    }
+
+    private func showDetails(_ entry: ROMLibraryEntry) {
+        detailEntry = entry
+    }
+
+    private func launchRecentGame(_ recent: RecentGame) {
+        if let issue = recent.launchIssue {
+            activeAlert = HomeAlertState(kind: .launchError(issue.message))
+            return
+        }
+        if let playable = recent.playableGame {
+            selectedGame = playable
+        } else {
+            showingRecentlyPlayed = true
+        }
+    }
+
+    private func performDeletion(_ candidate: HomeDeleteCandidate) {
+        do {
+            try GameDeletionService.shared.delete(entry: candidate.entry, mode: candidate.mode, in: viewContext)
+            refreshHome()
+        } catch {
+            activeAlert = HomeAlertState(kind: .launchError("Could not delete game: \(error.localizedDescription)"))
+        }
+    }
+
+    private func markInteraction() {
+        lastInteractionAt = Date()
+        if isIdle {
+            isIdle = false
+        }
+        idleTarget = .none
+    }
+
+    private func chooseIdleTarget() {
+        if !viewModel.recentGames.isEmpty, Bool.random() {
+            idleTarget = .firstContinueCard
+        } else {
+            idleTarget = .gameStats
+        }
     }
 }
 
@@ -221,145 +729,301 @@ struct StatCard: View {
     let title: String
     let value: String
     let icon: String
+    let helper: String
     let gradient: [Color]
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 4) {
             HStack(alignment: .top) {
-                ZStack {
-                    RoundedRectangle(cornerRadius: 10)
-                        .fill(
-                            LinearGradient(colors: gradient, startPoint: .topLeading, endPoint: .bottomTrailing)
-                        )
-                        .frame(width: 40, height: 40)
-                    
-                    Image(systemName: icon)
-                        .font(.system(size: 16, weight: .semibold))
-                        .foregroundColor(.white)
-                }
-                
+                Text(title)
+                    .font(.system(size: 15, weight: .medium))
+                    .foregroundStyle(AppColors.Text.secondary)
                 Spacer()
+                ZStack {
+                    Circle()
+                        .fill(AppColors.Surface.accentTint)
+                        .frame(width: 44, height: 44)
+
+                    Image(systemName: icon)
+                        .font(.system(size: 18, weight: .semibold))
+                        .foregroundStyle(AppColors.Text.accent)
+                }
             }
-            
+
             Text(value)
-                .font(.system(size: 28, weight: .bold))
-                .foregroundColor(AppColors.textPrimary)
-            
-            Text(title)
-                .font(.caption)
-                .foregroundColor(AppColors.textMuted)
+                .font(.system(size: 40, weight: .bold))
+                .foregroundStyle(AppColors.Text.primary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+
+            Text(helper)
+                .font(.system(size: 13, weight: .medium))
+                .foregroundStyle(AppColors.Text.tertiary)
         }
-        .padding(16)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 14)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(AppColors.surface)
-        .overlay(
-            RoundedRectangle(cornerRadius: 16)
-                .stroke(AppColors.surfaceLight.opacity(0.5), lineWidth: 1)
-        )
-        .clipShape(RoundedRectangle(cornerRadius: 16))
+        .frame(minHeight: 112, alignment: .topLeading)
+        .background(AppColors.Surface.cardPrimary)
+        .overlay(RoundedRectangle(cornerRadius: 20).stroke(AppColors.Border.subtle, lineWidth: 1))
+        .shadow(color: AppColors.Shadow.card, radius: 12, x: 0, y: 8)
+        .clipShape(RoundedRectangle(cornerRadius: 20))
+    }
+    
+    private func isLandscape(game: RecentGame) -> Bool {
+        #if os(iOS)
+        if let screenshotData = game.screenshotData,
+           let uiImage = UIImage(data: screenshotData) {
+            return uiImage.size.width > uiImage.size.height
+        }
+        #endif
+        return false
+    }
+    
+    private func formatRecentDate(_ date: Date) -> String {
+        let calendar = Calendar.current
+        if calendar.isDateInToday(date) { return "Today" }
+        if calendar.isDateInYesterday(date) { return "Yesterday" }
+        return date.formatted(.dateTime.month(.abbreviated).day())
     }
 }
 
-struct RecentGameCard: View {
+struct LandscapeGameRow: View {
     let game: RecentGame
     let onTap: () -> Void
     
     var body: some View {
         Button(action: onTap) {
-            VStack(alignment: .leading, spacing: 8) {
-                ZStack {
-                    RoundedRectangle(cornerRadius: 12)
-                        .fill(AppColors.surface)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 12)
-                                .stroke(AppColors.surfaceLight.opacity(0.5), lineWidth: 1)
-                        )
-                        .frame(width: 160, height: 120)
+            HStack(spacing: 12) {
+                #if os(iOS)
+                if let screenshotData = game.screenshotData, let uiImage = UIImage(data: screenshotData) {
+                    Image(uiImage: uiImage)
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                        .frame(width: 160, height: 90)
+                        .clipShape(RoundedRectangle(cornerRadius: 10))
+                } else if let coverData = game.coverData, let uiImage = UIImage(data: coverData) {
+                    Image(uiImage: uiImage)
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                        .frame(width: 160, height: 90)
+                        .clipShape(RoundedRectangle(cornerRadius: 10))
+                } else {
+                    placeholderImage
+                }
+                #else
+                placeholderImage
+                #endif
+                
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(GameCardTitleFormatter.format(game.title, maxWords: 7))
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundColor(AppColors.textPrimary)
+                        .lineLimit(2)
+                        .truncationMode(.tail)
+                        .frame(height: 38, alignment: .topLeading)
                     
-                    if let imageUrl = game.image, let url = URL(string: imageUrl) {
-                        AsyncImage(url: url) { image in
-                            image
-                                .resizable()
-                                .aspectRatio(contentMode: .fill)
-                        } placeholder: {
-                            Image(systemName: "gamecontroller")
-                                .font(.system(size: 32))
+                    HStack(spacing: 6) {
+                        if let lastPlayed = game.lastPlayed {
+                            Text(formatRecentDate(lastPlayed))
+                                .font(.system(size: 12, weight: .medium))
+                                .foregroundColor(AppColors.textSecondary)
+                        }
+
+                        if game.totalPlaySeconds > 0 {
+                            Text("•")
+                                .font(.system(size: 11, weight: .semibold))
+                                .foregroundColor(AppColors.textMuted)
+                            Text(totalHoursText)
+                                .font(.system(size: 11, weight: .medium))
                                 .foregroundColor(AppColors.textMuted)
                         }
-                        .frame(width: 160, height: 120)
-                        .clipShape(RoundedRectangle(cornerRadius: 12))
-                    } else {
-                        ZStack {
-                            LinearGradient(
-                                colors: [AppColors.surfaceLight, AppColors.surface],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                            Image(systemName: "gamecontroller.fill")
-                                .font(.system(size: 28))
-                                .foregroundColor(AppColors.textMuted)
-                        }
-                        .frame(width: 160, height: 120)
-                        .clipShape(RoundedRectangle(cornerRadius: 12))
                     }
 
-                    LinearGradient(
-                        colors: [Color.clear, AppColors.background.opacity(0.85)],
-                        startPoint: .top,
-                        endPoint: .bottom
-                    )
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
-                    
-                    VStack {
-                        HStack {
-                            if let lastPlayed = game.lastPlayed {
-                                Text(lastPlayed, style: .relative)
-                                    .font(.system(size: 10, weight: .medium))
-                                    .foregroundColor(AppColors.textPrimary)
-                                    .padding(.horizontal, 8)
-                                    .padding(.vertical, 4)
-                                    .background(AppColors.background.opacity(0.75))
-                                    .clipShape(Capsule())
-                            }
-                            Spacer()
+                    GeometryReader { geo in
+                        ZStack(alignment: .leading) {
+                            Capsule()
+                                .fill(AppColors.surfaceLight.opacity(0.65))
+                            Capsule()
+                                .fill(AppColors.primary.opacity(0.75))
+                                .frame(width: max(8, geo.size.width * sessionProgress))
                         }
-                        .padding(8)
+                    }
+                    .frame(height: 6)
 
+                    HStack {
+                        Text(game.console)
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundColor(AppColors.textMuted)
                         Spacer()
-                        HStack {
-                            Spacer()
-                            Text(game.console)
-                                .font(.system(size: 10, weight: .semibold))
-                                .padding(.horizontal, 8)
-                                .padding(.vertical, 4)
-                                .background(AppColors.primary.opacity(0.9))
-                                .foregroundColor(.white)
-                                .clipShape(Capsule())
-                        }
-                        .padding(8)
+                        Text("Resume")
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundColor(AppColors.primary)
                     }
                 }
                 
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(game.title)
-                        .font(.system(size: 14, weight: .semibold))
-                        .lineLimit(1)
-                        .foregroundColor(AppColors.textPrimary)
-                    
-                    if let lastPlayed = game.lastPlayed {
-                        HStack(spacing: 4) {
-                            Image(systemName: "clock.fill")
-                                .font(.system(size: 9))
-                            Text(lastPlayed, style: .relative)
-                                .font(.system(size: 10))
-                        }
-                        .foregroundColor(AppColors.textMuted)
-                    }
-                }
+                Spacer()
+                
+                Image(systemName: "play.circle.fill")
+                    .font(.system(size: 28))
+                    .foregroundColor(AppColors.primary)
             }
-            .frame(width: 160)
+            .padding(12)
+            .background(AppColors.surface)
+            .overlay(
+                RoundedRectangle(cornerRadius: 14)
+                    .stroke(AppColors.surfaceLight.opacity(0.5), lineWidth: 1)
+            )
+            .clipShape(RoundedRectangle(cornerRadius: 14))
+            .shadow(color: AppColors.primary.opacity(0.05), radius: 8, x: 0, y: 5)
         }
         .buttonStyle(PlainButtonStyle())
+    }
+    
+    private var placeholderImage: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 10)
+                .fill(AppColors.surfaceLight)
+            Image(systemName: "gamecontroller.fill")
+                .font(.system(size: 24))
+                .foregroundColor(AppColors.textMuted)
+        }
+        .frame(width: 160, height: 90)
+    }
+    
+    private func formatRecentDate(_ date: Date) -> String {
+        let calendar = Calendar.current
+        if calendar.isDateInToday(date) { return "Today" }
+        if calendar.isDateInYesterday(date) { return "Yesterday" }
+        return date.formatted(.dateTime.month(.abbreviated).day())
+    }
+
+    private var totalHoursText: String {
+        let hours = max(0, game.totalPlaySeconds / 3600)
+        return "\(hours)h"
+    }
+
+    private var sessionProgress: CGFloat {
+        guard game.totalPlaySeconds > 0 else { return 0.08 }
+        let capped = min(1.0, CGFloat(game.totalPlaySeconds) / CGFloat(4 * 3600))
+        return max(0.08, capped)
+    }
+
+}
+
+struct RecentGameCard: View {
+    let game: RecentGame
+    let variant: CollectorCardVariant
+    let onTap: () -> Void
+
+    init(game: RecentGame, variant: CollectorCardVariant = .featured, onTap: @escaping () -> Void) {
+        self.game = game
+        self.variant = variant
+        self.onTap = onTap
+    }
+    
+    var body: some View {
+        Button(action: onTap) {
+            CollectorGameCard(
+                variant: variant,
+                title: GameCardTitleFormatter.format(game.title, maxWords: 7),
+                metadataPrimary: playedDateText,
+                metadataSecondary: game.totalPlaySeconds > 0 ? totalHoursText : nil,
+                platformTag: game.console,
+                launchIssueIconName: game.launchIssue?.iconName,
+                progress: sessionProgress
+            ) {
+                recentCardArtwork
+            }
+        }
+        .buttonStyle(CollectorCardPressStyle())
+    }
+
+    @ViewBuilder
+    private var recentCardArtwork: some View {
+        let artworkHeight: CGFloat = variant == .featured ? 152 : 126
+        #if os(iOS)
+        if let screenshotData = game.screenshotData, let uiImage = UIImage(data: screenshotData) {
+            Image(uiImage: uiImage)
+                .resizable()
+                .aspectRatio(contentMode: .fill)
+                .frame(maxWidth: .infinity, minHeight: artworkHeight, maxHeight: artworkHeight)
+                .overlay(Color.white.opacity(0.12))
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+        } else if let coverData = game.coverData, let uiImage = UIImage(data: coverData) {
+            Image(uiImage: uiImage)
+                .resizable()
+                .aspectRatio(contentMode: .fill)
+                .frame(maxWidth: .infinity, minHeight: artworkHeight, maxHeight: artworkHeight)
+                .overlay(Color.white.opacity(0.16))
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+        } else if let imageUrl = game.image, let url = URL(string: imageUrl) {
+            AsyncImage(url: url) { image in
+                image
+                    .resizable()
+                    .aspectRatio(contentMode: .fill)
+            } placeholder: {
+                Image(systemName: "gamecontroller")
+                    .font(.system(size: 32))
+                    .foregroundColor(AppColors.textMuted)
+            }
+            .frame(maxWidth: .infinity, minHeight: artworkHeight, maxHeight: artworkHeight)
+            .overlay(Color.white.opacity(0.16))
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+        } else {
+            fallbackArtwork
+        }
+        #else
+        if let imageUrl = game.image, let url = URL(string: imageUrl) {
+            AsyncImage(url: url) { image in
+                image
+                    .resizable()
+                    .aspectRatio(contentMode: .fill)
+            } placeholder: {
+                Image(systemName: "gamecontroller")
+                    .font(.system(size: 32))
+                    .foregroundColor(AppColors.textMuted)
+            }
+            .frame(maxWidth: .infinity, minHeight: artworkHeight, maxHeight: artworkHeight)
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+        } else {
+            fallbackArtwork
+        }
+        #endif
+    }
+
+    private var fallbackArtwork: some View {
+        ZStack {
+            LinearGradient(
+                colors: [AppColors.surfaceLight, AppColors.surface],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+            Image(systemName: "gamecontroller.fill")
+                .font(.system(size: 28))
+                .foregroundColor(AppColors.textMuted)
+        }
+        .frame(maxWidth: .infinity, minHeight: variant == .featured ? 152 : 126, maxHeight: variant == .featured ? 152 : 126)
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+    }
+
+    private var playedDateText: String {
+        guard let date = game.lastPlayed else { return "Never" }
+        let calendar = Calendar.current
+        if calendar.isDateInToday(date) { return "Today" }
+        if calendar.isDateInYesterday(date) { return "Yesterday" }
+        return date.formatted(.dateTime.month(.abbreviated).day())
+    }
+
+    private var totalHoursText: String {
+        let hours = max(0, game.totalPlaySeconds / 3600)
+        return "\(hours)h"
+    }
+
+    private var sessionProgress: CGFloat {
+        guard game.totalPlaySeconds > 0 else { return 0.08 }
+        let capped = min(1.0, CGFloat(game.totalPlaySeconds) / CGFloat(4 * 3600))
+        return max(0.08, capped)
     }
 }
 
@@ -373,17 +1037,21 @@ struct EmulatorCard: View {
     let onTap: () -> Void
     
     @State private var isHovered = false
-    
+
+    private var consoleAssetName: String? {
+        ConsoleIdentity.resolve(systemRaw: shortName)?.assetName
+    }
+
     var body: some View {
         Button(action: onTap) {
-            ZStack {
-                RoundedRectangle(cornerRadius: 16)
-                    .fill(AppColors.surface)
+        ZStack {
+            RoundedRectangle(cornerRadius: 16)
+                .fill(AppColors.surface)
                     .overlay(
                         RoundedRectangle(cornerRadius: 16)
                             .fill(
                                 LinearGradient(
-                                    colors: gradient.map { $0.opacity(0.2) },
+                                    colors: [Color.white.opacity(0.16), Color.clear],
                                     startPoint: .topLeading,
                                     endPoint: .bottomTrailing
                                 )
@@ -393,35 +1061,49 @@ struct EmulatorCard: View {
                         RoundedRectangle(cornerRadius: 16)
                             .stroke(AppColors.surfaceLight.opacity(0.5), lineWidth: 1)
                     )
+                    .overlay(alignment: .leading) {
+                        RoundedRectangle(cornerRadius: 16)
+                            .fill(
+                                LinearGradient(
+                                    colors: [gradient.first?.opacity(0.24) ?? Color.clear, Color.clear],
+                                    startPoint: .leading,
+                                    endPoint: .trailing
+                                )
+                            )
+                            .frame(width: 72)
+                    }
+                    .shadow(color: AppColors.primary.opacity(0.05), radius: 12, x: 0, y: 6)
 
                 HStack(spacing: 16) {
                     ZStack {
-                        RoundedRectangle(cornerRadius: 12)
-                            .fill(LinearGradient(colors: gradient, startPoint: .topLeading, endPoint: .bottomTrailing))
-                            .frame(width: 48, height: 48)
-
-                        Text(icon)
-                            .font(.system(size: 20))
-                            .foregroundColor(.white)
+                        RMIconBadge(
+                            systemName: nil,
+                            assetName: consoleAssetName,
+                            emoji: consoleAssetName == nil ? icon : nil,
+                            size: 56,
+                            shape: .roundedRect,
+                            accent: true,
+                            imageInset: 5
+                        )
                     }
 
                     VStack(alignment: .leading, spacing: 2) {
                         Text(name)
-                            .font(.system(size: 16, weight: .semibold))
+                            .font(.system(size: 17, weight: .bold))
                             .foregroundColor(AppColors.textPrimary)
 
                         HStack(spacing: 4) {
                             Text(shortName)
-                                .font(.system(size: 12))
+                                .font(.system(size: 13, weight: .medium))
                                 .foregroundColor(AppColors.textMuted)
 
                             Text("•")
-                                .font(.system(size: 12))
+                                .font(.system(size: 12, weight: .medium))
                                 .foregroundColor(AppColors.textMuted)
 
                             Text("\(gamesCount) games")
-                                .font(.system(size: 12))
-                                .foregroundColor(AppColors.primary)
+                                .font(.system(size: 13, weight: .medium))
+                                .foregroundColor(AppColors.textSecondary)
                         }
                     }
 
@@ -430,8 +1112,8 @@ struct EmulatorCard: View {
                     ZStack {
                         Circle()
                             .fill(AppColors.primary)
-                            .frame(width: 40, height: 40)
-                            .shadow(color: AppColors.primary.opacity(0.5), radius: isHovered ? 12 : 8, x: 0, y: 4)
+                            .frame(width: 44, height: 44)
+                            .shadow(color: AppColors.primary.opacity(isHovered ? 0.38 : 0.22), radius: isHovered ? 16 : 10, x: 0, y: 6)
 
                         Image(systemName: "play.fill")
                             .font(.system(size: 14, weight: .bold))
@@ -441,6 +1123,7 @@ struct EmulatorCard: View {
                 }
                 .padding(16)
             }
+            .frame(minHeight: 92)
         }
         .buttonStyle(PlainButtonStyle())
         .onHover { hovering in
@@ -448,6 +1131,26 @@ struct EmulatorCard: View {
                 isHovered = hovering
             }
         }
+    }
+}
+
+private struct CollectorSystemTile: View {
+    let emulator: EmulatorInfo
+    let onTap: () -> Void
+
+    private var consoleAssetName: String? {
+        ConsoleIdentity.resolve(systemRaw: emulator.shortName)?.assetName
+    }
+
+    var body: some View {
+        CollectorConsoleTile(
+            title: emulator.shortName,
+            subtitle: "\(emulator.gamesCount) games",
+            systemTag: emulator.shortName,
+            icon: emulator.icon,
+            consoleAssetName: consoleAssetName,
+            onTap: onTap
+        )
     }
 }
 
@@ -543,6 +1246,7 @@ struct RomImportView: View {
     @Environment(\.dismiss) private var dismiss
     @StateObject private var coordinator: RomImportCoordinator
     @State private var isHovered = false
+    @State private var importErrorMessage: String?
     
     init() {
         let persistence = PersistenceController.shared
@@ -555,44 +1259,92 @@ struct RomImportView: View {
     
     var body: some View {
         NavigationStack {
-            VStack(spacing: 24) {
-                Spacer()
-                
-                Image(systemName: "arrow.down.doc.fill")
-                    .font(.system(size: 64))
-                    .foregroundColor(.purple)
-                
-                Text("Import ROMs")
-                    .font(.title)
-                    .fontWeight(.bold)
-                
-                Text("Select ROM files from your device to add them to your library.")
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal, 32)
-                
-                Spacer()
-                
-                Button(action: {
-                    #if os(iOS)
-                    presentDocumentPicker()
-                    #endif
-                }) {
-                    Text("Select Files")
-                        .font(.headline)
-                        .foregroundColor(.white)
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(
-                            LinearGradient(colors: [Color.pink, Color.purple], startPoint: .leading, endPoint: .trailing)
-                        )
-                        .cornerRadius(12)
+            ZStack {
+                AppColors.background.ignoresSafeArea()
+
+                VStack(spacing: 18) {
+                    Spacer(minLength: 8)
+
+                VStack(spacing: 16) {
+                    ZStack {
+                            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                                .fill(
+                                    LinearGradient(
+                                        colors: [AppColors.primary.opacity(0.95), AppColors.accent.opacity(0.9)],
+                                        startPoint: .topLeading,
+                                        endPoint: .bottomTrailing
+                                    )
+                                )
+                                .frame(width: 78, height: 78)
+                                .shadow(color: AppColors.primary.opacity(0.25), radius: 14, x: 0, y: 8)
+
+                            Image(systemName: "arrow.down.doc.fill")
+                                .font(.system(size: 34, weight: .semibold))
+                                .foregroundColor(.white.opacity(0.95))
+                        }
+
+                    VStack(spacing: 8) {
+                            Text("Import ROMs")
+                                .font(.system(size: 28, weight: .bold))
+                                .foregroundColor(AppColors.textPrimary)
+
+                            Text("Select ROM files from your device to add them to your library.")
+                                .font(.system(size: 15))
+                                .foregroundColor(AppColors.textMuted)
+                                .multilineTextAlignment(.center)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 26)
+                    .padding(.horizontal, 20)
+                    .background(AppColors.surface)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 22, style: .continuous)
+                            .stroke(AppColors.surfaceLight.opacity(0.55), lineWidth: 1)
+                    )
+                    .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+
+                    VStack(alignment: .leading, spacing: 8) {
+                        Label("Supports: .gb, .gbc, .gba, .nds", systemImage: "checkmark.seal")
+                            .font(.system(size: 13, weight: .medium))
+                            .foregroundColor(AppColors.textPrimary)
+                        Label("Files stay on your device", systemImage: "lock.shield")
+                            .font(.system(size: 13, weight: .medium))
+                            .foregroundColor(AppColors.textMuted)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, 4)
+
+                    Spacer(minLength: 0)
+
+                    Button(action: {
+                        #if os(iOS)
+                        presentDocumentPicker()
+                        #endif
+                    }) {
+                        Text("Select Files")
+                            .font(.system(size: 18, weight: .semibold))
+                            .foregroundColor(.white)
+                            .frame(maxWidth: .infinity, minHeight: 54)
+                            .background(
+                                LinearGradient(
+                                    colors: [Color(red: 1.0, green: 0.12, blue: 0.35), AppColors.primary],
+                                    startPoint: .leading,
+                                    endPoint: .trailing
+                                )
+                            )
+                            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                    }
+                    .buttonStyle(.plain)
+                    .padding(.bottom, 18)
                 }
-                .padding(.horizontal, 32)
-                .padding(.bottom, 32)
+                .padding(.horizontal, 16)
             }
             .navigationTitle("Import")
+            #if os(iOS)
+            .navigationBarTitleDisplayMode(.large)
+            #endif
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") {
@@ -605,6 +1357,21 @@ struct RomImportView: View {
         .sheet(isPresented: $coordinator.isImporting) {
             ImportingProgressView(progress: coordinator.importProgress)
         }
+        .alert(
+            "Import Failed",
+            isPresented: Binding(
+                get: { importErrorMessage != nil },
+                set: { if !$0 { importErrorMessage = nil } }
+            ),
+            actions: {
+                Button("OK", role: .cancel) {
+                    importErrorMessage = nil
+                }
+            },
+            message: {
+                Text(importErrorMessage ?? "The selected file could not be imported.")
+            }
+        )
         #endif
     }
     
@@ -622,19 +1389,26 @@ struct RomImportView: View {
         coordinator.presentFilePicker(on: topVC) { urls in
             guard !urls.isEmpty else { return }
             Task {
+                var successCount = 0
+                var failures: [String] = []
                 for url in urls {
                     do {
                         _ = try await self.coordinator.importROM(from: url)
-                        await MainActor.run {
-                            print("ROM imported successfully: \(url.lastPathComponent)")
-                        }
+                        successCount += 1
                     } catch {
-                        print("Import error for \(url.lastPathComponent): \(error.localizedDescription)")
+                        let detail = error.localizedDescription
+                        failures.append("\(url.lastPathComponent): \(detail)")
                     }
                 }
+                let didImportAny = successCount > 0
+                let firstFailure = failures.first
                 await MainActor.run {
                     self.coordinator.isImporting = false
-                    self.dismiss()
+                    if didImportAny {
+                        self.dismiss()
+                    } else if let firstFailure {
+                        self.importErrorMessage = firstFailure
+                    }
                 }
             }
         }
@@ -659,11 +1433,14 @@ struct ImportingProgressView: View {
 }
 #endif
 
+@MainActor
 final class HomeViewModel: ObservableObject {
     @Published var totalGames: Int = 0
     @Published var totalHours: String = "0h"
     @Published var recentGames: [RecentGame] = []
+    @Published var recentlyAddedGames: [RecentGame] = []
     @Published var emulators: [EmulatorInfo] = []
+    private var entriesByID: [UUID: ROMLibraryEntry] = [:]
     
     private var fetchedResultsController: NSFetchedResultsController<ROMLibraryEntry>?
     private weak var viewContext: NSManagedObjectContext?
@@ -689,11 +1466,11 @@ final class HomeViewModel: ObservableObject {
             updateStats(from: entries)
             loadEmulators(from: entries)
         } catch {
-            print("Failed to fetch: \(error)")
         }
     }
     
     private func updateStats(from entries: [ROMLibraryEntry]) {
+        entriesByID = Dictionary(uniqueKeysWithValues: entries.map { ($0.id, $0) })
         totalGames = entries.count
         
         let totalSeconds = entries.reduce(0) { $0 + $1.playtimeTotal }
@@ -702,40 +1479,65 @@ final class HomeViewModel: ObservableObject {
         
         let recentEntries = entries.filter { $0.lastPlayedAt != nil }.prefix(5)
         recentGames = recentEntries.map { entry in
-            RecentGame(
+            let console = entry.consoleIdentity?.systemCode ?? entry.system?.uppercased() ?? "Unknown"
+            return RecentGame(
                 id: entry.objectID.uriRepresentation().absoluteString,
                 title: entry.title ?? "Unknown",
-                console: entry.system?.uppercased() ?? "Unknown",
+                console: console,
                 lastPlayed: entry.lastPlayedAt,
                 progress: 0,
                 image: nil,
-                gameId: entry.id
+                screenshotData: SaveStateStorage.shared.latestScreenshot(for: entry.checksum ?? ""),
+                coverData: CoverArtService.shared.resolve(for: entry)?.data,
+                totalPlaySeconds: Int(entry.playtimeTotal),
+                playableGame: entry.toGame(),
+                gameId: entry.id,
+                launchIssue: ROMCompatibilityService.shared.compatibility(for: entry).issue
+            )
+        }
+
+        let addedEntries = entries
+            .sorted {
+                let lhs = $0.dateAdded ?? Date.distantPast
+                let rhs = $1.dateAdded ?? Date.distantPast
+                return lhs > rhs
+            }
+            .prefix(8)
+
+        recentlyAddedGames = addedEntries.map { entry in
+            let console = entry.consoleIdentity?.systemCode ?? entry.system?.uppercased() ?? "Unknown"
+            return RecentGame(
+                id: "added-\(entry.objectID.uriRepresentation().absoluteString)",
+                title: entry.title ?? "Unknown",
+                console: console,
+                lastPlayed: entry.dateAdded ?? entry.lastPlayedAt,
+                progress: 0,
+                image: nil,
+                screenshotData: SaveStateStorage.shared.latestScreenshot(for: entry.checksum ?? ""),
+                coverData: CoverArtService.shared.resolve(for: entry)?.data,
+                totalPlaySeconds: Int(entry.playtimeTotal),
+                playableGame: entry.toGame(),
+                gameId: entry.id,
+                launchIssue: ROMCompatibilityService.shared.compatibility(for: entry).issue
             )
         }
     }
     
     private func loadEmulators(from entries: [ROMLibraryEntry]) {
         let countsBySystem = Dictionary(grouping: entries) {
-            ($0.system ?? "").trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+            $0.resolvedSystemCode
         }.mapValues(\.count)
 
         emulators = [
-            EmulatorInfo(name: "Game Boy", shortName: "GB", gamesCount: countsBySystem["gb", default: 0], gradient: [Color.green, Color.mint], icon: "🎮"),
-            EmulatorInfo(name: "Game Boy Color", shortName: "GBC", gamesCount: countsBySystem["gbc", default: 0], gradient: [Color.blue, Color.purple], icon: "🎨"),
+            EmulatorInfo(name: "Game Boy", shortName: "GB", gamesCount: countsBySystem["gb", default: 0], gradient: [Color(hex: "B7D6A4"), Color(hex: "7D9A52")], icon: "🎮"),
+            EmulatorInfo(name: "Game Boy Color", shortName: "GBC", gamesCount: countsBySystem["gbc", default: 0], gradient: [Color(hex: "B597F5"), Color(hex: "7A4BC2")], icon: "🌈"),
             EmulatorInfo(name: "Game Boy Advance", shortName: "GBA", gamesCount: countsBySystem["gba", default: 0], gradient: [Color.purple, Color.indigo], icon: "⚡"),
             EmulatorInfo(name: "Nintendo DS", shortName: "NDS", gamesCount: countsBySystem["nds", default: 0], gradient: [Color.cyan, Color.blue], icon: "📱"),
-            EmulatorInfo(name: "PlayStation 1", shortName: "PS1", gamesCount: countsBySystem["ps1", default: 0], gradient: [Color.gray, Color.blue], icon: "💿"),
-            EmulatorInfo(name: "Nintendo 3DS", shortName: "3DS", gamesCount: countsBySystem["3ds", default: 0], gradient: [Color.red, Color.orange], icon: "🔺"),
-            EmulatorInfo(name: "PSP", shortName: "PSP", gamesCount: countsBySystem["psp", default: 0], gradient: [Color.gray, Color.black], icon: "🎯"),
-        ]
+        ].filter { $0.gamesCount > 0 || ["GB", "GBC", "GBA", "NDS"].contains($0.shortName) }
     }
     
-    func playGame(_ game: RecentGame) {
-        // Handle play action
-    }
-    
-    func selectEmulator(_ emulator: EmulatorInfo) {
-        // Handle emulator selection
+    func entry(for id: UUID) -> ROMLibraryEntry? {
+        entriesByID[id]
     }
 }
 
@@ -746,7 +1548,12 @@ struct RecentGame: Identifiable {
     let lastPlayed: Date?
     let progress: Int
     let image: String?
+    let screenshotData: Data?
+    let coverData: Data?
+    let totalPlaySeconds: Int
+    let playableGame: Game?
     let gameId: UUID
+    let launchIssue: ROMLaunchIssue?
 }
 
 struct EmulatorInfo: Identifiable {
@@ -756,4 +1563,21 @@ struct EmulatorInfo: Identifiable {
     var gamesCount: Int
     let gradient: [Color]
     let icon: String
+}
+
+private struct HomeDeleteCandidate: Identifiable {
+    let id = UUID()
+    let entry: ROMLibraryEntry
+    let mode: GameDeletionMode
+}
+
+private struct HomeAlertState: Identifiable {
+    enum Kind {
+        case launchError(String)
+        case confirmDelete(HomeDeleteCandidate)
+        case confirmFinalDelete(HomeDeleteCandidate)
+    }
+
+    let id = UUID()
+    let kind: Kind
 }

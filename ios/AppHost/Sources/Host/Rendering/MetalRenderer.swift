@@ -172,6 +172,7 @@ public final class MetalRenderer {
     
     private var frameCount: Int = 0
     private var colorAdjustments = ColorAdjustments()
+    private var postProcessingEnabled = true
     
     private let commandBufferLock = NSLock()
     private var lastCommandBuffer: MTLCommandBuffer?
@@ -195,6 +196,10 @@ public final class MetalRenderer {
             contrast: contrast,
             saturation: saturation
         )
+    }
+
+    public func setPostProcessingEnabled(_ enabled: Bool) {
+        postProcessingEnabled = enabled
     }
     
     private func _renderInternal(to drawable: CAMetalDrawable) {
@@ -252,6 +257,12 @@ public final class MetalRenderer {
             length: MemoryLayout<ColorAdjustments>.stride,
             index: 1
         )
+        var processingFlag: UInt32 = postProcessingEnabled ? 1 : 0
+        renderEncoder.setFragmentBytes(
+            &processingFlag,
+            length: MemoryLayout<UInt32>.stride,
+            index: 2
+        )
         renderEncoder.drawPrimitives(type: .triangleStrip, vertexStart: 0, vertexCount: 4)
         renderEncoder.endEncoding()
         
@@ -293,12 +304,16 @@ vertex VertexOut vertexShader(uint vertexID [[vertex_id]],
 
 fragment float4 fragmentShader(VertexOut in [[stage_in]],
                                 texture2d<float> texture [[texture(0)]],
-                                constant float4 &adjust [[buffer(1)]]) {
+                                constant float4 &adjust [[buffer(1)]],
+                                constant uint &postProcessEnabled [[buffer(2)]]) {
     constexpr sampler s(coord::normalized, address::clamp_to_edge, filter::nearest);
     float4 c = texture.sample(s, in.texCoord);
 
     // BGRA buffer -> RGB output
     float3 color = float3(c.b, c.g, c.r);
+    if (postProcessEnabled == 0) {
+        return float4(clamp(color, 0.0, 1.0), 1.0);
+    }
 
     // adjust = (brightness, gamma, contrast, saturation)
     float brightness = adjust.x;

@@ -4,20 +4,23 @@
 #include <algorithm>
 #include <array>
 #include <cctype>
+#include <cstdlib>
 #include <cstdio>
 #include <cstring>
+#include <limits>
 
 #include <mgba/flags.h>
 #include <mgba/gba/core.h>
+#include <mgba/core/interface.h>
 #include <mgba/internal/gba/input.h>
-#include <mgba-util/audio-buffer.h>
-#include <mgba-util/image.h>
 #include <mgba-util/vfs.h>
 
 namespace xemu {
 
+constexpr size_t mGBAWrapper::SAVE_STATE_SIZE;
+
 namespace {
-constexpr bool MGBA_LOAD_DEBUG = true;
+constexpr bool MGBA_LOAD_DEBUG = false;
 }
 
 class mGBAWrapper::Impl {
@@ -29,7 +32,7 @@ public:
     int audioSampleRate = mGBAWrapper::AUDIO_SAMPLE_RATE;
     std::array<char, 13> romTitle{};
     std::vector<uint8_t> romData;
-    std::vector<mColor> nativeVideo;
+    std::vector<color_t> nativeVideo;
 };
 
 mGBAWrapper::mGBAWrapper() : impl_(std::make_unique<Impl>()) {
@@ -98,8 +101,8 @@ bool mGBAWrapper::loadROM(const char* filename, const uint8_t* data, size_t size
 
     unsigned width = VIDEO_WIDTH;
     unsigned height = VIDEO_HEIGHT;
-    if (impl_->core->baseVideoSize) {
-        impl_->core->baseVideoSize(impl_->core, &width, &height);
+    if (impl_->core->desiredVideoDimensions) {
+        impl_->core->desiredVideoDimensions(impl_->core, &width, &height);
     }
     if (width == 0 || height == 0) {
         width = VIDEO_WIDTH;
@@ -110,12 +113,8 @@ bool mGBAWrapper::loadROM(const char* filename, const uint8_t* data, size_t size
     xemu_mgba_core_set_video_buffer(impl_->core, impl_->nativeVideo.data(), width);
 
     xemu_mgba_core_set_audio_buffer_size(impl_->core, AUDIO_SAMPLES_PER_FRAME);
-    const unsigned coreRate = xemu_mgba_core_audio_sample_rate(impl_->core);
-    if (coreRate > 0) {
-        impl_->audioSampleRate = static_cast<int>(coreRate);
-    } else {
-        impl_->audioSampleRate = AUDIO_SAMPLE_RATE;
-    }
+    impl_->audioSampleRate = AUDIO_SAMPLE_RATE;
+    xemu_mgba_core_set_audio_sample_rate(impl_->core, static_cast<unsigned>(impl_->audioSampleRate));
 
     (void)filename;
     impl_->romData.assign(data, data + size);
@@ -253,26 +252,33 @@ void mGBAWrapper::runFrame() {
     }
 
     impl_->audioSampleCount = 0;
-    mAudioBuffer* audio = xemu_mgba_core_get_audio_buffer(impl_->core);
-    if (audio) {
-        const size_t availableFrames = mAudioBufferAvailable(audio);
-        const size_t maxFrames = audioBuffer_.size() / 2; // stereo interleaved
-        size_t framesToRead = std::min(availableFrames, maxFrames);
+    const int availableFrames = xemu_mgba_core_audio_samples_avail(impl_->core);
+    int readFrames = 0;
+
+    if (availableFrames > 0) {
+        const int maxFrames = static_cast<int>(audioBuffer_.size() / 2); // stereo interleaved
+        int framesToRead = std::min(availableFrames, maxFrames);
 
         if (availableFrames > maxFrames) {
-            size_t framesToDrop = availableFrames - maxFrames;
+            int framesToDrop = availableFrames - maxFrames;
             std::array<int16_t, 1024> discardBuffer{}; // 512 stereo frames
             while (framesToDrop > 0) {
-                const size_t chunkFrames = std::min(framesToDrop, discardBuffer.size() / 2);
-                mAudioBufferRead(audio, discardBuffer.data(), chunkFrames);
-                framesToDrop -= chunkFrames;
+                const int chunkFrames = std::min(framesToDrop, static_cast<int>(discardBuffer.size() / 2));
+                const int dropped = xemu_mgba_core_audio_read_interleaved(impl_->core, discardBuffer.data(), chunkFrames);
+                if (dropped <= 0) {
+                    break;
+                }
+                framesToDrop -= dropped;
             }
             framesToRead = maxFrames;
         }
 
         if (framesToRead > 0) {
-            const size_t readFrames = mAudioBufferRead(audio, audioBuffer_.data(), framesToRead);
-            impl_->audioSampleCount = static_cast<int>(readFrames * 2);
+            readFrames = xemu_mgba_core_audio_read_interleaved(impl_->core, audioBuffer_.data(), framesToRead);
+            if (readFrames > 0) {
+                const int sampleCount = readFrames * 2;
+                impl_->audioSampleCount = sampleCount;
+            }
         }
     }
 }
@@ -342,6 +348,46 @@ size_t mGBAWrapper::getSaveStateSize() const {
 
 const char* mGBAWrapper::getROMTitle() const {
     return impl_->romTitle.data();
+}
+
+bool mGBAWrapper::saveBattery(uint8_t* buffer, size_t size) {
+    if (!impl_->core || !impl_->romLoaded || !buffer) {
+        return false;
+    }
+
+    void* savedata = nullptr;
+    const size_t savedataSize = xemu_mgba_core_savedata_clone(impl_->core, &savedata);
+    if (savedataSize == 0 || !savedata || size < savedataSize) {
+        if (savedata) {
+            std::free(savedata);
+        }
+        return false;
+    }
+
+    std::memcpy(buffer, savedata, savedataSize);
+    std::free(savedata);
+    return true;
+}
+
+bool mGBAWrapper::loadBattery(const uint8_t* buffer, size_t size) {
+    if (!impl_->core || !impl_->romLoaded || !buffer || size == 0) {
+        return false;
+    }
+
+    return xemu_mgba_core_savedata_restore(impl_->core, buffer, size, true);
+}
+
+size_t mGBAWrapper::getBatterySaveSize() const {
+    if (!impl_->core || !impl_->romLoaded) {
+        return 0;
+    }
+
+    void* savedata = nullptr;
+    const size_t savedataSize = xemu_mgba_core_savedata_clone(impl_->core, &savedata);
+    if (savedata) {
+        std::free(savedata);
+    }
+    return savedataSize;
 }
 
 } // namespace xemu

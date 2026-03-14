@@ -5,7 +5,7 @@ struct RomMetadataExtractor {
         switch system {
         case .nes:
             return extractNESMetadata(data)
-        case .gbc:
+        case .gb, .gbc:
             return extractGBMetadata(data)
         case .gba:
             return extractGBAMetadata(data)

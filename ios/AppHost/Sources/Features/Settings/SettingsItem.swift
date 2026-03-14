@@ -33,39 +33,73 @@ struct SettingsItem: View {
                 ZStack {
                     RoundedRectangle(cornerRadius: 12)
                         .fill(iconBackground)
-                        .frame(width: 48, height: 48)
+                        .frame(width: 56, height: 56)
 
                     Image(systemName: icon)
-                        .font(.system(size: 22, weight: .medium))
+                        .font(.system(size: 24, weight: .medium))
                         .foregroundColor(iconColor)
                 }
 
                 VStack(alignment: .leading, spacing: 2) {
                     Text(title)
-                        .font(.system(size: 16, weight: .semibold))
+                        .font(.system(size: 17, weight: .bold))
                         .foregroundColor(AppColors.textPrimary)
 
                     Text(description)
-                        .font(.system(size: 12))
-                        .foregroundColor(AppColors.textMuted)
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundColor(AppColors.primary)
                 }
 
                 Spacer()
 
                 Image(systemName: "chevron.right")
-                    .font(.system(size: 16, weight: .medium))
+                    .font(.system(size: 18, weight: .semibold))
                     .foregroundColor(AppColors.textPrimary)
                     .opacity(0.5)
             }
-            .padding(16)
-            .background(AppColors.surface)
+            .padding(18)
+            .background(cardBackground)
             .cornerRadius(16)
             .overlay(
                 RoundedRectangle(cornerRadius: 16)
-                    .stroke(AppColors.surfaceLight.opacity(0.5), lineWidth: 1)
+                    .stroke(cardStrokeColor, lineWidth: 1)
             )
+            .shadow(color: shadowColor, radius: shadowRadius, x: 0, y: shadowYOffset)
         }
         .buttonStyle(PlainButtonStyle())
+    }
+
+    private var isUpgrade: Bool {
+        title == "Upgrade"
+    }
+
+    @ViewBuilder
+    private var cardBackground: some View {
+        if isUpgrade {
+            LinearGradient(
+                colors: [AppColors.primary.opacity(0.10), AppColors.surface],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+        } else {
+            AppColors.surface
+        }
+    }
+
+    private var cardStrokeColor: Color {
+        isUpgrade ? AppColors.primary.opacity(0.28) : AppColors.surfaceLight.opacity(0.5)
+    }
+
+    private var shadowColor: Color {
+        isUpgrade ? AppColors.primary.opacity(0.16) : AppColors.primary.opacity(0.05)
+    }
+
+    private var shadowRadius: CGFloat {
+        isUpgrade ? 14 : 8
+    }
+
+    private var shadowYOffset: CGFloat {
+        isUpgrade ? 8 : 4
     }
 }
 

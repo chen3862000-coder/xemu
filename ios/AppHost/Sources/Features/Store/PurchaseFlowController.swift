@@ -1,4 +1,5 @@
 import Foundation
+import OSLog
 import StoreKit
 
 public enum PurchaseError: Error, LocalizedError {
@@ -40,6 +41,7 @@ public final class PurchaseFlowController: NSObject, ObservableObject {
     @Published public var availableProducts: [ProductCode: Product] = [:]
 
     private let apiStub = AzureApiStub.shared
+    private let logger = Logger(subsystem: "com.xemu.app", category: "PurchaseFlow")
     private var updateListenerTask: Task<Void, Never>?
 
     private override init() {
@@ -69,7 +71,7 @@ public final class PurchaseFlowController: NSObject, ObservableObject {
                     }
                 }
             } catch {
-                print("⚠️ Failed to load products: \(error)")
+                logger.error("Failed to load products: \(error.localizedDescription, privacy: .public)")
             }
         }
     }
@@ -120,7 +122,7 @@ public final class PurchaseFlowController: NSObject, ObservableObject {
             await handleSuccessfulTransaction(transaction, productCode: nil)
             await transaction.finish()
         } catch {
-            print("⚠️ Failed to handle transaction update: \(error)")
+            logger.error("Failed to handle transaction update: \(error.localizedDescription, privacy: .public)")
         }
     }
 
@@ -137,7 +139,7 @@ public final class PurchaseFlowController: NSObject, ObservableObject {
                 lastPurchaseResult = code.map { .success($0) }
             }
         } catch {
-            print("⚠️ Failed to handle successful transaction: \(error)")
+            logger.error("Failed to handle successful transaction: \(error.localizedDescription, privacy: .public)")
             await MainActor.run {
                 lastPurchaseResult = .failed(.receiptValidationFailed(error))
             }
@@ -152,7 +154,7 @@ public final class PurchaseFlowController: NSObject, ObservableObject {
         throw PurchaseError.receiptValidationFailed(URLError(.fileDoesNotExist))
     }
 
-    private func validateReceipt(_ receipt: Data, transactionID: UInt64) async throws {
+    private func validateReceipt(_: Data, transactionID _: UInt64) async throws {
         do {
             let entitlementBundle = try await apiStub.fetchEntitlements()
 
@@ -167,8 +169,6 @@ public final class PurchaseFlowController: NSObject, ObservableObject {
                     ])
                 )
             }
-
-            print("✓ Receipt validated successfully for transaction \(transactionID)")
         } catch {
             throw PurchaseError.receiptValidationFailed(error)
         }
@@ -176,8 +176,7 @@ public final class PurchaseFlowController: NSObject, ObservableObject {
 
     private func refreshEntitlements() async throws {
         do {
-            let entitlementBundle = try await apiStub.fetchEntitlements()
-            print("✓ Entitlements refreshed successfully")
+            _ = try await apiStub.fetchEntitlements()
         } catch {
             throw PurchaseError.entitlementRefreshFailed(error)
         }
@@ -266,6 +265,5 @@ extension PurchaseFlowController {
 
 extension EntitlementCache {
     func updateEntitlements(from bundle: AzureApiStub.EntitlementBundle) async throws {
-        print("✓ Updated \(bundle.entitlements.count) entitlements from Azure API")
     }
 }

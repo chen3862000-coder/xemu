@@ -6,8 +6,8 @@ cd "$SCRIPT_DIR"
 
 echo "Building Xemu Cores Library for iOS..."
 
-ENABLE_NDS_LIBRETRO_BACKEND="${ENABLE_NDS_LIBRETRO_BACKEND:-OFF}"
-ENABLE_NDS_MELONDS_LIBRETRO_SYMBOLS="${ENABLE_NDS_MELONDS_LIBRETRO_SYMBOLS:-OFF}"
+ENABLE_NDS_LIBRETRO_BACKEND="${ENABLE_NDS_LIBRETRO_BACKEND:-ON}"
+ENABLE_NDS_MELONDS_LIBRETRO_SYMBOLS="${ENABLE_NDS_MELONDS_LIBRETRO_SYMBOLS:-ON}"
 NDS_MELONDS_LIBRETRO_STATIC_LIB="${NDS_MELONDS_LIBRETRO_STATIC_LIB:-}"
 NDS_MELONDS_LIBRETRO_STATIC_LIB_DEVICE="${NDS_MELONDS_LIBRETRO_STATIC_LIB_DEVICE:-}"
 NDS_MELONDS_LIBRETRO_STATIC_LIB_SIM="${NDS_MELONDS_LIBRETRO_STATIC_LIB_SIM:-}"
@@ -16,6 +16,26 @@ NDS_MELONDS_LIBRETRO_STATIC_LIB_SIM="${NDS_MELONDS_LIBRETRO_STATIC_LIB_SIM:-}"
 if [ -n "$NDS_MELONDS_LIBRETRO_STATIC_LIB" ]; then
   [ -z "$NDS_MELONDS_LIBRETRO_STATIC_LIB_DEVICE" ] && NDS_MELONDS_LIBRETRO_STATIC_LIB_DEVICE="$NDS_MELONDS_LIBRETRO_STATIC_LIB"
   [ -z "$NDS_MELONDS_LIBRETRO_STATIC_LIB_SIM" ] && NDS_MELONDS_LIBRETRO_STATIC_LIB_SIM="$NDS_MELONDS_LIBRETRO_STATIC_LIB"
+fi
+
+# Auto-discover melonDS libretro archives for a safe default build.
+if [ -z "$NDS_MELONDS_LIBRETRO_STATIC_LIB_DEVICE" ]; then
+  AUTO_DEVICE_LIB="$SCRIPT_DIR/third_party/melonds-ds/build-xemu-ios-device/src/libretro/libmelondsds_libretro_xemu_bundle.a"
+  [ -f "$AUTO_DEVICE_LIB" ] && NDS_MELONDS_LIBRETRO_STATIC_LIB_DEVICE="$AUTO_DEVICE_LIB"
+fi
+if [ -z "$NDS_MELONDS_LIBRETRO_STATIC_LIB_SIM" ]; then
+  AUTO_SIM_LIB="$SCRIPT_DIR/third_party/melonds-ds/build-xemu-ios-sim/src/libretro/libmelondsds_libretro_xemu_bundle.a"
+  [ -f "$AUTO_SIM_LIB" ] && NDS_MELONDS_LIBRETRO_STATIC_LIB_SIM="$AUTO_SIM_LIB"
+fi
+
+# If we cannot bind melonDS symbols, disable symbol mode explicitly to avoid
+# a false "enabled" state that results in runtime NDS load failures.
+if [ "$ENABLE_NDS_MELONDS_LIBRETRO_SYMBOLS" = "ON" ]; then
+  if [ -z "$NDS_MELONDS_LIBRETRO_STATIC_LIB_DEVICE" ] || [ -z "$NDS_MELONDS_LIBRETRO_STATIC_LIB_SIM" ]; then
+    echo "Warning: melonDS static archives were not found for both device/simulator."
+    echo "         NDS symbol binding is being disabled for this build."
+    ENABLE_NDS_MELONDS_LIBRETRO_SYMBOLS="OFF"
+  fi
 fi
 
 echo "NDS libretro backend: $ENABLE_NDS_LIBRETRO_BACKEND"
@@ -57,6 +77,7 @@ rm -rf build-ios-device
 mkdir -p build-ios-device
 cd build-ios-device
 cmake .. \
+    -DCMAKE_POLICY_VERSION_MINIMUM=3.5 \
     -DCMAKE_OSX_ARCHITECTURES=arm64 \
     -DCMAKE_OSX_SYSROOT=$IOS_SDK \
     -DCMAKE_OSX_DEPLOYMENT_TARGET=14.0 \
@@ -81,6 +102,7 @@ rm -rf build-ios-sim
 mkdir -p build-ios-sim
 cd build-ios-sim
 cmake .. \
+    -DCMAKE_POLICY_VERSION_MINIMUM=3.5 \
     -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64" \
     -DCMAKE_OSX_SYSROOT=$SIM_SDK \
     -DCMAKE_OSX_DEPLOYMENT_TARGET=14.0 \
@@ -169,6 +191,78 @@ mv build-ios-device/libxemu_cores_combined.a build-ios-device/libxemu_cores.a
 libtool -static -o build-ios-sim/libxemu_cores_combined.a "${SIM_LIBS[@]}"
 strip_dummy_bitcode_members "build-ios-sim/libxemu_cores_combined.a"
 mv build-ios-sim/libxemu_cores_combined.a build-ios-sim/libxemu_cores.a
+
+remove_bitcode_wrapper_members() {
+  local archive="$1"
+  python3 - "$archive" <<'PY'
+import os, subprocess, sys, tempfile
+
+archive = sys.argv[1]
+if not os.path.exists(archive):
+    sys.exit(0)
+
+MAGIC = bytes.fromhex('dec0170b')
+
+def list_members(path):
+    try:
+        out = subprocess.check_output(['xcrun', 'ar', '-t', path], text=True, stderr=subprocess.DEVNULL)
+    except subprocess.CalledProcessError:
+        return []
+    return [m for m in out.splitlines() if m and m != '__.SYMDEF']
+
+def bitcode_members(path):
+    bad = []
+    for m in list_members(path):
+        try:
+            data = subprocess.check_output(['xcrun', 'ar', '-p', path, m], stderr=subprocess.DEVNULL)
+        except subprocess.CalledProcessError:
+            continue
+        if len(data) >= 4 and data[:4] == MAGIC:
+            bad.append(m)
+    return bad
+
+def delete_members(path, names):
+    if not names:
+        return
+    chunk = 50
+    for i in range(0, len(names), chunk):
+        batch = names[i:i + chunk]
+        subprocess.run(['xcrun', 'ar', '-d', path, *batch], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=False)
+    subprocess.run(['ranlib', path], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=False)
+
+def lipo_arches(path):
+    try:
+        info = subprocess.check_output(['lipo', '-info', path], text=True, stderr=subprocess.STDOUT)
+    except Exception:
+        return []
+    if 'are:' in info:
+        return info.split('are:', 1)[1].strip().split()
+    if 'architecture:' in info:
+        return [info.split('architecture:', 1)[1].strip().split()[0]]
+    return []
+
+arches = lipo_arches(archive)
+if len(arches) > 1:
+    with tempfile.TemporaryDirectory() as d:
+        thins = []
+        for arch in arches:
+            thin = os.path.join(d, f'{arch}.a')
+            try:
+                subprocess.check_call(['lipo', archive, '-thin', arch, '-output', thin], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            except subprocess.CalledProcessError:
+                continue
+            delete_members(thin, bitcode_members(thin))
+            thins.append(thin)
+        if thins:
+            subprocess.run(['lipo', '-create', *thins, '-output', archive], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=False)
+            subprocess.run(['ranlib', archive], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=False)
+else:
+    delete_members(archive, bitcode_members(archive))
+PY
+}
+
+remove_bitcode_wrapper_members "$SCRIPT_DIR/build-ios-device/libxemu_cores.a"
+remove_bitcode_wrapper_members "$SCRIPT_DIR/build-ios-sim/libxemu_cores.a"
 
 scan_archive_for_bitcode_wrappers() {
   local archive="$1"

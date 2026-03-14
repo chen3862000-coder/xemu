@@ -177,6 +177,37 @@ xemu_error_t xemu_gb_load_state(xemu_gb_handle_t handle, const xemu_save_state_t
     return success ? XEMU_OK : XEMU_ERROR_LOAD_STATE_FAILED;
 }
 
+size_t xemu_gb_get_battery_save_size(xemu_gb_handle_t handle) {
+    if (!handle || !handle->wrapper.isROMLoaded()) {
+        return 0;
+    }
+    return handle->wrapper.getBatterySaveSize();
+}
+
+xemu_error_t xemu_gb_save_battery(xemu_gb_handle_t handle, xemu_save_state_t* battery) {
+    if (!handle || !battery || !battery->data || battery->size == 0) {
+        return XEMU_ERROR_INVALID_ARGUMENT;
+    }
+    if (!handle->wrapper.isROMLoaded()) {
+        return XEMU_ERROR_NOT_INITIALIZED;
+    }
+
+    const bool success = handle->wrapper.saveBattery(battery->data, battery->size);
+    return success ? XEMU_OK : XEMU_ERROR_SAVE_STATE_FAILED;
+}
+
+xemu_error_t xemu_gb_load_battery(xemu_gb_handle_t handle, const xemu_save_state_t* battery) {
+    if (!handle || !battery || !battery->data || battery->size == 0) {
+        return XEMU_ERROR_INVALID_ARGUMENT;
+    }
+    if (!handle->wrapper.isROMLoaded()) {
+        return XEMU_ERROR_NOT_INITIALIZED;
+    }
+
+    const bool success = handle->wrapper.loadBattery(battery->data, battery->size);
+    return success ? XEMU_OK : XEMU_ERROR_LOAD_STATE_FAILED;
+}
+
 int xemu_gb_is_cgb_mode(xemu_gb_handle_t handle) {
     if (!handle) {
         return 0;

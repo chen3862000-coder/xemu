@@ -76,6 +76,23 @@ add_override_if_exists() {
   fi
 }
 
+# melonds-ds currently appends helper CMake module paths via
+# "${FETCHCONTENT_BASE_DIR}/<dep>-src/cmake" (not via *_SOURCE_DIR). In an
+# offline/local-override build this can still point at missing directories and
+# break `include(embed-binaries)`. Stage deterministic _deps symlinks so those
+# paths are always resolvable.
+stage_fetchcontent_dep_link() {
+  local dep_name="$1"
+  local source_dir="$2"
+  [ -d "$source_dir" ] || return 0
+
+  local deps_dir="$BUILD_DIR/_deps"
+  local link_path="$deps_dir/${dep_name}-src"
+  mkdir -p "$deps_dir"
+  rm -rf "$link_path"
+  ln -s "$source_dir" "$link_path"
+}
+
 melonds_dep_dir=""
 if [ -d "$MELONDS_FORK_DIR" ]; then
   melonds_dep_dir="$MELONDS_FORK_DIR"
@@ -113,13 +130,63 @@ if [ "${#missing_required[@]}" -gt 0 ]; then
   exit 1
 fi
 
+# Stage _deps links expected by melonds-ds CMake module-path wiring.
+stage_fetchcontent_dep_link "melonds" "${melonds_dep_dir:-$THIRD_PARTY_DIR/melonDS}"
+stage_fetchcontent_dep_link "libretro-common" "$THIRD_PARTY_DIR/libretro-common"
+stage_fetchcontent_dep_link "embed-binaries" "$THIRD_PARTY_DIR/embed-binaries"
+stage_fetchcontent_dep_link "glm" "$THIRD_PARTY_DIR/glm"
+stage_fetchcontent_dep_link "zlib" "$THIRD_PARTY_DIR/zlib"
+stage_fetchcontent_dep_link "libslirp" "$THIRD_PARTY_DIR/libslirp-mirror"
+stage_fetchcontent_dep_link "pntr" "$THIRD_PARTY_DIR/pntr"
+stage_fetchcontent_dep_link "fmt" "$THIRD_PARTY_DIR/fmt"
+stage_fetchcontent_dep_link "yamc" "$THIRD_PARTY_DIR/yamc"
+stage_fetchcontent_dep_link "span-lite" "$THIRD_PARTY_DIR/span-lite"
+stage_fetchcontent_dep_link "date" "$THIRD_PARTY_DIR/date"
+
 cmake "${cmake_args[@]}"
 jobs="$(sysctl -n hw.ncpu 2>/dev/null || getconf _NPROCESSORS_ONLN 2>/dev/null || echo 4)"
 cmake --build "$BUILD_DIR" --config "$BUILD_TYPE" --target melondsds_libretro -j"$jobs"
 
 archive_path="$(find "$BUILD_DIR" -type f \( -name 'libmelondsds_libretro.a' -o -name 'melondsds_libretro.a' \) | head -n 1)"
 if [ -z "$archive_path" ]; then
-  echo "ERROR: build completed but no static archive was found in $BUILD_DIR" >&2
+  # Newer melonds-ds builds may emit a MODULE dylib target instead of a static
+  # archive. For xemu symbol-linking we still need a static archive, so rebuild
+  # one from target object files plus local static dependencies.
+  obj_dir="$BUILD_DIR/src/libretro/CMakeFiles/melondsds_libretro.dir"
+  assets_obj_dir="$BUILD_DIR/src/libretro/CMakeFiles/libretro-assets.dir"
+  fallback_archive="$BUILD_DIR/src/libretro/libmelondsds_libretro.a"
+  if [ -d "$obj_dir" ] && command -v libtool >/dev/null 2>&1; then
+    echo "No melondsds static archive was emitted; creating fallback archive from object files..."
+    declare -a melonds_obj_inputs
+    while IFS= read -r obj; do
+      melonds_obj_inputs+=("$obj")
+    done < <(find "$obj_dir" -type f -name '*.o' | sort)
+    if [ -d "$assets_obj_dir" ]; then
+      while IFS= read -r obj; do
+        melonds_obj_inputs+=("$obj")
+      done < <(find "$assets_obj_dir" -type f -name '*.o' | sort)
+    fi
+
+    declare -a melonds_dep_archives
+    while IFS= read -r dep; do
+      # Skip previous xemu bundle output to avoid recursive archive growth.
+      case "$dep" in
+        *libmelondsds_libretro_xemu_bundle.a) continue ;;
+      esac
+      melonds_dep_archives+=("$dep")
+    done < <(find "$BUILD_DIR" -type f -name '*.a' | sort)
+
+    if [ "${#melonds_obj_inputs[@]}" -gt 0 ]; then
+      rm -f "$fallback_archive"
+      libtool -static -o "$fallback_archive" "${melonds_obj_inputs[@]}" "${melonds_dep_archives[@]}"
+      archive_path="$fallback_archive"
+      echo "Built fallback archive: $archive_path"
+    fi
+  fi
+fi
+
+if [ -z "$archive_path" ] || [ ! -f "$archive_path" ]; then
+  echo "ERROR: build completed but no usable static archive was found in $BUILD_DIR" >&2
   exit 1
 fi
 

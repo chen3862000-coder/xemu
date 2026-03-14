@@ -23,6 +23,7 @@ targets:
     dependencies:
       - sdk: libc++.tbd
       - sdk: libresolv.tbd
+      - sdk: libsqlite3.tbd
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.xemu.Xemu
@@ -33,6 +34,9 @@ targets:
         DEVELOPMENT_TEAM: ""
         SWIFT_INCLUDE_PATHS: 
           - "$(SRCROOT)/Sources/XemuCoresLib/include"
+        SWIFT_ACTIVE_COMPILATION_CONDITIONS:
+          - "$(inherited)"
+          - USE_XEMU_CORES
         HEADER_SEARCH_PATHS: 
           - "$(SRCROOT)/Sources/XemuCoresLib/include"
         LIBRARY_SEARCH_PATHS[sdk=iphoneos*]:
