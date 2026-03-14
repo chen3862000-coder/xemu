@@ -51,23 +51,71 @@ struct AppColors {
             )
         case .dark:
             return Palette(
-                primary: Color(hex: "A37CFF"),
-                secondary: Color(hex: "262433"),
-                accent: Color(hex: "8B5CFF"),
-                background: Color(hex: "14141A"),
-                surface: Color(hex: "1D1D26"),
-                surfaceLight: Color(hex: "2A2A36"),
-                textPrimary: Color(hex: "F6F6FA"),
-                textSecondary: Color(hex: "B5B5C1"),
-                textMuted: Color(hex: "8C8C9A"),
+                primary: Color(hex: "9B6BFF"),
+                secondary: Color(hex: "201D2B"),
+                accent: Color(hex: "9B6BFF"),
+                background: Color(hex: "0B0B12"),
+                surface: Color(hex: "14141D"),
+                surfaceLight: Color(hex: "202031"),
+                textPrimary: Color(hex: "F3F2F7"),
+                textSecondary: Color(hex: "B2B0C0"),
+                textMuted: Color(hex: "7F7B92"),
                 label: Color(hex: "FAFAFA"),
-                secondaryLabel: Color(hex: "B5B5C1"),
-                destructive: Color(hex: "D4183D"),
-                success: Color(hex: "22C55E"),
-                warning: Color(hex: "F59E0B"),
-                error: Color(hex: "D4183D"),
-                info: Color(hex: "3B82F6")
+                secondaryLabel: Color(hex: "B2B0C0"),
+                destructive: Color(hex: "C75B72"),
+                success: Color(hex: "6BB98E"),
+                warning: Color(hex: "C8A45A"),
+                error: Color(hex: "C75B72"),
+                info: Color(hex: "6C9CFF")
             )
+        }
+    }
+
+    static var isDarkMode: Bool { currentTheme == .dark }
+
+    enum Background {
+        static var appPrimary: Color { AppColors.isDarkMode ? Color(hex: "0B0B12") : AppColors.background }
+        static var appSecondary: Color { AppColors.isDarkMode ? Color(hex: "11111A") : Color(hex: "EEE8F6") }
+        static var appTertiary: Color { AppColors.isDarkMode ? Color(hex: "181824") : Color(hex: "E5DEEF") }
+    }
+
+    enum Surface {
+        static var cardPrimary: Color { AppColors.isDarkMode ? Color(hex: "14141D") : AppColors.surface }
+        static var cardSecondary: Color { AppColors.isDarkMode ? Color(hex: "1A1A25") : Color(hex: "F8F5FC") }
+        static var cardElevated: Color { AppColors.isDarkMode ? Color(hex: "202031") : Color(hex: "F1ECF8") }
+        static var cardOverlay: Color { AppColors.isDarkMode ? Color.black.opacity(0.58) : Color.black.opacity(0.36) }
+        static var accentTint: Color { AppColors.primary.opacity(AppColors.isDarkMode ? 0.14 : 0.10) }
+        static var accentTintStrong: Color { AppColors.primary.opacity(AppColors.isDarkMode ? 0.20 : 0.16) }
+    }
+
+    enum Text {
+        static var primary: Color { AppColors.textPrimary }
+        static var secondary: Color { AppColors.textSecondary }
+        static var tertiary: Color { AppColors.textMuted }
+        static var accent: Color { AppColors.primary }
+    }
+
+    enum Border {
+        static var subtle: Color {
+            AppColors.isDarkMode ? Color.white.opacity(0.10) : Color.black.opacity(0.08)
+        }
+
+        static var active: Color {
+            AppColors.isDarkMode ? AppColors.primary.opacity(0.24) : AppColors.primary.opacity(0.18)
+        }
+
+        static var softDivider: Color {
+            AppColors.isDarkMode ? Color.white.opacity(0.08) : Color.black.opacity(0.06)
+        }
+    }
+
+    enum Shadow {
+        static var card: Color {
+            AppColors.isDarkMode ? Color.black.opacity(0.26) : Color.black.opacity(0.10)
+        }
+
+        static var ambientGlow: Color {
+            AppColors.primary.opacity(AppColors.isDarkMode ? 0.18 : 0.10)
         }
     }
 

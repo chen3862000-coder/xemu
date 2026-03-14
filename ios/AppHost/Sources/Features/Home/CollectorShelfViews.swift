@@ -19,10 +19,11 @@ struct CollectorShelfSectionView<Content: View>: View {
                 if let subtitle, !subtitle.isEmpty {
                     Text(subtitle)
                         .font(.system(size: 13, weight: .semibold))
-                        .foregroundStyle(AppColors.textMuted)
+                        .foregroundStyle(AppColors.Text.tertiary)
                         .padding(.horizontal, 10)
                         .frame(height: 28)
-                        .background(Color.white.opacity(0.42))
+                        .background(AppColors.Surface.cardElevated)
+                        .overlay(Capsule().stroke(AppColors.Border.subtle, lineWidth: 1))
                         .clipShape(Capsule())
                 }
             }
@@ -42,20 +43,12 @@ struct CollectorShelfSectionView<Content: View>: View {
         }
         .padding(.horizontal, 22)
         .padding(.vertical, 20)
-        .background(
+        .background(AppColors.Surface.cardPrimary)
+        .overlay(
             RoundedRectangle(cornerRadius: 28, style: .continuous)
-                .fill(
-                    LinearGradient(
-                        colors: [Color.white.opacity(0.34), Color.white.opacity(0.18)],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: 28, style: .continuous)
-                        .stroke(Color.white.opacity(0.16), lineWidth: 1)
-                )
+                .stroke(AppColors.Border.subtle, lineWidth: 1)
         )
+        .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
     }
 
     private var shelfRail: some View {
@@ -64,8 +57,8 @@ struct CollectorShelfSectionView<Content: View>: View {
                 .fill(
                     LinearGradient(
                         colors: [
-                            Color(red: 0.38, green: 0.25, blue: 0.18).opacity(0.72),
-                            Color(red: 0.25, green: 0.16, blue: 0.12).opacity(0.84)
+                            AppColors.Surface.cardElevated,
+                            AppColors.Surface.cardPrimary
                         ],
                         startPoint: .top,
                         endPoint: .bottom
@@ -201,35 +194,18 @@ struct CollectorShelfFilterRail: View {
 
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 10) {
+            HStack(spacing: 8) {
                 ForEach(LibrarySystemFilter.allCases) { filter in
                     Button {
                         withAnimation(.easeOut(duration: 0.18)) {
                             onSelect(filter)
                         }
                     } label: {
-                        HStack(spacing: 8) {
-                            Text(filterLabel(filter))
-                                .font(.system(size: 13, weight: .bold, design: .rounded))
-                            Text("\(counts[filter, default: 0])")
-                                .font(.system(size: 11, weight: .semibold, design: .rounded))
-                                .padding(.horizontal, 7)
-                                .frame(height: 20)
-                                .background(
-                                    Capsule()
-                                        .fill(selectedFilter == filter ? Color.white.opacity(0.18) : Color.black.opacity(0.08))
-                                )
-                        }
-                        .foregroundStyle(selectedFilter == filter ? Color.white : AppColors.textSecondary)
-                        .padding(.horizontal, 14)
-                        .frame(height: 40)
-                        .background(
-                            Capsule()
-                                .fill(selectedFilter == filter ? AppColors.primary : Color.white.opacity(0.54))
-                        )
-                        .overlay(
-                            Capsule()
-                                .stroke(Color.white.opacity(selectedFilter == filter ? 0 : 0.42), lineWidth: 1)
+                        RMChip(
+                            title: filterLabel(filter),
+                            count: "\(counts[filter, default: 0])",
+                            selected: selectedFilter == filter,
+                            style: .compact
                         )
                     }
                     .buttonStyle(.plain)

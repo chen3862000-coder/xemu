@@ -213,32 +213,43 @@ struct GameListView: View {
                 Button(action: { dismiss() }) {
                     Image(systemName: "arrow.left")
                         .font(.system(size: 16, weight: .semibold))
-                        .foregroundColor(AppColors.textPrimary)
+                        .foregroundColor(AppColors.Text.primary)
                         .frame(width: 36, height: 36)
-                        .background(AppColors.surfaceLight.opacity(0.5))
+                        .background(AppColors.Surface.cardElevated)
+                        .overlay(Circle().stroke(AppColors.Border.subtle, lineWidth: 1))
                         .clipShape(Circle())
                 }
 
                 VStack(alignment: .leading, spacing: 1) {
                     Text(platformDisplay.displayName)
                         .font(isCollectorMode ? .system(size: 20, weight: .bold) : SubpageUI.Font.title)
-                        .foregroundColor(AppColors.textPrimary)
+                        .foregroundColor(AppColors.Text.primary)
                     Text("\(sortedFilteredGames.count) games")
                         .font(SubpageUI.Font.subtitle)
-                        .foregroundColor(isCollectorMode ? AppColors.textSecondary : AppColors.primary)
+                        .foregroundColor(isCollectorMode ? AppColors.Text.secondary : AppColors.Text.accent)
                 }
 
                 Spacer()
 
-                if let assetName = platformDisplay.consoleAssetName {
-                    Image(assetName)
-                        .resizable()
-                        .scaledToFit()
-                        .frame(width: 32, height: 32)
-                        .clipShape(RoundedRectangle(cornerRadius: 8))
+                if platformDisplay.consoleAssetName != nil {
+                    RMIconBadge(
+                        systemName: nil,
+                        assetName: platformDisplay.consoleAssetName,
+                        size: 36,
+                        shape: .roundedRect,
+                        accent: true,
+                        imageInset: 4
+                    )
                 } else {
-                    Text(platformDisplay.emoji)
-                        .font(.system(size: 28))
+                    RMIconBadge(
+                        systemName: nil,
+                        assetName: nil,
+                        emoji: platformDisplay.emoji,
+                        size: 36,
+                        shape: .roundedRect,
+                        accent: false,
+                        imageInset: 4
+                    )
                 }
             }
 
@@ -280,9 +291,9 @@ struct GameListView: View {
                     .foregroundColor(AppColors.textPrimary)
                     .padding(.horizontal, 10)
                     .frame(height: 38)
-                    .background(AppColors.surfaceLight.opacity(0.45))
+                    .background(AppColors.Surface.cardElevated)
                     .overlay(
-                        Capsule().stroke(AppColors.surfaceLight.opacity(0.7), lineWidth: 1)
+                        Capsule().stroke(AppColors.Border.subtle, lineWidth: 1)
                     )
                     .clipShape(Capsule())
                 }
@@ -291,10 +302,10 @@ struct GameListView: View {
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
-        .background(AppColors.background.opacity(0.85))
+        .background(AppColors.Background.appPrimary.opacity(0.88))
         .overlay(
             Rectangle()
-                .fill(AppColors.surfaceLight.opacity(0.5))
+                .fill(AppColors.Border.softDivider)
                 .frame(height: 1),
             alignment: .bottom
         )
@@ -303,23 +314,19 @@ struct GameListView: View {
     private var systemIdentitySection: some View {
         ZStack {
             RoundedRectangle(cornerRadius: 20)
-                .fill(AppColors.surface)
+                .fill(AppColors.Surface.cardPrimary)
                 .overlay(
                     RoundedRectangle(cornerRadius: 20)
-                        .fill(platform.gradient.opacity(0.035))
+                        .fill(AppColors.Surface.accentTint.opacity(0.35))
                 )
                 .overlay(
                     RoundedRectangle(cornerRadius: 20)
-                        .stroke(AppColors.primary.opacity(0.12), lineWidth: 1)
+                        .stroke(AppColors.Border.subtle, lineWidth: 1)
                 )
-                .shadow(color: AppColors.primary.opacity(0.12), radius: 16, x: 0, y: 10)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 20)
-                        .stroke(Color.white.opacity(0.10), lineWidth: 0.7)
-                )
+                .shadow(color: AppColors.Shadow.card, radius: 16, x: 0, y: 10)
                 .overlay(alignment: .topLeading) {
                     Capsule()
-                        .fill(AppColors.primary.opacity(0.28))
+                        .fill(AppColors.primary.opacity(0.42))
                         .frame(width: 52, height: 3)
                         .padding(.leading, 16)
                         .padding(.top, 14)
@@ -328,17 +335,20 @@ struct GameListView: View {
             VStack(alignment: .leading, spacing: 12) {
                 HStack {
                     HStack(spacing: 8) {
-                        Image(systemName: "gamecontroller.fill")
-                            .font(.system(size: 14, weight: .semibold))
-                            .foregroundColor(AppColors.primary)
+                        RMIconBadge(
+                            systemName: "gamecontroller.fill",
+                            assetName: nil,
+                            size: 28,
+                            shape: .roundedRect,
+                            accent: true,
+                            imageInset: 6
+                        )
                         Text("Quick Stats")
                             .font(.system(size: 15, weight: .bold))
-                            .foregroundColor(AppColors.textPrimary)
+                            .foregroundColor(AppColors.Text.primary)
                     }
                     Spacer()
-                    Text(platformDisplay.shortName)
-                        .font(.system(size: 11, weight: .semibold))
-                        .foregroundColor(AppColors.primary)
+                    RMChip(title: platformDisplay.shortName, selected: true, style: .compact)
                 }
 
                 HStack(spacing: 16) {
@@ -347,10 +357,10 @@ struct GameListView: View {
                     VStack(alignment: .leading, spacing: 4) {
                         Text(platformDisplay.displayName)
                             .font(.system(size: 18, weight: .bold))
-                            .foregroundColor(AppColors.textPrimary)
+                            .foregroundColor(AppColors.Text.primary)
                         Text(identitySubtitle)
                             .font(.system(size: 13, weight: .medium))
-                            .foregroundColor(AppColors.textMuted)
+                            .foregroundColor(AppColors.Text.secondary)
                             .lineLimit(2)
                     }
                 }
@@ -577,27 +587,15 @@ struct GameListView: View {
     }
 
     private var platformIcon: some View {
-        ZStack {
-            RoundedRectangle(cornerRadius: 14)
-                .fill(platform.gradient)
-                .frame(width: 64, height: 64)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 14)
-                        .stroke(Color.white.opacity(0.15), lineWidth: 1)
-                )
-
-            if let assetName = platformDisplay.consoleAssetName {
-                Image(assetName)
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: 54, height: 54)
-                    .clipShape(RoundedRectangle(cornerRadius: 10))
-            } else {
-                Image(systemName: platform.iconName)
-                    .font(.system(size: 22, weight: .bold))
-                    .foregroundColor(.white)
-            }
-        }
+        RMIconBadge(
+            systemName: platformDisplay.consoleAssetName == nil ? platform.iconName : nil,
+            assetName: platformDisplay.consoleAssetName,
+            emoji: platformDisplay.consoleAssetName == nil ? platformDisplay.emoji : nil,
+            size: 64,
+            shape: .roundedRect,
+            accent: true,
+            imageInset: 5
+        )
     }
     
     private var gamesSection: some View {
@@ -863,18 +861,18 @@ struct StatBadge: View {
         VStack(spacing: 2) {
             Text(value)
                 .font(.system(size: 18, weight: .bold))
-                .foregroundColor(AppColors.textPrimary)
+                .foregroundColor(AppColors.Text.primary)
             
-                Text(label)
+            Text(label)
                 .font(.system(size: 10, weight: .medium))
-                .foregroundColor(AppColors.primary.opacity(0.9))
+                .foregroundColor(AppColors.Text.secondary)
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 10)
-        .background(AppColors.background.opacity(0.35))
+        .background(AppColors.Surface.cardElevated)
         .overlay(
             RoundedRectangle(cornerRadius: 12)
-                .stroke(AppColors.surfaceLight.opacity(0.45), lineWidth: 1)
+                .stroke(AppColors.Border.subtle, lineWidth: 1)
         )
         .clipShape(RoundedRectangle(cornerRadius: 12))
     }
@@ -913,14 +911,14 @@ private struct AchievementBadgeCard: View {
 
     var body: some View {
         HStack(spacing: 10) {
-            ZStack {
-                RoundedRectangle(cornerRadius: 10)
-                    .fill((achievement.isUnlocked ? AppColors.primary : AppColors.surfaceLight).opacity(achievement.isUnlocked ? 0.16 : 0.35))
-                    .frame(width: 34, height: 34)
-                Image(systemName: achievement.iconName)
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundColor(achievement.isUnlocked ? AppColors.primary : AppColors.textMuted.opacity(0.7))
-            }
+            RMIconBadge(
+                systemName: achievement.iconName,
+                assetName: nil,
+                size: 34,
+                shape: .roundedRect,
+                accent: achievement.isUnlocked,
+                imageInset: 6
+            )
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(achievement.title)
@@ -936,10 +934,10 @@ private struct AchievementBadgeCard: View {
             Spacer(minLength: 0)
         }
         .padding(10)
-        .background(AppColors.surface)
+        .background(AppColors.Surface.cardPrimary)
         .overlay(
             RoundedRectangle(cornerRadius: 14)
-                .stroke((achievement.isUnlocked ? AppColors.primary : AppColors.surfaceLight).opacity(achievement.isUnlocked ? 0.22 : 0.45), lineWidth: 1)
+                .stroke(achievement.isUnlocked ? AppColors.Border.active : AppColors.Border.subtle, lineWidth: 1)
         )
         .clipShape(RoundedRectangle(cornerRadius: 14))
     }
@@ -1027,13 +1025,7 @@ private struct SystemHubGameCard: View {
                     .frame(height: coverHeight)
                     .clipped()
 
-                Text(platformText)
-                    .font(.system(size: 11, weight: .bold))
-                    .foregroundColor(.white)
-                    .padding(.horizontal, 10)
-                    .frame(height: 28)
-                    .background(AppColors.primary)
-                    .clipShape(Capsule())
+                RMOverlayBadge(title: platformText)
                     .padding(8)
 
                 if let launchIssue {

@@ -5,11 +5,17 @@ struct Header: View {
     let onSettingsTapped: () -> Void
 
     var body: some View {
-        VStack(spacing: 0) {
-            HStack {
+        ZStack(alignment: .topLeading) {
+            Circle()
+                .fill(AppColors.Shadow.ambientGlow)
+                .frame(width: 84, height: 84)
+                .blur(radius: 28)
+                .offset(x: 8, y: 2)
+
+            HStack(alignment: .center) {
                 HStack(spacing: 12) {
                     ZStack {
-                        RoundedRectangle(cornerRadius: 14)
+                        RoundedRectangle(cornerRadius: 12)
                             .fill(
                                 LinearGradient(
                                     colors: [AppColors.primary, AppColors.accent],
@@ -17,21 +23,21 @@ struct Header: View {
                                     endPoint: .bottomTrailing
                                 )
                             )
-                            .frame(width: 44, height: 44)
-                            .shadow(color: AppColors.primary.opacity(0.5), radius: 8, x: 0, y: 4)
+                            .frame(width: 38, height: 38)
+                            .shadow(color: AppColors.Shadow.ambientGlow.opacity(0.8), radius: 8, x: 0, y: 4)
 
                         XemuBrandIconGlyph()
-                            .frame(width: 30, height: 30)
+                            .frame(width: 26, height: 26)
                     }
 
-                    VStack(alignment: .leading, spacing: 0) {
+                    VStack(alignment: .leading, spacing: 2) {
                         Text("RetroMind")
-                            .font(.system(size: 20, weight: .bold))
-                            .foregroundColor(AppColors.primary)
+                            .font(.system(size: 22, weight: .semibold))
+                            .foregroundStyle(AppColors.Text.primary)
 
                         Text("Classic Gaming Hub")
-                            .font(.system(size: 12, weight: .medium))
-                            .foregroundColor(AppColors.primary.opacity(0.9))
+                            .font(.system(size: 13, weight: .medium))
+                            .foregroundStyle(AppColors.Text.tertiary)
                     }
                 }
 
@@ -40,33 +46,22 @@ struct Header: View {
                 HStack(spacing: 8) {
                     Button(action: onAddTapped) {
                         Image(systemName: "plus")
-                            .font(.system(size: 16, weight: .medium))
-                            .foregroundColor(AppColors.textPrimary)
-                            .frame(width: 36, height: 36)
-                            .background(AppColors.surfaceLight.opacity(0.5))
-                            .clipShape(Circle())
+                            .font(.system(size: 15, weight: .medium))
                     }
+                    .buttonStyle(RMIconCircleButtonStyle())
 
                     Button(action: onSettingsTapped) {
                         Image(systemName: "gearshape.fill")
-                            .font(.system(size: 16, weight: .medium))
-                            .foregroundColor(AppColors.textPrimary)
-                            .frame(width: 36, height: 36)
-                            .background(AppColors.surfaceLight.opacity(0.5))
-                            .clipShape(Circle())
+                            .font(.system(size: 15, weight: .medium))
                     }
+                    .buttonStyle(RMIconCircleButtonStyle())
                 }
             }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 14)
+            .padding(.horizontal, 20)
+            .padding(.top, 16)
+            .padding(.bottom, 12)
         }
-        .background(AppColors.background.opacity(0.8))
-        .overlay(
-            Rectangle()
-                .fill(AppColors.surfaceLight.opacity(0.5))
-                .frame(height: 1),
-            alignment: .bottom
-        )
+        .background(AppColors.Background.appPrimary)
     }
 }
 

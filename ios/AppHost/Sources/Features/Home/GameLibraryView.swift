@@ -24,15 +24,15 @@ private enum AllGamesTokens {
     static var isDark: Bool { currentTheme == .dark }
 
     static var appBackground: Color {
-        isDark ? Color(hex: "14141A") : Color(hex: "F5F2FA")
+        isDark ? AppColors.Background.appPrimary : Color(hex: "F5F2FA")
     }
 
     static var surface: Color {
-        isDark ? Color(hex: "1D1D26") : Color(hex: "FFFFFF")
+        isDark ? AppColors.Surface.cardPrimary : Color(hex: "FFFFFF")
     }
 
     static var surfaceAlt: Color {
-        isDark ? Color(hex: "2A2A36") : Color(hex: "FBFBFD")
+        isDark ? AppColors.Surface.cardElevated : Color(hex: "FBFBFD")
     }
 
     static var textPrimary: Color {
@@ -44,27 +44,27 @@ private enum AllGamesTokens {
     }
 
     static var textTertiary: Color {
-        isDark ? Color(hex: "8C8C9A") : Color(hex: "9A9AA6")
+        isDark ? AppColors.Text.tertiary : Color(hex: "9A9AA6")
     }
 
-    static let accent = Color(hex: "8B3DFF")
+    static let accent = Color(hex: "9B6BFF")
     static let accentPressed = Color(hex: "7B2FEA")
-    static let info = Color(hex: "3B82F6")
+    static let info = Color(hex: "6C9CFF")
 
     static var strokeSubtle: Color {
-        isDark ? Color.white.opacity(0.10) : Color.black.opacity(0.06)
+        isDark ? AppColors.Border.subtle : Color.black.opacity(0.06)
     }
 
     static var strokeDivider: Color {
-        isDark ? Color.white.opacity(0.14) : Color.black.opacity(0.10)
+        isDark ? AppColors.Border.softDivider : Color.black.opacity(0.10)
     }
 
     static var shadowColor: Color {
-        isDark ? Color.black.opacity(0.28) : Color.black.opacity(0.12)
+        isDark ? AppColors.Shadow.card : Color.black.opacity(0.12)
     }
 
     static var timeBadgeBackground: Color {
-        isDark ? Color.white.opacity(0.12) : Color.black.opacity(0.08)
+        isDark ? AppColors.Surface.cardOverlay : Color.black.opacity(0.08)
     }
 
     static var timeBadgeText: Color {
@@ -462,9 +462,7 @@ struct GameLibraryView: View {
     private var backgroundLayer: some View {
         ZStack {
             LinearGradient(
-                colors: isCollectorMode
-                    ? [Color(hex: "F2ECE4"), Color(hex: "E7DCCF"), Color(hex: "D5C4B1")]
-                    : [AllGamesTokens.appBackground, AllGamesTokens.appBackground],
+                colors: [AllGamesTokens.appBackground, AppColors.Background.appSecondary, AllGamesTokens.appBackground],
                 startPoint: .top,
                 endPoint: .bottom
             )
@@ -473,9 +471,7 @@ struct GameLibraryView: View {
             Circle()
                 .fill(
                     LinearGradient(
-                        colors: isCollectorMode
-                            ? [Color(hex: "D8B18A").opacity(0.26), Color(hex: "8B5E3C").opacity(0.10)]
-                            : [AllGamesTokens.accent.opacity(0.14), AllGamesTokens.info.opacity(0.10)],
+                        colors: [AllGamesTokens.accent.opacity(0.12), AllGamesTokens.info.opacity(0.07)],
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing
                     )
@@ -489,9 +485,7 @@ struct GameLibraryView: View {
                 Circle()
                     .fill(
                         LinearGradient(
-                            colors: isCollectorMode
-                                ? [Color(hex: "8F7058").opacity(0.12), Color(hex: "EADBC8").opacity(0.10)]
-                                : [AllGamesTokens.info.opacity(0.10), AllGamesTokens.accent.opacity(0.08)],
+                            colors: [AllGamesTokens.info.opacity(0.08), AllGamesTokens.accent.opacity(0.05)],
                             startPoint: .topLeading,
                             endPoint: .bottomTrailing
                         )
@@ -511,13 +505,8 @@ struct GameLibraryView: View {
                     Image(systemName: "arrow.left")
                         .font(.system(size: 16, weight: .semibold))
                         .foregroundColor(AllGamesTokens.textPrimary)
-                        .frame(width: 36, height: 36)
-                        .background(AllGamesTokens.surfaceAlt)
-                        .overlay(
-                            Circle().stroke(AllGamesTokens.strokeSubtle, lineWidth: 1)
-                        )
-                        .clipShape(Circle())
                 }
+                .buttonStyle(RMIconCircleButtonStyle())
 
                 VStack(alignment: .leading, spacing: 1) {
                     Text("Game Library")
@@ -564,39 +553,13 @@ struct GameLibraryView: View {
                             }
                         }
                     } label: {
-                        HStack(spacing: 5) {
-                            Image(systemName: "arrow.up.arrow.down.circle")
-                                .font(.system(size: 12, weight: .semibold))
-                            Text(sortLabel(selectedSort))
-                                .font(.system(size: 12, weight: .semibold))
-                            Image(systemName: "chevron.down")
-                                .font(.system(size: 10, weight: .bold))
-                        }
-                        .foregroundColor(AllGamesTokens.textPrimary)
-                        .padding(.horizontal, 12)
-                        .frame(height: 34)
-                        .background(AllGamesTokens.surface)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 17)
-                                .stroke(AllGamesTokens.strokeSubtle, lineWidth: 1)
-                        )
-                        .clipShape(Capsule())
+                        RMChip(title: sortLabel(selectedSort), selected: true, style: .compact)
                     }
                     .buttonStyle(.plain)
 
                     Spacer()
 
-                    Text("\(filteredGames.count) on shelf")
-                        .font(.system(size: 12, weight: .semibold))
-                        .foregroundColor(AllGamesTokens.textSecondary)
-                        .padding(.horizontal, 12)
-                        .frame(height: 34)
-                        .background(AllGamesTokens.surface)
-                        .overlay(
-                            Capsule()
-                                .stroke(AllGamesTokens.strokeSubtle, lineWidth: 1)
-                        )
-                        .clipShape(Capsule())
+                    RMChip(title: "\(filteredGames.count) on shelf", style: .compact)
                 }
             } else {
                 HStack(spacing: 8) {
@@ -628,23 +591,7 @@ struct GameLibraryView: View {
                             }
                         }
                     } label: {
-                        HStack(spacing: 5) {
-                            Image(systemName: "arrow.up.arrow.down.circle")
-                                .font(.system(size: 12, weight: .semibold))
-                            Text(sortLabel(selectedSort))
-                                .font(.system(size: 12, weight: .semibold))
-                            Image(systemName: "chevron.down")
-                                .font(.system(size: 10, weight: .bold))
-                        }
-                        .foregroundColor(AllGamesTokens.textPrimary)
-                        .padding(.horizontal, 12)
-                        .frame(height: 34)
-                        .background(AllGamesTokens.surface)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 17)
-                                .stroke(AllGamesTokens.strokeSubtle, lineWidth: 1)
-                        )
-                        .clipShape(Capsule())
+                        RMChip(title: sortLabel(selectedSort), selected: true)
                     }
                     .buttonStyle(.plain)
 
@@ -714,12 +661,12 @@ struct GameLibraryView: View {
                                 } label: {
                                     Text(filter.label)
                                         .font(.system(size: 12, weight: .semibold))
-                                        .foregroundColor(selectedSystemFilter == filter ? Color.white : AllGamesTokens.textSecondary)
+                                        .foregroundColor(selectedSystemFilter == filter ? AppColors.Text.primary : AllGamesTokens.textSecondary)
                                         .padding(.horizontal, 12)
                                         .frame(height: 30)
-                                        .background(selectedSystemFilter == filter ? AllGamesTokens.accent : AllGamesTokens.surface)
+                                        .background(selectedSystemFilter == filter ? AppColors.Surface.accentTintStrong : AllGamesTokens.surface)
                                         .overlay(
-                                            Capsule().stroke(AllGamesTokens.strokeSubtle, lineWidth: selectedSystemFilter == filter ? 0 : 1)
+                                            Capsule().stroke(selectedSystemFilter == filter ? AppColors.Border.active : AllGamesTokens.strokeSubtle, lineWidth: 1)
                                         )
                                         .clipShape(Capsule())
                                 }

@@ -3,11 +3,12 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 77;
+	objectVersion = 63;
 	objects = {
 
 /* Begin PBXBuildFile section */
 		00469B5B648C1B8BCF74FD39 /* SettingsHeader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9360EC40197B186BF8A999A9 /* SettingsHeader.swift */; };
+		01B534B17B3992875AA763F5 /* RetroThemeComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 16CF948434019E8544A04B26 /* RetroThemeComponents.swift */; };
 		035053A54A3D1B64E486DB50 /* ExperimentalGatingManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A2F6AE1AF2BA016009F25D8 /* ExperimentalGatingManager.swift */; };
 		036F7DDCD64203C8C3D9AB22 /* PerformanceProfiler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4143CBD12B5F19B2A461EDBB /* PerformanceProfiler.swift */; };
 		055C08E8A307D8622BD26E7B /* Toggle.swift in Sources */ = {isa = PBXBuildFile; fileRef = C626FB0CA4B289019CD0CF84 /* Toggle.swift */; };
@@ -137,6 +138,7 @@
 		1401482B9019897D45053268 /* HapticManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HapticManager.swift; sourceTree = "<group>"; };
 		153169A0519B5D36DA5ED8C1 /* GBACore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GBACore.swift; sourceTree = "<group>"; };
 		15C94619A252760EF9BF7DCB /* CompatibilityDiagnosticsSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CompatibilityDiagnosticsSheet.swift; sourceTree = "<group>"; };
+		16CF948434019E8544A04B26 /* RetroThemeComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RetroThemeComponents.swift; sourceTree = "<group>"; };
 		16E22620B32971AFA3464BF3 /* ResumeCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ResumeCard.swift; sourceTree = "<group>"; };
 		176ABDABD3CC0F966E55F6C9 /* StableSystemsCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StableSystemsCoordinator.swift; sourceTree = "<group>"; };
 		1B23E4D49D3B071A781925F8 /* ControllerMappingEditor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ControllerMappingEditor.swift; sourceTree = "<group>"; };
@@ -166,9 +168,9 @@
 		466D0058781640285EE96634 /* EntitlementStatusView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EntitlementStatusView.swift; sourceTree = "<group>"; };
 		486B84BFA72CBA7EA3DCDA05 /* ROMLibraryOperations.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ROMLibraryOperations.swift; sourceTree = "<group>"; };
 		4C48534E106FC93B669B1859 /* Checkbox.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Checkbox.swift; sourceTree = "<group>"; };
-		4DE8FCC2F96A65DCDAB928F2 /* Xemu.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = Xemu.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		4DE8FCC2F96A65DCDAB928F2 /* Xemu.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Xemu.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		51E656E584201333675159E7 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
-		54AF13F28BAC35299C18C1B7 /* metadata_schema.sql */ = {isa = PBXFileReference; path = metadata_schema.sql; sourceTree = "<group>"; };
+		54AF13F28BAC35299C18C1B7 /* metadata_schema.sql */ = {isa = PBXFileReference; lastKnownFileType = text; path = metadata_schema.sql; sourceTree = "<group>"; };
 		58A46770D20436EFFDBD5E98 /* RecentlyPlayedView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecentlyPlayedView.swift; sourceTree = "<group>"; };
 		5B46B7ED335E85F0798430D0 /* EmulatorModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmulatorModels.swift; sourceTree = "<group>"; };
 		5D62DC4B965230783C1FAB31 /* ExperimentalLaunchView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExperimentalLaunchView.swift; sourceTree = "<group>"; };
@@ -205,7 +207,7 @@
 		AC3641DA7AB5979DD18519D7 /* SettingsItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsItem.swift; sourceTree = "<group>"; };
 		ACFE85D5A008F2D881F62BA9 /* VirtualPadView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VirtualPadView.swift; sourceTree = "<group>"; };
 		AD2BA596028329B64FC9E98D /* OfflineGraceManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfflineGraceManager.swift; sourceTree = "<group>"; };
-		B603DE63EE316FEE9E00898D /* cover_metadata.sqlite-wal */ = {isa = PBXFileReference; path = "cover_metadata.sqlite-wal"; sourceTree = "<group>"; };
+		B603DE63EE316FEE9E00898D /* cover_metadata.sqlite-wal */ = {isa = PBXFileReference; lastKnownFileType = text; path = "cover_metadata.sqlite-wal"; sourceTree = "<group>"; };
 		B65C2B2E7E71454EF6AA5F9B /* module.modulemap */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.module-map"; path = module.modulemap; sourceTree = "<group>"; };
 		B7590148A026C7627A4511DC /* AzureApiStub.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AzureApiStub.swift; sourceTree = "<group>"; };
 		B77DB84F7D6B83B354E369C2 /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
@@ -225,7 +227,7 @@
 		D24F51E4490BD43AE3AE7DE1 /* ControllerOverlayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ControllerOverlayView.swift; sourceTree = "<group>"; };
 		D3598A04582EA6802C14ED20 /* libsqlite3.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = libsqlite3.tbd; path = usr/lib/libsqlite3.tbd; sourceTree = SDKROOT; };
 		D7A97E34F6714D55B2ED6121 /* Button.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Button.swift; sourceTree = "<group>"; };
-		D96C91DB35FC25FB8CA6F9A9 /* cover_metadata.sqlite-shm */ = {isa = PBXFileReference; path = "cover_metadata.sqlite-shm"; sourceTree = "<group>"; };
+		D96C91DB35FC25FB8CA6F9A9 /* cover_metadata.sqlite-shm */ = {isa = PBXFileReference; lastKnownFileType = file; path = "cover_metadata.sqlite-shm"; sourceTree = "<group>"; };
 		D9B06594522E3AB0385931D9 /* RomImportCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RomImportCoordinator.swift; sourceTree = "<group>"; };
 		E34A757D05BE16111E361A97 /* MetalRenderer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MetalRenderer.swift; sourceTree = "<group>"; };
 		E6B83C8DF59433DEA55727D3 /* libresolv.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = libresolv.tbd; path = usr/lib/libresolv.tbd; sourceTree = SDKROOT; };
@@ -546,6 +548,7 @@
 				F79E3AF9AFB00FC5BF241472 /* Misc.swift */,
 				CE8DE758ED002F2F23925456 /* PlaceholderPatterns.swift */,
 				6CC9E8AC6255876C10AF7518 /* Progress.swift */,
+				16CF948434019E8544A04B26 /* RetroThemeComponents.swift */,
 				EBFCD24F74EE4522EAE30B33 /* ShellThemes.swift */,
 				2133FE3F8BC4E5C41AA511DE /* SubpageUI.swift */,
 				3AEF9FE24A117EA15A71E6D9 /* SwipeBackModifier.swift */,
@@ -710,7 +713,6 @@
 				LastUpgradeCheck = 1600;
 				TargetAttributes = {
 					FC22F39D8E5DD809F0D0C14A = {
-						DevelopmentTeam = "";
 						ProvisioningStyle = Automatic;
 					};
 				};
@@ -725,7 +727,6 @@
 			);
 			mainGroup = 0C1EC4B251E6BBE262A4AAA5;
 			minimizedProjectReferenceProxies = 1;
-			preferredProjectObjectVersion = 77;
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
@@ -830,6 +831,7 @@
 				3C1C1C30461209C438218C32 /* ROMStorage.swift in Sources */,
 				A97A12BD1ABD56E12653866F /* RecentlyPlayedView.swift in Sources */,
 				8C025DA36D1B72D7A864B002 /* ResumeCard.swift in Sources */,
+				01B534B17B3992875AA763F5 /* RetroThemeComponents.swift in Sources */,
 				8B5DAC81EFB96AC46E0AAE32 /* RomImportCoordinator.swift in Sources */,
 				1BFE8C580B6A09CD9FCAD335 /* RomMetadataExtractor.swift in Sources */,
 				382072FAFD010B7BA5C59BCD /* RomValidator.swift in Sources */,
@@ -871,34 +873,21 @@
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
-				DEVELOPMENT_TEAM = "";
+				DEVELOPMENT_TEAM = SGZHXCUVBD;
 				GENERATE_INFOPLIST_FILE = NO;
-				HEADER_SEARCH_PATHS = (
-					"$(SRCROOT)/Sources/XemuCoresLib/include",
-				);
+				HEADER_SEARCH_PATHS = "$(SRCROOT)/Sources/XemuCoresLib/include";
 				INFOPLIST_FILE = Sources/AppHost/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				"LIBRARY_SEARCH_PATHS[sdk=iphoneos*]" = (
-					"$(SRCROOT)/../../cores/XemuCores.xcframework/ios-arm64",
-				);
-				"LIBRARY_SEARCH_PATHS[sdk=iphonesimulator*]" = (
-					"$(SRCROOT)/../../cores/XemuCores.xcframework/ios-arm64_x86_64-simulator",
-				);
-				OTHER_LDFLAGS = (
-					"-lxemu_cores",
-				);
+				"LIBRARY_SEARCH_PATHS[sdk=iphoneos*]" = "$(SRCROOT)/../../cores/XemuCores.xcframework/ios-arm64";
+				"LIBRARY_SEARCH_PATHS[sdk=iphonesimulator*]" = "$(SRCROOT)/../../cores/XemuCores.xcframework/ios-arm64_x86_64-simulator";
+				OTHER_LDFLAGS = "-lxemu_cores";
 				PRODUCT_BUNDLE_IDENTIFIER = com.xemu.Xemu;
 				SDKROOT = iphoneos;
-				SWIFT_ACTIVE_COMPILATION_CONDITIONS = (
-					"$(inherited)",
-					USE_XEMU_CORES,
-				);
-				SWIFT_INCLUDE_PATHS = (
-					"$(SRCROOT)/Sources/XemuCoresLib/include",
-				);
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "$(inherited) USE_XEMU_CORES";
+				SWIFT_INCLUDE_PATHS = "$(SRCROOT)/Sources/XemuCoresLib/include";
 				SWIFT_OBJC_BRIDGING_HEADER = Sources/XemuCores/include/BridgingHeader.h;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
@@ -1034,34 +1023,21 @@
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
-				DEVELOPMENT_TEAM = "";
+				DEVELOPMENT_TEAM = SGZHXCUVBD;
 				GENERATE_INFOPLIST_FILE = NO;
-				HEADER_SEARCH_PATHS = (
-					"$(SRCROOT)/Sources/XemuCoresLib/include",
-				);
+				HEADER_SEARCH_PATHS = "$(SRCROOT)/Sources/XemuCoresLib/include";
 				INFOPLIST_FILE = Sources/AppHost/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				"LIBRARY_SEARCH_PATHS[sdk=iphoneos*]" = (
-					"$(SRCROOT)/../../cores/XemuCores.xcframework/ios-arm64",
-				);
-				"LIBRARY_SEARCH_PATHS[sdk=iphonesimulator*]" = (
-					"$(SRCROOT)/../../cores/XemuCores.xcframework/ios-arm64_x86_64-simulator",
-				);
-				OTHER_LDFLAGS = (
-					"-lxemu_cores",
-				);
+				"LIBRARY_SEARCH_PATHS[sdk=iphoneos*]" = "$(SRCROOT)/../../cores/XemuCores.xcframework/ios-arm64";
+				"LIBRARY_SEARCH_PATHS[sdk=iphonesimulator*]" = "$(SRCROOT)/../../cores/XemuCores.xcframework/ios-arm64_x86_64-simulator";
+				OTHER_LDFLAGS = "-lxemu_cores";
 				PRODUCT_BUNDLE_IDENTIFIER = com.xemu.Xemu;
 				SDKROOT = iphoneos;
-				SWIFT_ACTIVE_COMPILATION_CONDITIONS = (
-					"$(inherited)",
-					USE_XEMU_CORES,
-				);
-				SWIFT_INCLUDE_PATHS = (
-					"$(SRCROOT)/Sources/XemuCoresLib/include",
-				);
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "$(inherited) USE_XEMU_CORES";
+				SWIFT_INCLUDE_PATHS = "$(SRCROOT)/Sources/XemuCoresLib/include";
 				SWIFT_OBJC_BRIDGING_HEADER = Sources/XemuCores/include/BridgingHeader.h;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};

@@ -117,20 +117,10 @@ struct ResumeCard: View {
         VStack {
             HStack {
                 Spacer()
-                Text(entry.consoleIdentity?.systemCode ?? "")
-                    .font(.system(size: 11, weight: .bold))
-                    .foregroundColor(.white)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
-                    .background(consoleBadgeColor.opacity(0.85))
-                    .clipShape(RoundedRectangle(cornerRadius: 4))
+                RMOverlayBadge(title: entry.consoleIdentity?.systemCode ?? "")
             }
             Spacer()
         }
-    }
-    
-    private var consoleBadgeColor: Color {
-        entry.consoleIdentity?.accentColor ?? .gray
     }
     
     private var lastPlayedText: String {

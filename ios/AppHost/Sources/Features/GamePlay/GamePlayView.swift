@@ -1865,8 +1865,8 @@ struct GamePlayView: View {
 
     private func ndsLandscapeMetrics(contentWidth: CGFloat, contentHeight: CGFloat) -> NDSLandscapeLayoutMetrics {
         let deckWidth = min(contentWidth * 0.88, 1040)
-        let deckHeight = min(contentHeight * 0.58, 352)
-        let deckTop: CGFloat = 8
+        let deckHeight = min(contentHeight * 0.64, 384)
+        let deckTop: CGFloat = -4
         let shoulderWidth: CGFloat = 34
         let shoulderHeight: CGFloat = 96
         let dpadSize: CGFloat = 126
@@ -2004,8 +2004,10 @@ struct GamePlayView: View {
     private func ndsLandscapeDualScreens(deckWidth: CGFloat, deckHeight: CGFloat) -> some View {
         let innerPadding: CGFloat = 8
         let dividerWidth: CGFloat = 4
-        let singleWidth = (deckWidth - (innerPadding * 2) - dividerWidth) / 2
-        let singleHeight = min(deckHeight - (innerPadding * 2), singleWidth * 0.92)
+        let availableHeight = deckHeight - (innerPadding * 2)
+        let maxSingleWidth = (deckWidth - (innerPadding * 2) - dividerWidth) / 2
+        let singleHeight = availableHeight
+        let singleWidth = min(maxSingleWidth, singleHeight * (256.0 / 192.0))
 
         return HStack(spacing: 0) {
             ndsLandscapeSingleScreen(
@@ -2335,6 +2337,7 @@ struct GamePlayView: View {
         let displayHeight = safeFrameValue(displayWidth * (384.0 / 256.0), fallback: 270)
         let screenHalfHeight = safeFrameValue((displayHeight - 10) / 2, fallback: 120)
         let stackedTouchHeight = safeFrameValue(displayHeight / 2.0, fallback: 120)
+        let portraitDisplayVerticalOffset: CGFloat = 12
         // Keep a light active-area trim for the decorative bezel in stacked mode.
         let stackedTouchTopInsetNormalized = safeFrameValue(6.0 / max(stackedTouchHeight, 1.0), fallback: 0.03)
         let stackedTouchBottomInsetNormalized = safeFrameValue(4.0 / max(stackedTouchHeight, 1.0), fallback: 0.02)
@@ -2448,6 +2451,7 @@ struct GamePlayView: View {
                 .frame(width: displayWidth + 96, height: displayHeight)
             }
             .frame(width: displayWidth + 90, height: displayHeight)
+            .offset(y: portraitDisplayVerticalOffset)
         }
         .frame(width: screenAreaWidth, height: screenAreaHeight)
     }
@@ -4160,6 +4164,11 @@ struct GamePlayView: View {
                 ? (centerLanePosition - (geometry.size.width - calculatedCenterLaneWidth) / 2) + ndsLandscapePauseNudge
                 : 0
             let centerLaneWidth = isNDSLandscape ? calculatedCenterLaneWidth : 560.0
+            let horizontalInset: CGFloat = isLandscape ? 40 : 28
+            let availablePanelWidth = safeFrameValue(
+                geometry.size.width - safeLeading - safeTrailing - horizontalInset,
+                fallback: geometry.size.width - horizontalInset
+            )
 
             let pausePanelWidth = isLandscape
                 ? safeFrameValue(
@@ -4172,7 +4181,10 @@ struct GamePlayView: View {
                     ),
                     fallback: centerLaneWidth
                 )
-                : 720
+                : safeFrameValue(
+                    min(max(availablePanelWidth, 280), 620),
+                    fallback: 360
+                )
 
             ZStack {
                 AppColors.background.opacity(heavyUIEffectsEnabled ? 0.42 : 0.56)
@@ -4341,6 +4353,7 @@ struct GamePlayView: View {
                 .frame(width: pausePanelWidth)
                 .subpagePopup(cornerRadius: 22)
                 .offset(x: centerLaneOffset)
+                .padding(.horizontal, isLandscape ? 0 : 14)
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
             }
         }

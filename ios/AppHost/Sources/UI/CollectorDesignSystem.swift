@@ -61,7 +61,7 @@ enum CollectorPlatformStyle {
             )
         case .neutral:
             return LinearGradient(
-                colors: [AppColors.surfaceLight.opacity(0.66), AppColors.surface.opacity(0.85)],
+                colors: [AppColors.Surface.cardElevated, AppColors.Surface.cardSecondary],
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
             )
@@ -161,13 +161,7 @@ struct CollectorGameCard<Artwork: View>: View {
                     .clipped()
 
                 if let platformTag, !platformTag.isEmpty {
-                    Text(platformTag)
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundColor(.white)
-                        .padding(.horizontal, 10)
-                        .frame(height: 30)
-                        .background(platformStyle.badgeColor.opacity(0.86))
-                        .clipShape(Capsule())
+                    RMOverlayBadge(title: platformTag)
                         .padding(8)
                 }
 
@@ -178,7 +172,7 @@ struct CollectorGameCard<Artwork: View>: View {
                                 .font(.system(size: 11, weight: .bold))
                                 .foregroundColor(.orange)
                                 .padding(6)
-                                .background(Color.black.opacity(0.55))
+                                .background(AppColors.Surface.cardOverlay)
                                 .clipShape(Circle())
                                 .padding(8)
                             Spacer()
@@ -225,30 +219,24 @@ struct CollectorGameCard<Artwork: View>: View {
                 )
 
                 GeometryReader { geo in
-                    ZStack(alignment: .leading) {
-                        Capsule()
-                            .fill(AppColors.surfaceLight.opacity(0.58))
-                        if let progress {
-                            Capsule()
-                                .fill(AppColors.primary.opacity(0.62))
-                                .frame(width: max(8, geo.size.width * max(0.05, min(1.0, progress))))
-                        }
-                    }
+                    RMProgressBar(value: progress ?? 0, height: 8)
                 }
-                .frame(height: 4)
+                .frame(height: 8)
             }
             .frame(maxWidth: .infinity, alignment: .topLeading)
             .padding(.horizontal, 14)
-            .padding(.vertical, 12)
-            .background(Color.white.opacity(0.96))
+            .padding(.top, 14)
+            .padding(.bottom, 16)
+            .background(AppColors.Surface.cardPrimary)
         }
         .frame(maxWidth: .infinity)
-        .background(Color.white.opacity(0.88))
+        .background(AppColors.Surface.cardPrimary)
         .overlay(
             RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .stroke(Color.white.opacity(0.70), lineWidth: 1)
+                .stroke(AppColors.Border.subtle, lineWidth: 1)
         )
-        .shadow(color: Color.black.opacity(0.07), radius: 10, x: 0, y: 4)
+        .shadow(color: AppColors.Shadow.card, radius: 14, x: 0, y: 8)
+        .shadow(color: AppColors.Shadow.ambientGlow.opacity(0.45), radius: 16, x: 0, y: 8)
         .frame(height: CollectorCardMetrics.cardHeight(for: variant))
         .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
     }
