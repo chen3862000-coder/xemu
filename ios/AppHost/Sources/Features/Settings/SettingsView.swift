@@ -207,6 +207,22 @@ struct SettingsView: View {
 
     private var infoSection: some View {
         Section(header: SettingsSectionHeader(L10n.string("settings.info.section", languageManager: languageManager))) {
+            NavigationSettingsRow(
+                title: L10n.string("settings.privacy_policy.title", languageManager: languageManager),
+                subtitle: L10n.string("settings.privacy_policy.subtitle", languageManager: languageManager)
+            ) {
+                PrivacyPolicyView()
+                    .environmentObject(languageManager)
+            }
+
+            NavigationSettingsRow(
+                title: L10n.string("settings.user_agreement.title", languageManager: languageManager),
+                subtitle: L10n.string("settings.user_agreement.subtitle", languageManager: languageManager)
+            ) {
+                UserAgreementView()
+                    .environmentObject(languageManager)
+            }
+
             InfoSettingsRow(title: L10n.string("app.brand.title", languageManager: languageManager), value: appVersionText)
                 .contentShape(Rectangle())
                 .onTapGesture {
