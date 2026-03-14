@@ -14,7 +14,7 @@ struct PlayerStatsView: View {
                 AppColors.background.ignoresSafeArea()
 
                 ScrollView {
-                    VStack(spacing: 20) {
+                    VStack(spacing: 28) {
                         summaryHero
                         consoleBreakdownSection
                         topGamesSection
@@ -22,7 +22,7 @@ struct PlayerStatsView: View {
                         timelineSection
                         insightsSection
                     }
-                    .padding(.horizontal, 16)
+                    .padding(.horizontal, RMSpacing.lg)
                     .padding(.top, 12)
                     .padding(.bottom, 28)
                 }
@@ -194,7 +194,7 @@ struct PlayerStatsView: View {
                                     .frame(width: max(10, proxy.size.width * item.ratio))
                             }
                         }
-                        .frame(height: 9)
+                        .frame(height: 6)
                     }
                 }
             }
@@ -213,9 +213,9 @@ struct PlayerStatsView: View {
                         selectedGame = item.game
                     } label: {
                         HStack(spacing: 12) {
-                            Text("\(index + 1)")
+                            Text("#\(index + 1)")
                                 .font(.system(size: 13, weight: .bold))
-                                .foregroundColor(AppColors.primary)
+                                .foregroundColor(index == 0 ? AppColors.primary : AppColors.textSecondary)
                                 .frame(width: 22)
 
                             VStack(alignment: .leading, spacing: 4) {
@@ -404,10 +404,10 @@ struct PlayerStatsView: View {
     }
 
     private func sectionCard<Content: View>(title: String, trailing: String?, @ViewBuilder content: () -> Content) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: RMSpacing.md) {
             HStack {
                 Text(title)
-                    .font(.system(size: 18, weight: .bold))
+                    .font(RMTypeScale.sectionTitle)
                     .foregroundColor(AppColors.textPrimary)
                 Spacer()
                 if let trailing {
@@ -418,13 +418,13 @@ struct PlayerStatsView: View {
             }
             content()
         }
-        .padding(14)
+        .padding(RMSpacing.lg)
         .background(
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
+            RoundedRectangle(cornerRadius: RMRadius.card, style: .continuous)
                 .fill(AppColors.surface.opacity(0.96))
         )
         .overlay(
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
+            RoundedRectangle(cornerRadius: RMRadius.card, style: .continuous)
                 .stroke(AppColors.surfaceLight.opacity(0.7), lineWidth: 1)
         )
         .shadow(color: AppColors.primary.opacity(0.06), radius: 10, x: 0, y: 6)

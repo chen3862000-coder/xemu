@@ -208,7 +208,7 @@ struct GameListView: View {
     }
     
     private var headerSection: some View {
-        VStack(spacing: isCollectorMode ? 8 : 10) {
+        VStack(spacing: isCollectorMode ? RMSpacing.sm : RMSpacing.md) {
             HStack(spacing: 12) {
                 Button(action: { dismiss() }) {
                     Image(systemName: "arrow.left")
@@ -253,11 +253,11 @@ struct GameListView: View {
                 }
             }
 
-            HStack(spacing: 8) {
-                    HStack(spacing: 8) {
-                        Image(systemName: "magnifyingglass")
-                            .font(.system(size: 13, weight: .medium))
-                            .foregroundColor(AppColors.textMuted)
+            HStack(spacing: RMSpacing.sm) {
+                HStack(spacing: RMSpacing.sm) {
+                    Image(systemName: "magnifyingglass")
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundColor(AppColors.textMuted)
 
                     TextField("Search games...", text: $searchText)
 #if os(iOS)
@@ -283,6 +283,8 @@ struct GameListView: View {
                     }
                 } label: {
                     HStack(spacing: 6) {
+                        Text("Sort")
+                            .font(.system(size: 12, weight: .semibold))
                         Text(selectedSort.rawValue)
                             .font(.system(size: 12, weight: .semibold))
                         Image(systemName: "chevron.down")
@@ -300,8 +302,8 @@ struct GameListView: View {
                 .buttonStyle(.plain)
             }
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
+        .padding(.horizontal, RMSpacing.lg)
+        .padding(.vertical, RMSpacing.md)
         .background(AppColors.Background.appPrimary.opacity(0.88))
         .overlay(
             Rectangle()
@@ -332,7 +334,7 @@ struct GameListView: View {
                         .padding(.top, 14)
                 }
 
-            VStack(alignment: .leading, spacing: 12) {
+            VStack(alignment: .leading, spacing: RMSpacing.lg) {
                 HStack {
                     HStack(spacing: 8) {
                         RMIconBadge(
@@ -344,7 +346,7 @@ struct GameListView: View {
                             imageInset: 6
                         )
                         Text("Quick Stats")
-                            .font(.system(size: 15, weight: .bold))
+                            .font(RMTypeScale.cardTitle)
                             .foregroundColor(AppColors.Text.primary)
                     }
                     Spacer()
@@ -354,18 +356,18 @@ struct GameListView: View {
                 HStack(spacing: 16) {
                     platformIcon
 
-                    VStack(alignment: .leading, spacing: 4) {
+                    VStack(alignment: .leading, spacing: 6) {
                         Text(platformDisplay.displayName)
-                            .font(.system(size: 18, weight: .bold))
+                            .font(RMTypeScale.sectionTitle)
                             .foregroundColor(AppColors.Text.primary)
                         Text(identitySubtitle)
-                            .font(.system(size: 13, weight: .medium))
+                            .font(RMTypeScale.meta)
                             .foregroundColor(AppColors.Text.secondary)
                             .lineLimit(2)
                     }
                 }
 
-                HStack(spacing: 10) {
+                HStack(spacing: RMSpacing.md) {
                     StatBadge(value: "\(viewModel.totalGames)", label: "Games")
                     StatBadge(value: "\(viewModel.playedGames)", label: "Played")
                     StatBadge(value: "\(viewModel.favoriteGames)", label: "Favorites")
@@ -411,7 +413,7 @@ struct GameListView: View {
         VStack(alignment: .leading, spacing: 10) {
             sectionHeader("Your Stats", trailing: nil)
 
-            VStack(spacing: 10) {
+            VStack(spacing: RMSpacing.md) {
                 ConsoleStatRow(label: "Total Hours", value: formatHoursShort(viewModel.totalPlayTimeSeconds))
                 ConsoleStatRow(label: "Sessions", value: "\(viewModel.estimatedSessionCount)")
                 ConsoleStatRow(label: "Avg Session", value: formatMinutesShort(viewModel.averageSessionLengthEstimate))
@@ -858,23 +860,23 @@ struct StatBadge: View {
     let label: String
     
     var body: some View {
-        VStack(spacing: 2) {
+        VStack(spacing: 6) {
             Text(value)
-                .font(.system(size: 18, weight: .bold))
+                .font(.system(size: 22, weight: .bold))
                 .foregroundColor(AppColors.Text.primary)
             
             Text(label)
-                .font(.system(size: 10, weight: .medium))
+                .font(.system(size: 12, weight: .medium))
                 .foregroundColor(AppColors.Text.secondary)
         }
         .frame(maxWidth: .infinity)
-        .padding(.vertical, 10)
+        .padding(.vertical, 12)
         .background(AppColors.Surface.cardElevated)
         .overlay(
-            RoundedRectangle(cornerRadius: 12)
+            RoundedRectangle(cornerRadius: RMRadius.chip)
                 .stroke(AppColors.Border.subtle, lineWidth: 1)
         )
-        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .clipShape(RoundedRectangle(cornerRadius: RMRadius.chip))
     }
 }
 
@@ -952,9 +954,9 @@ private struct MostPlayedBarRow: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 5) {
             HStack(spacing: 8) {
-                Text("\(rank).")
+                Text("#\(rank)")
                     .font(.system(size: 12, weight: .bold))
-                    .foregroundColor(AppColors.primary)
+                    .foregroundColor(rank == 1 ? AppColors.primary : AppColors.textSecondary)
                 Text(title)
                     .font(.system(size: 13, weight: .semibold))
                     .foregroundColor(AppColors.textPrimary)
@@ -1025,8 +1027,11 @@ private struct SystemHubGameCard: View {
                     .frame(height: coverHeight)
                     .clipped()
 
-                RMOverlayBadge(title: platformText)
-                    .padding(8)
+                RMOverlayBadge(
+                    title: platformText,
+                    backgroundColor: CollectorPlatformStyle(systemTag: platformText).badgeColor
+                )
+                .padding(RMSpacing.sm)
 
                 if let launchIssue {
                     VStack {

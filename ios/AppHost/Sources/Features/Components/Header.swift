@@ -30,13 +30,13 @@ struct Header: View {
                             .frame(width: 26, height: 26)
                     }
 
-                    VStack(alignment: .leading, spacing: 2) {
+                    VStack(alignment: .leading, spacing: 6) {
                         Text("RetroMind")
-                            .font(.system(size: 22, weight: .semibold))
+                            .font(RMTypeScale.sectionTitle)
                             .foregroundStyle(AppColors.Text.primary)
 
                         Text("Classic Gaming Hub")
-                            .font(.system(size: 13, weight: .medium))
+                            .font(RMTypeScale.meta)
                             .foregroundStyle(AppColors.Text.tertiary)
                     }
                 }
@@ -57,9 +57,9 @@ struct Header: View {
                     .buttonStyle(RMIconCircleButtonStyle())
                 }
             }
-            .padding(.horizontal, 20)
-            .padding(.top, 16)
-            .padding(.bottom, 12)
+            .padding(.horizontal, RMSpacing.screenMargin)
+            .padding(.top, RMSpacing.lg)
+            .padding(.bottom, RMSpacing.lg)
         }
         .background(AppColors.Background.appPrimary)
     }

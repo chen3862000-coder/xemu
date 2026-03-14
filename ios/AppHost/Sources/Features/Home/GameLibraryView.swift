@@ -141,10 +141,10 @@ private struct AllGamesConsoleBadge: View {
         Text(text)
             .font(.system(size: 11, weight: .semibold))
             .foregroundColor(AllGamesTokens.consoleBadgeText)
-            .padding(.horizontal, 8)
-            .padding(.vertical, 4)
+            .padding(.horizontal, 6)
+            .padding(.vertical, 6)
             .background(backgroundColor)
-            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+            .clipShape(Capsule())
     }
 }
 
@@ -279,7 +279,7 @@ struct GameLibraryView: View {
     }
 
     private var contentHorizontalPadding: CGFloat {
-        isCollectorMode ? 20 : 20
+        RMSpacing.screenMargin
     }
 
     private var gridColumns: [GridItem] {
@@ -309,7 +309,7 @@ struct GameLibraryView: View {
                 headerSection
 
                 ScrollView {
-                    VStack(spacing: 14) {
+                    VStack(spacing: RMSpacing.md) {
                         if filteredGames.isEmpty {
                             emptyState
                         } else if isCollectorMode {
@@ -323,7 +323,7 @@ struct GameLibraryView: View {
                         }
                     }
                     .padding(.horizontal, contentHorizontalPadding)
-                    .padding(.top, 12)
+                    .padding(.top, RMSpacing.md)
                     .padding(.bottom, 24)
                 }
             }
@@ -499,7 +499,7 @@ struct GameLibraryView: View {
     }
 
     private var headerSection: some View {
-        VStack(spacing: isCollectorMode ? 8 : 10) {
+        VStack(spacing: isCollectorMode ? RMSpacing.sm : RMSpacing.md) {
             HStack(spacing: 12) {
                 Button(action: { dismiss() }) {
                     Image(systemName: "arrow.left")
@@ -524,8 +524,8 @@ struct GameLibraryView: View {
             }
 
             if isCollectorMode {
-                HStack(spacing: 8) {
-                    HStack(spacing: 8) {
+                HStack(spacing: RMSpacing.sm) {
+                    HStack(spacing: RMSpacing.sm) {
                         Image(systemName: "magnifyingglass")
                             .font(.system(size: 13))
                             .foregroundColor(AllGamesTokens.textTertiary)
@@ -562,7 +562,7 @@ struct GameLibraryView: View {
                     RMChip(title: "\(filteredGames.count) on shelf", style: .compact)
                 }
             } else {
-                HStack(spacing: 8) {
+                HStack(spacing: RMSpacing.sm) {
                     Image(systemName: "magnifyingglass")
                         .font(.system(size: 13))
                         .foregroundColor(AllGamesTokens.textTertiary)
@@ -576,7 +576,7 @@ struct GameLibraryView: View {
                 }
                 .allGamesSearchField(cornerRadius: 19, height: 38)
 
-                HStack(spacing: 8) {
+                HStack(spacing: RMSpacing.sm) {
                     Menu {
                         ForEach(LibrarySortOption.allCases) { option in
                             Button {
@@ -652,7 +652,7 @@ struct GameLibraryView: View {
 
                 if showConsoleFilters {
                     ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: 8) {
+                        HStack(spacing: 12) {
                             ForEach(LibrarySystemFilter.allCases) { filter in
                                 Button {
                                     withAnimation(.easeOut(duration: 0.18)) {
@@ -663,7 +663,7 @@ struct GameLibraryView: View {
                                         .font(.system(size: 12, weight: .semibold))
                                         .foregroundColor(selectedSystemFilter == filter ? AppColors.Text.primary : AllGamesTokens.textSecondary)
                                         .padding(.horizontal, 12)
-                                        .frame(height: 30)
+                                        .frame(minWidth: 44, minHeight: 44)
                                         .background(selectedSystemFilter == filter ? AppColors.Surface.accentTintStrong : AllGamesTokens.surface)
                                         .overlay(
                                             Capsule().stroke(selectedSystemFilter == filter ? AppColors.Border.active : AllGamesTokens.strokeSubtle, lineWidth: 1)
@@ -679,7 +679,7 @@ struct GameLibraryView: View {
             }
         }
         .padding(.horizontal, contentHorizontalPadding)
-        .padding(.vertical, 12)
+        .padding(.vertical, RMSpacing.md)
         .background(AllGamesTokens.appBackground.opacity(0.96))
         .overlay(
             Rectangle()
@@ -1168,8 +1168,6 @@ struct AllGamesCard: View {
     var body: some View {
         let issue = ROMCompatibilityService.shared.compatibility(for: entry).issue
         let metadata = issue?.title ?? lastPlayedLabel
-        let shouldShowBadge = !(entry.resolvedSystemCode == "gba" &&
-                              selectedSystemFilter == .gba)
         let platformTag = entry.consoleIdentity?.systemCode ?? (entry.system ?? "UNK").uppercased()
         let progress: CGFloat? = entry.playtimeTotal > 0 ? max(0.08, min(1.0, CGFloat(entry.playtimeTotal) / CGFloat(4 * 3600))) : nil
         let content = Button(action: onTap) {
@@ -1178,7 +1176,7 @@ struct AllGamesCard: View {
                 title: displayTitle(entry.title),
                 metadataPrimary: metadata,
                 metadataSecondary: entry.playtimeTotal > 0 ? playtimeBadge : nil,
-                platformTag: shouldShowBadge ? platformTag : nil,
+                platformTag: platformTag,
                 launchIssueIconName: issue?.iconName,
                 progress: progress
             ) {
@@ -1236,16 +1234,12 @@ struct AllGamesCard: View {
                     .padding(collectorMode ? 6 : 8)
             }
         }
-        .overlay(alignment: .bottomTrailing) {
-            let shouldShowBadge = !(entry.resolvedSystemCode == "gba" &&
-                                  selectedSystemFilter == .gba)
-            if shouldShowBadge {
-                AllGamesConsoleBadge(
-                    text: entry.consoleIdentity?.systemCode ?? (entry.system ?? "UNK").uppercased(),
-                    backgroundColor: SubpageUI.CollectorIdentity.accent(forSystem: entry.resolvedSystemCode)
-                )
-                    .padding(collectorMode ? 6 : 8)
-            }
+        .overlay(alignment: .topTrailing) {
+            AllGamesConsoleBadge(
+                text: entry.consoleIdentity?.systemCode ?? (entry.system ?? "UNK").uppercased(),
+                backgroundColor: SubpageUI.CollectorIdentity.accent(forSystem: entry.resolvedSystemCode)
+            )
+                .padding(8)
         }
         .clipShape(RoundedRectangle(cornerRadius: coverCornerRadius))
         .overlay(alignment: .bottom) {
@@ -1495,8 +1489,8 @@ private struct AllGamesListRow: View {
 private struct PressScaleButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .scaleEffect(configuration.isPressed ? 0.98 : 1.0)
-            .animation(.easeOut(duration: 0.14), value: configuration.isPressed)
+            .scaleEffect(configuration.isPressed ? 0.97 : 1.0)
+            .animation(.easeOut(duration: 0.12), value: configuration.isPressed)
     }
 }
 

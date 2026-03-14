@@ -163,18 +163,18 @@ private struct CollectorShelfPressStyle: ButtonStyle {
 
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .scaleEffect(reduceMotion ? 1.0 : (configuration.isPressed ? 1.06 : 1.0))
+            .scaleEffect(reduceMotion ? 1.0 : (configuration.isPressed ? 0.97 : 1.0))
             .rotation3DEffect(
-                .degrees(reduceMotion ? 0 : (configuration.isPressed ? -6 : -2)),
+                .degrees(reduceMotion ? 0 : (configuration.isPressed ? -3 : -1)),
                 axis: (x: 0, y: 1, z: 0),
                 anchor: .bottom,
                 perspective: 0.8
             )
             .shadow(
                 color: Color.black.opacity(configuration.isPressed ? 0.28 : 0.14),
-                radius: configuration.isPressed ? 18 : 8,
+                radius: configuration.isPressed ? 14 : 8,
                 x: 0,
-                y: configuration.isPressed ? 10 : 5
+                y: configuration.isPressed ? 8 : 5
             )
             .overlay(alignment: .bottom) {
                 Capsule()
@@ -183,7 +183,7 @@ private struct CollectorShelfPressStyle: ButtonStyle {
                     .blur(radius: configuration.isPressed ? 10 : 6)
                     .offset(y: 14)
             }
-            .animation(.easeOut(duration: 0.18), value: configuration.isPressed)
+            .animation(.easeOut(duration: 0.12), value: configuration.isPressed)
     }
 }
 
@@ -194,7 +194,7 @@ struct CollectorShelfFilterRail: View {
 
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 8) {
+            HStack(spacing: 12) {
                 ForEach(LibrarySystemFilter.allCases) { filter in
                     Button {
                         withAnimation(.easeOut(duration: 0.18)) {

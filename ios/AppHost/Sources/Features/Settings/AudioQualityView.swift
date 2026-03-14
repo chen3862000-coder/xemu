@@ -82,6 +82,7 @@ struct AudioQualityRow: View {
                         .foregroundColor(.accentColor)
                 }
             }
+            .frame(maxWidth: .infinity, minHeight: 56, alignment: .leading)
             .contentShape(Rectangle())
         }
         .buttonStyle(PlainButtonStyle())

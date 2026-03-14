@@ -18,7 +18,7 @@ struct SettingsView: View {
     @AppStorage("respectLowPowerMode") private var respectLowPowerMode = true
     @AppStorage("performanceMode") private var performanceModeRaw = PerformanceMode.auto.rawValue
     @AppStorage("showFPSMeter") private var showFPSMeter = false
-    @AppStorage("showCartridgeLaunchIntro") private var showCartridgeLaunchIntro = true
+    @AppStorage("showCartridgeLaunchIntro") private var showCartridgeLaunchIntro = false
 
     @AppStorage("settings.devModeUnlocked") private var devModeUnlocked = false
     @AppStorage("proUnlocked") private var proUnlocked = false
@@ -44,8 +44,7 @@ struct SettingsView: View {
 
     private var appVersionText: String {
         let short = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0"
-        let build = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "1"
-        return "Version \(short) (\(build))"
+        return "Version \(short)"
     }
 
     var body: some View {
@@ -93,15 +92,6 @@ struct SettingsView: View {
             ) {
                 ThemeModeSelectorView()
                     .environmentObject(themeController)
-            }
-
-            NavigationSettingsRow(
-                title: "Shell Skins",
-                subtitle: "Global and per-emulator styles",
-                value: shellThemeManager.activeTheme.displayName
-            ) {
-                ShellSkinsView()
-                    .environmentObject(shellThemeManager)
             }
         }
     }
@@ -179,7 +169,8 @@ struct SettingsView: View {
                     title: "Share App",
                     subtitle: "Tell a friend"
                 )
-                .frame(minHeight: SettingsTokens.rowHeight, alignment: .leading)
+                .frame(maxWidth: .infinity, minHeight: SettingsTokens.rowHeight, alignment: .leading)
+                .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
 
@@ -194,7 +185,8 @@ struct SettingsView: View {
                     title: "Support",
                     subtitle: "FAQ and help resources"
                 )
-                .frame(minHeight: SettingsTokens.rowHeight, alignment: .leading)
+                .frame(maxWidth: .infinity, minHeight: SettingsTokens.rowHeight, alignment: .leading)
+                .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
         }
@@ -329,7 +321,8 @@ private struct NavigationSettingsRow<Destination: View>: View {
                         .foregroundStyle(.secondary)
                 }
             }
-            .frame(minHeight: SettingsTokens.rowHeight, alignment: .leading)
+            .frame(maxWidth: .infinity, minHeight: SettingsTokens.rowHeight, alignment: .leading)
+            .contentShape(Rectangle())
         }
     }
 }
@@ -352,7 +345,8 @@ private struct ToggleSettingsRow: View {
             SwiftUI.Toggle(isOn: $isOn) { EmptyView() }
                 .labelsHidden()
         }
-        .frame(minHeight: SettingsTokens.rowHeight, alignment: .leading)
+        .frame(maxWidth: .infinity, minHeight: SettingsTokens.rowHeight, alignment: .leading)
+        .contentShape(Rectangle())
     }
 }
 
@@ -417,7 +411,8 @@ private struct ThemeModeSelectorView: View {
                         .foregroundColor(.accentColor)
                 }
             }
-            .frame(minHeight: SettingsTokens.rowHeight, alignment: .leading)
+            .frame(maxWidth: .infinity, minHeight: SettingsTokens.rowHeight, alignment: .leading)
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
     }
@@ -453,7 +448,8 @@ private struct PerformanceModeSelectorView: View {
                         .foregroundColor(.accentColor)
                 }
             }
-            .frame(minHeight: SettingsTokens.rowHeight, alignment: .leading)
+            .frame(maxWidth: .infinity, minHeight: SettingsTokens.rowHeight, alignment: .leading)
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
     }
@@ -568,7 +564,8 @@ private struct TouchFallbackSelectorView: View {
                         .foregroundColor(.accentColor)
                 }
             }
-            .frame(minHeight: SettingsTokens.rowHeight, alignment: .leading)
+            .frame(maxWidth: .infinity, minHeight: SettingsTokens.rowHeight, alignment: .leading)
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
     }
@@ -618,7 +615,8 @@ private struct StickSensitivitySelectorView: View {
                         .foregroundColor(.accentColor)
                 }
             }
-            .frame(minHeight: SettingsTokens.rowHeight, alignment: .leading)
+            .frame(maxWidth: .infinity, minHeight: SettingsTokens.rowHeight, alignment: .leading)
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
     }

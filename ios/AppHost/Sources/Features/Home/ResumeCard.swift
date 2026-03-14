@@ -35,9 +35,9 @@ struct ResumeCard: View {
                             .foregroundColor(.white.opacity(0.8))
                         
                         if entry.playtimeTotal > 0 {
-                            Text("•")
+                            Text("·")
                                 .foregroundColor(.white.opacity(0.6))
-                            Text("\(entry.playtimeTotal / 3600)h played")
+                            Text(playtimeText)
                                 .font(.system(size: 12))
                                 .foregroundColor(.white.opacity(0.6))
                         }
@@ -48,7 +48,7 @@ struct ResumeCard: View {
                         GeometryReader { geometry in
                             ZStack(alignment: .leading) {
                                 RoundedRectangle(cornerRadius: 2)
-                                    .fill(Color.white.opacity(0.3))
+                                    .fill(Color.white.opacity(0.15))
                                     .frame(height: 4)
                                 
                                 RoundedRectangle(cornerRadius: 2)
@@ -68,13 +68,13 @@ struct ResumeCard: View {
             .aspectRatio(16/9, contentMode: .fill)
             .clipShape(RoundedRectangle(cornerRadius: 20))
             .shadow(color: Color.black.opacity(0.08), radius: 12, x: 0, y: 6)
-            .scaleEffect(isPressed ? 1.02 : 1.0)
+            .scaleEffect(isPressed ? 0.97 : 1.0)
         }
         .buttonStyle(PlainButtonStyle())
         .simultaneousGesture(
             DragGesture(minimumDistance: 0)
-                .onChanged { _ in withAnimation(.easeInOut(duration: 0.1)) { isPressed = true } }
-                .onEnded { _ in withAnimation(.easeInOut(duration: 0.1)) { isPressed = false } }
+                .onChanged { _ in withAnimation(.easeOut(duration: 0.12)) { isPressed = true } }
+                .onEnded { _ in withAnimation(.easeOut(duration: 0.12)) { isPressed = false } }
         )
     }
     
@@ -129,5 +129,18 @@ struct ResumeCard: View {
         if calendar.isDateInToday(lastPlayed) { return "Today" }
         if calendar.isDateInYesterday(lastPlayed) { return "Yesterday" }
         return lastPlayed.formatted(.dateTime.month(.abbreviated).day())
+    }
+
+    private var playtimeText: String {
+        let minutes = max(1, Int(entry.playtimeTotal) / 60)
+        if minutes < 60 {
+            return "\(minutes)m played"
+        }
+        let hours = minutes / 60
+        let remainder = minutes % 60
+        if remainder == 0 {
+            return "\(hours)h played"
+        }
+        return "\(hours)h \(remainder)m played"
     }
 }

@@ -34,6 +34,7 @@ struct GamePlayView: View {
     @State private var fastForwardSpeed: Int = 1
     @State private var startTask: Task<Void, Never>?
     @State private var showCartridgeIntro = false
+    @State private var cartridgeOverlayOpacity: CGFloat = 0
     @State private var cartridgeInsertionProgress: CGFloat = 0
     @State private var cartridgeRevealProgress: CGFloat = 0
     @State private var showCartridgePowerOnGlow = false
@@ -130,6 +131,7 @@ struct GamePlayView: View {
             achievementToastTask?.cancel()
             achievementToastTask = nil
             showCartridgeIntro = false
+            cartridgeOverlayOpacity = 0
             cartridgeInsertionProgress = 0
             cartridgeRevealProgress = 0
             showCartridgePowerOnGlow = false
@@ -213,48 +215,49 @@ struct GamePlayView: View {
             pendingLaunchResumeFlow = false
             if showCartridgeLaunchIntro {
                 showCartridgeIntro = true
+                cartridgeOverlayOpacity = 1
                 showCartridgePowerOnGlow = false
                 showRetroBootSequence = false
                 cartridgeInsertionProgress = 0
                 cartridgeRevealProgress = 0
                 retroBootProgress = 0
-                try? await Task.sleep(nanoseconds: 120_000_000)
+                try? await Task.sleep(nanoseconds: 180_000_000)
                 guard !Task.isCancelled else { return }
 
-                withAnimation(.timingCurve(0.20, 0.80, 0.22, 1.0, duration: 0.62)) {
+                withAnimation(.timingCurve(0.18, 0.82, 0.22, 1.0, duration: 0.82)) {
                     cartridgeInsertionProgress = 0.84
                 }
-                try? await Task.sleep(nanoseconds: 560_000_000)
+                try? await Task.sleep(nanoseconds: 740_000_000)
                 guard !Task.isCancelled else { return }
 
-                withAnimation(.spring(response: 0.30, dampingFraction: 0.76, blendDuration: 0.12)) {
+                withAnimation(.spring(response: 0.38, dampingFraction: 0.78, blendDuration: 0.12)) {
                     cartridgeInsertionProgress = 1.03
-                }
-
-                try? await Task.sleep(nanoseconds: 130_000_000)
-                guard !Task.isCancelled else { return }
-
-                playCartridgeInsertionFeedback()
-                withAnimation(.spring(response: 0.30, dampingFraction: 0.90, blendDuration: 0.10)) {
-                    cartridgeInsertionProgress = 1.0
                 }
 
                 try? await Task.sleep(nanoseconds: 180_000_000)
                 guard !Task.isCancelled else { return }
 
-                withAnimation(.easeOut(duration: 0.24)) {
-                    showCartridgePowerOnGlow = true
-                }
-                withAnimation(.easeInOut(duration: 0.30)) {
-                    cartridgeRevealProgress = 0.58
+                playCartridgeInsertionFeedback()
+                withAnimation(.spring(response: 0.34, dampingFraction: 0.90, blendDuration: 0.10)) {
+                    cartridgeInsertionProgress = 1.0
                 }
 
-                try? await Task.sleep(nanoseconds: 140_000_000)
+                try? await Task.sleep(nanoseconds: 260_000_000)
+                guard !Task.isCancelled else { return }
+
+                withAnimation(.easeOut(duration: 0.34)) {
+                    showCartridgePowerOnGlow = true
+                }
+                withAnimation(.easeInOut(duration: 0.42)) {
+                    cartridgeRevealProgress = 0.46
+                }
+
+                try? await Task.sleep(nanoseconds: 240_000_000)
                 guard !Task.isCancelled else { return }
 
                 launchGame(allowResumeFlow: allowResumeFlow, deferResumeFlow: true)
 
-                for _ in 0..<14 {
+                for _ in 0..<18 {
                     if viewModel.isRunning { break }
                     try? await Task.sleep(nanoseconds: 100_000_000)
                     guard !Task.isCancelled else { return }
@@ -265,21 +268,29 @@ struct GamePlayView: View {
                     handleLaunchResumeFlowIfNeeded()
                 }
 
-                withAnimation(.easeInOut(duration: 0.38)) {
+                withAnimation(.easeInOut(duration: 0.58)) {
                     cartridgeRevealProgress = 1.0
+                }
+
+                try? await Task.sleep(nanoseconds: 560_000_000)
+                guard !Task.isCancelled else { return }
+
+                withAnimation(.easeInOut(duration: 0.56)) {
+                    showCartridgePowerOnGlow = false
+                    cartridgeOverlayOpacity = 0
                 }
 
                 try? await Task.sleep(nanoseconds: 420_000_000)
                 guard !Task.isCancelled else { return }
-                withAnimation(.easeInOut(duration: 0.42)) {
-                    showCartridgePowerOnGlow = false
-                    showRetroBootSequence = false
-                    showCartridgeIntro = false
-                    cartridgeRevealProgress = 0
-                    cartridgeInsertionProgress = 0
-                }
+
+                showRetroBootSequence = false
+                showCartridgeIntro = false
+                cartridgeRevealProgress = 0
+                cartridgeInsertionProgress = 0
+                cartridgeOverlayOpacity = 0
             } else {
                 showCartridgeIntro = false
+                cartridgeOverlayOpacity = 0
                 showCartridgePowerOnGlow = false
                 showRetroBootSequence = false
                 cartridgeInsertionProgress = 0
@@ -3613,13 +3624,35 @@ struct GamePlayView: View {
 
     private func cartridgeLaunchOverlay(in geometry: GeometryProxy) -> some View {
         let style = cartridgeLaunchStyle
+        let isNDSLandscapeIntro = game.gamePlatform == .NDS && isLandscape(geometry)
         let insertionProgress = max(0.0, min(1.0, cartridgeInsertionProgress))
         let revealProgress = max(0.0, min(1.0, cartridgeRevealProgress))
         let bootProgress = max(0.0, min(1.0, retroBootProgress))
         let depthProgress = 1.0 - insertionProgress
         let easedDepth = depthProgress * depthProgress
         let travel = max(108.0, min(180.0, geometry.size.height * 0.18))
-        let centerYOffset = -max(42.0, min(92.0, geometry.size.height * 0.08))
+        let finalLift = max(18.0, min(36.0, geometry.size.height * 0.035)) * revealProgress
+        let centerYOffset: CGFloat = {
+            if isNDSLandscapeIntro {
+                return -max(10.0, min(26.0, geometry.size.height * 0.03)) - (finalLift * 0.35)
+            }
+            return -max(58.0, min(118.0, geometry.size.height * 0.11)) - finalLift
+        }()
+        let centerXOffset: CGFloat = {
+            guard isNDSLandscapeIntro else { return 0 }
+            let safeLeading = geometry.safeAreaInsets.leading
+            let safeTrailing = geometry.safeAreaInsets.trailing
+            let cameraSideExclusionInset: CGFloat = 34
+            let cameraOnLeadingSide = safeLeading > safeTrailing
+            let cameraLeadingInset = cameraOnLeadingSide ? cameraSideExclusionInset : 0
+            let cameraTrailingInset = cameraOnLeadingSide ? 0 : cameraSideExclusionInset
+            return ndsLandscapeHorizontalOffset(
+                safeLeading: safeLeading,
+                safeTrailing: safeTrailing,
+                cameraLeadingInset: cameraLeadingInset,
+                cameraTrailingInset: cameraTrailingInset
+            )
+        }()
         let sinkDistance = style.height * 0.46 * revealProgress
         let cartridgeY = (-travel + (travel * 2.0 * insertionProgress)) + centerYOffset + sinkDistance
         let slotY = travel + (style.height * 0.34) + centerYOffset
@@ -3632,16 +3665,6 @@ struct GamePlayView: View {
         let sideCompression = 1.0 - (0.13 * easedDepth)
         let cardShadowOpacity = 0.20 + (0.22 * depthProgress)
         let cardVisibility = max(0.0, 1.0 - revealProgress * 1.2 - (showRetroBootSequence ? (0.20 + 0.65 * bootProgress) : 0))
-        let statusYOffset = max(94.0, min(154.0, geometry.size.height * 0.13))
-        let statusText: String = {
-            if revealProgress > 0.08 { return "Launching \(loadingPlatformName)" }
-            if showRetroBootSequence { return "Booting \(loadingPlatformName)" }
-            if showCartridgePowerOnGlow { return "Booting \(loadingPlatformName)" }
-            if insertionProgress < 0.5 { return "Inserting \(loadingPlatformName) Cartridge" }
-            if insertionProgress < 1.0 { return "Locking Cartridge" }
-            return "Powering On \(loadingPlatformName)"
-        }()
-
         return ZStack {
             Color.black.opacity(max(0.02, (0.24 - (0.12 * insertionProgress)) * (1.0 - 0.92 * revealProgress)))
                 .ignoresSafeArea()
@@ -3711,6 +3734,7 @@ struct GamePlayView: View {
                     .opacity(cardVisibility)
                     .blur(radius: 4.0 * revealProgress, opaque: false)
             }
+            .offset(x: centerXOffset)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
 
             if showCartridgePowerOnGlow {
@@ -3720,6 +3744,7 @@ struct GamePlayView: View {
                     startRadius: 10,
                     endRadius: max(120, min(240, geometry.size.width * 0.34))
                 )
+                .offset(x: centerXOffset)
                 .ignoresSafeArea()
                 .transition(.opacity)
             }
@@ -3727,14 +3752,8 @@ struct GamePlayView: View {
             Color.black.opacity(0.20 * revealProgress)
                 .ignoresSafeArea()
                 .blendMode(.multiply)
-
-            Text(statusText)
-                .font(.system(size: 13, weight: .semibold))
-                .foregroundColor(.white.opacity(0.82))
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
-                .offset(y: statusYOffset)
-                .opacity(max(0.0, (1.0 - revealProgress * 2.1) * (showRetroBootSequence ? 0.62 : 1.0)))
         }
+        .opacity(cartridgeOverlayOpacity)
         .allowsHitTesting(true)
     }
 

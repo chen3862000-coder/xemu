@@ -10,7 +10,7 @@ private enum HomeShelfMetrics {
     }
 
     static func collectorRecentGameCardWidth(for availableWidth: CGFloat) -> CGFloat {
-        min(330, max(260, availableWidth - 52))
+        min(250, max(228, availableWidth - 72))
     }
 }
 
@@ -77,7 +77,7 @@ struct HomeView: View {
                 headerSection
 
                 ScrollView {
-                    VStack(spacing: isCollectorMode ? 18 : 24) {
+                    VStack(spacing: isCollectorMode ? 18 : RMSpacing.sectionGap) {
                         if isCollectorMode {
                             collectorModeContent
                         } else {
@@ -87,7 +87,7 @@ struct HomeView: View {
                         }
                     }
                     .padding(.top, 8)
-                    .padding(.horizontal, 16)
+                    .padding(.horizontal, RMSpacing.lg)
                     .padding(.bottom, 32)
                 }
             }
@@ -346,7 +346,7 @@ struct HomeView: View {
 
     private var collectorContinueSection: some View {
         VStack(alignment: .leading, spacing: 10) {
-            HStack {
+            HStack(alignment: .firstTextBaseline) {
                 Text("Continue Playing")
                     .font(.system(size: 24, weight: .bold))
                     .foregroundStyle(AppColors.Text.primary)
@@ -355,7 +355,7 @@ struct HomeView: View {
                     showingRecentlyPlayed = true
                 }
                 .buttonStyle(.plain)
-                .font(.system(size: 15, weight: .semibold))
+                .font(RMTypeScale.body)
                 .foregroundStyle(AppColors.Text.accent)
             }
 
@@ -372,12 +372,12 @@ struct HomeView: View {
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: 20) {
                             ForEach(viewModel.recentGames) { game in
-                                RecentGameCard(game: game, variant: .featured) {
+                                RecentGameCard(game: game, variant: .compact) {
                                     launchRecentGame(game)
                                 }
                                 .frame(
                                     width: HomeShelfMetrics.collectorRecentGameCardWidth(for: proxy.size.width),
-                                    height: 280
+                                    height: 216
                                 )
                                 .contextMenu {
                                     recentGameContextMenu(game)
@@ -387,7 +387,7 @@ struct HomeView: View {
                         .padding(.horizontal, 24)
                     }
                 }
-                .frame(height: 280)
+                .frame(height: 216)
 #if os(iOS)
                 .scrollTargetBehavior(.viewAligned)
 #endif
@@ -475,7 +475,7 @@ struct HomeView: View {
     }
     
     private var statsGrid: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: RMSpacing.lg) {
             Button(action: {
                 showingGameLibrary = true
             }) {
@@ -513,13 +513,13 @@ struct HomeView: View {
     
     private var recentGamesSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            HStack {
+            HStack(alignment: .firstTextBaseline) {
                 HStack(spacing: 8) {
                     Image(systemName: "clock.fill")
                         .font(.system(size: 17, weight: .semibold))
                         .foregroundColor(AppColors.primary)
                     Text("Continue Playing")
-                        .font(.system(size: 20, weight: .bold))
+                        .font(RMTypeScale.sectionTitle)
                         .foregroundColor(AppColors.textPrimary)
                 }
                 
@@ -530,9 +530,11 @@ struct HomeView: View {
                     showingRecentlyPlayed = true
                 }
                 .buttonStyle(.plain)
-                .font(.system(size: 16, weight: .semibold))
+                .font(RMTypeScale.body)
                 .foregroundColor(AppColors.primary)
             }
+            .padding(.top, RMSpacing.xl)
+            .padding(.bottom, RMSpacing.md)
             .contentShape(Rectangle())
             .zIndex(2)
             
@@ -733,19 +735,19 @@ struct StatCard: View {
     let gradient: [Color]
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
+        VStack(alignment: .leading, spacing: RMSpacing.xs) {
             HStack(alignment: .top) {
                 Text(title)
-                    .font(.system(size: 15, weight: .medium))
+                    .font(RMTypeScale.body)
                     .foregroundStyle(AppColors.Text.secondary)
                 Spacer()
                 ZStack {
                     Circle()
                         .fill(AppColors.Surface.accentTint)
-                        .frame(width: 44, height: 44)
+                        .frame(width: 36, height: 36)
 
                     Image(systemName: icon)
-                        .font(.system(size: 18, weight: .semibold))
+                        .font(.system(size: 22, weight: .semibold))
                         .foregroundStyle(AppColors.Text.accent)
                 }
             }
@@ -899,8 +901,16 @@ struct LandscapeGameRow: View {
     }
 
     private var totalHoursText: String {
-        let hours = max(0, game.totalPlaySeconds / 3600)
-        return "\(hours)h"
+        let minutes = max(1, game.totalPlaySeconds / 60)
+        if minutes < 60 {
+            return "\(minutes)m played"
+        }
+        let hours = minutes / 60
+        let remainder = minutes % 60
+        if remainder == 0 {
+            return "\(hours)h played"
+        }
+        return "\(hours)h \(remainder)m played"
     }
 
     private var sessionProgress: CGFloat {
@@ -1092,10 +1102,10 @@ struct EmulatorCard: View {
                             .font(.system(size: 17, weight: .bold))
                             .foregroundColor(AppColors.textPrimary)
 
-                        HStack(spacing: 4) {
-                            Text(shortName)
-                                .font(.system(size: 13, weight: .medium))
-                                .foregroundColor(AppColors.textMuted)
+            HStack(spacing: 4) {
+                Text(shortName)
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundColor(AppColors.textMuted)
 
                             Text("•")
                                 .font(.system(size: 12, weight: .medium))
@@ -1111,7 +1121,7 @@ struct EmulatorCard: View {
 
                     ZStack {
                         Circle()
-                            .fill(AppColors.primary)
+                            .fill(AppColors.accentGradient.opacity(0.9))
                             .frame(width: 44, height: 44)
                             .shadow(color: AppColors.primary.opacity(isHovered ? 0.38 : 0.22), radius: isHovered ? 16 : 10, x: 0, y: 6)
 
