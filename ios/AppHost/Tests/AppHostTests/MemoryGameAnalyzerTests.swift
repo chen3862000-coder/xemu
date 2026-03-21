@@ -212,6 +212,109 @@ final class MemoryGameAnalyzerTests: XCTestCase {
         XCTAssertEqual(result?.gameplayPhase, .deathSequence)
     }
 
+    func testDragonBallAdvancedAdventureInitialLiveMemoryStateEmitsNoEvents() {
+        let analyzer = MemoryGameAnalyzer()
+
+        let baseline = MarioLiveMemorySample(
+            lives: 3,
+            powerUpState: 0,
+            gameplayState: 0,
+            invulnerabilityTimer: 0,
+            health: 255,
+            maxHealth: 255
+        )
+
+        let result = analyzer.analyzeLiveMemory(baseline, profile: .dragonBallAdvancedAdventure)
+
+        XCTAssertTrue(result?.events.isEmpty ?? false)
+        XCTAssertEqual(result?.playerState, .superState)
+        XCTAssertEqual(result?.gameplayPhase, .gameplayActive)
+    }
+
+    func testDragonBallAdvancedAdventureZeroHealthEmitsDeathFromLiveMemory() {
+        let analyzer = MemoryGameAnalyzer()
+
+        let baseline = MarioLiveMemorySample(
+            lives: 3,
+            powerUpState: 0,
+            gameplayState: 0,
+            invulnerabilityTimer: 0,
+            health: 180,
+            maxHealth: 255
+        )
+        let dead = MarioLiveMemorySample(
+            lives: 2,
+            powerUpState: 0,
+            gameplayState: 0,
+            invulnerabilityTimer: 0,
+            health: 0,
+            maxHealth: 255
+        )
+
+        _ = analyzer.analyzeLiveMemory(baseline, profile: .dragonBallAdvancedAdventure)
+        let result = analyzer.analyzeLiveMemory(dead, profile: .dragonBallAdvancedAdventure)
+
+        XCTAssertEqual(result?.events, [.deathDetected])
+        XCTAssertEqual(result?.playerState, .dead)
+        XCTAssertEqual(result?.gameplayPhase, .deathSequence)
+    }
+
+    func testDragonBallAdvancedAdventureHealthDropEmitsDamageFromLiveMemory() {
+        let analyzer = MemoryGameAnalyzer()
+
+        let baseline = MarioLiveMemorySample(
+            lives: 3,
+            powerUpState: 0,
+            gameplayState: 0,
+            invulnerabilityTimer: 0,
+            health: 180,
+            maxHealth: 512
+        )
+        let damaged = MarioLiveMemorySample(
+            lives: 3,
+            powerUpState: 0,
+            gameplayState: 0,
+            invulnerabilityTimer: 0,
+            health: 164,
+            maxHealth: 512
+        )
+
+        _ = analyzer.analyzeLiveMemory(baseline, profile: .dragonBallAdvancedAdventure)
+        let result = analyzer.analyzeLiveMemory(damaged, profile: .dragonBallAdvancedAdventure)
+
+        XCTAssertEqual(result?.events, [.damageLight])
+        XCTAssertEqual(result?.playerState, .superState)
+        XCTAssertEqual(result?.gameplayPhase, .gameplayActive)
+    }
+
+    func testDragonBallAdvancedAdventureInvulnerabilityOnsetEmitsDamageFromLiveMemory() {
+        let analyzer = MemoryGameAnalyzer()
+
+        let baseline = MarioLiveMemorySample(
+            lives: 3,
+            powerUpState: 0,
+            gameplayState: 0,
+            invulnerabilityTimer: 0,
+            health: 180,
+            maxHealth: 512
+        )
+        let hurt = MarioLiveMemorySample(
+            lives: 3,
+            powerUpState: 0,
+            gameplayState: 2,
+            invulnerabilityTimer: 2,
+            health: 180,
+            maxHealth: 512
+        )
+
+        _ = analyzer.analyzeLiveMemory(baseline, profile: .dragonBallAdvancedAdventure)
+        let result = analyzer.analyzeLiveMemory(hurt, profile: .dragonBallAdvancedAdventure)
+
+        XCTAssertEqual(result?.events, [.damageLight])
+        XCTAssertEqual(result?.playerState, .superState)
+        XCTAssertEqual(result?.gameplayPhase, .gameplayActive)
+    }
+
     func testCastlevaniaAriaOfSorrowHealthDropEmitsDamageFromLiveMemory() {
         let analyzer = MemoryGameAnalyzer()
 
@@ -266,6 +369,118 @@ final class MemoryGameAnalyzerTests: XCTestCase {
 
         _ = analyzer.analyzeLiveMemory(baseline, profile: .castlevaniaAriaOfSorrow)
         let result = analyzer.analyzeLiveMemory(dead, profile: .castlevaniaAriaOfSorrow)
+
+        XCTAssertEqual(result?.events, [.deathDetected])
+        XCTAssertEqual(result?.playerState, .dead)
+        XCTAssertEqual(result?.gameplayPhase, .deathSequence)
+    }
+
+    func testCastlevaniaCircleOfTheMoonHealthDropEmitsDamageFromLiveMemory() {
+        let analyzer = MemoryGameAnalyzer()
+
+        let baseline = MarioLiveMemorySample(
+            lives: nil,
+            powerUpState: 0x01,
+            gameplayState: 0x00,
+            invulnerabilityTimer: 0,
+            health: 100,
+            maxHealth: 120
+        )
+        let damaged = MarioLiveMemorySample(
+            lives: nil,
+            powerUpState: 0x01,
+            gameplayState: 0x02,
+            invulnerabilityTimer: 8,
+            health: 92,
+            maxHealth: 120
+        )
+
+        _ = analyzer.analyzeLiveMemory(baseline, profile: .castlevaniaCircleOfTheMoon)
+        let result = analyzer.analyzeLiveMemory(damaged, profile: .castlevaniaCircleOfTheMoon)
+
+        XCTAssertEqual(result?.events, [.damageLight])
+        XCTAssertEqual(result?.playerState, .invulnerableBlink)
+        XCTAssertEqual(result?.gameplayPhase, .gameplayActive)
+    }
+
+    func testCastlevaniaCircleOfTheMoonZeroHealthEmitsDeathFromLiveMemory() {
+        let analyzer = MemoryGameAnalyzer()
+
+        let baseline = MarioLiveMemorySample(
+            lives: nil,
+            powerUpState: 0x01,
+            gameplayState: 0x00,
+            invulnerabilityTimer: 0,
+            health: 30,
+            maxHealth: 120
+        )
+        let dead = MarioLiveMemorySample(
+            lives: nil,
+            powerUpState: 0x01,
+            gameplayState: 0x00,
+            invulnerabilityTimer: 0,
+            health: 0,
+            maxHealth: 120
+        )
+
+        _ = analyzer.analyzeLiveMemory(baseline, profile: .castlevaniaCircleOfTheMoon)
+        let result = analyzer.analyzeLiveMemory(dead, profile: .castlevaniaCircleOfTheMoon)
+
+        XCTAssertEqual(result?.events, [.deathDetected])
+        XCTAssertEqual(result?.playerState, .dead)
+        XCTAssertEqual(result?.gameplayPhase, .deathSequence)
+    }
+
+    func testCastlevaniaHarmonyOfDissonanceHealthDropEmitsDamageFromLiveMemory() {
+        let analyzer = MemoryGameAnalyzer()
+
+        let baseline = MarioLiveMemorySample(
+            lives: nil,
+            powerUpState: 0x01,
+            gameplayState: 0x01,
+            invulnerabilityTimer: 50,
+            health: 140,
+            maxHealth: 160
+        )
+        let damaged = MarioLiveMemorySample(
+            lives: nil,
+            powerUpState: 0x01,
+            gameplayState: 0x01,
+            invulnerabilityTimer: 50,
+            health: 128,
+            maxHealth: 160
+        )
+
+        _ = analyzer.analyzeLiveMemory(baseline, profile: .castlevaniaHarmonyOfDissonance)
+        let result = analyzer.analyzeLiveMemory(damaged, profile: .castlevaniaHarmonyOfDissonance)
+
+        XCTAssertEqual(result?.events, [.damageLight])
+        XCTAssertEqual(result?.playerState, .poweredUp)
+        XCTAssertEqual(result?.gameplayPhase, .gameplayActive)
+    }
+
+    func testCastlevaniaHarmonyOfDissonanceZeroHealthEmitsDeathFromLiveMemory() {
+        let analyzer = MemoryGameAnalyzer()
+
+        let baseline = MarioLiveMemorySample(
+            lives: nil,
+            powerUpState: 0x01,
+            gameplayState: 0x01,
+            invulnerabilityTimer: 50,
+            health: 24,
+            maxHealth: 160
+        )
+        let dead = MarioLiveMemorySample(
+            lives: nil,
+            powerUpState: 0x01,
+            gameplayState: 0x01,
+            invulnerabilityTimer: 50,
+            health: 0,
+            maxHealth: 160
+        )
+
+        _ = analyzer.analyzeLiveMemory(baseline, profile: .castlevaniaHarmonyOfDissonance)
+        let result = analyzer.analyzeLiveMemory(dead, profile: .castlevaniaHarmonyOfDissonance)
 
         XCTAssertEqual(result?.events, [.deathDetected])
         XCTAssertEqual(result?.playerState, .dead)

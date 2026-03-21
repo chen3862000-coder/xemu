@@ -131,7 +131,10 @@ final class FrameAnalysisCoordinator {
                 hybridResult.confidence,
                 hybridResult.memoryObservation != nil || hasDamageEvent || hasDeathEvent ? 0.9 : 0.0
             ),
-            blinkConfidence: hybridResult.memoryObservation?.blinkConfidence ?? (hasDamageEvent ? 0.9 : 0.0),
+            blinkConfidence: max(
+                hybridResult.memoryObservation?.blinkConfidence ?? 0.0,
+                memoryBacked && hasDamageEvent ? 0.9 : 0.0
+            ),
             hurtPoseConfidence: hasDamageEvent ? (memoryBacked ? 1.0 : 0.95) : 0.0,
             deathAnimationConfidence: hasDeathEvent ? (memoryBacked ? 1.0 : 0.95) : 0.0,
             transitionFadeConfidence: hasDeathEvent ? (memoryBacked ? 1.0 : 0.8) : 0.0,

@@ -80,6 +80,22 @@ final class GameplayEventStateMachineTests: XCTestCase {
         XCTAssertEqual(result.events, [.damageLight])
     }
 
+    func testMemoryBackedDamageWithoutFormDowngradeStillEmitsLightDamage() {
+        let machine = GameplayEventStateMachine(profile: .dragonBallAdvancedAdventure)
+        let result = machine.consume(
+            makeObservation(
+                state: .superState,
+                confidence: 0.98,
+                blinkConfidence: 0.9,
+                hurtConfidence: 1.0,
+                phase: .gameplayActive,
+                timestamp: Date(timeIntervalSinceReferenceDate: 325)
+            )
+        )
+
+        XCTAssertEqual(result.events, [.damageLight])
+    }
+
     func testGameplayResumesAfterDeathSequenceAndAllowsBlinkDamage() {
         let machine = GameplayEventStateMachine(profile: .sma4SuperMarioBros3)
         let t0 = Date(timeIntervalSinceReferenceDate: 400)

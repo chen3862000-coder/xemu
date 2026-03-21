@@ -104,8 +104,17 @@ final class MemoryGameAnalyzer {
         if memoryMap.kind == .metroidFusion {
             return analyzeMetroidFusionLiveMemory(liveSample, memoryMap: memoryMap)
         }
+        if memoryMap.kind == .dragonBallAdvancedAdventure {
+            return analyzeDragonBallAdvancedAdventureLiveMemory(liveSample, memoryMap: memoryMap)
+        }
         if memoryMap.kind == .castlevaniaAriaOfSorrow {
             return analyzeCastlevaniaAriaOfSorrowLiveMemory(liveSample, memoryMap: memoryMap)
+        }
+        if memoryMap.kind == .castlevaniaCircleOfTheMoon {
+            return analyzeCastlevaniaCircleOfTheMoonLiveMemory(liveSample, memoryMap: memoryMap)
+        }
+        if memoryMap.kind == .castlevaniaHarmonyOfDissonance {
+            return analyzeCastlevaniaHarmonyOfDissonanceLiveMemory(liveSample, memoryMap: memoryMap)
         }
         guard let lives = liveSample.lives,
               let powerUpState = liveSample.powerUpState,
@@ -461,6 +470,278 @@ final class MemoryGameAnalyzer {
         )
     }
 
+    private func analyzeDragonBallAdvancedAdventureLiveMemory(
+        _ liveSample: MarioLiveMemorySample,
+        memoryMap: MarioLiveMemoryMap
+    ) -> MemoryGameObservation? {
+        guard let lives = liveSample.lives,
+              let state = liveSample.gameplayState,
+              let timer = liveSample.invulnerabilityTimer,
+              let health = liveSample.health,
+              let maxHealth = liveSample.maxHealth else {
+            previousLiveSample = liveSample
+            return nil
+        }
+
+        let isDeathState = health == 0
+        let playerState: MarioPlayerState = isDeathState ? .dead : .superState
+        let gameplayPhase: MarioGameplayPhase = isDeathState ? .deathSequence : .gameplayActive
+
+        guard let previousLiveSample else {
+            self.previousLiveSample = liveSample
+            if health > 0 && lives > 0 {
+                lastStableLiveSample = liveSample
+                nonDeathEventsArmed = true
+            }
+            return MemoryGameObservation(
+                events: [],
+                confidence: 0.98,
+                lives: Int(lives),
+                health: Int(health),
+                powerUp: 0,
+                playerState: playerState,
+                gameplayPhase: gameplayPhase,
+                blinkConfidence: 0.0,
+                debugSummary: dragonBallDebugSummary(
+                    lives: lives,
+                    state: state,
+                    timer: timer,
+                    health: health,
+                    maxHealth: maxHealth
+                ),
+                pattern: nil
+            )
+        }
+
+        let previousHealth = previousLiveSample.health
+        let previousLives = previousLiveSample.lives
+        let previousState = previousLiveSample.gameplayState
+        let previousTimer = previousLiveSample.invulnerabilityTimer
+        let previousWasDeath = previousHealth == 0
+
+        var events: [GameplayEvent] = []
+        if isDeathState && !previousWasDeath {
+            events.append(.deathDetected)
+        } else if let previousLives,
+                  lives < previousLives {
+            events.append(.deathDetected)
+        } else if nonDeathEventsArmed,
+                  let previousHealth,
+                  previousHealth > health,
+                  health > 0 {
+            let delta = previousHealth - health
+            events.append(delta >= 32 ? .damageHeavy : .damageLight)
+        } else if nonDeathEventsArmed,
+                  health > 0,
+                  (previousState ?? 0) == 0,
+                  state != 0 || timer != 0,
+                  (previousTimer ?? 0) == 0 {
+            events.append(.damageLight)
+        }
+
+        if events.contains(.deathDetected) {
+            lastStableLiveSample = nil
+            invulnerabilityWindowReported = false
+            nonDeathEventsArmed = false
+        } else if health > 0 && lives > 0 {
+            lastStableLiveSample = liveSample
+            invulnerabilityWindowReported = false
+            nonDeathEventsArmed = true
+        }
+
+        self.previousLiveSample = liveSample
+
+        return MemoryGameObservation(
+            events: events,
+            confidence: 0.98,
+            lives: Int(lives),
+            health: Int(health),
+            powerUp: 0,
+            playerState: playerState,
+            gameplayPhase: gameplayPhase,
+            blinkConfidence: 0.0,
+            debugSummary: dragonBallDebugSummary(
+                lives: lives,
+                state: state,
+                timer: timer,
+                health: health,
+                maxHealth: maxHealth
+            ),
+            pattern: nil
+        )
+    }
+
+    private func analyzeCastlevaniaCircleOfTheMoonLiveMemory(
+        _ liveSample: MarioLiveMemorySample,
+        memoryMap: MarioLiveMemoryMap
+    ) -> MemoryGameObservation? {
+        guard let health = liveSample.health,
+              let maxHealth = liveSample.maxHealth,
+              let equipmentState = liveSample.powerUpState,
+              let movementState = liveSample.gameplayState,
+              let timer = liveSample.invulnerabilityTimer else {
+            previousLiveSample = liveSample
+            return nil
+        }
+
+        let isDeathState = health == 0
+        let isInvulnerable = timer > 0 || memoryMap.invulnerabilityStateValues.contains(movementState)
+        let playerState: MarioPlayerState = isDeathState ? .dead : (isInvulnerable ? .invulnerableBlink : (equipmentState == 0 ? .superState : .poweredUp))
+        let gameplayPhase: MarioGameplayPhase = isDeathState ? .deathSequence : .gameplayActive
+
+        guard let previousLiveSample else {
+            self.previousLiveSample = liveSample
+            if !isInvulnerable && health > 0 {
+                lastStableLiveSample = liveSample
+                nonDeathEventsArmed = true
+            }
+            return MemoryGameObservation(
+                events: [],
+                confidence: 0.98,
+                lives: Int(maxHealth),
+                health: Int(health),
+                powerUp: Int(equipmentState),
+                playerState: playerState,
+                gameplayPhase: gameplayPhase,
+                blinkConfidence: isInvulnerable ? 0.90 : 0.0,
+                debugSummary: castlevaniaDebugSummary(
+                    health: health,
+                    maxHealth: maxHealth,
+                    movementState: movementState,
+                    timer: timer,
+                    gameMode: nil
+                ),
+                pattern: nil
+            )
+        }
+
+        var events: [GameplayEvent] = []
+        if health == 0 && previousLiveSample.health != 0 {
+            events.append(.deathDetected)
+        } else if nonDeathEventsArmed,
+                  let previousHealth = previousLiveSample.health,
+                  previousHealth > health,
+                  health > 0 {
+            let delta = previousHealth - health
+            events.append(delta >= 20 ? .damageHeavy : .damageLight)
+        }
+
+        if events.contains(.deathDetected) {
+            lastStableLiveSample = nil
+            invulnerabilityWindowReported = false
+            nonDeathEventsArmed = false
+        } else if !isInvulnerable && health > 0 {
+            lastStableLiveSample = liveSample
+            invulnerabilityWindowReported = false
+            nonDeathEventsArmed = true
+        }
+
+        self.previousLiveSample = liveSample
+
+        return MemoryGameObservation(
+            events: events,
+            confidence: 0.98,
+            lives: Int(maxHealth),
+            health: Int(health),
+            powerUp: Int(equipmentState),
+            playerState: playerState,
+            gameplayPhase: gameplayPhase,
+            blinkConfidence: isInvulnerable ? 0.95 : 0.0,
+            debugSummary: castlevaniaDebugSummary(
+                health: health,
+                maxHealth: maxHealth,
+                movementState: movementState,
+                timer: timer,
+                gameMode: nil
+            ),
+            pattern: nil
+        )
+    }
+
+    private func analyzeCastlevaniaHarmonyOfDissonanceLiveMemory(
+        _ liveSample: MarioLiveMemorySample,
+        memoryMap: MarioLiveMemoryMap
+    ) -> MemoryGameObservation? {
+        guard let health = liveSample.health,
+              let maxHealth = liveSample.maxHealth,
+              let spellBook = liveSample.powerUpState,
+              let pseudoState = liveSample.gameplayState,
+              let mpOrTimer = liveSample.invulnerabilityTimer else {
+            previousLiveSample = liveSample
+            return nil
+        }
+
+        let isDeathState = health == 0
+        let playerState: MarioPlayerState = isDeathState ? .dead : (spellBook == 0 ? .superState : .poweredUp)
+        let gameplayPhase: MarioGameplayPhase = isDeathState ? .deathSequence : .gameplayActive
+
+        guard let previousLiveSample else {
+            self.previousLiveSample = liveSample
+            if health > 0 {
+                lastStableLiveSample = liveSample
+                nonDeathEventsArmed = true
+            }
+            return MemoryGameObservation(
+                events: [],
+                confidence: 0.96,
+                lives: Int(maxHealth),
+                health: Int(health),
+                powerUp: Int(spellBook),
+                playerState: playerState,
+                gameplayPhase: gameplayPhase,
+                blinkConfidence: 0.0,
+                debugSummary: castlevaniaDebugSummary(
+                    health: health,
+                    maxHealth: maxHealth,
+                    movementState: pseudoState,
+                    timer: mpOrTimer,
+                    gameMode: nil
+                ),
+                pattern: nil
+            )
+        }
+
+        var events: [GameplayEvent] = []
+        if health == 0 && previousLiveSample.health != 0 {
+            events.append(.deathDetected)
+        } else if nonDeathEventsArmed,
+                  let previousHealth = previousLiveSample.health,
+                  previousHealth > health,
+                  health > 0 {
+            let delta = previousHealth - health
+            events.append(delta >= 20 ? .damageHeavy : .damageLight)
+        }
+
+        if events.contains(.deathDetected) {
+            lastStableLiveSample = nil
+            nonDeathEventsArmed = false
+        } else if health > 0 {
+            lastStableLiveSample = liveSample
+            nonDeathEventsArmed = true
+        }
+
+        self.previousLiveSample = liveSample
+
+        return MemoryGameObservation(
+            events: events,
+            confidence: 0.96,
+            lives: Int(maxHealth),
+            health: Int(health),
+            powerUp: Int(spellBook),
+            playerState: playerState,
+            gameplayPhase: gameplayPhase,
+            blinkConfidence: 0.0,
+            debugSummary: castlevaniaDebugSummary(
+                health: health,
+                maxHealth: maxHealth,
+                movementState: pseudoState,
+                timer: mpOrTimer,
+                gameMode: nil
+            ),
+            pattern: nil
+        )
+    }
+
     func reset() {
         cachedPatternMatch = nil
         cachedGameTitle = ""
@@ -752,7 +1033,7 @@ final class MemoryGameAnalyzer {
         maxHealth: UInt16,
         movementState: UInt8,
         timer: UInt8,
-        gameMode: UInt8
+        gameMode: UInt8?
     ) -> String {
         String(
             format: "mem H=%u/%u M=%02X T=%u G=%02X",
@@ -760,7 +1041,24 @@ final class MemoryGameAnalyzer {
             Int(maxHealth),
             Int(movementState),
             Int(timer),
-            Int(gameMode)
+            Int(gameMode ?? 0)
+        )
+    }
+
+    private func dragonBallDebugSummary(
+        lives: UInt8,
+        state: UInt8,
+        timer: UInt8,
+        health: UInt16,
+        maxHealth: UInt16
+    ) -> String {
+        String(
+            format: "mem L=%u S=%02X I=%u H=%u/%u",
+            Int(lives),
+            Int(state),
+            Int(timer),
+            Int(health),
+            Int(maxHealth)
         )
     }
 

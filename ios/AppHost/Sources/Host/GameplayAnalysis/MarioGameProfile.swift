@@ -4,7 +4,10 @@ import CoreGraphics
 enum GameplayProfileKind: Sendable {
     case marioPlatformer
     case metroidFusion
+    case dragonBallAdvancedAdventure
     case castlevaniaAriaOfSorrow
+    case castlevaniaCircleOfTheMoon
+    case castlevaniaHarmonyOfDissonance
 }
 
 struct MarioGameProfile: Sendable {
@@ -317,6 +320,48 @@ struct MarioGameProfile: Sendable {
         )
     )
 
+    static let dragonBallAdvancedAdventure = MarioGameProfile(
+        id: "dragon_ball_advanced_adventure_gba",
+        displayName: "Dragon Ball: Advanced Adventure",
+        titleMatchers: [
+            "dragon ball advanced adventure",
+            "dragonballadvancedadventure",
+            "dragon ball adventure",
+            "dragonballadv",
+            "dragonballaa",
+            "dragon ball aa",
+            "advanced adventure",
+            "db advanced adventure",
+            "015ab2129d6f4315b92b32fa29d8cead7195a51951945d87fbcc6f07149811c5"
+        ],
+        nativeResolution: CGSize(width: 240, height: 160),
+        gameplayRegion: CGRect(x: 0.0, y: 0.10, width: 1.0, height: 0.80),
+        initialSearchRegion: CGRect(x: 0.08, y: 0.18, width: 0.84, height: 0.64),
+        minSampleInterval: 0.16,
+        damageCooldown: 1.0,
+        deathCooldown: 2.0,
+        fadeConfirmationThreshold: 0.38,
+        blackoutThreshold: 0.09,
+        smallHeightRange: 10...20,
+        superHeightRange: 21...32,
+        poweredUpHeightRange: 21...32,
+        liveMemory: MarioLiveMemoryMap(
+            kind: .dragonBallAdvancedAdventure,
+            livesAddress: 0x02029F36,
+            powerUpAddress: 0x02020650,
+            gameplayStateAddress: 0x02020658,
+            invulnerabilityTimerAddress: 0x02020658,
+            deathStateValues: [],
+            invulnerabilityStateValues: [],
+            smallPowerUpValues: [],
+            superPowerUpValues: [0],
+            poweredUpValues: Set(1...UInt8.max),
+            healthAddress16: 0x02020646,
+            maxHealthAddress16: 0x02020648,
+            gameModeAddress: nil
+        )
+    )
+
     static let castlevaniaAriaOfSorrow = MarioGameProfile(
         id: "castlevania_aria_of_sorrow_gba",
         displayName: "Castlevania: Aria of Sorrow",
@@ -356,6 +401,80 @@ struct MarioGameProfile: Sendable {
         )
     )
 
+    static let castlevaniaCircleOfTheMoon = MarioGameProfile(
+        id: "castlevania_circle_of_the_moon_gba",
+        displayName: "Castlevania: Circle of the Moon",
+        titleMatchers: [
+            "castlevania circle of the moon",
+            "circle of the moon",
+            "castlevaniacircleofthemoon",
+            "dracula agb1"
+        ],
+        nativeResolution: CGSize(width: 240, height: 160),
+        gameplayRegion: CGRect(x: 0.0, y: 0.10, width: 1.0, height: 0.80),
+        initialSearchRegion: CGRect(x: 0.08, y: 0.18, width: 0.84, height: 0.64),
+        minSampleInterval: 0.14,
+        damageCooldown: 0.8,
+        deathCooldown: 2.0,
+        fadeConfirmationThreshold: 0.38,
+        blackoutThreshold: 0.09,
+        smallHeightRange: 10...20,
+        superHeightRange: 21...32,
+        poweredUpHeightRange: 21...32,
+        liveMemory: MarioLiveMemoryMap(
+            kind: .castlevaniaCircleOfTheMoon,
+            livesAddress: 0x0202562E,
+            powerUpAddress: 0x020253F4,
+            gameplayStateAddress: 0x020000D0,
+            invulnerabilityTimerAddress: 0x020000D4,
+            deathStateValues: [],
+            invulnerabilityStateValues: [0x01, 0x02, 0x03, 0x04],
+            smallPowerUpValues: [],
+            superPowerUpValues: [0],
+            poweredUpValues: Set(1...UInt8.max),
+            healthAddress16: 0x0202562E,
+            maxHealthAddress16: 0x02025632,
+            gameModeAddress: nil
+        )
+    )
+
+    static let castlevaniaHarmonyOfDissonance = MarioGameProfile(
+        id: "castlevania_harmony_of_dissonance_gba",
+        displayName: "Castlevania: Harmony of Dissonance",
+        titleMatchers: [
+            "castlevania harmony of dissonance",
+            "harmony of dissonance",
+            "castlevaniaharmonyofdissonance",
+            "castlevania1"
+        ],
+        nativeResolution: CGSize(width: 240, height: 160),
+        gameplayRegion: CGRect(x: 0.0, y: 0.10, width: 1.0, height: 0.80),
+        initialSearchRegion: CGRect(x: 0.08, y: 0.18, width: 0.84, height: 0.64),
+        minSampleInterval: 0.14,
+        damageCooldown: 0.8,
+        deathCooldown: 2.0,
+        fadeConfirmationThreshold: 0.38,
+        blackoutThreshold: 0.09,
+        smallHeightRange: 10...20,
+        superHeightRange: 21...32,
+        poweredUpHeightRange: 21...32,
+        liveMemory: MarioLiveMemoryMap(
+            kind: .castlevaniaHarmonyOfDissonance,
+            livesAddress: 0x0201854E,
+            powerUpAddress: 0x02000DE6,
+            gameplayStateAddress: 0x02000DE6,
+            invulnerabilityTimerAddress: 0x02018550,
+            deathStateValues: [],
+            invulnerabilityStateValues: [],
+            smallPowerUpValues: [],
+            superPowerUpValues: [0],
+            poweredUpValues: Set(1...UInt8.max),
+            healthAddress16: 0x0201854E,
+            maxHealthAddress16: 0x02018786,
+            gameModeAddress: nil
+        )
+    )
+
     static let allProfiles: [MarioGameProfile] = [
         superMarioLand,
         superMarioLand2,
@@ -365,7 +484,10 @@ struct MarioGameProfile: Sendable {
         sma3YoshisIsland,
         sma4SuperMarioBros3,
         metroidFusion,
-        castlevaniaAriaOfSorrow
+        dragonBallAdvancedAdventure,
+        castlevaniaAriaOfSorrow,
+        castlevaniaCircleOfTheMoon,
+        castlevaniaHarmonyOfDissonance
     ]
 
     private var profilePlatform: Platform {
