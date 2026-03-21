@@ -151,4 +151,64 @@ final class MemoryGameAnalyzerTests: XCTestCase {
         XCTAssertTrue(respawnPowerResult?.events.isEmpty ?? false)
         XCTAssertEqual(laterPowerResult?.events, [.powerUpCollected])
     }
+
+    func testMetroidFusionHealthDropEmitsDamageFromLiveMemory() {
+        let analyzer = MemoryGameAnalyzer()
+
+        let baseline = MarioLiveMemorySample(
+            lives: nil,
+            powerUpState: 0x10,
+            gameplayState: 0x00,
+            invulnerabilityTimer: 0,
+            health: 99,
+            maxHealth: 99,
+            gameMode: 0x01
+        )
+        let damaged = MarioLiveMemorySample(
+            lives: nil,
+            powerUpState: 0x10,
+            gameplayState: 0x11,
+            invulnerabilityTimer: 45,
+            health: 89,
+            maxHealth: 99,
+            gameMode: 0x01
+        )
+
+        _ = analyzer.analyzeLiveMemory(baseline, profile: .metroidFusion)
+        let result = analyzer.analyzeLiveMemory(damaged, profile: .metroidFusion)
+
+        XCTAssertEqual(result?.events, [.damageLight])
+        XCTAssertEqual(result?.playerState, .invulnerableBlink)
+        XCTAssertEqual(result?.gameplayPhase, .gameplayActive)
+    }
+
+    func testMetroidFusionDeathPoseEmitsDeathFromLiveMemory() {
+        let analyzer = MemoryGameAnalyzer()
+
+        let baseline = MarioLiveMemorySample(
+            lives: nil,
+            powerUpState: 0x10,
+            gameplayState: 0x00,
+            invulnerabilityTimer: 0,
+            health: 35,
+            maxHealth: 99,
+            gameMode: 0x01
+        )
+        let dead = MarioLiveMemorySample(
+            lives: nil,
+            powerUpState: 0x10,
+            gameplayState: 0x3E,
+            invulnerabilityTimer: 0,
+            health: 0,
+            maxHealth: 99,
+            gameMode: 0x08
+        )
+
+        _ = analyzer.analyzeLiveMemory(baseline, profile: .metroidFusion)
+        let result = analyzer.analyzeLiveMemory(dead, profile: .metroidFusion)
+
+        XCTAssertEqual(result?.events, [.deathDetected])
+        XCTAssertEqual(result?.playerState, .dead)
+        XCTAssertEqual(result?.gameplayPhase, .deathSequence)
+    }
 }

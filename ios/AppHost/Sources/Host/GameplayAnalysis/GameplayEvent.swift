@@ -69,4 +69,25 @@ struct MarioLiveMemorySample: Sendable {
     let powerUpState: UInt8?
     let gameplayState: UInt8?
     let invulnerabilityTimer: UInt8?
+    let health: UInt16?
+    let maxHealth: UInt16?
+    let gameMode: UInt8?
+
+    init(
+        lives: UInt8?,
+        powerUpState: UInt8?,
+        gameplayState: UInt8?,
+        invulnerabilityTimer: UInt8?,
+        health: UInt16? = nil,
+        maxHealth: UInt16? = nil,
+        gameMode: UInt8? = nil
+    ) {
+        self.lives = lives
+        self.powerUpState = powerUpState
+        self.gameplayState = gameplayState
+        self.invulnerabilityTimer = invulnerabilityTimer
+        self.health = health
+        self.maxHealth = maxHealth
+        self.gameMode = gameMode
+    }
 }

@@ -100,6 +100,11 @@ final class MemoryGameAnalyzer {
         guard let memoryMap = profile.liveMemory else {
             return nil
         }
+
+        if memoryMap.kind == .metroidFusion {
+            return analyzeMetroidFusionLiveMemory(liveSample, memoryMap: memoryMap)
+        }
+
         guard let lives = liveSample.lives,
               let powerUpState = liveSample.powerUpState,
               let gameplayState = liveSample.gameplayState,
@@ -219,6 +224,123 @@ final class MemoryGameAnalyzer {
                 powerUpState: powerUpState,
                 gameplayState: gameplayState,
                 invulnerabilityTimer: invulnerabilityTimer
+            ),
+            pattern: nil
+        )
+    }
+
+    private func analyzeMetroidFusionLiveMemory(
+        _ liveSample: MarioLiveMemorySample,
+        memoryMap: MarioLiveMemoryMap
+    ) -> MemoryGameObservation? {
+        guard let health = liveSample.health,
+              let maxHealth = liveSample.maxHealth,
+              let suitStatus = liveSample.powerUpState,
+              let pose = liveSample.gameplayState,
+              let invulnerabilityTimer = liveSample.invulnerabilityTimer,
+              let gameMode = liveSample.gameMode else {
+            previousLiveSample = liveSample
+            return nil
+        }
+
+        let isDeathMode = memoryMap.deathStateValues.contains(pose) || gameMode == 0x08 || gameMode == 0x0A || health == 0
+        let isGameplayActive = gameMode == 0x01
+        let isInvulnerable = invulnerabilityTimer > 0 || memoryMap.invulnerabilityStateValues.contains(pose)
+
+        var playerState: MarioPlayerState
+        if isDeathMode {
+            playerState = .dead
+        } else if isInvulnerable {
+            playerState = .invulnerableBlink
+        } else if suitStatus == 0 {
+            playerState = .superState
+        } else {
+            playerState = .poweredUp
+        }
+
+        let gameplayPhase: MarioGameplayPhase = isDeathMode ? .deathSequence : (isGameplayActive ? .gameplayActive : .transition)
+
+        guard let previousLiveSample else {
+            self.previousLiveSample = liveSample
+            if isGameplayActive && !isInvulnerable && health > 0 {
+                lastStableLiveSample = liveSample
+                nonDeathEventsArmed = true
+            }
+            return MemoryGameObservation(
+                events: [],
+                confidence: 0.98,
+                lives: Int(maxHealth),
+                health: Int(health),
+                powerUp: Int(suitStatus),
+                playerState: playerState,
+                gameplayPhase: gameplayPhase,
+                blinkConfidence: isInvulnerable ? 0.90 : 0.0,
+                debugSummary: metroidDebugSummary(
+                    health: health,
+                    maxHealth: maxHealth,
+                    suitStatus: suitStatus,
+                    pose: pose,
+                    invulnerabilityTimer: invulnerabilityTimer,
+                    gameMode: gameMode
+                ),
+                pattern: nil
+            )
+        }
+
+        var events: [GameplayEvent] = []
+        let previousHealth = previousLiveSample.health
+        let previousPose = previousLiveSample.gameplayState
+        let previousGameMode = previousLiveSample.gameMode
+
+        let previousWasDeath = previousPose.map(memoryMap.deathStateValues.contains) == true ||
+            previousGameMode == 0x08 ||
+            previousGameMode == 0x0A ||
+            previousHealth == 0
+
+        if isDeathMode && !previousWasDeath {
+            events.append(.deathDetected)
+        } else if nonDeathEventsArmed,
+                  isGameplayActive,
+                  let previousHealth,
+                  previousHealth > health,
+                  health > 0 {
+            let healthDelta = previousHealth - health
+            events.append(healthDelta >= 30 ? .damageHeavy : .damageLight)
+        }
+
+        if events.contains(.deathDetected) {
+            lastStableLiveSample = nil
+            invulnerabilityWindowReported = false
+            nonDeathEventsArmed = false
+        }
+
+        if isGameplayActive && !isInvulnerable && health > 0 {
+            lastStableLiveSample = liveSample
+            invulnerabilityWindowReported = false
+            nonDeathEventsArmed = true
+        } else if isDeathMode || !isGameplayActive {
+            invulnerabilityWindowReported = false
+            nonDeathEventsArmed = false
+        }
+
+        self.previousLiveSample = liveSample
+
+        return MemoryGameObservation(
+            events: events,
+            confidence: 0.98,
+            lives: Int(maxHealth),
+            health: Int(health),
+            powerUp: Int(suitStatus),
+            playerState: playerState,
+            gameplayPhase: gameplayPhase,
+            blinkConfidence: isInvulnerable ? 0.95 : 0.0,
+            debugSummary: metroidDebugSummary(
+                health: health,
+                maxHealth: maxHealth,
+                suitStatus: suitStatus,
+                pose: pose,
+                invulnerabilityTimer: invulnerabilityTimer,
+                gameMode: gameMode
             ),
             pattern: nil
         )
@@ -488,6 +610,25 @@ final class MemoryGameAnalyzer {
             Int(powerUpState),
             Int(gameplayState),
             Int(invulnerabilityTimer)
+        )
+    }
+
+    private func metroidDebugSummary(
+        health: UInt16,
+        maxHealth: UInt16,
+        suitStatus: UInt8,
+        pose: UInt8,
+        invulnerabilityTimer: UInt8,
+        gameMode: UInt8
+    ) -> String {
+        String(
+            format: "mem H=%u/%u U=%02X P=%02X I=%u M=%02X",
+            Int(health),
+            Int(maxHealth),
+            Int(suitStatus),
+            Int(pose),
+            Int(invulnerabilityTimer),
+            Int(gameMode)
         )
     }
 }

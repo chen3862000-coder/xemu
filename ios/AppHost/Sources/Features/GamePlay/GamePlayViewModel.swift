@@ -697,7 +697,10 @@ class GamePlayViewModel: ObservableObject {
                 lives: gbaCore.readMemory8(at: liveMemory.livesAddress),
                 powerUpState: gbaCore.readMemory8(at: liveMemory.powerUpAddress),
                 gameplayState: gbaCore.readMemory8(at: liveMemory.gameplayStateAddress),
-                invulnerabilityTimer: gbaCore.readMemory8(at: liveMemory.invulnerabilityTimerAddress)
+                invulnerabilityTimer: gbaCore.readMemory8(at: liveMemory.invulnerabilityTimerAddress),
+                health: liveMemory.healthAddress16.flatMap { gbaCore.readMemory16(at: $0) },
+                maxHealth: liveMemory.maxHealthAddress16.flatMap { gbaCore.readMemory16(at: $0) },
+                gameMode: liveMemory.gameModeAddress.flatMap { gbaCore.readMemory8(at: $0) }
             )
         }
 
@@ -711,7 +714,10 @@ class GamePlayViewModel: ObservableObject {
                 lives: gbcCore.readMemory8(at: UInt16(liveMemory.livesAddress)),
                 powerUpState: gbcCore.readMemory8(at: UInt16(liveMemory.powerUpAddress)),
                 gameplayState: gbcCore.readMemory8(at: UInt16(liveMemory.gameplayStateAddress)),
-                invulnerabilityTimer: gbcCore.readMemory8(at: UInt16(liveMemory.invulnerabilityTimerAddress))
+                invulnerabilityTimer: gbcCore.readMemory8(at: UInt16(liveMemory.invulnerabilityTimerAddress)),
+                health: nil,
+                maxHealth: nil,
+                gameMode: nil
             )
         }
 

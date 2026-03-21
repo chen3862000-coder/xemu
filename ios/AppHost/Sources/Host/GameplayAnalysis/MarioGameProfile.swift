@@ -1,6 +1,11 @@
 import Foundation
 import CoreGraphics
 
+enum GameplayProfileKind: Sendable {
+    case marioPlatformer
+    case metroidFusion
+}
+
 struct MarioGameProfile: Sendable {
     let id: String
     let displayName: String
@@ -129,6 +134,7 @@ struct MarioGameProfile: Sendable {
         superHeightRange: 16...24,
         poweredUpHeightRange: 22...36,
         liveMemory: MarioLiveMemoryMap(
+            kind: .marioPlatformer,
             livesAddress: 0xC17F,
             powerUpAddress: 0xC1C5,
             gameplayStateAddress: 0xC1C1,
@@ -137,7 +143,10 @@ struct MarioGameProfile: Sendable {
             invulnerabilityStateValues: [0x06],
             smallPowerUpValues: [0],
             superPowerUpValues: [1],
-            poweredUpValues: [2, 3]
+            poweredUpValues: [2, 3],
+            healthAddress16: nil,
+            maxHealthAddress16: nil,
+            gameModeAddress: nil
         )
     )
 
@@ -186,6 +195,7 @@ struct MarioGameProfile: Sendable {
         superHeightRange: 19...28,
         poweredUpHeightRange: 26...40,
         liveMemory: MarioLiveMemoryMap(
+            kind: .marioPlatformer,
             livesAddress: 0x030042BC,
             powerUpAddress: 0x03004300,
             gameplayStateAddress: 0x03003FA0,
@@ -194,7 +204,10 @@ struct MarioGameProfile: Sendable {
             invulnerabilityStateValues: [0x01, 0x0E],
             smallPowerUpValues: [0],
             superPowerUpValues: [1],
-            poweredUpValues: [2, 3]
+            poweredUpValues: [2, 3],
+            healthAddress16: nil,
+            maxHealthAddress16: nil,
+            gameModeAddress: nil
         )
     )
 
@@ -247,6 +260,7 @@ struct MarioGameProfile: Sendable {
         superHeightRange: 18...27,
         poweredUpHeightRange: 25...38,
         liveMemory: MarioLiveMemoryMap(
+            kind: .marioPlatformer,
             livesAddress: 0x03002A6A,
             powerUpAddress: 0x03003F5B,
             gameplayStateAddress: 0x03003F65,
@@ -255,7 +269,50 @@ struct MarioGameProfile: Sendable {
             invulnerabilityStateValues: [],
             smallPowerUpValues: [0],
             superPowerUpValues: [1],
-            poweredUpValues: [2, 3, 4, 5, 6, 7, 8]
+            poweredUpValues: [2, 3, 4, 5, 6, 7, 8],
+            healthAddress16: nil,
+            maxHealthAddress16: nil,
+            gameModeAddress: nil
+        )
+    )
+
+    static let metroidFusion = MarioGameProfile(
+        id: "metroid_fusion_gba",
+        displayName: "Metroid Fusion",
+        titleMatchers: [
+            "metroid fusion",
+            "metroid4",
+            "metroid 4",
+            "metroid4usa",
+            "metroid4eur",
+            "metroid4jpn",
+            "metfusionchn"
+        ],
+        nativeResolution: CGSize(width: 240, height: 160),
+        gameplayRegion: CGRect(x: 0.0, y: 0.10, width: 1.0, height: 0.80),
+        initialSearchRegion: CGRect(x: 0.08, y: 0.18, width: 0.84, height: 0.64),
+        minSampleInterval: 0.14,
+        damageCooldown: 0.9,
+        deathCooldown: 2.0,
+        fadeConfirmationThreshold: 0.38,
+        blackoutThreshold: 0.09,
+        smallHeightRange: 10...20,
+        superHeightRange: 21...32,
+        poweredUpHeightRange: 21...32,
+        liveMemory: MarioLiveMemoryMap(
+            kind: .metroidFusion,
+            livesAddress: 0x03001310,
+            powerUpAddress: 0x0300131C,
+            gameplayStateAddress: 0x03001245,
+            invulnerabilityTimerAddress: 0x03001249,
+            deathStateValues: [0x3E, 0x3F],
+            invulnerabilityStateValues: [0x11, 0x12, 0x13, 0x14],
+            smallPowerUpValues: [],
+            superPowerUpValues: [0],
+            poweredUpValues: Set(1...UInt8.max),
+            healthAddress16: 0x03001310,
+            maxHealthAddress16: 0x03001312,
+            gameModeAddress: 0x03000BDE
         )
     )
 
@@ -266,7 +323,8 @@ struct MarioGameProfile: Sendable {
         superMarioAdvance,
         sma2SuperMarioWorld,
         sma3YoshisIsland,
-        sma4SuperMarioBros3
+        sma4SuperMarioBros3,
+        metroidFusion
     ]
 
     private var profilePlatform: Platform {
@@ -281,6 +339,7 @@ struct MarioGameProfile: Sendable {
 }
 
 struct MarioLiveMemoryMap: Sendable {
+    let kind: GameplayProfileKind
     let livesAddress: UInt32
     let powerUpAddress: UInt32
     let gameplayStateAddress: UInt32
@@ -290,6 +349,9 @@ struct MarioLiveMemoryMap: Sendable {
     let smallPowerUpValues: Set<UInt8>
     let superPowerUpValues: Set<UInt8>
     let poweredUpValues: Set<UInt8>
+    let healthAddress16: UInt32?
+    let maxHealthAddress16: UInt32?
+    let gameModeAddress: UInt32?
 }
 
 private extension String {

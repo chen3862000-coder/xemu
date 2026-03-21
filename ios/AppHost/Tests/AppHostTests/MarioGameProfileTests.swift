@@ -41,4 +41,14 @@ final class MarioGameProfileTests: XCTestCase {
 
         XCTAssertEqual(profile?.id, MarioGameProfile.superMarioAdvance.id)
     }
+
+    func testMetroidFusionProfileMatchesMetroid4USATitle() {
+        let profile = MarioGameProfile.activeProfile(
+            title: "METROID4USA",
+            platform: .GBA,
+            romHash: ""
+        )
+
+        XCTAssertEqual(profile?.id, MarioGameProfile.metroidFusion.id)
+    }
 }
