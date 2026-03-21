@@ -82,6 +82,7 @@ final class GameplayEventStateMachine {
             lastEvent: runtimeState.lastEvent,
             lastEventAt: runtimeState.lastEvent == .deathDetected ? runtimeState.lastDeathAt : runtimeState.lastDamageAt,
             memoryDebugSummary: observation.memoryDebugSummary,
+            locationDebugSummary: observation.locationDebugSummary,
             sampledAt: timestamp
         )
         return (emittedEvents, snapshot)

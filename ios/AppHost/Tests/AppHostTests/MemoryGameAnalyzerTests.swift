@@ -17,6 +17,24 @@ final class MemoryGameAnalyzerTests: XCTestCase {
         XCTAssertEqual(second?.gameplayPhase, .gameplayActive)
     }
 
+    func testSMA2LocationSummaryIncludesMapAndLevel() {
+        let analyzer = MemoryGameAnalyzer()
+        let sample = MarioLiveMemorySample(
+            lives: 5,
+            powerUpState: 1,
+            gameplayState: 0,
+            invulnerabilityTimer: 0,
+            contextValues: [
+                "map": 0x01,
+                "level": 0x15
+            ]
+        )
+
+        let result = analyzer.analyzeLiveMemory(sample, profile: .sma2SuperMarioWorld)
+
+        XCTAssertEqual(result?.locationSummary, "Loc Donut Plains • level 15")
+    }
+
     func testSMA2DeathStateEmitsDeathFromLiveMemory() {
         let analyzer = MemoryGameAnalyzer()
 
@@ -182,6 +200,29 @@ final class MemoryGameAnalyzerTests: XCTestCase {
         XCTAssertEqual(result?.gameplayPhase, .gameplayActive)
     }
 
+    func testMetroidFusionLocationSummaryIncludesAreaRoomAndMap() {
+        let analyzer = MemoryGameAnalyzer()
+        let sample = MarioLiveMemorySample(
+            lives: nil,
+            powerUpState: 0x10,
+            gameplayState: 0x00,
+            invulnerabilityTimer: 0,
+            health: 99,
+            maxHealth: 99,
+            gameMode: 0x01,
+            contextValues: [
+                "area": 0x03,
+                "room": 0x1A,
+                "mapX": 12,
+                "mapY": 7
+            ]
+        )
+
+        let result = analyzer.analyzeLiveMemory(sample, profile: .metroidFusion)
+
+        XCTAssertEqual(result?.locationSummary, "Loc Sector 3 • room 1A • map 12,7")
+    }
+
     func testMetroidFusionDeathPoseEmitsDeathFromLiveMemory() {
         let analyzer = MemoryGameAnalyzer()
 
@@ -343,6 +384,27 @@ final class MemoryGameAnalyzerTests: XCTestCase {
         XCTAssertEqual(result?.events, [.damageLight])
         XCTAssertEqual(result?.playerState, .invulnerableBlink)
         XCTAssertEqual(result?.gameplayPhase, .gameplayActive)
+    }
+
+    func testCastlevaniaAriaOfSorrowLocationSummaryIncludesModeAndAreas() {
+        let analyzer = MemoryGameAnalyzer()
+        let sample = MarioLiveMemorySample(
+            lives: nil,
+            powerUpState: 0x01,
+            gameplayState: 0x0C,
+            invulnerabilityTimer: 12,
+            health: 110,
+            maxHealth: 160,
+            gameMode: 0x04,
+            contextValues: [
+                "subMode": 0x02,
+                "visitedAreas": 0b0001_0111
+            ]
+        )
+
+        let result = analyzer.analyzeLiveMemory(sample, profile: .castlevaniaAriaOfSorrow)
+
+        XCTAssertEqual(result?.locationSummary, "State Game/02 • Hurt Ground • areas 4")
     }
 
     func testCastlevaniaAriaOfSorrowDeadStateEmitsDeathFromLiveMemory() {

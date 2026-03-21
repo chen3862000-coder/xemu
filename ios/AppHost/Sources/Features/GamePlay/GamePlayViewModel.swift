@@ -700,7 +700,15 @@ class GamePlayViewModel: ObservableObject {
                 invulnerabilityTimer: gbaCore.readMemory8(at: liveMemory.invulnerabilityTimerAddress),
                 health: liveMemory.healthAddress16.flatMap { gbaCore.readMemory16(at: $0) },
                 maxHealth: liveMemory.maxHealthAddress16.flatMap { gbaCore.readMemory16(at: $0) },
-                gameMode: liveMemory.gameModeAddress.flatMap { gbaCore.readMemory8(at: $0) }
+                gameMode: liveMemory.gameModeAddress.flatMap { gbaCore.readMemory8(at: $0) },
+                contextValues: readContextValues(fields: liveMemory.contextFields) { field in
+                    switch field.width {
+                    case .u8:
+                        return gbaCore.readMemory8(at: field.address).map(UInt16.init)
+                    case .u16:
+                        return gbaCore.readMemory16(at: field.address)
+                    }
+                }
             )
         }
 
@@ -717,12 +725,39 @@ class GamePlayViewModel: ObservableObject {
                 invulnerabilityTimer: gbcCore.readMemory8(at: UInt16(liveMemory.invulnerabilityTimerAddress)),
                 health: nil,
                 maxHealth: nil,
-                gameMode: nil
+                gameMode: nil,
+                contextValues: readContextValues(fields: liveMemory.contextFields) { field in
+                    guard field.address <= UInt32(UInt16.max) else { return nil }
+                    switch field.width {
+                    case .u8:
+                        return gbcCore.readMemory8(at: UInt16(field.address)).map(UInt16.init)
+                    case .u16:
+                        let low = gbcCore.readMemory8(at: UInt16(field.address))
+                        let high = field.address < UInt32(UInt16.max)
+                            ? gbcCore.readMemory8(at: UInt16(field.address + 1))
+                            : nil
+                        guard let low, let high else { return nil }
+                        return UInt16(low) | (UInt16(high) << 8)
+                    }
+                }
             )
         }
 
         GameplayAnalysisLogger.event("live-memory unsupported profile=\(profile.id) platform=\(platform.rawValue)")
         return nil
+    }
+
+    private func readContextValues(
+        fields: [MarioLiveMemoryContextField],
+        reader: (MarioLiveMemoryContextField) -> UInt16?
+    ) -> [String: UInt16] {
+        var values: [String: UInt16] = [:]
+        for field in fields {
+            if let value = reader(field) {
+                values[field.key] = value
+            }
+        }
+        return values
     }
 
     private func nativeSaveDirectoryURL() -> URL? {

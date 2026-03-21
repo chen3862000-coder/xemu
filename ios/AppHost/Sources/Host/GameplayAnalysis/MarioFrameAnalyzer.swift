@@ -52,6 +52,7 @@ final class MarioFrameAnalyzer {
             gameplayPhase: gameplayPhase,
             playerBounds: spriteMetrics?.bounds.normalized(in: surface.size),
             memoryDebugSummary: nil,
+            locationDebugSummary: nil,
             timestamp: timestamp
         )
 

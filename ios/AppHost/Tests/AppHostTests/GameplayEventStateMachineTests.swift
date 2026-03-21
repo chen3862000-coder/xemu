@@ -157,6 +157,7 @@ final class GameplayEventStateMachineTests: XCTestCase {
             gameplayPhase: phase,
             playerBounds: nil,
             memoryDebugSummary: nil,
+            locationDebugSummary: nil,
             timestamp: timestamp
         )
     }

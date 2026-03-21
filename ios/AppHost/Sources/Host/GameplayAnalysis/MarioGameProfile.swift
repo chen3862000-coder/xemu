@@ -150,7 +150,8 @@ struct MarioGameProfile: Sendable {
             poweredUpValues: [2, 3],
             healthAddress16: nil,
             maxHealthAddress16: nil,
-            gameModeAddress: nil
+            gameModeAddress: nil,
+            contextFields: []
         )
     )
 
@@ -211,7 +212,11 @@ struct MarioGameProfile: Sendable {
             poweredUpValues: [2, 3],
             healthAddress16: nil,
             maxHealthAddress16: nil,
-            gameModeAddress: nil
+            gameModeAddress: nil,
+            contextFields: [
+                MarioLiveMemoryContextField(key: "map", address: 0x030042FE, width: .u8),
+                MarioLiveMemoryContextField(key: "level", address: 0x030042C0, width: .u8)
+            ]
         )
     )
 
@@ -276,7 +281,12 @@ struct MarioGameProfile: Sendable {
             poweredUpValues: [2, 3, 4, 5, 6, 7, 8],
             healthAddress16: nil,
             maxHealthAddress16: nil,
-            gameModeAddress: nil
+            gameModeAddress: nil,
+            contextFields: [
+                MarioLiveMemoryContextField(key: "world", address: 0x03002A69, width: .u8),
+                MarioLiveMemoryContextField(key: "mapX", address: 0x03003DE4, width: .u8),
+                MarioLiveMemoryContextField(key: "mapY", address: 0x03003DE0, width: .u8)
+            ]
         )
     )
 
@@ -316,7 +326,13 @@ struct MarioGameProfile: Sendable {
             poweredUpValues: Set(1...UInt8.max),
             healthAddress16: 0x03001310,
             maxHealthAddress16: 0x03001312,
-            gameModeAddress: 0x03000BDE
+            gameModeAddress: 0x03000BDE,
+            contextFields: [
+                MarioLiveMemoryContextField(key: "area", address: 0x0300015D, width: .u8),
+                MarioLiveMemoryContextField(key: "room", address: 0x0300015E, width: .u8),
+                MarioLiveMemoryContextField(key: "mapX", address: 0x03000162, width: .u8),
+                MarioLiveMemoryContextField(key: "mapY", address: 0x03000163, width: .u8)
+            ]
         )
     )
 
@@ -358,7 +374,8 @@ struct MarioGameProfile: Sendable {
             poweredUpValues: Set(1...UInt8.max),
             healthAddress16: 0x02020646,
             maxHealthAddress16: 0x02020648,
-            gameModeAddress: nil
+            gameModeAddress: nil,
+            contextFields: []
         )
     )
 
@@ -397,7 +414,11 @@ struct MarioGameProfile: Sendable {
             poweredUpValues: Set(1...UInt8.max),
             healthAddress16: 0x0201327A,
             maxHealthAddress16: 0x0201327E,
-            gameModeAddress: 0x02000010
+            gameModeAddress: 0x02000010,
+            contextFields: [
+                MarioLiveMemoryContextField(key: "subMode", address: 0x02000011, width: .u8),
+                MarioLiveMemoryContextField(key: "visitedAreas", address: 0x0200037C, width: .u8)
+            ]
         )
     )
 
@@ -434,7 +455,10 @@ struct MarioGameProfile: Sendable {
             poweredUpValues: Set(1...UInt8.max),
             healthAddress16: 0x0202562E,
             maxHealthAddress16: 0x02025632,
-            gameModeAddress: nil
+            gameModeAddress: nil,
+            contextFields: [
+                MarioLiveMemoryContextField(key: "level", address: 0x02025664, width: .u8)
+            ]
         )
     )
 
@@ -471,7 +495,11 @@ struct MarioGameProfile: Sendable {
             poweredUpValues: Set(1...UInt8.max),
             healthAddress16: 0x0201854E,
             maxHealthAddress16: 0x02018786,
-            gameModeAddress: nil
+            gameModeAddress: nil,
+            contextFields: [
+                MarioLiveMemoryContextField(key: "visitedAreas", address: 0x0200030E, width: .u8),
+                MarioLiveMemoryContextField(key: "level", address: 0x0201877C, width: .u8)
+            ]
         )
     )
 
@@ -515,6 +543,18 @@ struct MarioLiveMemoryMap: Sendable {
     let healthAddress16: UInt32?
     let maxHealthAddress16: UInt32?
     let gameModeAddress: UInt32?
+    let contextFields: [MarioLiveMemoryContextField]
+}
+
+enum MarioLiveMemoryContextWidth: Sendable {
+    case u8
+    case u16
+}
+
+struct MarioLiveMemoryContextField: Sendable {
+    let key: String
+    let address: UInt32
+    let width: MarioLiveMemoryContextWidth
 }
 
 private extension String {

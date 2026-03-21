@@ -43,6 +43,7 @@ struct MarioObservation: Sendable {
     let gameplayPhase: MarioGameplayPhase
     let playerBounds: CGRect?
     let memoryDebugSummary: String?
+    let locationDebugSummary: String?
     let timestamp: Date
 }
 
@@ -61,6 +62,7 @@ struct MarioAnalysisSnapshot: Sendable {
     let lastEvent: GameplayEvent?
     let lastEventAt: Date?
     let memoryDebugSummary: String?
+    let locationDebugSummary: String?
     let sampledAt: Date
 }
 
@@ -72,6 +74,7 @@ struct MarioLiveMemorySample: Sendable {
     let health: UInt16?
     let maxHealth: UInt16?
     let gameMode: UInt8?
+    let contextValues: [String: UInt16]
 
     init(
         lives: UInt8?,
@@ -80,7 +83,8 @@ struct MarioLiveMemorySample: Sendable {
         invulnerabilityTimer: UInt8?,
         health: UInt16? = nil,
         maxHealth: UInt16? = nil,
-        gameMode: UInt8? = nil
+        gameMode: UInt8? = nil,
+        contextValues: [String: UInt16] = [:]
     ) {
         self.lives = lives
         self.powerUpState = powerUpState
@@ -89,5 +93,6 @@ struct MarioLiveMemorySample: Sendable {
         self.health = health
         self.maxHealth = maxHealth
         self.gameMode = gameMode
+        self.contextValues = contextValues
     }
 }

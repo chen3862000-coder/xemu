@@ -155,6 +155,7 @@ final class MemoryGameAnalyzer {
                     gameplayState: gameplayState,
                     invulnerabilityTimer: invulnerabilityTimer
                 ),
+                locationSummary: marioLocationSummary(for: profile, liveSample: liveSample),
                 pattern: nil
             )
         }
@@ -236,6 +237,7 @@ final class MemoryGameAnalyzer {
                 gameplayState: gameplayState,
                 invulnerabilityTimer: invulnerabilityTimer
             ),
+            locationSummary: marioLocationSummary(for: profile, liveSample: liveSample),
             pattern: nil
         )
     }
@@ -294,6 +296,7 @@ final class MemoryGameAnalyzer {
                     invulnerabilityTimer: invulnerabilityTimer,
                     gameMode: gameMode
                 ),
+                locationSummary: metroidLocationSummary(liveSample: liveSample),
                 pattern: nil
             )
         }
@@ -353,6 +356,7 @@ final class MemoryGameAnalyzer {
                 invulnerabilityTimer: invulnerabilityTimer,
                 gameMode: gameMode
             ),
+            locationSummary: metroidLocationSummary(liveSample: liveSample),
             pattern: nil
         )
     }
@@ -410,6 +414,7 @@ final class MemoryGameAnalyzer {
                     timer: timer,
                     gameMode: gameMode
                 ),
+                locationSummary: castlevaniaAriaLocationSummary(liveSample: liveSample),
                 pattern: nil
             )
         }
@@ -466,6 +471,7 @@ final class MemoryGameAnalyzer {
                 timer: timer,
                 gameMode: gameMode
             ),
+            locationSummary: castlevaniaAriaLocationSummary(liveSample: liveSample),
             pattern: nil
         )
     }
@@ -509,6 +515,7 @@ final class MemoryGameAnalyzer {
                     health: health,
                     maxHealth: maxHealth
                 ),
+                locationSummary: nil,
                 pattern: nil
             )
         }
@@ -567,6 +574,7 @@ final class MemoryGameAnalyzer {
                 health: health,
                 maxHealth: maxHealth
             ),
+            locationSummary: nil,
             pattern: nil
         )
     }
@@ -611,6 +619,7 @@ final class MemoryGameAnalyzer {
                     timer: timer,
                     gameMode: nil
                 ),
+                locationSummary: castlevaniaCircleLocationSummary(liveSample: liveSample),
                 pattern: nil
             )
         }
@@ -654,6 +663,7 @@ final class MemoryGameAnalyzer {
                 timer: timer,
                 gameMode: nil
             ),
+            locationSummary: castlevaniaCircleLocationSummary(liveSample: liveSample),
             pattern: nil
         )
     }
@@ -697,6 +707,7 @@ final class MemoryGameAnalyzer {
                     timer: mpOrTimer,
                     gameMode: nil
                 ),
+                locationSummary: castlevaniaHarmonyLocationSummary(liveSample: liveSample),
                 pattern: nil
             )
         }
@@ -738,6 +749,7 @@ final class MemoryGameAnalyzer {
                 timer: mpOrTimer,
                 gameMode: nil
             ),
+            locationSummary: castlevaniaHarmonyLocationSummary(liveSample: liveSample),
             pattern: nil
         )
     }
@@ -938,6 +950,7 @@ final class MemoryGameAnalyzer {
             gameplayPhase: .unknown,
             blinkConfidence: 0.0,
             debugSummary: nil,
+            locationSummary: nil,
             pattern: pattern
         )
     }
@@ -956,6 +969,7 @@ final class MemoryGameAnalyzer {
             gameplayPhase: .unknown,
             blinkConfidence: 0.0,
             debugSummary: nil,
+            locationSummary: nil,
             pattern: pattern
         )
     }
@@ -1062,6 +1076,136 @@ final class MemoryGameAnalyzer {
         )
     }
 
+    private func marioLocationSummary(for profile: MarioGameProfile, liveSample: MarioLiveMemorySample) -> String? {
+        switch profile.id {
+        case MarioGameProfile.sma2SuperMarioWorld.id:
+            guard let map = liveSample.contextValues["map"],
+                  let level = liveSample.contextValues["level"] else {
+                return nil
+            }
+            return "Loc \(sma2MapName(UInt8(map))) • level \(hex8(level))"
+        case MarioGameProfile.sma4SuperMarioBros3.id:
+            guard let world = liveSample.contextValues["world"] else {
+                return nil
+            }
+            let mapX = liveSample.contextValues["mapX"].map(String.init) ?? "?"
+            let mapY = liveSample.contextValues["mapY"].map(String.init) ?? "?"
+            return "Loc \(sma4WorldName(UInt8(world))) • map \(mapX),\(mapY)"
+        default:
+            return nil
+        }
+    }
+
+    private func metroidLocationSummary(liveSample: MarioLiveMemorySample) -> String? {
+        guard let area = liveSample.contextValues["area"],
+              let room = liveSample.contextValues["room"] else {
+            return nil
+        }
+        let mapX = liveSample.contextValues["mapX"].map(String.init) ?? "?"
+        let mapY = liveSample.contextValues["mapY"].map(String.init) ?? "?"
+        return "Loc \(metroidAreaName(UInt8(area))) • room \(hex8(room)) • map \(mapX),\(mapY)"
+    }
+
+    private func castlevaniaAriaLocationSummary(liveSample: MarioLiveMemorySample) -> String? {
+        guard let gameMode = liveSample.gameMode else { return nil }
+        let subMode = liveSample.contextValues["subMode"].map { hex8($0) } ?? "--"
+        let movement = liveSample.gameplayState.map(castlevaniaAriaMovementName(_:)) ?? "Unknown"
+        let visitedAreas = liveSample.contextValues["visitedAreas"].map { String($0.nonzeroBitCount) } ?? "?"
+        return "State \(ariaModeName(gameMode))/\(subMode) • \(movement) • areas \(visitedAreas)"
+    }
+
+    private func castlevaniaCircleLocationSummary(liveSample: MarioLiveMemorySample) -> String? {
+        guard let level = liveSample.contextValues["level"] else { return nil }
+        return "State level \(hex8(level)) • \(circleStateName(liveSample.gameplayState))"
+    }
+
+    private func castlevaniaHarmonyLocationSummary(liveSample: MarioLiveMemorySample) -> String? {
+        let visitedAreas = liveSample.contextValues["visitedAreas"].map { String($0.nonzeroBitCount) } ?? "?"
+        let level = liveSample.contextValues["level"].map(hex8(_:)) ?? "--"
+        return "State level \(level) • areas \(visitedAreas)"
+    }
+
+    private func sma2MapName(_ value: UInt8) -> String {
+        switch value {
+        case 0x00: return "Yoshi's Island"
+        case 0x01: return "Donut Plains"
+        case 0x02: return "Vanilla Dome"
+        case 0x03: return "Twin Bridges"
+        case 0x04: return "Forest of Illusion"
+        case 0x05: return "Chocolate Island"
+        case 0x06: return "Valley of Bowser"
+        case 0x07: return "Star Road"
+        case 0x08: return "Special Zone"
+        default: return "Map \(hex8(UInt16(value)))"
+        }
+    }
+
+    private func sma4WorldName(_ value: UInt8) -> String {
+        switch value {
+        case 0x00: return "World 1"
+        case 0x01: return "World 2"
+        case 0x02: return "World 3"
+        case 0x03: return "World 4"
+        case 0x04: return "World 5"
+        case 0x05: return "World 6"
+        case 0x06: return "World 7"
+        case 0x07: return "World 8"
+        case 0x08: return "World 9"
+        default: return "World \(value)"
+        }
+    }
+
+    private func metroidAreaName(_ value: UInt8) -> String {
+        switch value {
+        case 0x00: return "Main Deck"
+        case 0x01: return "Sector 1"
+        case 0x02: return "Sector 2"
+        case 0x03: return "Sector 3"
+        case 0x04: return "Sector 4"
+        case 0x05: return "Sector 5"
+        case 0x06: return "Sector 6"
+        case 0x07: return "Restricted Lab"
+        default: return "Area \(value)"
+        }
+    }
+
+    private func ariaModeName(_ value: UInt8) -> String {
+        switch value {
+        case 0x04: return "Game"
+        case 0x05: return "Death"
+        case 0x06: return "Pause"
+        case 0x08: return "Cutscene"
+        default: return "Mode \(hex8(UInt16(value)))"
+        }
+    }
+
+    private func castlevaniaAriaMovementName(_ value: UInt8) -> String {
+        switch value {
+        case 0x00: return "Move"
+        case 0x01: return "Attack"
+        case 0x02: return "Subweapon"
+        case 0x03: return "Slide"
+        case 0x04: return "Recovery"
+        case 0x05: return "High Jump"
+        case 0x07: return "Dive Kick"
+        case 0x08: return "Bat"
+        case 0x0C: return "Hurt Ground"
+        case 0x0D: return "Hurt Air"
+        case 0x0E: return "Launched"
+        case 0x10: return "Dead"
+        default: return "Move \(hex8(UInt16(value)))"
+        }
+    }
+
+    private func circleStateName(_ value: UInt8?) -> String {
+        guard let value else { return "state --" }
+        return "state \(hex8(UInt16(value)))"
+    }
+
+    private func hex8(_ value: UInt16) -> String {
+        String(format: "%02X", Int(value & 0xFF))
+    }
+
 }
 
 /// Mario game memory pattern
@@ -1087,5 +1231,6 @@ struct MemoryGameObservation {
     let gameplayPhase: MarioGameplayPhase
     let blinkConfidence: Double
     let debugSummary: String?
+    let locationSummary: String?
     let pattern: MarioMemoryPattern?
 }

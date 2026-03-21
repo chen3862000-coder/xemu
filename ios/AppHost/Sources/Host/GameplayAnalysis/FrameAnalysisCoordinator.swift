@@ -142,6 +142,7 @@ final class FrameAnalysisCoordinator {
             gameplayPhase: hybridResult.memoryObservation?.gameplayPhase ?? (hasDeathEvent ? .transition : .gameplayActive),
             playerBounds: nil,
             memoryDebugSummary: hybridResult.memoryObservation?.debugSummary,
+            locationDebugSummary: hybridResult.memoryObservation?.locationSummary,
             timestamp: timestamp
         )
     }

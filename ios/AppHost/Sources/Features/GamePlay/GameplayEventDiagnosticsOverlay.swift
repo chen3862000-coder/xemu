@@ -31,6 +31,10 @@ struct GameplayEventDiagnosticsOverlay: View {
                 Text("Last \(lastEvent.rawValue)")
             }
 
+            if let locationDebugSummary = snapshot.locationDebugSummary {
+                Text(locationDebugSummary)
+            }
+
             if let memoryDebugSummary = snapshot.memoryDebugSummary {
                 Text(memoryDebugSummary)
             }
