@@ -51,11 +51,31 @@ public struct AudioSampleInfo {
     public let sampleCount: Int
     public let sampleRate: Int
     public let samples: UnsafePointer<Int16>?
-    
+
     public init(sampleCount: Int, sampleRate: Int, samples: UnsafePointer<Int16>?) {
         self.sampleCount = sampleCount
         self.sampleRate = sampleRate
         self.samples = samples
+    }
+}
+
+// Memory regions for game state analysis
+public enum MemoryRegion: Int32 {
+    case systemRAM = 0
+    case workRAM
+    case videoRAM
+    case cartridgeRAM
+    case saveRAM
+}
+
+// Memory access info
+public struct MemoryAccessInfo {
+    public let data: UnsafePointer<UInt8>?
+    public let size: Int
+
+    public init(data: UnsafePointer<UInt8>?, size: Int) {
+        self.data = data
+        self.size = size
     }
 }
 

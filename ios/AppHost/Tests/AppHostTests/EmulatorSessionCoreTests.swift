@@ -36,6 +36,23 @@ final class EmulatorSessionCoreTests: XCTestCase {
         XCTAssertTrue(delegate.renderedFrames.isEmpty)
         XCTAssertEqual(delegate.audioEventCount, 1)
     }
+
+    func testFramePacerCatchesUpAfterDroppedDraw() {
+        var pacer = EmulationFramePacer()
+
+        XCTAssertEqual(pacer.stepsToRun(at: 0), 1)
+        XCTAssertEqual(pacer.stepsToRun(at: 1.0 / 120.0), 0)
+        XCTAssertEqual(pacer.stepsToRun(at: 1.0 / 60.0), 1)
+        XCTAssertEqual(pacer.stepsToRun(at: 1.0 / 60.0 + (1.0 / 30.0)), 2)
+    }
+
+    func testFramePacerCapsCatchUpWorkAfterLongStall() {
+        var pacer = EmulationFramePacer(maxCatchUpSteps: 3, maxDelta: 0.25)
+
+        XCTAssertEqual(pacer.stepsToRun(at: 0), 1)
+        XCTAssertEqual(pacer.stepsToRun(at: 0.25), 3)
+        XCTAssertEqual(pacer.stepsToRun(at: 0.25 + (1.0 / 60.0)), 1)
+    }
 }
 
 private final class MockEmulatorCore: EmulatorCore {

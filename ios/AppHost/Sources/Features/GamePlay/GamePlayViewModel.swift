@@ -44,9 +44,6 @@ class GamePlayViewModel: ObservableObject {
     private var frameAnalysisCoordinator: FrameAnalysisCoordinator?
     private var sessionStartedAt: Date?
     private var lastFrameSnapshot: (data: Data, width: Int, height: Int, bytesPerRow: Int)?
-    private var audioDebugChunkCount: Int = 0
-    private var ndsRateNormalizationLogCount: Int = 0
-    
     private var frameWidth = 160
     private var frameHeight = 144
     private var lastFPSTime: Double = 0
@@ -63,6 +60,7 @@ class GamePlayViewModel: ObservableObject {
     private var ndsTouchPressedAtNs: UInt64 = 0
     private var pendingNDSTouchReleaseTask: Task<Void, Never>?
     @Published private(set) var currentNDSDisplayLayout: NDSScreenLayout = .stacked
+    private var currentSaveStateData: Data? = nil
     #if canImport(UIKit)
     private var lifecycleObservers: [NSObjectProtocol] = []
     #endif
@@ -149,6 +147,53 @@ class GamePlayViewModel: ObservableObject {
         return profile.shadersEnabled
     }
 
+    static func initialAudioEngineRate(
+        requestedPlatform: Platform,
+        isNDSCore: Bool,
+        audioQuality: Int,
+        nativeRateHint: Int? = nil
+    ) -> Double {
+        switch audioQuality {
+        case 0:
+            return 48_000
+        case 1, 2:
+            if requestedPlatform == .GB || requestedPlatform == .GBC {
+                return Double(GBCore.nativeAudioSampleRate)
+            }
+            if requestedPlatform == .NDS || isNDSCore {
+                let hintedRate = nativeRateHint ?? 32_728
+                return Double(max(8_000, hintedRate))
+            }
+            return 44_100
+        default:
+            return 44_100
+        }
+    }
+
+    static func audioLatencyProfile(
+        requestedPlatform: Platform,
+        isNDSCore: Bool
+    ) -> AudioEngine.LatencyProfile {
+        if requestedPlatform == .GB || requestedPlatform == .GBC {
+            return .lowLatency
+        }
+        if requestedPlatform == .NDS || isNDSCore {
+            return .streaming
+        }
+        return .balanced
+    }
+
+    static func shouldAutoResumeLaunchState(for platform: Platform?) -> Bool {
+        _ = platform
+        return true
+    }
+
+    static func resolvedAudioSampleRate(_ sampleRate: Int, platform: Platform?) -> Int {
+        guard platform == .NDS else { return sampleRate }
+        guard sampleRate > 0 else { return sampleRate }
+        return sampleRate
+    }
+
     func startEmulation(romPath: String, platform: Platform, gameTitle: String? = nil, romHash: String? = nil) {
         if emulatorSession != nil || metalRenderer != nil || isRunning {
             stopEmulation()
@@ -195,6 +240,10 @@ class GamePlayViewModel: ObservableObject {
                 statusMessage = "Failed to load ROM"
                 return
             }
+
+            // Reset save state data for new game
+            currentSaveStateData = nil
+
             if platform != .NDS {
                 restoreNativeSaveIfAvailable(for: core)
             }
@@ -227,35 +276,20 @@ class GamePlayViewModel: ObservableObject {
             applyDisplayColorAdjustments(for: effectiveDisplayPlatform)
 
             let isNDSCore = core is NDSCore
-            let audioEngineRate: Double
-            switch audioQuality {
-            case 0:  // Sound First - 48kHz for best quality
-                audioEngineRate = 48_000
-            case 1:  // Balanced - stable 44.1kHz output
-                if platform == .GB || platform == .GBC {
-                    audioEngineRate = Double(GBCore.nativeAudioSampleRate)
-                } else if platform == .NDS || isNDSCore {
-                    // Keep NDS output pinned to hardware-friendly 48kHz.
-                    audioEngineRate = 48_000
-                } else {
-                    audioEngineRate = 44_100
-                }
-            default:  // Frame First - direct pass-through; keep GB/GBC native
-                if platform == .GB || platform == .GBC {
-                    audioEngineRate = Double(GBCore.nativeAudioSampleRate)
-                } else if platform == .NDS || isNDSCore {
-                    audioEngineRate = 48_000
-                } else {
-                    audioEngineRate = 44_100
-                }
-            }
-            NSLog("[AudioTune] start platform=%@ core=%@ quality=%d initRate=%.1f",
-                  platform.rawValue,
-                  String(describing: type(of: core)),
-                  audioQuality,
-                  audioEngineRate)
+            let audioEngineRate = Self.initialAudioEngineRate(
+                requestedPlatform: platform,
+                isNDSCore: isNDSCore,
+                audioQuality: audioQuality,
+                nativeRateHint: core.getAudioSampleRate()
+            )
             activeAudioSampleRate = audioEngineRate
-            audioEngine = AudioEngine(sampleRate: audioEngineRate)
+            audioEngine = AudioEngine(
+                sampleRate: audioEngineRate,
+                latencyProfile: Self.audioLatencyProfile(
+                    requestedPlatform: platform,
+                    isNDSCore: isNDSCore
+                )
+            )
             audioEngine?.configureAudioSession()
             try? audioEngine?.start()
             audioEngine?.setVolume(0.8)
@@ -385,6 +419,7 @@ class GamePlayViewModel: ObservableObject {
             defer { performanceProfiler.endOperation(op) }
             do {
                 let data = try session.saveState(to: 0)
+                currentSaveStateData = data // Track save state for memory analysis
                 let metadata = makeMetadata(slot: 0)
                 try await SaveStateStorage.shared.persist(data: data, metadata: metadata, screenshotData: makeSaveStateScreenshotData())
                 let (verifyData, _, _) = try SaveStateStorage.shared.load(slot: 0, romHash: currentROMHash)
@@ -565,6 +600,7 @@ class GamePlayViewModel: ObservableObject {
                 HapticManager.shared.gameplayEvent(event)
             }
         }
+        frameAnalysisCoordinator?.setLaunchInfo(platform: platform, gameTitle: currentGameTitle)
     }
 
     private func makeMetadata(slot: Int) -> SaveStateMetadata {
@@ -880,6 +916,10 @@ class GamePlayViewModel: ObservableObject {
 
     func autoResumeLaunchState(_ summary: SaveStateSlotSummary) {
         guard !summary.isEmpty else { return }
+        guard Self.shouldAutoResumeLaunchState(for: currentPlatform) else {
+            NSLog("[StateLoadGuard] auto-resume skipped reason=nds_audio_guard slot=%d rom=%@", summary.slot, currentROMHash)
+            return
+        }
         guard !hasAutoResumedStateThisSession else {
             NSLog("[StateLoadGuard] auto-resume skipped reason=already_loaded slot=%d rom=%@", summary.slot, currentROMHash)
             return
@@ -1072,7 +1112,7 @@ class GamePlayViewModel: ObservableObject {
         guard let renderer = metalRenderer else { return }
         guard lastAppliedQualityProfile != profile else { return }
         lastAppliedQualityProfile = profile
-        emulatorSession?.setRenderFrameSkip(max(0, profile.frameSkip))
+        emulatorSession?.setRenderFrameSkip(profile.frameSkip)
         let shouldEnablePostProcessing = Self.shouldEnablePostProcessing(
             for: profile,
             displayPlatform: activeDisplayPlatform
@@ -1105,7 +1145,10 @@ extension GamePlayViewModel: EmulatorRenderDelegate {
                 )
             }
             lastFrameSnapshot = (data: data, width: width, height: height, bytesPerRow: pitch)
-            frameAnalysisCoordinator?.enqueue(frameBufferInfo: frameBufferInfo, timestamp: Date())
+            frameAnalysisCoordinator?.enqueue(
+                frameBufferInfo: frameBufferInfo,
+                timestamp: Date()
+            )
             let qualityProfile = performanceProfiler.currentQualityProfile
             applyPerformanceProfileIfNeeded(qualityProfile)
 
@@ -1124,22 +1167,19 @@ extension GamePlayViewModel: EmulatorRenderDelegate {
     func emulatorDidGenerateAudio(samples: Data?, sampleRate: Int) {
         autoreleasepool {
             guard let samples = samples, !samples.isEmpty else { return }
-            let normalizedInputRate = normalizedInputSampleRate(sampleRate)
+            let normalizedInputRate = resolvedInputSampleRate(sampleRate)
 
             if audioQuality != 0,
                prefersNativeAudioRateForCurrentPlatform(),
-               normalizedInputRate > 0,
-               currentPlatform != .NDS {
+               normalizedInputRate > 0 {
                 retuneAudioEngineIfNeeded(to: normalizedInputRate)
             }
 
             var outputSamples = samples
-            var outputRate = normalizedInputRate
 
             switch audioQuality {
             case 0:  // Sound First - resample to 48kHz for best quality
                 let targetRate = 48_000
-                outputRate = targetRate
                 if normalizedInputRate != targetRate {
                     guard let resampled = resampleAudioLinearStreaming(samples: samples, fromRate: normalizedInputRate, toRate: targetRate) else {
                         return
@@ -1151,8 +1191,7 @@ extension GamePlayViewModel: EmulatorRenderDelegate {
                 
             case 1:  // Balanced
                 if currentPlatform == .NDS {
-                    let targetRate = 48_000
-                    outputRate = targetRate
+                    let targetRate = Int(activeAudioSampleRate.rounded())
                     if normalizedInputRate != targetRate {
                         guard let resampled = resampleAudioLinearStreaming(samples: samples, fromRate: normalizedInputRate, toRate: targetRate) else {
                             return
@@ -1163,11 +1202,9 @@ extension GamePlayViewModel: EmulatorRenderDelegate {
                     }
                 } else if prefersNativeAudioRateForCurrentPlatform() {
                     outputSamples = samples
-                    outputRate = normalizedInputRate
                     resetAudioResamplerState()
                 } else {
                     let targetRate = 44_100
-                    outputRate = targetRate
                     if normalizedInputRate != targetRate {
                         guard let resampled = resampleAudioLinearStreaming(samples: samples, fromRate: normalizedInputRate, toRate: targetRate) else {
                             return
@@ -1180,8 +1217,7 @@ extension GamePlayViewModel: EmulatorRenderDelegate {
                 
             case 2:  // Frame First
                 if currentPlatform == .NDS {
-                    let targetRate = 48_000
-                    outputRate = targetRate
+                    let targetRate = Int(activeAudioSampleRate.rounded())
                     if normalizedInputRate != targetRate {
                         guard let resampled = resampleAudioLinearStreaming(samples: samples, fromRate: normalizedInputRate, toRate: targetRate) else {
                             return
@@ -1201,29 +1237,15 @@ extension GamePlayViewModel: EmulatorRenderDelegate {
             }
 
             audioEngine?.updateAudioBuffer(outputSamples)
-            logAudioABIfNeeded(rawSamples: samples,
-                               rawRate: normalizedInputRate,
-                               outputSamples: outputSamples,
-                               outputRate: outputRate)
         }
     }
 
-    private func normalizedInputSampleRate(_ sampleRate: Int) -> Int {
-        guard currentPlatform == .NDS else { return sampleRate }
-        guard sampleRate > 0 else { return sampleRate }
+    private func resolvedInputSampleRate(_ sampleRate: Int) -> Int {
+        let resolvedRate = Self.resolvedAudioSampleRate(sampleRate, platform: currentPlatform)
+        guard currentPlatform == .NDS else { return resolvedRate }
+        guard resolvedRate > 0 else { return resolvedRate }
 
-        // melonDS/libretro occasionally reports a near-32k value (e.g. 32728).
-        // Normalize near-native DS rates so resampling ratio stays stable.
-        if abs(sampleRate - 32_768) <= 300 {
-            if sampleRate != 32_768 {
-                ndsRateNormalizationLogCount += 1
-                if ndsRateNormalizationLogCount <= 3 || ndsRateNormalizationLogCount % 240 == 0 {
-                    NSLog("[AudioTune] normalize nds inputRate from=%d to=32768", sampleRate)
-                }
-            }
-            return 32_768
-        }
-        return sampleRate
+        return resolvedRate
     }
 
     private func prefersNativeAudioRateForCurrentPlatform() -> Bool {
@@ -1238,16 +1260,17 @@ extension GamePlayViewModel: EmulatorRenderDelegate {
         guard targetRate >= 8_000, targetRate <= 96_000 else { return }
         guard abs(activeAudioSampleRate - targetRate) >= 12 else { return }
 
-        NSLog("[AudioTune] retune from=%.1f to=%.1f platform=%@",
-              activeAudioSampleRate,
-              targetRate,
-              currentPlatform?.rawValue ?? "unknown")
-
         audioEngine?.stop()
         audioEngine?.deactivateAudioSession()
 
         activeAudioSampleRate = targetRate
-        let engine = AudioEngine(sampleRate: targetRate)
+        let engine = AudioEngine(
+            sampleRate: targetRate,
+            latencyProfile: Self.audioLatencyProfile(
+                requestedPlatform: currentPlatform ?? .GB,
+                isNDSCore: activeCore is NDSCore
+            )
+        )
         engine.configureAudioSession()
         try? engine.start()
         engine.setVolume(0.8)
@@ -1346,47 +1369,18 @@ extension GamePlayViewModel: EmulatorRenderDelegate {
         }
     }
 
-    private func logAudioABIfNeeded(rawSamples: Data,
-                                    rawRate: Int,
-                                    outputSamples: Data,
-                                    outputRate: Int) {
-        guard currentPlatform == .GBA || currentPlatform == .NDS else { return }
-        guard UserDefaults.standard.bool(forKey: "dev.audio.debugAB") else { return }
-
-        audioDebugChunkCount += 1
-        guard audioDebugChunkCount % 120 == 0 else { return }
-
-        let rawMetrics = audioMetrics(for: rawSamples)
-        let outMetrics = audioMetrics(for: outputSamples)
-        let title = currentGameTitle.isEmpty ? "unknown" : currentGameTitle
-        let hashPrefix = String(currentROMHash.prefix(8))
-        NSLog("[AudioAB] game=%@ hash=%@ chunk=%d quality=%d rawRate=%d outRate=%d rawFrames=%d outFrames=%d rawPeak=%d outPeak=%d rawDcL=%.1f rawDcR=%.1f outDcL=%.1f outDcR=%.1f",
-              title,
-              hashPrefix,
-              audioDebugChunkCount,
-              audioQuality,
-              rawRate,
-              outputRate,
-              rawSamples.count / 4,
-              outputSamples.count / 4,
-              rawMetrics.peak,
-              outMetrics.peak,
-              rawMetrics.dcL,
-              rawMetrics.dcR,
-              outMetrics.dcL,
-              outMetrics.dcR)
-    }
-
-    private func audioMetrics(for samples: Data) -> (peak: Int, dcL: Double, dcR: Double) {
-        guard samples.count >= 4 else { return (0, 0, 0) }
+    private func audioMetrics(for samples: Data) -> (peak: Int, rms: Double, clippedSamples: Int, dcL: Double, dcR: Double) {
+        guard samples.count >= 4 else { return (0, 0, 0, 0, 0) }
         let sampleCount = samples.count / 2
-        guard sampleCount >= 2 else { return (0, 0, 0) }
+        guard sampleCount >= 2 else { return (0, 0, 0, 0, 0) }
 
         return samples.withUnsafeBytes { raw in
             guard let ptr = raw.baseAddress?.assumingMemoryBound(to: Int16.self) else {
-                return (0, 0, 0)
+                return (0, 0, 0, 0, 0)
             }
             var peak = 0
+            var sumSquares: Double = 0
+            var clippedSamples = 0
             var sumL: Double = 0
             var sumR: Double = 0
             var frames = 0
@@ -1398,13 +1392,19 @@ extension GamePlayViewModel: EmulatorRenderDelegate {
                 let absR = Swift.abs(r)
                 if absL > peak { peak = absL }
                 if absR > peak { peak = absR }
+                sumSquares += Double(l * l)
+                sumSquares += Double(r * r)
+                if absL >= 32_000 { clippedSamples += 1 }
+                if absR >= 32_000 { clippedSamples += 1 }
                 sumL += Double(l)
                 sumR += Double(r)
                 frames += 1
                 idx += 2
             }
-            guard frames > 0 else { return (peak, 0, 0) }
-            return (peak, sumL / Double(frames), sumR / Double(frames))
+            guard frames > 0 else { return (peak, 0, clippedSamples, 0, 0) }
+            let channelSamples = Double(frames * 2)
+            let rms = sqrt(sumSquares / max(1.0, channelSamples))
+            return (peak, rms, clippedSamples, sumL / Double(frames), sumR / Double(frames))
         }
     }
 

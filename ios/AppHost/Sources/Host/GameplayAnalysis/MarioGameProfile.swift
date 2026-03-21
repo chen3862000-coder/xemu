@@ -52,7 +52,7 @@ struct MarioGameProfile: Sendable {
         nativeResolution: CGSize(width: 160, height: 144),
         gameplayRegion: CGRect(x: 0.0, y: 0.15, width: 1.0, height: 0.70),
         initialSearchRegion: CGRect(x: 0.1, y: 0.25, width: 0.8, height: 0.55),
-        minSampleInterval: 0.16,
+        minSampleInterval: 10.0,  // Effectively disable analysis for GBC to restore performance
         damageCooldown: 2.0,
         deathCooldown: 2.5,
         fadeConfirmationThreshold: 0.35,
@@ -74,7 +74,7 @@ struct MarioGameProfile: Sendable {
         nativeResolution: CGSize(width: 160, height: 144),
         gameplayRegion: CGRect(x: 0.0, y: 0.15, width: 1.0, height: 0.70),
         initialSearchRegion: CGRect(x: 0.1, y: 0.25, width: 0.8, height: 0.55),
-        minSampleInterval: 0.16,
+        minSampleInterval: 10.0,  // Effectively disable analysis for GBC to restore performance
         damageCooldown: 2.0,
         deathCooldown: 2.5,
         fadeConfirmationThreshold: 0.35,
@@ -91,12 +91,24 @@ struct MarioGameProfile: Sendable {
             "super mario bros deluxe",
             "super mario deluxe",
             "smbd",
-            "sm deluxe"
+            "sm deluxe",
+            "mario deluxe",           // Catch "MARIO DELUXAHYE"
+            "smb deluxe",            // Super Mario Bros Deluxe shortened
+            "smd",                   // Super Mario Deluxe abbreviation
+            "deluxe",                // Match "deluxe" variations
+            "deluxahye",              // Match "deluxahye" variations
+            "mario deluxahye",          // Match "mario deluxahye" variations
+            "mario deluxa",              // Match "mario deluxa" variations
+            "mario deluxa hye",           // Match "mario deluxa hye" variations
+            "mario deluxahy e",          // Match "mario deluxahy e" variations
+            "mariodeluxe",              // Match "mariodeluxe" variations
+            "mariodeluxahye",          // Match "mariodeluxahye" variations
+            "smb"                   // Match "smb" variations
         ],
         nativeResolution: CGSize(width: 160, height: 144),
         gameplayRegion: CGRect(x: 0.0, y: 0.12, width: 1.0, height: 0.76),
         initialSearchRegion: CGRect(x: 0.08, y: 0.22, width: 0.84, height: 0.58),
-        minSampleInterval: 0.15,
+        minSampleInterval: 0.8,  // Increased from 0.15 to reduce CPU load
         damageCooldown: 2.2,
         deathCooldown: 2.8,
         fadeConfirmationThreshold: 0.36,
