@@ -95,6 +95,7 @@ void xemu_gb_set_input(xemu_gb_handle_t handle, uint32_t buttons);
 size_t xemu_gb_get_save_state_size(xemu_gb_handle_t handle);
 xemu_error_t xemu_gb_save_state(xemu_gb_handle_t handle, xemu_save_state_t* state);
 xemu_error_t xemu_gb_load_state(xemu_gb_handle_t handle, const xemu_save_state_t* state);
+xemu_error_t xemu_gb_read_memory8(xemu_gb_handle_t handle, uint16_t address, uint8_t* value);
 
 /* System type detection */
 int xemu_gb_is_cgb_mode(xemu_gb_handle_t handle);

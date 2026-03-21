@@ -59,6 +59,12 @@ func xemu_gb_save_battery_stub(_ handle: xemu_gb_handle_t?, _ battery: UnsafeMut
 @_cdecl("xemu_gb_load_battery")
 func xemu_gb_load_battery_stub(_ handle: xemu_gb_handle_t?, _ battery: UnsafePointer<xemu_save_state_t>?) -> xemu_error_t { XEMU_OK }
 
+@_cdecl("xemu_gb_read_memory8")
+func xemu_gb_read_memory8_stub(_ handle: xemu_gb_handle_t?, _ address: UInt16, _ value: UnsafeMutablePointer<UInt8>?) -> xemu_error_t {
+    value?.pointee = 0
+    return XEMU_OK
+}
+
 @_cdecl("xemu_gb_is_cgb_mode")
 func xemu_gb_is_cgb_mode_stub(_ handle: xemu_gb_handle_t?) -> Int32 { 0 }
 

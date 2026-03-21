@@ -112,12 +112,15 @@ struct MarioGameProfile: Sendable {
             "mario deluxahy e",          // Match "mario deluxahy e" variations
             "mariodeluxe",              // Match "mariodeluxe" variations
             "mariodeluxahye",          // Match "mariodeluxahye" variations
-            "smb"                   // Match "smb" variations
+            "smb",                  // Match "smb" variations
+            "f84f26f22751b58ed57bd332274e18131660729a",
+            "07295cd60ae44183ebecb013930727e0404169d5",
+            "254f2254e9d54e2501e3e4ebe09491e03573a6a4"
         ],
         nativeResolution: CGSize(width: 160, height: 144),
         gameplayRegion: CGRect(x: 0.0, y: 0.12, width: 1.0, height: 0.76),
         initialSearchRegion: CGRect(x: 0.08, y: 0.22, width: 0.84, height: 0.58),
-        minSampleInterval: 0.8,  // Increased from 0.15 to reduce CPU load
+        minSampleInterval: 0.16,
         damageCooldown: 2.2,
         deathCooldown: 2.8,
         fadeConfirmationThreshold: 0.36,
@@ -125,7 +128,14 @@ struct MarioGameProfile: Sendable {
         smallHeightRange: 8...15,
         superHeightRange: 16...24,
         poweredUpHeightRange: 22...36,
-        liveMemory: nil
+        liveMemory: MarioLiveMemoryMap(
+            livesAddress: 0xC17F,
+            powerUpAddress: 0xC1C5,
+            gameplayStateAddress: 0xC1C1,
+            invulnerabilityTimerAddress: 0xC1D5,
+            deathStateValues: [0x03],
+            invulnerabilityStateValues: [0x06]
+        )
     )
 
     static let superMarioAdvance = MarioGameProfile(

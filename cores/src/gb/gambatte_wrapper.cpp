@@ -320,6 +320,18 @@ public:
 #endif
     }
 
+    bool readMemory8(uint16_t address, uint8_t& value) const {
+#ifdef XEMU_USE_REAL_CORES
+        if (!gambatte_ || !romLoaded_) {
+            return false;
+        }
+        return gambatte_->readMemory(address, &value);
+#else
+        value = 0;
+        return false;
+#endif
+    }
+
     bool isCGBMode() const {
 #ifdef XEMU_USE_REAL_CORES
         return gambatte_ ? gambatte_->isCgb() : false;
@@ -442,6 +454,7 @@ size_t GambatteWrapper::getSaveStateSize() const { return impl_->getSaveStateSiz
 bool GambatteWrapper::saveBattery(uint8_t* buffer, size_t size) { return impl_->saveBattery(buffer, size); }
 bool GambatteWrapper::loadBattery(const uint8_t* buffer, size_t size) { return impl_->loadBattery(buffer, size); }
 size_t GambatteWrapper::getBatterySaveSize() const { return impl_->getBatterySaveSize(); }
+bool GambatteWrapper::readMemory8(uint16_t address, uint8_t& value) const { return impl_->readMemory8(address, value); }
 bool GambatteWrapper::isCGBMode() const { return impl_->isCGBMode(); }
 const char* GambatteWrapper::getROMTitle() const { return impl_->getROMTitle(); }
 

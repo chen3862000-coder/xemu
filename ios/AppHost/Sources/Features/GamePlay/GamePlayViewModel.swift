@@ -683,23 +683,40 @@ class GamePlayViewModel: ObservableObject {
     private func currentLiveMemorySample() -> MarioLiveMemorySample? {
         guard hpDeathDetectionEnabled,
               let platform = currentPlatform,
-              platform == .GBA,
               let profile = MarioGameProfile.activeProfile(
                   title: currentGameTitle,
                   platform: platform,
                   romHash: currentROMHash
               ),
-              let liveMemory = profile.liveMemory,
-              let gbaCore = activeCore as? GBACore else {
+              let liveMemory = profile.liveMemory else {
             return nil
         }
 
-        return MarioLiveMemorySample(
-            lives: gbaCore.readMemory8(at: liveMemory.livesAddress),
-            powerUpState: gbaCore.readMemory8(at: liveMemory.powerUpAddress),
-            gameplayState: gbaCore.readMemory8(at: liveMemory.gameplayStateAddress),
-            invulnerabilityTimer: gbaCore.readMemory8(at: liveMemory.invulnerabilityTimerAddress)
-        )
+        if platform == .GBA, let gbaCore = activeCore as? GBACore {
+            return MarioLiveMemorySample(
+                lives: gbaCore.readMemory8(at: liveMemory.livesAddress),
+                powerUpState: gbaCore.readMemory8(at: liveMemory.powerUpAddress),
+                gameplayState: gbaCore.readMemory8(at: liveMemory.gameplayStateAddress),
+                invulnerabilityTimer: gbaCore.readMemory8(at: liveMemory.invulnerabilityTimerAddress)
+            )
+        }
+
+        if (platform == .GB || platform == .GBC),
+           let gbcCore = activeCore as? GBCore,
+           liveMemory.livesAddress <= UInt32(UInt16.max),
+           liveMemory.powerUpAddress <= UInt32(UInt16.max),
+           liveMemory.gameplayStateAddress <= UInt32(UInt16.max),
+           liveMemory.invulnerabilityTimerAddress <= UInt32(UInt16.max) {
+            return MarioLiveMemorySample(
+                lives: gbcCore.readMemory8(at: UInt16(liveMemory.livesAddress)),
+                powerUpState: gbcCore.readMemory8(at: UInt16(liveMemory.powerUpAddress)),
+                gameplayState: gbcCore.readMemory8(at: UInt16(liveMemory.gameplayStateAddress)),
+                invulnerabilityTimer: gbcCore.readMemory8(at: UInt16(liveMemory.invulnerabilityTimerAddress))
+            )
+        }
+
+        GameplayAnalysisLogger.event("live-memory unsupported profile=\(profile.id) platform=\(platform.rawValue)")
+        return nil
     }
 
     private func nativeSaveDirectoryURL() -> URL? {

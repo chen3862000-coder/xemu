@@ -30,4 +30,32 @@ final class MemoryGameAnalyzerTests: XCTestCase {
         XCTAssertEqual(result?.playerState, .dead)
         XCTAssertEqual(result?.gameplayPhase, .deathSequence)
     }
+
+    func testSMBDPowerDownEmitsDamageFromLiveMemory() {
+        let analyzer = MemoryGameAnalyzer()
+
+        let baseline = MarioLiveMemorySample(lives: 5, powerUpState: 1, gameplayState: 0, invulnerabilityTimer: 0)
+        let damaged = MarioLiveMemorySample(lives: 5, powerUpState: 0, gameplayState: 0x06, invulnerabilityTimer: 32)
+
+        _ = analyzer.analyzeLiveMemory(baseline, profile: .superMarioBrosDeluxe)
+        let result = analyzer.analyzeLiveMemory(damaged, profile: .superMarioBrosDeluxe)
+
+        XCTAssertEqual(result?.events, [.damageLight])
+        XCTAssertEqual(result?.playerState, .invulnerableBlink)
+        XCTAssertEqual(result?.gameplayPhase, .gameplayActive)
+    }
+
+    func testSMBDDeathStateEmitsDeathFromLiveMemory() {
+        let analyzer = MemoryGameAnalyzer()
+
+        let baseline = MarioLiveMemorySample(lives: 3, powerUpState: 0, gameplayState: 0, invulnerabilityTimer: 0)
+        let dead = MarioLiveMemorySample(lives: 3, powerUpState: 0, gameplayState: 0x03, invulnerabilityTimer: 0)
+
+        _ = analyzer.analyzeLiveMemory(baseline, profile: .superMarioBrosDeluxe)
+        let result = analyzer.analyzeLiveMemory(dead, profile: .superMarioBrosDeluxe)
+
+        XCTAssertEqual(result?.events, [.deathDetected])
+        XCTAssertEqual(result?.playerState, .dead)
+        XCTAssertEqual(result?.gameplayPhase, .deathSequence)
+    }
 }

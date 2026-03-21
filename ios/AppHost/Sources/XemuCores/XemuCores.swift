@@ -306,6 +306,17 @@ public class GBCCoreWrapper: CEmulatorCore {
 
         return Data(bytes: samples, count: size)
     }
+
+    public func readMemory8(address: UInt16) -> UInt8? {
+        nativeLock.lock()
+        defer { nativeLock.unlock() }
+
+        guard useNative, let handle = handle, isROMLoaded else { return nil }
+
+        var value: UInt8 = 0
+        let result = xemu_gb_read_memory8(handle, address, &value)
+        return result == XEMU_OK ? value : nil
+    }
     
     public func setInput(button: Int, pressed: Bool) {
         nativeLock.lock()
