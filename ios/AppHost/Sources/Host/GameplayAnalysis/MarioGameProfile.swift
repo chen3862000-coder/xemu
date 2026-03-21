@@ -134,7 +134,10 @@ struct MarioGameProfile: Sendable {
             gameplayStateAddress: 0xC1C1,
             invulnerabilityTimerAddress: 0xC1D5,
             deathStateValues: [0x03],
-            invulnerabilityStateValues: [0x06]
+            invulnerabilityStateValues: [0x06],
+            smallPowerUpValues: [0],
+            superPowerUpValues: [1],
+            poweredUpValues: [2, 3]
         )
     )
 
@@ -188,7 +191,10 @@ struct MarioGameProfile: Sendable {
             gameplayStateAddress: 0x03003FA0,
             invulnerabilityTimerAddress: 0x0300402D,
             deathStateValues: [0x09],
-            invulnerabilityStateValues: [0x01, 0x0E]
+            invulnerabilityStateValues: [0x01, 0x0E],
+            smallPowerUpValues: [0],
+            superPowerUpValues: [1],
+            poweredUpValues: [2, 3]
         )
     )
 
@@ -222,7 +228,12 @@ struct MarioGameProfile: Sendable {
             "super mario advance 4",
             "sma4",
             "super mario bros 3",
-            "smb3"
+            "smb3",
+            "super mariod",
+            "69e81f41394f02d64cad206adb26b3cd43690770",
+            "532f3307021637474b6dd37da059ca360f612337",
+            "b7f3d6dc014e2f0ddc996137bdefbb8167a77e66",
+            "2e5ce11a893464dc0cce0a6b451580ba35a7e5de"
         ],
         nativeResolution: CGSize(width: 240, height: 160),
         gameplayRegion: CGRect(x: 0.0, y: 0.13, width: 1.0, height: 0.74),
@@ -235,7 +246,17 @@ struct MarioGameProfile: Sendable {
         smallHeightRange: 10...17,
         superHeightRange: 18...27,
         poweredUpHeightRange: 25...38,
-        liveMemory: nil
+        liveMemory: MarioLiveMemoryMap(
+            livesAddress: 0x03002A6A,
+            powerUpAddress: 0x03003F5B,
+            gameplayStateAddress: 0x03003F65,
+            invulnerabilityTimerAddress: 0x03003F60,
+            deathStateValues: [],
+            invulnerabilityStateValues: [],
+            smallPowerUpValues: [0],
+            superPowerUpValues: [1],
+            poweredUpValues: [2, 3, 4, 5, 6, 7, 8]
+        )
     )
 
     static let allProfiles: [MarioGameProfile] = [
@@ -266,6 +287,9 @@ struct MarioLiveMemoryMap: Sendable {
     let invulnerabilityTimerAddress: UInt32
     let deathStateValues: Set<UInt8>
     let invulnerabilityStateValues: Set<UInt8>
+    let smallPowerUpValues: Set<UInt8>
+    let superPowerUpValues: Set<UInt8>
+    let poweredUpValues: Set<UInt8>
 }
 
 private extension String {

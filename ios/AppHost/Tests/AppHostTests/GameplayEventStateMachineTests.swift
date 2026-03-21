@@ -80,6 +80,45 @@ final class GameplayEventStateMachineTests: XCTestCase {
         XCTAssertEqual(result.events, [.damageLight])
     }
 
+    func testGameplayResumesAfterDeathSequenceAndAllowsBlinkDamage() {
+        let machine = GameplayEventStateMachine(profile: .sma4SuperMarioBros3)
+        let t0 = Date(timeIntervalSinceReferenceDate: 400)
+
+        _ = machine.consume(
+            makeObservation(
+                state: .dead,
+                confidence: 1.0,
+                deathConfidence: 1.0,
+                fadeConfidence: 1.0,
+                lifeLossConfidence: 1.0,
+                phase: .deathSequence,
+                timestamp: t0
+            )
+        )
+
+        _ = machine.consume(
+            makeObservation(
+                state: .poweredUp,
+                confidence: 0.95,
+                phase: .gameplayActive,
+                timestamp: t0.addingTimeInterval(2.0)
+            )
+        )
+
+        let damage = machine.consume(
+            makeObservation(
+                state: .invulnerableBlink,
+                confidence: 0.98,
+                blinkConfidence: 0.95,
+                hurtConfidence: 1.0,
+                phase: .gameplayActive,
+                timestamp: t0.addingTimeInterval(2.2)
+            )
+        )
+
+        XCTAssertEqual(damage.events, [.damageLight])
+    }
+
     private func makeObservation(
         state: MarioPlayerState,
         confidence: Double,

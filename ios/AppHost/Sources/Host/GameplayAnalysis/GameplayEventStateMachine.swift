@@ -47,8 +47,8 @@ final class GameplayEventStateMachine {
             runtimeState.lastDamageAt = timestamp
             runtimeState.lastEvent = damageEvent
         } else if observation.gameplayPhase == .gameplayActive,
-                  observation.playerStateConfidence >= 0.55,
-                  stableStates.contains(observation.playerState) {
+                  observation.playerState != .dead,
+                  observation.playerStateConfidence >= 0.8 {
             runtimeState.inDeathSequence = false
             runtimeState.deathConfirmed = false
         }

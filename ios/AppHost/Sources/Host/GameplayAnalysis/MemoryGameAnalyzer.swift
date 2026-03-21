@@ -87,6 +87,9 @@ final class MemoryGameAnalyzer {
     private var previousLives: [UInt8] = []
     private var previousHealth: [UInt8] = []
     private var previousLiveSample: MarioLiveMemorySample?
+    private var lastStableLiveSample: MarioLiveMemorySample?
+    private var invulnerabilityWindowReported = false
+    private var nonDeathEventsArmed = false
 
     init() {}
 
@@ -105,16 +108,22 @@ final class MemoryGameAnalyzer {
             return nil
         }
 
-        let currentPlayerState = playerState(
+        var currentPlayerState = playerState(
             powerUpState: powerUpState,
             gameplayState: gameplayState,
             invulnerabilityTimer: invulnerabilityTimer,
             memoryMap: memoryMap
         )
-        let gameplayPhase: MarioGameplayPhase = memoryMap.deathStateValues.contains(gameplayState) ? .deathSequence : .gameplayActive
+        var gameplayPhase: MarioGameplayPhase = memoryMap.deathStateValues.contains(gameplayState) ? .deathSequence : .gameplayActive
+        let isInvulnerable = invulnerabilityTimer > 0 ||
+            memoryMap.invulnerabilityStateValues.contains(gameplayState)
 
         guard let previousLiveSample else {
             self.previousLiveSample = liveSample
+            if !isInvulnerable && gameplayPhase == .gameplayActive && lives > 0 {
+                lastStableLiveSample = liveSample
+                nonDeathEventsArmed = true
+            }
             return MemoryGameObservation(
                 events: [],
                 confidence: 0.98,
@@ -143,20 +152,55 @@ final class MemoryGameAnalyzer {
         } else if let previousLives = previousLiveSample.lives,
                   lives < previousLives {
             events.append(.deathDetected)
-        } else if let previousPowerUpState = previousLiveSample.powerUpState,
+        } else if nonDeathEventsArmed,
+                  let previousPowerUpState = previousLiveSample.powerUpState,
                   powerUpState < previousPowerUpState {
             events.append(.damageLight)
-        } else if let previousInvulnerabilityTimer = previousLiveSample.invulnerabilityTimer,
+        } else if nonDeathEventsArmed,
+                  let previousInvulnerabilityTimer = previousLiveSample.invulnerabilityTimer,
                   let previousGameplayState = previousLiveSample.gameplayState,
                   previousInvulnerabilityTimer == 0,
                   invulnerabilityTimer > 0,
                   !memoryMap.deathStateValues.contains(gameplayState),
-                  memoryMap.invulnerabilityStateValues.contains(gameplayState) ||
+                  memoryMap.invulnerabilityStateValues.isEmpty ||
+                      memoryMap.invulnerabilityStateValues.contains(gameplayState) ||
                       memoryMap.invulnerabilityStateValues.contains(previousGameplayState) {
             events.append(.damageLight)
-        } else if let previousPowerUpState = previousLiveSample.powerUpState,
+        } else if nonDeathEventsArmed,
+                  isInvulnerable,
+                  !invulnerabilityWindowReported,
+                  !memoryMap.deathStateValues.contains(gameplayState),
+                  let stableSample = lastStableLiveSample,
+                  let stableLives = stableSample.lives,
+                  let stablePowerUpState = stableSample.powerUpState,
+                  stableLives == lives,
+                  powerUpState <= stablePowerUpState {
+            events.append(.damageLight)
+        } else if nonDeathEventsArmed,
+                  let previousPowerUpState = previousLiveSample.powerUpState,
                   powerUpState > previousPowerUpState {
             events.append(.powerUpCollected)
+        }
+
+        if events.contains(.deathDetected) {
+            currentPlayerState = .dead
+            gameplayPhase = .deathSequence
+            lastStableLiveSample = nil
+            invulnerabilityWindowReported = false
+            nonDeathEventsArmed = false
+        }
+
+        if events.contains(.damageLight) && isInvulnerable {
+            invulnerabilityWindowReported = true
+        }
+
+        if !isInvulnerable && gameplayPhase == .gameplayActive && lives > 0 {
+            lastStableLiveSample = liveSample
+            invulnerabilityWindowReported = false
+            nonDeathEventsArmed = true
+        } else if gameplayPhase == .deathSequence {
+            invulnerabilityWindowReported = false
+            nonDeathEventsArmed = false
         }
 
         self.previousLiveSample = liveSample
@@ -178,6 +222,17 @@ final class MemoryGameAnalyzer {
             ),
             pattern: nil
         )
+    }
+
+    func reset() {
+        cachedPatternMatch = nil
+        cachedGameTitle = ""
+        previousLives = []
+        previousHealth = []
+        previousLiveSample = nil
+        lastStableLiveSample = nil
+        invulnerabilityWindowReported = false
+        nonDeathEventsArmed = false
     }
 
     /// Analyze game state using save state data
@@ -387,16 +442,6 @@ final class MemoryGameAnalyzer {
         )
     }
 
-    /// Reset analyzer state for new game session
-    func reset() {
-        previousLives.removeAll()
-        previousHealth.removeAll()
-        previousLiveSample = nil
-        cachedPatternMatch = nil
-        cachedGameTitle = ""
-        print("🔄 MemoryAnalyzer reset")
-    }
-
     private func playerState(
         powerUpState: UInt8,
         gameplayState: UInt8,
@@ -406,28 +451,29 @@ final class MemoryGameAnalyzer {
         if memoryMap.deathStateValues.contains(gameplayState) {
             return .dead
         }
-        if invulnerabilityTimer > 0 || memoryMap.invulnerabilityStateValues.contains(gameplayState) {
-            switch powerUpState {
-            case 0:
-                return .invulnerableBlink
-            case 1:
-                return .superState
-            case 2, 3:
-                return .poweredUp
-            default:
+        if invulnerabilityTimer > 0 ||
+            memoryMap.invulnerabilityStateValues.contains(gameplayState) {
+            if memoryMap.smallPowerUpValues.contains(powerUpState) {
                 return .invulnerableBlink
             }
+            if memoryMap.superPowerUpValues.contains(powerUpState) {
+                return .superState
+            }
+            if memoryMap.poweredUpValues.contains(powerUpState) {
+                return .poweredUp
+            }
+            return .invulnerableBlink
         }
-        switch powerUpState {
-        case 0:
+        if memoryMap.smallPowerUpValues.contains(powerUpState) {
             return .small
-        case 1:
-            return .superState
-        case 2, 3:
-            return .poweredUp
-        default:
-            return .unknown
         }
+        if memoryMap.superPowerUpValues.contains(powerUpState) {
+            return .superState
+        }
+        if memoryMap.poweredUpValues.contains(powerUpState) {
+            return .poweredUp
+        }
+        return .unknown
     }
 
     private func debugSummary(

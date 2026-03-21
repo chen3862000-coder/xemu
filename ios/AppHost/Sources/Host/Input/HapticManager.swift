@@ -100,8 +100,12 @@ final class HapticManager {
 
     private func triggerDamageLight() {
         #if os(iOS)
-        lightImpact.impactOccurred(intensity: 0.8)
-        lightImpact.prepare()
+        heavyImpact.impactOccurred(intensity: 1.0)
+        heavyImpact.prepare()
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.045) { [weak self] in
+            self?.mediumImpact.impactOccurred(intensity: 0.85)
+            self?.mediumImpact.prepare()
+        }
         #endif
     }
 
