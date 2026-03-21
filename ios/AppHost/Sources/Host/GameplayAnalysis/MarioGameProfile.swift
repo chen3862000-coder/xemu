@@ -4,6 +4,7 @@ import CoreGraphics
 enum GameplayProfileKind: Sendable {
     case marioPlatformer
     case metroidFusion
+    case castlevaniaAriaOfSorrow
 }
 
 struct MarioGameProfile: Sendable {
@@ -316,6 +317,45 @@ struct MarioGameProfile: Sendable {
         )
     )
 
+    static let castlevaniaAriaOfSorrow = MarioGameProfile(
+        id: "castlevania_aria_of_sorrow_gba",
+        displayName: "Castlevania: Aria of Sorrow",
+        titleMatchers: [
+            "castlevania aria of sorrow",
+            "aria of sorrow",
+            "castlevaniaaos",
+            "castlevaniaariaofsorrow",
+            "castlevania",
+            "aos"
+        ],
+        nativeResolution: CGSize(width: 240, height: 160),
+        gameplayRegion: CGRect(x: 0.0, y: 0.10, width: 1.0, height: 0.80),
+        initialSearchRegion: CGRect(x: 0.08, y: 0.18, width: 0.84, height: 0.64),
+        minSampleInterval: 0.14,
+        damageCooldown: 0.8,
+        deathCooldown: 2.0,
+        fadeConfirmationThreshold: 0.38,
+        blackoutThreshold: 0.09,
+        smallHeightRange: 10...20,
+        superHeightRange: 21...32,
+        poweredUpHeightRange: 21...32,
+        liveMemory: MarioLiveMemoryMap(
+            kind: .castlevaniaAriaOfSorrow,
+            livesAddress: 0x0201327A,
+            powerUpAddress: 0x02013268,
+            gameplayStateAddress: 0x020004EE,
+            invulnerabilityTimerAddress: 0x02013272,
+            deathStateValues: [0x10],
+            invulnerabilityStateValues: [0x0C, 0x0D, 0x0E],
+            smallPowerUpValues: [],
+            superPowerUpValues: [0],
+            poweredUpValues: Set(1...UInt8.max),
+            healthAddress16: 0x0201327A,
+            maxHealthAddress16: 0x0201327E,
+            gameModeAddress: 0x02000010
+        )
+    )
+
     static let allProfiles: [MarioGameProfile] = [
         superMarioLand,
         superMarioLand2,
@@ -324,7 +364,8 @@ struct MarioGameProfile: Sendable {
         sma2SuperMarioWorld,
         sma3YoshisIsland,
         sma4SuperMarioBros3,
-        metroidFusion
+        metroidFusion,
+        castlevaniaAriaOfSorrow
     ]
 
     private var profilePlatform: Platform {

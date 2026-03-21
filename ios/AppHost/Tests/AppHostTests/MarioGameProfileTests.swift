@@ -51,4 +51,15 @@ final class MarioGameProfileTests: XCTestCase {
 
         XCTAssertEqual(profile?.id, MarioGameProfile.metroidFusion.id)
     }
+
+    func testCastlevaniaAriaOfSorrowProfileMatchesCanonicalTitle() {
+        let profile = MarioGameProfile.activeProfile(
+            title: "Castlevania: Aria of Sorrow",
+            platform: .GBA,
+            romHash: ""
+        )
+
+        XCTAssertEqual(profile?.id, MarioGameProfile.castlevaniaAriaOfSorrow.id)
+    }
+
 }

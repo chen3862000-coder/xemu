@@ -211,4 +211,65 @@ final class MemoryGameAnalyzerTests: XCTestCase {
         XCTAssertEqual(result?.playerState, .dead)
         XCTAssertEqual(result?.gameplayPhase, .deathSequence)
     }
+
+    func testCastlevaniaAriaOfSorrowHealthDropEmitsDamageFromLiveMemory() {
+        let analyzer = MemoryGameAnalyzer()
+
+        let baseline = MarioLiveMemorySample(
+            lives: nil,
+            powerUpState: 0x01,
+            gameplayState: 0x00,
+            invulnerabilityTimer: 0,
+            health: 120,
+            maxHealth: 160,
+            gameMode: 0x04
+        )
+        let damaged = MarioLiveMemorySample(
+            lives: nil,
+            powerUpState: 0x01,
+            gameplayState: 0x0C,
+            invulnerabilityTimer: 12,
+            health: 110,
+            maxHealth: 160,
+            gameMode: 0x04
+        )
+
+        _ = analyzer.analyzeLiveMemory(baseline, profile: .castlevaniaAriaOfSorrow)
+        let result = analyzer.analyzeLiveMemory(damaged, profile: .castlevaniaAriaOfSorrow)
+
+        XCTAssertEqual(result?.events, [.damageLight])
+        XCTAssertEqual(result?.playerState, .invulnerableBlink)
+        XCTAssertEqual(result?.gameplayPhase, .gameplayActive)
+    }
+
+    func testCastlevaniaAriaOfSorrowDeadStateEmitsDeathFromLiveMemory() {
+        let analyzer = MemoryGameAnalyzer()
+
+        let baseline = MarioLiveMemorySample(
+            lives: nil,
+            powerUpState: 0x01,
+            gameplayState: 0x00,
+            invulnerabilityTimer: 0,
+            health: 40,
+            maxHealth: 160,
+            gameMode: 0x04
+        )
+        let dead = MarioLiveMemorySample(
+            lives: nil,
+            powerUpState: 0x01,
+            gameplayState: 0x10,
+            invulnerabilityTimer: 0,
+            health: 0,
+            maxHealth: 160,
+            gameMode: 0x05
+        )
+
+        _ = analyzer.analyzeLiveMemory(baseline, profile: .castlevaniaAriaOfSorrow)
+        let result = analyzer.analyzeLiveMemory(dead, profile: .castlevaniaAriaOfSorrow)
+
+        XCTAssertEqual(result?.events, [.deathDetected])
+        XCTAssertEqual(result?.playerState, .dead)
+        XCTAssertEqual(result?.gameplayPhase, .deathSequence)
+    }
+
 }

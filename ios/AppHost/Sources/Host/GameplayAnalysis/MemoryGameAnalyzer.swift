@@ -104,7 +104,9 @@ final class MemoryGameAnalyzer {
         if memoryMap.kind == .metroidFusion {
             return analyzeMetroidFusionLiveMemory(liveSample, memoryMap: memoryMap)
         }
-
+        if memoryMap.kind == .castlevaniaAriaOfSorrow {
+            return analyzeCastlevaniaAriaOfSorrowLiveMemory(liveSample, memoryMap: memoryMap)
+        }
         guard let lives = liveSample.lives,
               let powerUpState = liveSample.powerUpState,
               let gameplayState = liveSample.gameplayState,
@@ -340,6 +342,119 @@ final class MemoryGameAnalyzer {
                 suitStatus: suitStatus,
                 pose: pose,
                 invulnerabilityTimer: invulnerabilityTimer,
+                gameMode: gameMode
+            ),
+            pattern: nil
+        )
+    }
+
+    private func analyzeCastlevaniaAriaOfSorrowLiveMemory(
+        _ liveSample: MarioLiveMemorySample,
+        memoryMap: MarioLiveMemoryMap
+    ) -> MemoryGameObservation? {
+        guard let health = liveSample.health,
+              let maxHealth = liveSample.maxHealth,
+              let equipmentState = liveSample.powerUpState,
+              let movementState = liveSample.gameplayState,
+              let timer = liveSample.invulnerabilityTimer,
+              let gameMode = liveSample.gameMode else {
+            previousLiveSample = liveSample
+            return nil
+        }
+
+        let isDeathState = memoryMap.deathStateValues.contains(movementState) || gameMode == 0x05 || health == 0
+        let isGameplayActive = gameMode == 0x04
+        let isInvulnerable = memoryMap.invulnerabilityStateValues.contains(movementState) || timer > 0
+
+        let playerState: MarioPlayerState
+        if isDeathState {
+            playerState = .dead
+        } else if isInvulnerable {
+            playerState = .invulnerableBlink
+        } else if equipmentState == 0 {
+            playerState = .superState
+        } else {
+            playerState = .poweredUp
+        }
+
+        let gameplayPhase: MarioGameplayPhase = isDeathState ? .deathSequence : (isGameplayActive ? .gameplayActive : .transition)
+
+        guard let previousLiveSample else {
+            self.previousLiveSample = liveSample
+            if isGameplayActive && !isInvulnerable && health > 0 {
+                lastStableLiveSample = liveSample
+                nonDeathEventsArmed = true
+            }
+            return MemoryGameObservation(
+                events: [],
+                confidence: 0.98,
+                lives: Int(maxHealth),
+                health: Int(health),
+                powerUp: Int(equipmentState),
+                playerState: playerState,
+                gameplayPhase: gameplayPhase,
+                blinkConfidence: isInvulnerable ? 0.90 : 0.0,
+                debugSummary: castlevaniaDebugSummary(
+                    health: health,
+                    maxHealth: maxHealth,
+                    movementState: movementState,
+                    timer: timer,
+                    gameMode: gameMode
+                ),
+                pattern: nil
+            )
+        }
+
+        let previousHealth = previousLiveSample.health
+        let previousMovementState = previousLiveSample.gameplayState
+        let previousGameMode = previousLiveSample.gameMode
+        let previousWasDeath = previousMovementState.map(memoryMap.deathStateValues.contains) == true ||
+            previousGameMode == 0x05 ||
+            previousHealth == 0
+
+        var events: [GameplayEvent] = []
+        if isDeathState && !previousWasDeath {
+            events.append(.deathDetected)
+        } else if nonDeathEventsArmed,
+                  isGameplayActive,
+                  let previousHealth,
+                  previousHealth > health,
+                  health > 0 {
+            let delta = previousHealth - health
+            events.append(delta >= 20 ? .damageHeavy : .damageLight)
+        }
+
+        if events.contains(.deathDetected) {
+            lastStableLiveSample = nil
+            invulnerabilityWindowReported = false
+            nonDeathEventsArmed = false
+        }
+
+        if isGameplayActive && !isInvulnerable && health > 0 {
+            lastStableLiveSample = liveSample
+            invulnerabilityWindowReported = false
+            nonDeathEventsArmed = true
+        } else if isDeathState || !isGameplayActive {
+            invulnerabilityWindowReported = false
+            nonDeathEventsArmed = false
+        }
+
+        self.previousLiveSample = liveSample
+
+        return MemoryGameObservation(
+            events: events,
+            confidence: 0.98,
+            lives: Int(maxHealth),
+            health: Int(health),
+            powerUp: Int(equipmentState),
+            playerState: playerState,
+            gameplayPhase: gameplayPhase,
+            blinkConfidence: isInvulnerable ? 0.95 : 0.0,
+            debugSummary: castlevaniaDebugSummary(
+                health: health,
+                maxHealth: maxHealth,
+                movementState: movementState,
+                timer: timer,
                 gameMode: gameMode
             ),
             pattern: nil
@@ -631,6 +746,24 @@ final class MemoryGameAnalyzer {
             Int(gameMode)
         )
     }
+
+    private func castlevaniaDebugSummary(
+        health: UInt16,
+        maxHealth: UInt16,
+        movementState: UInt8,
+        timer: UInt8,
+        gameMode: UInt8
+    ) -> String {
+        String(
+            format: "mem H=%u/%u M=%02X T=%u G=%02X",
+            Int(health),
+            Int(maxHealth),
+            Int(movementState),
+            Int(timer),
+            Int(gameMode)
+        )
+    }
+
 }
 
 /// Mario game memory pattern
