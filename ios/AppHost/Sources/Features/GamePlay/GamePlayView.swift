@@ -25,6 +25,7 @@ struct GamePlayView: View {
     let onExit: () -> Void
     
     @EnvironmentObject private var shellThemeManager: ShellThemeManager
+    @EnvironmentObject private var languageManager: LanguageManager
     @Environment(\.emulatorShellTheme) private var shellTheme
     @StateObject private var viewModel = GamePlayViewModel()
     @State private var showPauseMenu = false
@@ -4253,10 +4254,10 @@ struct GamePlayView: View {
                 VStack(spacing: 12) {
                     HStack {
                         VStack(alignment: .leading, spacing: 4) {
-                            Text("Game Paused")
+                            Text(screenString("gameplay.pause.title", "Game Paused"))
                                 .font(SubpageUI.Font.title)
                                 .foregroundColor(AppColors.textPrimary)
-                            Text(game.title ?? "Current game")
+                            Text(game.title ?? screenString("gameplay.pause.current_game", "Current game"))
                                 .font(SubpageUI.Font.subtitle)
                                 .foregroundColor(AppColors.textMuted)
                                 .lineLimit(1)
@@ -4276,37 +4277,37 @@ struct GamePlayView: View {
                     }
 
                     if !viewModel.statusMessage.isEmpty {
-                        Text(viewModel.statusMessage)
+                        Text(localizedPauseStatusMessage)
                             .font(.system(size: 12, weight: .medium))
                             .foregroundColor(AppColors.textSecondary)
                             .frame(maxWidth: .infinity, alignment: .leading)
                             .padding(.horizontal, 2)
                     }
 
-                    pauseActionButton(title: "Resume", icon: "play.fill", style: .primary) {
+                    pauseActionButton(title: screenString("gameplay.pause.resume", "Resume"), icon: "play.fill", style: .primary) {
                         triggerHaptic(.light)
                         viewModel.resumeEmulation()
                         showPauseMenu = false
                     }
 
                     HStack(spacing: 10) {
-                        pauseActionButton(title: "Quick Save", icon: "square.and.arrow.down.fill") {
+                        pauseActionButton(title: screenString("gameplay.pause.quick_save", "Quick Save"), icon: "square.and.arrow.down.fill") {
                             triggerHaptic(.medium)
                             viewModel.quickSave()
                             saveSlotSummaries = viewModel.saveSlotSummaries()
                         }
-                        pauseActionButton(title: "Quick Load", icon: "square.and.arrow.up.fill") {
+                        pauseActionButton(title: screenString("gameplay.pause.quick_load", "Quick Load"), icon: "square.and.arrow.up.fill") {
                             triggerHaptic(.medium)
                             viewModel.quickLoad()
                         }
                     }
 
-                    pauseActionButton(title: "Restart Game", icon: "arrow.counterclockwise") {
+                    pauseActionButton(title: screenString("gameplay.pause.restart", "Restart Game"), icon: "arrow.counterclockwise") {
                         restartGameFromPause()
                     }
 
                     HStack(spacing: 10) {
-                        pauseActionButton(title: pauseSheetMode == .advanced ? "Back" : "Save States", icon: pauseSheetMode == .advanced ? "chevron.left" : "tray.full.fill") {
+                        pauseActionButton(title: pauseSheetMode == .advanced ? screenString("gameplay.pause.back", "Back") : screenString("gameplay.pause.save_states", "Save States"), icon: pauseSheetMode == .advanced ? "chevron.left" : "tray.full.fill") {
                             withAnimation(.easeOut(duration: 0.2)) {
                                 if pauseSheetMode == .advanced {
                                     pauseSheetMode = .quick
@@ -4347,13 +4348,13 @@ struct GamePlayView: View {
                     if pauseSheetMode == .advanced {
                         VStack(spacing: 10) {
                             HStack(spacing: 10) {
-                                pauseActionButton(title: showSaveSlotsPanel ? "Hide Saves" : "Manage Saves", icon: "tray.full.fill") {
+                                pauseActionButton(title: showSaveSlotsPanel ? screenString("gameplay.pause.hide_saves", "Hide Saves") : screenString("gameplay.pause.manage_saves", "Manage Saves"), icon: "tray.full.fill") {
                                     saveSlotSummaries = viewModel.saveSlotSummaries()
                                     withAnimation(.easeOut(duration: 0.2)) {
                                         showSaveSlotsPanel.toggle()
                                     }
                                 }
-                                pauseActionButton(title: "Controls", icon: "gamecontroller") {
+                                pauseActionButton(title: screenString("gameplay.pause.controls", "Controls"), icon: "gamecontroller") {
                                     // Reserved for future in-game controls editor
                                 }
                             }
@@ -4361,11 +4362,11 @@ struct GamePlayView: View {
                             if showSaveSlotsPanel {
                                 VStack(alignment: .leading, spacing: 10) {
                                     HStack {
-                                        Text("Save States")
+                                        Text(screenString("gameplay.pause.save_states", "Save States"))
                                             .font(.system(size: 15, weight: .semibold))
                                             .foregroundColor(AppColors.textPrimary)
                                         Spacer()
-                                        Text("Quick + 10 Slots")
+                                        Text(screenString("gameplay.pause.slot_overview", "Quick + 10 Slots"))
                                             .font(.system(size: 11))
                                             .foregroundColor(AppColors.textMuted)
                                     }
@@ -4392,7 +4393,7 @@ struct GamePlayView: View {
                         }
                     }
 
-                    pauseActionButton(title: "Exit to Library", icon: "xmark", style: .destructive) {
+                    pauseActionButton(title: screenString("gameplay.pause.exit_to_library", "Exit to Library"), icon: "xmark", style: .destructive) {
                         startTask?.cancel()
                         startTask = nil
                         viewModel.stopEmulation()
@@ -4416,10 +4417,10 @@ struct GamePlayView: View {
                 .overlay(.ultraThinMaterial.opacity(0.14))
             VStack(alignment: .leading, spacing: 16) {
                 VStack(alignment: .leading, spacing: 6) {
-                    Text("Resume From Save State?")
+                    Text(screenString("gameplay.pause.resume_from_save_state", "Resume From Save State?"))
                         .font(SubpageUI.Font.title)
                         .foregroundColor(AppColors.textPrimary)
-                    Text("Choose a save to continue, or start fresh.")
+                    Text(screenString("gameplay.pause.resume_from_save_state_message", "Choose a save to continue, or start fresh."))
                         .font(SubpageUI.Font.body)
                         .foregroundColor(AppColors.textMuted)
                 }
@@ -4440,10 +4441,10 @@ struct GamePlayView: View {
                 .frame(maxHeight: 220)
 
                 HStack(spacing: 10) {
-                    pauseActionButton(title: "Start Fresh", icon: "sparkles") {
+                    pauseActionButton(title: screenString("gameplay.pause.start_fresh", "Start Fresh"), icon: "sparkles") {
                         showLaunchStatePicker = false
                     }
-                    pauseActionButton(title: "Open Pause Menu", icon: "line.3.horizontal") {
+                    pauseActionButton(title: screenString("gameplay.pause.open_pause_menu", "Open Pause Menu"), icon: "line.3.horizontal") {
                         showLaunchStatePicker = false
                         showPauseMenu = true
                     }
@@ -4466,7 +4467,7 @@ struct GamePlayView: View {
                 Image(systemName: "exclamationmark.triangle.fill")
                     .font(.system(size: 24, weight: .semibold))
                     .foregroundColor(AppColors.warning)
-                Text("Unable to Start Game")
+                Text(screenString("gameplay.pause.unable_to_start", "Unable to Start Game"))
                     .font(SubpageUI.Font.title)
                     .foregroundColor(AppColors.textPrimary)
                 Text(viewModel.statusMessage)
@@ -4476,10 +4477,10 @@ struct GamePlayView: View {
                     .lineLimit(3)
 
                 HStack(spacing: 10) {
-                    pauseActionButton(title: "Retry", icon: "arrow.clockwise", style: .primary) {
+                    pauseActionButton(title: screenString("gameplay.pause.retry", "Retry"), icon: "arrow.clockwise", style: .primary) {
                         beginLaunchSequence(allowResumeFlow: true)
                     }
-                    pauseActionButton(title: "Back", icon: "xmark") {
+                    pauseActionButton(title: screenString("gameplay.pause.back", "Back"), icon: "xmark") {
                         onExit()
                     }
                 }
@@ -4489,6 +4490,23 @@ struct GamePlayView: View {
             .subpagePopup(cornerRadius: 22)
             .padding(.horizontal, 18)
         }
+    }
+
+    private var localizedPauseStatusMessage: String {
+        switch viewModel.statusMessage {
+        case "Paused":
+            return screenString("gameplay.pause.paused", "Paused")
+        default:
+            return viewModel.statusMessage
+        }
+    }
+
+    private func screenString(_ key: String, _ fallback: String) -> String {
+        L10n.string(key, table: "Screens", fallback: fallback, languageManager: languageManager)
+    }
+
+    private func screenFormat(_ key: String, _ fallback: String, _ value: CVarArg) -> String {
+        L10n.format(key, value, table: "Screens", fallback: fallback, languageManager: languageManager)
     }
 
     private enum PauseActionStyle {
@@ -4585,14 +4603,14 @@ struct GamePlayView: View {
             if mode == .launchPicker {
                 VStack(alignment: .leading, spacing: 6) {
                     HStack(spacing: 8) {
-                        Text(summary.isQuickSlot ? "Quick Save" : "Slot \(summary.displayName)")
+                        Text(summary.isQuickSlot ? screenString("gameplay.pause.quick_save", "Quick Save") : screenFormat("gameplay.pause.slot_format", "Slot %@", summary.displayName))
                             .font(.system(size: 15, weight: .semibold))
                             .foregroundColor(AppColors.textPrimary)
                             .lineLimit(1)
                             .layoutPriority(1)
                         consoleIdentityBadge
                         if isRecommended {
-                            Text("Recommended")
+                            Text(screenString("gameplay.pause.recommended", "Recommended"))
                                 .font(.system(size: 10, weight: .semibold))
                                 .foregroundColor(AppColors.primary)
                                 .padding(.horizontal, 7)
@@ -4600,12 +4618,12 @@ struct GamePlayView: View {
                                 .background(Capsule().fill(AppColors.primary.opacity(0.10)))
                         }
                     }
-                    Text(summary.metadata?.createdAt.formatted(date: .abbreviated, time: .shortened) ?? "No save yet")
+                    Text(summary.metadata?.createdAt.formatted(date: .abbreviated, time: .shortened) ?? screenString("gameplay.pause.no_save_yet", "No save yet"))
                         .font(.system(size: 12))
                         .foregroundColor(AppColors.textMuted)
                         .lineLimit(1)
 
-                    Text(game.title ?? "Unknown Game")
+                    Text(game.title ?? screenString("gameplay.pause.unknown_game", "Unknown Game"))
                         .font(.system(size: 11, weight: .medium))
                         .foregroundColor(AppColors.textSecondary)
                         .lineLimit(1)
@@ -4621,14 +4639,14 @@ struct GamePlayView: View {
             } else {
                 VStack(alignment: .leading, spacing: 8) {
                     HStack(spacing: 8) {
-                        Text(summary.isQuickSlot ? "Quick Save" : "Slot \(summary.displayName)")
+                        Text(summary.isQuickSlot ? screenString("gameplay.pause.quick_save", "Quick Save") : screenFormat("gameplay.pause.slot_format", "Slot %@", summary.displayName))
                             .font(.system(size: 15, weight: .semibold))
                             .foregroundColor(AppColors.textPrimary)
                             .lineLimit(1)
                             .layoutPriority(1)
                         consoleIdentityBadge
 
-                        Text(summary.isEmpty ? "Empty" : "Saved")
+                        Text(summary.isEmpty ? screenString("gameplay.pause.empty", "Empty") : screenString("gameplay.pause.saved", "Saved"))
                             .font(.system(size: 10, weight: .semibold))
                             .foregroundColor(summary.isEmpty ? AppColors.textMuted : AppColors.primary)
                             .padding(.horizontal, 7)
@@ -4636,12 +4654,12 @@ struct GamePlayView: View {
                             .background(Capsule().fill(AppColors.surfaceLight.opacity(summary.isEmpty ? 0.35 : 0.55)))
                     }
 
-                    Text(summary.metadata?.createdAt.formatted(date: .abbreviated, time: .shortened) ?? "No save yet")
+                    Text(summary.metadata?.createdAt.formatted(date: .abbreviated, time: .shortened) ?? screenString("gameplay.pause.no_save_yet", "No save yet"))
                         .font(.system(size: 12))
                         .foregroundColor(AppColors.textMuted)
                         .lineLimit(1)
 
-                    Text(game.title ?? "Unknown Game")
+                    Text(game.title ?? screenString("gameplay.pause.unknown_game", "Unknown Game"))
                         .font(.system(size: 11, weight: .medium))
                         .foregroundColor(AppColors.textSecondary)
                         .lineLimit(1)

@@ -58,18 +58,13 @@ final class HapticManager {
     func gameplayEvent(_ event: GameplayEvent) {
         #if os(iOS)
         guard isEnabled, gameplayHapticsEnabled else { return }
+        GameplayAnalysisLogger.event("haptic event=\(event.rawValue)")
         
         switch event {
         case .damageLight:
-            lightImpact.impactOccurred(intensity: 0.5)
-            lightImpact.prepare()
+            triggerDamageLight()
         case .damageHeavy:
-            heavyImpact.impactOccurred(intensity: 0.75)
-            heavyImpact.prepare()
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self] in
-                self?.heavyImpact.impactOccurred(intensity: 0.6)
-                self?.heavyImpact.prepare()
-            }
+            triggerDamageHeavy()
         case .deathDetected:
             triggerDeathSequence()
         case .powerUpCollected:
@@ -102,28 +97,31 @@ final class HapticManager {
         }
         #endif
     }
+
+    private func triggerDamageLight() {
+        #if os(iOS)
+        lightImpact.impactOccurred(intensity: 0.8)
+        lightImpact.prepare()
+        #endif
+    }
+
+    private func triggerDamageHeavy() {
+        #if os(iOS)
+        mediumImpact.impactOccurred(intensity: 0.95)
+        mediumImpact.prepare()
+        #endif
+    }
     
     private func triggerDeathSequence() {
         #if os(iOS)
         heavyImpact.impactOccurred(intensity: 1.0)
         heavyImpact.prepare()
-        
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.12) { [weak self] in
-            self?.heavyImpact.impactOccurred(intensity: 0.9)
-            self?.heavyImpact.prepare()
-        }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.24) { [weak self] in
-            self?.heavyImpact.impactOccurred(intensity: 0.8)
-            self?.heavyImpact.prepare()
-        }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.36) { [weak self] in
-            self?.mediumImpact.impactOccurred(intensity: 0.6)
-            self?.mediumImpact.prepare()
-        }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.48) { [weak self] in
-            self?.mediumImpact.impactOccurred(intensity: 0.5)
-            self?.mediumImpact.prepare()
-        }
+
+        scheduleHeavyImpact(after: 0.10, intensity: 1.0)
+        scheduleHeavyImpact(after: 0.22, intensity: 0.95)
+        scheduleHeavyImpact(after: 0.36, intensity: 0.9)
+        scheduleMediumImpact(after: 0.52, intensity: 0.75)
+        scheduleMediumImpact(after: 0.68, intensity: 0.6)
         #endif
     }
     
@@ -158,6 +156,24 @@ final class HapticManager {
         }
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in
             self?.mediumImpact.impactOccurred(intensity: 0.7)
+            self?.mediumImpact.prepare()
+        }
+        #endif
+    }
+
+    private func scheduleHeavyImpact(after delay: TimeInterval, intensity: CGFloat) {
+        #if os(iOS)
+        DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self] in
+            self?.heavyImpact.impactOccurred(intensity: intensity)
+            self?.heavyImpact.prepare()
+        }
+        #endif
+    }
+
+    private func scheduleMediumImpact(after delay: TimeInterval, intensity: CGFloat) {
+        #if os(iOS)
+        DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self] in
+            self?.mediumImpact.impactOccurred(intensity: intensity)
             self?.mediumImpact.prepare()
         }
         #endif

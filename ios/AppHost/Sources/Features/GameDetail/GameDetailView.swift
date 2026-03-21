@@ -9,6 +9,7 @@ import UIKit
 struct GameDetailView: View {
     let game: Game
     @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject private var languageManager: LanguageManager
     @State private var showGamePlay = false
     
     var body: some View {
@@ -75,7 +76,7 @@ struct GameDetailView: View {
     private var titleSection: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
-                Text(game.title ?? "Unknown Title")
+                Text(game.title ?? screenString("gamedetail.unknown_title", "Unknown Title"))
                     .font(.title2)
                     .fontWeight(.bold)
                 if let console = game.consoleIdentity {
@@ -98,8 +99,12 @@ struct GameDetailView: View {
     
     private var statsSection: some View {
         HStack(spacing: 16) {
-            StatBox(icon: "clock", title: "Play Time", value: "\(game.totalPlayTime)h")
-            StatBox(icon: "internaldrive", title: "Size", value: formatFileSize(game.fileSize))
+            StatBox(
+                icon: "clock",
+                title: screenString("gamedetail.play_time", "Play Time"),
+                value: screenFormat("gamedetail.playtime.hours", "\(game.totalPlayTime)h", game.totalPlayTime)
+            )
+            StatBox(icon: "internaldrive", title: screenString("gamedetail.size", "Size"), value: formatFileSize(game.fileSize))
         }
     }
     
@@ -113,7 +118,7 @@ struct GameDetailView: View {
         Button(action: { showGamePlay = true }) {
             HStack {
                 Image(systemName: "play.fill")
-                Text("Play Now")
+                Text(screenString("gamedetail.play_now", "Play Now"))
             }
             .font(.headline)
             .foregroundColor(.white)
@@ -131,13 +136,21 @@ struct GameDetailView: View {
     
     private var infoSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Game Info")
+            Text(screenString("gamedetail.game_info", "Game Info"))
                 .font(.headline)
             
-            GameInfoRow(label: "Platform", value: game.platform)
-            GameInfoRow(label: "Console", value: game.consoleIdentity?.displayName ?? game.platform)
-            GameInfoRow(label: "Genre", value: game.genre ?? "Unknown")
+            GameInfoRow(label: screenString("gamedetail.platform", "Platform"), value: game.platform)
+            GameInfoRow(label: screenString("gamedetail.console", "Console"), value: game.consoleIdentity?.displayName ?? game.platform)
+            GameInfoRow(label: screenString("gamedetail.genre", "Genre"), value: game.genre ?? screenString("gamedetail.unknown", "Unknown"))
         }
+    }
+
+    private func screenString(_ key: String, _ fallback: String) -> String {
+        L10n.string(key, table: "Screens", fallback: fallback, languageManager: languageManager)
+    }
+
+    private func screenFormat(_ key: String, _ fallback: String, _ value: CVarArg) -> String {
+        L10n.format(key, value, table: "Screens", fallback: fallback, languageManager: languageManager)
     }
 }
 

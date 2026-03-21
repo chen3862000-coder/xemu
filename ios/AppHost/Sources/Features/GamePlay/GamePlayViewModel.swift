@@ -205,7 +205,6 @@ class GamePlayViewModel: ObservableObject {
             currentPlatform = platform
             currentGameTitle = gameTitle ?? ""
             currentROMHash = romHash ?? deriveROMHash(from: romPath)
-            print("🎮 Starting emulation - gameTitle: '\(currentGameTitle)', romHash: '\(currentROMHash)', platform: \(platform)")
             configureGameplayAnalysisIfNeeded(platform: platform)
             
             switch platform {
@@ -571,27 +570,27 @@ class GamePlayViewModel: ObservableObject {
     }
 
     private func configureGameplayAnalysisIfNeeded(platform: Platform) {
-        print("🔧 configureGameplayAnalysisIfNeeded called - hpDeathDetectionEnabled: \(hpDeathDetectionEnabled), platform: \(platform)")
         guard hpDeathDetectionEnabled else {
+            GameplayAnalysisLogger.session("disabled title=\(currentGameTitle) platform=\(platform.rawValue)")
             frameAnalysisCoordinator = nil
             gameplayAnalysisSnapshot = nil
-            print("🔇 HP/Death Detection disabled in settings")
             return
         }
 
-        print("🔍 Gameplay Analysis: Attempting to match profile with title='\(currentGameTitle)', platform=\(platform), romHash='\(currentROMHash)'")
         guard let profile = MarioGameProfile.activeProfile(
             title: currentGameTitle,
             platform: platform,
             romHash: currentROMHash
         ) else {
+            GameplayAnalysisLogger.session("no-profile title=\(currentGameTitle) platform=\(platform.rawValue) romHash=\(currentROMHash)")
             frameAnalysisCoordinator = nil
             gameplayAnalysisSnapshot = nil
-            print("❌ Gameplay Analysis: No matching profile found for title='\(currentGameTitle)', platform=\(platform), romHash='\(currentROMHash)'")
             return
         }
 
-        print("✅ Gameplay Analysis: Profile matched - \(profile.displayName)")
+        GameplayAnalysisLogger.session(
+            "configured profile=\(profile.id) title=\(currentGameTitle) platform=\(platform.rawValue) romHash=\(currentROMHash)"
+        )
         frameAnalysisCoordinator = FrameAnalysisCoordinator(profile: profile) { [weak self] events, snapshot in
             guard let self else { return }
             guard self.isRunning else { return }
@@ -600,7 +599,7 @@ class GamePlayViewModel: ObservableObject {
                 HapticManager.shared.gameplayEvent(event)
             }
         }
-        frameAnalysisCoordinator?.setLaunchInfo(platform: platform, gameTitle: currentGameTitle)
+        frameAnalysisCoordinator?.setLaunchInfo(platform: platform, gameTitle: currentGameTitle, romHash: currentROMHash)
     }
 
     private func makeMetadata(slot: Int) -> SaveStateMetadata {
@@ -679,6 +678,28 @@ class GamePlayViewModel: ObservableObject {
     private func supportsNativeBatterySave(_ platform: Platform?) -> Bool {
         guard let platform else { return false }
         return platform == .GB || platform == .GBC || platform == .GBA || platform == .NDS
+    }
+
+    private func currentLiveMemorySample() -> MarioLiveMemorySample? {
+        guard hpDeathDetectionEnabled,
+              let platform = currentPlatform,
+              platform == .GBA,
+              let profile = MarioGameProfile.activeProfile(
+                  title: currentGameTitle,
+                  platform: platform,
+                  romHash: currentROMHash
+              ),
+              let liveMemory = profile.liveMemory,
+              let gbaCore = activeCore as? GBACore else {
+            return nil
+        }
+
+        return MarioLiveMemorySample(
+            lives: gbaCore.readMemory8(at: liveMemory.livesAddress),
+            powerUpState: gbaCore.readMemory8(at: liveMemory.powerUpAddress),
+            gameplayState: gbaCore.readMemory8(at: liveMemory.gameplayStateAddress),
+            invulnerabilityTimer: gbaCore.readMemory8(at: liveMemory.invulnerabilityTimerAddress)
+        )
     }
 
     private func nativeSaveDirectoryURL() -> URL? {
@@ -1147,7 +1168,9 @@ extension GamePlayViewModel: EmulatorRenderDelegate {
             lastFrameSnapshot = (data: data, width: width, height: height, bytesPerRow: pitch)
             frameAnalysisCoordinator?.enqueue(
                 frameBufferInfo: frameBufferInfo,
-                timestamp: Date()
+                timestamp: Date(),
+                liveMemorySample: currentLiveMemorySample(),
+                saveStateData: currentSaveStateData
             )
             let qualityProfile = performanceProfiler.currentQualityProfile
             applyPerformanceProfileIfNeeded(qualityProfile)

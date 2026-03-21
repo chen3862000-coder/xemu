@@ -51,6 +51,7 @@ final class MarioFrameAnalyzer {
             lifeLossScreenConfidence: lifeLossScreenConfidence,
             gameplayPhase: gameplayPhase,
             playerBounds: spriteMetrics?.bounds.normalized(in: surface.size),
+            memoryDebugSummary: nil,
             timestamp: timestamp
         )
 

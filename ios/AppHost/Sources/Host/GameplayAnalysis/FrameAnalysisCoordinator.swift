@@ -5,17 +5,15 @@ final class FrameAnalysisCoordinator {
     private let profile: MarioGameProfile
     private let queue: DispatchQueue
     private let hybridAnalyzer = HybridGameplayAnalyzer()
-    private var stateMachine: GameplayEventStateMachine? // Make it optional
+    private var stateMachine: GameplayEventStateMachine?
     private let onResult: @MainActor ([GameplayEvent], MarioAnalysisSnapshot) -> Void
 
     private var lastSampleAt: Date?
     private var isProcessing = false
-    private var pendingFrame: (frame: FrameBufferInfo, timestamp: Date)?
-    private var currentPlatform: Platform = .GB  // Default fallback
-    private var currentGameTitle: String = ""
-    private var currentROMHash: String = ""
-    private var launchPlatform: Platform = .GB  // Preserve platform from launch
-    private var launchGameTitle: String = ""  // Preserve game title from launch
+    private var pendingFrame: (frame: FrameBufferInfo, timestamp: Date, liveMemorySample: MarioLiveMemorySample?, saveStateData: Data?)?
+    private var launchPlatform: Platform = .GB
+    private var launchGameTitle: String = ""
+    private var launchROMHash: String = ""
 
     init(
         profile: MarioGameProfile,
@@ -27,27 +25,24 @@ final class FrameAnalysisCoordinator {
         self.onResult = onResult
     }
 
-    func enqueue(frameBufferInfo: FrameBufferInfo, timestamp: Date = Date()) {
-        // Preserve launch values if not overridden
-        let effectivePlatform = launchPlatform
-        let effectiveGameTitle = launchGameTitle
-
-        // Update current game info
-        currentPlatform = effectivePlatform
-        currentGameTitle = effectiveGameTitle
-
+    func enqueue(
+        frameBufferInfo: FrameBufferInfo,
+        timestamp: Date = Date(),
+        liveMemorySample: MarioLiveMemorySample? = nil,
+        saveStateData: Data? = nil
+    ) {
         if let lastSampleAt, timestamp.timeIntervalSince(lastSampleAt) < profile.minSampleInterval {
             return
         }
         lastSampleAt = timestamp
 
         if isProcessing {
-            pendingFrame = (frameBufferInfo, timestamp)
+            pendingFrame = (frameBufferInfo, timestamp, liveMemorySample, saveStateData)
             return
         }
 
         isProcessing = true
-        process(frameBufferInfo, timestamp: timestamp)
+        process(frameBufferInfo, timestamp: timestamp, liveMemorySample: liveMemorySample, saveStateData: saveStateData)
     }
 
     func reset() {
@@ -55,12 +50,11 @@ final class FrameAnalysisCoordinator {
         pendingFrame = nil
         isProcessing = false
         hybridAnalyzer.reset()
-        stateMachine = GameplayEventStateMachine(profile: profile) // Reinitialize state machine with profile
-        print("🔄 FrameAnalysisCoordinator reset for new session")
+        stateMachine = GameplayEventStateMachine(profile: profile)
     }
 
     func updateProfile(_ newProfile: MarioGameProfile) {
-        print("🔄 Profile update requested to: \(newProfile.displayName)")
+        _ = newProfile
     }
 
     func getDetectionStatistics() -> DetectionStatistics {
@@ -74,38 +68,48 @@ final class FrameAnalysisCoordinator {
         )
     }
 
-    private func process(_ frameBufferInfo: FrameBufferInfo, timestamp: Date) {
+    private func process(
+        _ frameBufferInfo: FrameBufferInfo,
+        timestamp: Date,
+        liveMemorySample: MarioLiveMemorySample?,
+        saveStateData: Data?
+    ) {
         queue.async { [weak self] in
             guard let self, let stateMachine = self.stateMachine else { return }
 
-            // Use hybrid analysis to get gameplay events
             let hybridResult = self.hybridAnalyzer.analyze(
                 frameBufferInfo: frameBufferInfo,
-                saveStateData: nil, // Save state tracking not yet implemented
-                platform: launchPlatform, // Use preserved platform
-                gameTitle: launchGameTitle // Use preserved game title
+                liveMemorySample: liveMemorySample,
+                profile: self.profile,
+                saveStateData: saveStateData,
+                platform: self.launchPlatform,
+                gameTitle: self.launchGameTitle,
+                romHash: self.launchROMHash
             )
 
-            // Convert hybrid events to MarioObservation for state machine
             let marioObservation = self.createMarioObservation(
                 from: hybridResult,
                 frameBufferInfo: frameBufferInfo,
                 timestamp: timestamp
             )
 
-            // Process through existing state machine
-            guard let stateMachine = self.stateMachine else {
-                // If state machine not available, skip processing
-                return
-            }
-
             let (events, snapshot) = stateMachine.consume(marioObservation)
+
+            if !events.isEmpty {
+                let eventNames = events.map(\.rawValue).joined(separator: ",")
+                GameplayAnalysisLogger.event(
+                    """
+                    emitted=\(eventNames) profile=\(self.profile.id) phase=\(snapshot.gameplayPhase.rawValue) \
+                    state=\(snapshot.playerState.rawValue) damage=\(String(format: "%.2f", snapshot.damageConfidence)) \
+                    death=\(String(format: "%.2f", snapshot.deathConfidence))
+                    """
+                )
+            }
 
             DispatchQueue.main.async {
                 Task { @MainActor [weak self] in
                     guard let self else { return }
                     self.onResult(events, snapshot)
-                    self.logDetectionResults(hybridResult, events: events)
                     self.finishProcessing()
                 }
             }
@@ -117,16 +121,24 @@ final class FrameAnalysisCoordinator {
         frameBufferInfo: FrameBufferInfo,
         timestamp: Date
     ) -> MarioObservation {
+        let hasDamageEvent = hybridResult.events.contains(.damageHeavy) || hybridResult.events.contains(.damageLight)
+        let hasDeathEvent = hybridResult.events.contains(.deathDetected)
+        let memoryBacked = hybridResult.detectionMethod == .memory && hybridResult.memoryObservation != nil
+
         return MarioObservation(
-            playerState: inferPlayerState(from: hybridResult.events),
-            playerStateConfidence: hybridResult.confidence,
-            blinkConfidence: 0.0,
-            hurtPoseConfidence: hybridResult.events.contains(.damageHeavy) ? hybridResult.confidence : 0.0,
-            deathAnimationConfidence: hybridResult.events.contains(.deathDetected) ? hybridResult.confidence : 0.0,
-            transitionFadeConfidence: 0.0,
-            lifeLossScreenConfidence: 0.0,
-            gameplayPhase: .gameplayActive,
+            playerState: hybridResult.memoryObservation?.playerState ?? inferPlayerState(from: hybridResult.events),
+            playerStateConfidence: max(
+                hybridResult.confidence,
+                hybridResult.memoryObservation != nil || hasDamageEvent || hasDeathEvent ? 0.9 : 0.0
+            ),
+            blinkConfidence: hybridResult.memoryObservation?.blinkConfidence ?? (hasDamageEvent ? 0.9 : 0.0),
+            hurtPoseConfidence: hasDamageEvent ? (memoryBacked ? 1.0 : 0.95) : 0.0,
+            deathAnimationConfidence: hasDeathEvent ? (memoryBacked ? 1.0 : 0.95) : 0.0,
+            transitionFadeConfidence: hasDeathEvent ? (memoryBacked ? 1.0 : 0.8) : 0.0,
+            lifeLossScreenConfidence: hasDeathEvent ? (memoryBacked ? 1.0 : 0.8) : 0.0,
+            gameplayPhase: hybridResult.memoryObservation?.gameplayPhase ?? (hasDeathEvent ? .transition : .gameplayActive),
             playerBounds: nil,
+            memoryDebugSummary: hybridResult.memoryObservation?.debugSummary,
             timestamp: timestamp
         )
     }
@@ -147,45 +159,24 @@ final class FrameAnalysisCoordinator {
         return .unknown
     }
 
-    private func logDetectionResults(_ result: HybridAnalysisResult, events: [GameplayEvent]) {
-        let detectionMethod: String
-        switch result.detectionMethod {
-        case .memory:
-            detectionMethod = "🧠 MEMORY (95-99%)"
-        case .pattern:
-            detectionMethod = "🔍 PATTERN (80-85%)"
-        case .vision:
-            detectionMethod = "👁️ VISION (60-70%)"
-        case .unknown:
-            detectionMethod = "❓ UNKNOWN"
-        }
-
-        let eventsString = events.isEmpty ? "none" : events.map { "\($0)" }.joined(separator: ", ")
-
-        print("🎮 Gameplay Analysis:")
-        print("   Method: \(detectionMethod)")
-        print("   Confidence: \(String(format: "%.1f%%", result.confidence * 100))")
-        print("   Events: \(eventsString)")
-        print("   Performance: \(result.performanceMetrics)")
-
-        if result.confidence < 0.7 {
-            print("⚠️ Low confidence detection - may need address discovery")
-        }
-    }
-
     private func finishProcessing() {
         if let pendingFrame {
             self.pendingFrame = nil
-            process(pendingFrame.frame, timestamp: pendingFrame.timestamp)
+            process(
+                pendingFrame.frame,
+                timestamp: pendingFrame.timestamp,
+                liveMemorySample: pendingFrame.liveMemorySample,
+                saveStateData: pendingFrame.saveStateData
+            )
             return
         }
         isProcessing = false
     }
 
-    func setLaunchInfo(platform: Platform, gameTitle: String) {
+    func setLaunchInfo(platform: Platform, gameTitle: String, romHash: String) {
         launchPlatform = platform
         launchGameTitle = gameTitle
-        print("🎮 Launch info preserved: Platform=\(platform), Title='\(gameTitle)')")
+        launchROMHash = romHash
     }
 }
 

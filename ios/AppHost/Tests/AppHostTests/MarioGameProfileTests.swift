@@ -31,4 +31,14 @@ final class MarioGameProfileTests: XCTestCase {
 
         XCTAssertNil(profile)
     }
+
+    func testGameBoyProfilesDoNotCaptureGBAAdvanceTitles() {
+        let profile = MarioGameProfile.activeProfile(
+            title: "Super Mario Advance",
+            platform: .GBA,
+            romHash: ""
+        )
+
+        XCTAssertEqual(profile?.id, MarioGameProfile.superMarioAdvance.id)
+    }
 }

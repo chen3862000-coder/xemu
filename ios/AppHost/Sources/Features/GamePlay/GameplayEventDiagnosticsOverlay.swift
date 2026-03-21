@@ -30,6 +30,10 @@ struct GameplayEventDiagnosticsOverlay: View {
             if let lastEvent = snapshot.lastEvent {
                 Text("Last \(lastEvent.rawValue)")
             }
+
+            if let memoryDebugSummary = snapshot.memoryDebugSummary {
+                Text(memoryDebugSummary)
+            }
         }
         .font(.system(size: 11, weight: .semibold, design: .monospaced))
         .foregroundStyle(.white.opacity(0.95))

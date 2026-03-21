@@ -110,6 +110,24 @@ func xemu_gba_save_battery_stub(_ handle: xemu_gba_handle_t?, _ battery: UnsafeM
 @_cdecl("xemu_gba_load_battery")
 func xemu_gba_load_battery_stub(_ handle: xemu_gba_handle_t?, _ battery: UnsafePointer<xemu_save_state_t>?) -> xemu_error_t { XEMU_OK }
 
+@_cdecl("xemu_gba_read_memory8")
+func xemu_gba_read_memory8_stub(_ handle: xemu_gba_handle_t?, _ address: UInt32, _ value: UnsafeMutablePointer<UInt8>?) -> xemu_error_t {
+    value?.pointee = 0
+    return XEMU_OK
+}
+
+@_cdecl("xemu_gba_read_memory16")
+func xemu_gba_read_memory16_stub(_ handle: xemu_gba_handle_t?, _ address: UInt32, _ value: UnsafeMutablePointer<UInt16>?) -> xemu_error_t {
+    value?.pointee = 0
+    return XEMU_OK
+}
+
+@_cdecl("xemu_gba_read_memory32")
+func xemu_gba_read_memory32_stub(_ handle: xemu_gba_handle_t?, _ address: UInt32, _ value: UnsafeMutablePointer<UInt32>?) -> xemu_error_t {
+    value?.pointee = 0
+    return XEMU_OK
+}
+
 @_cdecl("xemu_nds_create")
 func xemu_nds_create_stub() -> xemu_nds_handle_t? { OpaquePointer(bitPattern: 0x3) }
 

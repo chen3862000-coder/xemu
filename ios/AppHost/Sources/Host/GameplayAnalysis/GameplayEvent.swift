@@ -42,6 +42,7 @@ struct MarioObservation: Sendable {
     let lifeLossScreenConfidence: Double
     let gameplayPhase: MarioGameplayPhase
     let playerBounds: CGRect?
+    let memoryDebugSummary: String?
     let timestamp: Date
 }
 
@@ -59,5 +60,13 @@ struct MarioAnalysisSnapshot: Sendable {
     let inDeathSequence: Bool
     let lastEvent: GameplayEvent?
     let lastEventAt: Date?
+    let memoryDebugSummary: String?
     let sampledAt: Date
+}
+
+struct MarioLiveMemorySample: Sendable {
+    let lives: UInt8?
+    let powerUpState: UInt8?
+    let gameplayState: UInt8?
+    let invulnerabilityTimer: UInt8?
 }

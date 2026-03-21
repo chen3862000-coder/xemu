@@ -390,4 +390,25 @@ size_t mGBAWrapper::getBatterySaveSize() const {
     return savedataSize;
 }
 
+bool mGBAWrapper::readMemory8(uint32_t address, uint8_t& value) const {
+    if (!impl_->core || !impl_->romLoaded) {
+        return false;
+    }
+    return xemu_mgba_core_read8(impl_->core, address, &value);
+}
+
+bool mGBAWrapper::readMemory16(uint32_t address, uint16_t& value) const {
+    if (!impl_->core || !impl_->romLoaded) {
+        return false;
+    }
+    return xemu_mgba_core_read16(impl_->core, address, &value);
+}
+
+bool mGBAWrapper::readMemory32(uint32_t address, uint32_t& value) const {
+    if (!impl_->core || !impl_->romLoaded) {
+        return false;
+    }
+    return xemu_mgba_core_read32(impl_->core, address, &value);
+}
+
 } // namespace xemu

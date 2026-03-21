@@ -48,6 +48,38 @@ final class GameplayEventStateMachineTests: XCTestCase {
         XCTAssertTrue(death.snapshot.inDeathSequence)
     }
 
+    func testMemoryBackedDeathSequenceTriggersDeath() {
+        let machine = GameplayEventStateMachine(profile: .sma2SuperMarioWorld)
+        let result = machine.consume(
+            makeObservation(
+                state: .dead,
+                confidence: 0.98,
+                deathConfidence: 1.0,
+                fadeConfidence: 1.0,
+                lifeLossConfidence: 1.0,
+                phase: .deathSequence,
+                timestamp: Date(timeIntervalSinceReferenceDate: 250)
+            )
+        )
+
+        XCTAssertEqual(result.events, [.deathDetected])
+    }
+
+    func testHurtAndBlinkComboEmitsLightDamage() {
+        let machine = GameplayEventStateMachine(profile: .sma2SuperMarioWorld)
+        let result = machine.consume(
+            makeObservation(
+                state: .hurt,
+                confidence: 0.9,
+                blinkConfidence: 0.9,
+                hurtConfidence: 0.95,
+                timestamp: Date(timeIntervalSinceReferenceDate: 300)
+            )
+        )
+
+        XCTAssertEqual(result.events, [.damageLight])
+    }
+
     private func makeObservation(
         state: MarioPlayerState,
         confidence: Double,
@@ -69,6 +101,7 @@ final class GameplayEventStateMachineTests: XCTestCase {
             lifeLossScreenConfidence: lifeLossConfidence,
             gameplayPhase: phase,
             playerBounds: nil,
+            memoryDebugSummary: nil,
             timestamp: timestamp
         )
     }

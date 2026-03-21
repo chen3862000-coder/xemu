@@ -32,6 +32,9 @@ bool xemu_mgba_core_save_state(struct mCore* core, void* state);
 bool xemu_mgba_core_load_state(struct mCore* core, const void* state);
 size_t xemu_mgba_core_savedata_clone(struct mCore* core, void** out_savedata);
 bool xemu_mgba_core_savedata_restore(struct mCore* core, const void* savedata, size_t size, bool writeback);
+bool xemu_mgba_core_read8(struct mCore* core, uint32_t address, uint8_t* out_value);
+bool xemu_mgba_core_read16(struct mCore* core, uint32_t address, uint16_t* out_value);
+bool xemu_mgba_core_read32(struct mCore* core, uint32_t address, uint32_t* out_value);
 
 #ifdef __cplusplus
 }

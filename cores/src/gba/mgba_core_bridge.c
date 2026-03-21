@@ -142,3 +142,27 @@ bool xemu_mgba_core_savedata_restore(struct mCore* core, const void* savedata, s
     return core && savedata && size > 0 && core->savedataRestore &&
            core->savedataRestore(core, savedata, size, writeback);
 }
+
+bool xemu_mgba_core_read8(struct mCore* core, uint32_t address, uint8_t* out_value) {
+    if (!core || !out_value || !core->rawRead8) {
+        return false;
+    }
+    *out_value = (uint8_t) core->rawRead8(core, address, -1);
+    return true;
+}
+
+bool xemu_mgba_core_read16(struct mCore* core, uint32_t address, uint16_t* out_value) {
+    if (!core || !out_value || !core->rawRead16) {
+        return false;
+    }
+    *out_value = (uint16_t) core->rawRead16(core, address, -1);
+    return true;
+}
+
+bool xemu_mgba_core_read32(struct mCore* core, uint32_t address, uint32_t* out_value) {
+    if (!core || !out_value || !core->rawRead32) {
+        return false;
+    }
+    *out_value = core->rawRead32(core, address, -1);
+    return true;
+}

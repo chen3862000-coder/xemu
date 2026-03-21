@@ -8,11 +8,11 @@ enum DetectionMethod: String, Sendable {
     case unknown
 }
 
-/// Hybrid gameplay analyzer that combines multiple detection methods
-/// Priority: Memory (95-99%) → Pattern recognition (80-85%) → Computer vision (60-70%)
+/// Gameplay analyzer currently constrained to memory-backed signals only.
+/// Pattern and vision fallbacks are intentionally disabled to avoid dark-screen false positives.
 final class HybridGameplayAnalyzer {
     private let memoryAnalyzer = MemoryGameAnalyzer()
-    private let frameAnalyzer = MarioFrameAnalyzer(profile: .superMarioLand)
+    private var frameAnalyzers: [String: MarioFrameAnalyzer] = [:]
     private var currentDetectionMethod: DetectionMethod = .unknown
     private var confidenceThreshold: Double = 0.75 // Minimum confidence to trust a method
 
@@ -26,23 +26,51 @@ final class HybridGameplayAnalyzer {
     /// Analyze gameplay using the best available method
     func analyze(
         frameBufferInfo: FrameBufferInfo,
+        liveMemorySample: MarioLiveMemorySample?,
+        profile: MarioGameProfile,
         saveStateData: Data?,
         platform: Platform,
-        gameTitle: String
+        gameTitle: String,
+        romHash: String
     ) -> HybridAnalysisResult {
         let timestamp = Date()
 
-        // Debug logging
-        print("🔍 Hybrid Analysis: Starting")
-        print("   Platform: \(platform)")
-        print("   Game Title: '\(gameTitle)'")
-        print("   Save State Data: \(saveStateData != nil ? "Available (\(saveStateData!.count) bytes)" : "None")")
-        print("   Current Platform: \(platform)")
-        print("   Current Game Title: '\(gameTitle)'")
-
         // Priority 1: Memory-based detection (most accurate)
-        if let stateData = saveStateData {
-            if let memoryObservation = memoryAnalyzer.analyzeSaveState(stateData, for: platform) {
+        if let liveMemorySample,
+           let memoryObservation = memoryAnalyzer.analyzeLiveMemory(liveMemorySample, profile: profile) {
+            if let debugSummary = memoryObservation.debugSummary, GameplayAnalysisLogger.isEnabled {
+                GameplayAnalysisLogger.event(debugSummary)
+            }
+            if !memoryObservation.events.isEmpty {
+                GameplayAnalysisLogger.event(
+                    "memory events=\(memoryObservation.events.map { $0.rawValue }.joined(separator: ",")) confidence=\(String(format: "%.2f", memoryObservation.confidence))"
+                )
+            }
+            currentDetectionMethod = .memory
+            memoryCheckCount += 1
+            confidenceThreshold = adaptConfidence(accuracy: 0.98, reliability: 1.0)
+
+            return HybridAnalysisResult(
+                events: memoryObservation.events,
+                detectionMethod: .memory,
+                confidence: memoryObservation.confidence,
+                timestamp: timestamp,
+                performanceMetrics: PerformanceMetrics(
+                    memoryCheckCount: memoryCheckCount,
+                    patternCheckCount: patternCheckCount,
+                    visionCheckCount: visionCheckCount,
+                    confidence: confidenceThreshold
+                ),
+                memoryObservation: memoryObservation
+            )
+        }
+
+        if let stateData = saveStateData, profile.liveMemory == nil {
+            if let memoryObservation = memoryAnalyzer.analyzeSaveState(stateData, for: platform),
+               !memoryObservation.events.isEmpty {
+                GameplayAnalysisLogger.event(
+                    "memory events=\(memoryObservation.events.map { $0.rawValue }.joined(separator: ",")) confidence=\(String(format: "%.2f", memoryObservation.confidence))"
+                )
                 currentDetectionMethod = .memory
                 memoryCheckCount += 1
                 confidenceThreshold = adaptConfidence(accuracy: 0.95, reliability: 1.0)
@@ -53,76 +81,32 @@ final class HybridGameplayAnalyzer {
                     confidence: memoryObservation.confidence,
                     timestamp: timestamp,
                     performanceMetrics: PerformanceMetrics(
-                        memoryCheckCount: memoryCheckCount,
-                        patternCheckCount: patternCheckCount,
-                        visionCheckCount: visionCheckCount,
-                        confidence: confidenceThreshold
-                    )
-                )
-            }
-        } else {
-            // Use heuristic detection when save state data is not available
-            if let heuristicObservation = memoryAnalyzer.analyzeGameUsingHeuristics(platform, gameTitle: gameTitle) {
-                currentDetectionMethod = .memory
-                memoryCheckCount += 1
-                confidenceThreshold = adaptConfidence(accuracy: 0.85, reliability: 0.9)
-
-                return HybridAnalysisResult(
-                    events: heuristicObservation.events,
-                    detectionMethod: .memory,
-                    confidence: heuristicObservation.confidence,
-                    timestamp: timestamp,
-                    performanceMetrics: PerformanceMetrics(
-                        memoryCheckCount: memoryCheckCount,
-                        patternCheckCount: patternCheckCount,
-                        visionCheckCount: visionCheckCount,
-                        confidence: confidenceThreshold
-                    )
-                )
-            }
-        }
-        // Continue to pattern recognition if memory detection not available or found no events
-
-        // Priority 2: Pattern recognition (medium accuracy)
-        let frameAnalysis = analyzeFramePatterns(frameBufferInfo, gameTitle: gameTitle)
-        if frameAnalysis.confidence > confidenceThreshold {
-
-            currentDetectionMethod = .pattern
-            patternCheckCount += 1
-            confidenceThreshold = adaptConfidence(accuracy: 0.80, reliability: 0.9)
-
-            return HybridAnalysisResult(
-                events: frameAnalysis.events,
-                detectionMethod: .pattern,
-                confidence: frameAnalysis.confidence,
-                timestamp: timestamp,
-                performanceMetrics: PerformanceMetrics(
                     memoryCheckCount: memoryCheckCount,
                     patternCheckCount: patternCheckCount,
                     visionCheckCount: visionCheckCount,
                     confidence: confidenceThreshold
+                    ),
+                    memoryObservation: memoryObservation
                 )
-            )
+            }
         }
 
-        // Priority 3: Computer vision (fallback, lower accuracy)
-        let visualAnalysis = analyzeVisualFrame(frameBufferInfo)
-        visionCheckCount += 1
-        confidenceThreshold = adaptConfidence(accuracy: 0.60, reliability: 0.7)
-
-        currentDetectionMethod = .vision
-
+        currentDetectionMethod = .unknown
+        GameplayAnalysisLogger.event(
+            "memory-only no-events title=\(gameTitle) platform=\(platform.rawValue) saveState=\(saveStateData != nil ? "present" : "missing")"
+        )
         return HybridAnalysisResult(
-            events: visualAnalysis.events,
-            detectionMethod: .vision,
-            confidence: visualAnalysis.confidence,
+            events: [],
+            detectionMethod: .unknown,
+            confidence: 0.0,
             timestamp: timestamp,
             performanceMetrics: PerformanceMetrics(
                 memoryCheckCount: memoryCheckCount,
                 patternCheckCount: patternCheckCount,
                 visionCheckCount: visionCheckCount,
                 confidence: confidenceThreshold
-            )
+            ),
+            memoryObservation: nil
         )
     }
 
@@ -154,7 +138,29 @@ final class HybridGameplayAnalyzer {
     }
 
     /// Analyze visual frame (existing computer vision logic)
-    private func analyzeVisualFrame(_ frameBufferInfo: FrameBufferInfo) -> FramePatternAnalysisResult {
+    private func analyzeVisualFrame(
+        _ frameBufferInfo: FrameBufferInfo,
+        platform: Platform,
+        gameTitle: String,
+        romHash: String
+    ) -> FramePatternAnalysisResult {
+        guard let profile = MarioGameProfile.activeProfile(
+            title: gameTitle,
+            platform: platform,
+            romHash: romHash
+        ) else {
+            return FramePatternAnalysisResult(events: [], confidence: 0.0)
+        }
+
+        let frameAnalyzer: MarioFrameAnalyzer
+        if let cached = frameAnalyzers[profile.id] {
+            frameAnalyzer = cached
+        } else {
+            let created = MarioFrameAnalyzer(profile: profile)
+            frameAnalyzers[profile.id] = created
+            frameAnalyzer = created
+        }
+
         let observation = frameAnalyzer.analyze(frameBufferInfo: frameBufferInfo, timestamp: Date())
 
         // Convert visual observations to gameplay events
@@ -213,6 +219,7 @@ final class HybridGameplayAnalyzer {
         memoryCheckCount = 0
         patternCheckCount = 0
         visionCheckCount = 0
+        frameAnalyzers.removeAll()
         memoryAnalyzer.reset()
     }
 }
@@ -224,6 +231,7 @@ struct HybridAnalysisResult {
     let confidence: Double
     let timestamp: Date
     let performanceMetrics: PerformanceMetrics
+    let memoryObservation: MemoryGameObservation?
 }
 
 /// Frame pattern analysis result

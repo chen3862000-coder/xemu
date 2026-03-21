@@ -86,8 +86,99 @@ final class MemoryGameAnalyzer {
 
     private var previousLives: [UInt8] = []
     private var previousHealth: [UInt8] = []
+    private var previousLiveSample: MarioLiveMemorySample?
 
     init() {}
+
+    func analyzeLiveMemory(
+        _ liveSample: MarioLiveMemorySample,
+        profile: MarioGameProfile
+    ) -> MemoryGameObservation? {
+        guard let memoryMap = profile.liveMemory else {
+            return nil
+        }
+        guard let lives = liveSample.lives,
+              let powerUpState = liveSample.powerUpState,
+              let gameplayState = liveSample.gameplayState,
+              let invulnerabilityTimer = liveSample.invulnerabilityTimer else {
+            previousLiveSample = liveSample
+            return nil
+        }
+
+        let currentPlayerState = playerState(
+            powerUpState: powerUpState,
+            gameplayState: gameplayState,
+            invulnerabilityTimer: invulnerabilityTimer,
+            memoryMap: memoryMap
+        )
+        let gameplayPhase: MarioGameplayPhase = memoryMap.deathStateValues.contains(gameplayState) ? .deathSequence : .gameplayActive
+
+        guard let previousLiveSample else {
+            self.previousLiveSample = liveSample
+            return MemoryGameObservation(
+                events: [],
+                confidence: 0.98,
+                lives: Int(lives),
+                health: 0,
+                powerUp: Int(powerUpState),
+                playerState: currentPlayerState,
+                gameplayPhase: gameplayPhase,
+                blinkConfidence: invulnerabilityTimer > 0 ? 0.85 : 0.0,
+                debugSummary: debugSummary(
+                    lives: lives,
+                    powerUpState: powerUpState,
+                    gameplayState: gameplayState,
+                    invulnerabilityTimer: invulnerabilityTimer
+                ),
+                pattern: nil
+            )
+        }
+
+        var events: [GameplayEvent] = []
+
+        if let previousGameplayState = previousLiveSample.gameplayState,
+           memoryMap.deathStateValues.contains(gameplayState),
+           !memoryMap.deathStateValues.contains(previousGameplayState) {
+            events.append(.deathDetected)
+        } else if let previousLives = previousLiveSample.lives,
+                  lives < previousLives {
+            events.append(.deathDetected)
+        } else if let previousPowerUpState = previousLiveSample.powerUpState,
+                  powerUpState < previousPowerUpState {
+            events.append(.damageLight)
+        } else if let previousInvulnerabilityTimer = previousLiveSample.invulnerabilityTimer,
+                  let previousGameplayState = previousLiveSample.gameplayState,
+                  previousInvulnerabilityTimer == 0,
+                  invulnerabilityTimer > 0,
+                  !memoryMap.deathStateValues.contains(gameplayState),
+                  memoryMap.invulnerabilityStateValues.contains(gameplayState) ||
+                      memoryMap.invulnerabilityStateValues.contains(previousGameplayState) {
+            events.append(.damageLight)
+        } else if let previousPowerUpState = previousLiveSample.powerUpState,
+                  powerUpState > previousPowerUpState {
+            events.append(.powerUpCollected)
+        }
+
+        self.previousLiveSample = liveSample
+
+        return MemoryGameObservation(
+            events: events,
+            confidence: 0.98,
+            lives: Int(lives),
+            health: 0,
+            powerUp: Int(powerUpState),
+            playerState: currentPlayerState,
+            gameplayPhase: gameplayPhase,
+            blinkConfidence: invulnerabilityTimer > 0 ? 0.95 : 0.0,
+            debugSummary: debugSummary(
+                lives: lives,
+                powerUpState: powerUpState,
+                gameplayState: gameplayState,
+                invulnerabilityTimer: invulnerabilityTimer
+            ),
+            pattern: nil
+        )
+    }
 
     /// Analyze game state using save state data
     func analyzeSaveState(_ saveStateData: Data, for platform: Platform) -> MemoryGameObservation? {
@@ -270,6 +361,10 @@ final class MemoryGameAnalyzer {
             lives: Int(currentLives),
             health: Int(currentHealth),
             powerUp: Int(currentPowerUp),
+            playerState: .unknown,
+            gameplayPhase: .unknown,
+            blinkConfidence: 0.0,
+            debugSummary: nil,
             pattern: pattern
         )
     }
@@ -284,6 +379,10 @@ final class MemoryGameAnalyzer {
             lives: 0,
             health: 0,
             powerUp: 0,
+            playerState: .unknown,
+            gameplayPhase: .unknown,
+            blinkConfidence: 0.0,
+            debugSummary: nil,
             pattern: pattern
         )
     }
@@ -292,9 +391,58 @@ final class MemoryGameAnalyzer {
     func reset() {
         previousLives.removeAll()
         previousHealth.removeAll()
+        previousLiveSample = nil
         cachedPatternMatch = nil
         cachedGameTitle = ""
         print("🔄 MemoryAnalyzer reset")
+    }
+
+    private func playerState(
+        powerUpState: UInt8,
+        gameplayState: UInt8,
+        invulnerabilityTimer: UInt8,
+        memoryMap: MarioLiveMemoryMap
+    ) -> MarioPlayerState {
+        if memoryMap.deathStateValues.contains(gameplayState) {
+            return .dead
+        }
+        if invulnerabilityTimer > 0 || memoryMap.invulnerabilityStateValues.contains(gameplayState) {
+            switch powerUpState {
+            case 0:
+                return .invulnerableBlink
+            case 1:
+                return .superState
+            case 2, 3:
+                return .poweredUp
+            default:
+                return .invulnerableBlink
+            }
+        }
+        switch powerUpState {
+        case 0:
+            return .small
+        case 1:
+            return .superState
+        case 2, 3:
+            return .poweredUp
+        default:
+            return .unknown
+        }
+    }
+
+    private func debugSummary(
+        lives: UInt8,
+        powerUpState: UInt8,
+        gameplayState: UInt8,
+        invulnerabilityTimer: UInt8
+    ) -> String {
+        String(
+            format: "mem L=%u P=%u S=%02X I=%u",
+            Int(lives),
+            Int(powerUpState),
+            Int(gameplayState),
+            Int(invulnerabilityTimer)
+        )
     }
 }
 
@@ -317,5 +465,9 @@ struct MemoryGameObservation {
     let lives: Int
     let health: Int
     let powerUp: Int
-    let pattern: MarioMemoryPattern
+    let playerState: MarioPlayerState
+    let gameplayPhase: MarioGameplayPhase
+    let blinkConfidence: Double
+    let debugSummary: String?
+    let pattern: MarioMemoryPattern?
 }

@@ -33,6 +33,7 @@ struct SettingsView: View {
     @AppStorage("settings.controller.stickSensitivity") private var controllerStickSensitivity = StickSensitivity.medium.rawValue
     @AppStorage("settings.controller.hapticFeedback") private var controllerHapticFeedback = true
     @AppStorage("settings.dev.gameplayEventOverlay") private var devGameplayEventOverlay = false
+    @AppStorage("settings.dev.gameplayEventLogging") private var devGameplayEventLogging = false
 
     private let appStoreURL = URL(string: "https://apps.apple.com")
 
@@ -164,13 +165,6 @@ struct SettingsView: View {
     private var accountSection: some View {
         Section(header: SettingsSectionHeader(L10n.string("settings.account.section", languageManager: languageManager))) {
             NavigationSettingsRow(
-                title: L10n.string("settings.controller.status", languageManager: languageManager),
-                subtitle: "Subscription and entitlement state"
-            ) {
-                EntitlementStatusView()
-            }
-
-            NavigationSettingsRow(
                 title: L10n.string("settings.upgrade.title", languageManager: languageManager),
                 subtitle: L10n.string("settings.upgrade.subtitle", languageManager: languageManager)
             ) {
@@ -243,6 +237,7 @@ struct SettingsView: View {
             ToggleSettingsRow(title: L10n.string("settings.dev.thermal_logging", languageManager: languageManager), isOn: hapticBinding($devThermalLogging))
             ToggleSettingsRow(title: "HP vibration / Death detection", subtitle: "Enable haptic feedback for Mario damage and death events", isOn: hapticBinding($devHPDeathDetection))
             ToggleSettingsRow(title: "Gameplay event overlay", subtitle: "Show Mario damage/death detector confidence during gameplay", isOn: hapticBinding($devGameplayEventOverlay))
+            ToggleSettingsRow(title: "Gameplay event logs", subtitle: "Write Mario detector events to the simulator console", isOn: hapticBinding($devGameplayEventLogging))
 
             NavigationSettingsRow(title: L10n.string("settings.dev.debug_controller_input", languageManager: languageManager)) {
                 ControllerInputDebugView()
@@ -289,6 +284,7 @@ struct SettingsView: View {
         devMemoryMonitor = false
         devThermalLogging = false
         devGameplayEventOverlay = false
+        devGameplayEventLogging = false
     }
 }
 

@@ -142,6 +142,9 @@ xemu_error_t xemu_gba_load_state(xemu_gba_handle_t handle, const xemu_save_state
 size_t xemu_gba_get_battery_save_size(xemu_gba_handle_t handle);
 xemu_error_t xemu_gba_save_battery(xemu_gba_handle_t handle, xemu_save_state_t* battery);
 xemu_error_t xemu_gba_load_battery(xemu_gba_handle_t handle, const xemu_save_state_t* battery);
+xemu_error_t xemu_gba_read_memory8(xemu_gba_handle_t handle, uint32_t address, uint8_t* value);
+xemu_error_t xemu_gba_read_memory16(xemu_gba_handle_t handle, uint32_t address, uint16_t* value);
+xemu_error_t xemu_gba_read_memory32(xemu_gba_handle_t handle, uint32_t address, uint32_t* value);
 
 /* ============================================================================
  * Nintendo DS API (skeleton)

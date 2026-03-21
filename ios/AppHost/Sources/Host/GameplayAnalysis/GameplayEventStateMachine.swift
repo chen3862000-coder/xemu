@@ -81,6 +81,7 @@ final class GameplayEventStateMachine {
             inDeathSequence: runtimeState.inDeathSequence,
             lastEvent: runtimeState.lastEvent,
             lastEventAt: runtimeState.lastEvent == .deathDetected ? runtimeState.lastDeathAt : runtimeState.lastDamageAt,
+            memoryDebugSummary: observation.memoryDebugSummary,
             sampledAt: timestamp
         )
         return (emittedEvents, snapshot)
@@ -148,7 +149,9 @@ final class GameplayEventStateMachine {
 
     private func deathConfidence(for observation: MarioObservation) -> Double {
         let lethalFromSmall = runtimeState.lastStablePlayerState == .small ? 0.12 : 0
-        let fadeContribution = observation.gameplayPhase == .transition ? observation.transitionFadeConfidence * 0.22 : 0
+        let fadeContribution = (observation.gameplayPhase == .transition || observation.gameplayPhase == .deathSequence)
+            ? observation.transitionFadeConfidence * 0.22
+            : 0
         let combined = observation.deathAnimationConfidence * 0.48 +
             fadeContribution +
             observation.lifeLossScreenConfidence * 0.22 +

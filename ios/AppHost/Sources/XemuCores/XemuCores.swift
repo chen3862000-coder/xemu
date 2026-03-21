@@ -700,6 +700,36 @@ public class GBACoreWrapper: CEmulatorCore {
             throw XemuCoresError.saveStateFailed("Failed to import GBA battery save")
         }
     }
+
+    public func readMemory8(address: UInt32) -> UInt8? {
+        nativeLock.lock()
+        defer { nativeLock.unlock() }
+
+        guard useNative, let handle = handle, isROMLoaded else { return nil }
+        var value: UInt8 = 0
+        let result = xemu_gba_read_memory8(handle, address, &value)
+        return result == XEMU_OK ? value : nil
+    }
+
+    public func readMemory16(address: UInt32) -> UInt16? {
+        nativeLock.lock()
+        defer { nativeLock.unlock() }
+
+        guard useNative, let handle = handle, isROMLoaded else { return nil }
+        var value: UInt16 = 0
+        let result = xemu_gba_read_memory16(handle, address, &value)
+        return result == XEMU_OK ? value : nil
+    }
+
+    public func readMemory32(address: UInt32) -> UInt32? {
+        nativeLock.lock()
+        defer { nativeLock.unlock() }
+
+        guard useNative, let handle = handle, isROMLoaded else { return nil }
+        var value: UInt32 = 0
+        let result = xemu_gba_read_memory32(handle, address, &value)
+        return result == XEMU_OK ? value : nil
+    }
     
     public func shutdown() {
         nativeLock.lock()

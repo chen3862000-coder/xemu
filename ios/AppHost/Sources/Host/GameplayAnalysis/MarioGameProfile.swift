@@ -16,21 +16,24 @@ struct MarioGameProfile: Sendable {
     let smallHeightRange: ClosedRange<CGFloat>
     let superHeightRange: ClosedRange<CGFloat>
     let poweredUpHeightRange: ClosedRange<CGFloat>
+    let liveMemory: MarioLiveMemoryMap?
 
     func matches(title: String, platform: Platform, romHash: String) -> Bool {
+        matchScore(title: title, platform: platform, romHash: romHash) != nil
+    }
+
+    func matchScore(title: String, platform: Platform, romHash: String) -> Int? {
+        guard profilePlatform == platform else { return nil }
         let normalizedTitle = title.normalizedMarioProfileKey
         let normalizedHash = romHash.normalizedMarioProfileKey
-        print("🔍 Profile matching - title: '\(title)' -> normalized: '\(normalizedTitle)', hash: '\(romHash)' -> normalized: '\(normalizedHash)'")
-        for matcher in titleMatchers {
+        let scores = titleMatchers.compactMap { matcher -> Int? in
             let candidate = matcher.normalizedMarioProfileKey
-            let titleMatch = normalizedTitle.contains(candidate)
-            let hashMatch = !normalizedHash.isEmpty && normalizedHash.contains(candidate)
-            print("🔍   matcher: '\(matcher)' -> '\(candidate)', titleMatch: \(titleMatch), hashMatch: \(hashMatch)")
-            if titleMatch || hashMatch {
-                return true
+            guard normalizedTitle.contains(candidate) || (!normalizedHash.isEmpty && normalizedHash.contains(candidate)) else {
+                return nil
             }
+            return candidate.count
         }
-        return false
+        return scores.max()
     }
 
     static func activeProfile(
@@ -38,7 +41,12 @@ struct MarioGameProfile: Sendable {
         platform: Platform,
         romHash: String
     ) -> MarioGameProfile? {
-        allProfiles.first { $0.matches(title: title, platform: platform, romHash: romHash) }
+        allProfiles
+            .compactMap { profile in
+                profile.matchScore(title: title, platform: platform, romHash: romHash).map { (profile, $0) }
+            }
+            .max { lhs, rhs in lhs.1 < rhs.1 }?
+            .0
     }
 
     static let superMarioLand = MarioGameProfile(
@@ -46,8 +54,7 @@ struct MarioGameProfile: Sendable {
         displayName: "Super Mario Land",
         titleMatchers: [
             "super mario land",
-            "sml",
-            "super mario"
+            "sml"
         ],
         nativeResolution: CGSize(width: 160, height: 144),
         gameplayRegion: CGRect(x: 0.0, y: 0.15, width: 1.0, height: 0.70),
@@ -59,7 +66,8 @@ struct MarioGameProfile: Sendable {
         blackoutThreshold: 0.08,
         smallHeightRange: 8...14,
         superHeightRange: 15...22,
-        poweredUpHeightRange: 20...32
+        poweredUpHeightRange: 20...32,
+        liveMemory: nil
     )
 
     static let superMarioLand2 = MarioGameProfile(
@@ -81,7 +89,8 @@ struct MarioGameProfile: Sendable {
         blackoutThreshold: 0.08,
         smallHeightRange: 8...14,
         superHeightRange: 15...22,
-        poweredUpHeightRange: 20...32
+        poweredUpHeightRange: 20...32,
+        liveMemory: nil
     )
 
     static let superMarioBrosDeluxe = MarioGameProfile(
@@ -115,7 +124,8 @@ struct MarioGameProfile: Sendable {
         blackoutThreshold: 0.085,
         smallHeightRange: 8...15,
         superHeightRange: 16...24,
-        poweredUpHeightRange: 22...36
+        poweredUpHeightRange: 22...36,
+        liveMemory: nil
     )
 
     static let superMarioAdvance = MarioGameProfile(
@@ -136,7 +146,8 @@ struct MarioGameProfile: Sendable {
         blackoutThreshold: 0.085,
         smallHeightRange: 9...16,
         superHeightRange: 17...26,
-        poweredUpHeightRange: 24...38
+        poweredUpHeightRange: 24...38,
+        liveMemory: nil
     )
 
     static let sma2SuperMarioWorld = MarioGameProfile(
@@ -160,7 +171,15 @@ struct MarioGameProfile: Sendable {
         blackoutThreshold: 0.09,
         smallHeightRange: 10...18,
         superHeightRange: 19...28,
-        poweredUpHeightRange: 26...40
+        poweredUpHeightRange: 26...40,
+        liveMemory: MarioLiveMemoryMap(
+            livesAddress: 0x030042BC,
+            powerUpAddress: 0x03004300,
+            gameplayStateAddress: 0x03003FA0,
+            invulnerabilityTimerAddress: 0x0300402D,
+            deathStateValues: [0x09],
+            invulnerabilityStateValues: [0x01, 0x0E]
+        )
     )
 
     static let sma3YoshisIsland = MarioGameProfile(
@@ -182,7 +201,8 @@ struct MarioGameProfile: Sendable {
         blackoutThreshold: 0.10,
         smallHeightRange: 10...18,
         superHeightRange: 19...28,
-        poweredUpHeightRange: 28...42
+        poweredUpHeightRange: 28...42,
+        liveMemory: nil
     )
 
     static let sma4SuperMarioBros3 = MarioGameProfile(
@@ -204,7 +224,8 @@ struct MarioGameProfile: Sendable {
         blackoutThreshold: 0.09,
         smallHeightRange: 10...17,
         superHeightRange: 18...27,
-        poweredUpHeightRange: 25...38
+        poweredUpHeightRange: 25...38,
+        liveMemory: nil
     )
 
     static let allProfiles: [MarioGameProfile] = [
@@ -216,6 +237,25 @@ struct MarioGameProfile: Sendable {
         sma3YoshisIsland,
         sma4SuperMarioBros3
     ]
+
+    private var profilePlatform: Platform {
+        if id.hasSuffix("_gbc") {
+            return .GBC
+        }
+        if id.hasSuffix("_gb") {
+            return .GB
+        }
+        return .GBA
+    }
+}
+
+struct MarioLiveMemoryMap: Sendable {
+    let livesAddress: UInt32
+    let powerUpAddress: UInt32
+    let gameplayStateAddress: UInt32
+    let invulnerabilityTimerAddress: UInt32
+    let deathStateValues: Set<UInt8>
+    let invulnerabilityStateValues: Set<UInt8>
 }
 
 private extension String {
