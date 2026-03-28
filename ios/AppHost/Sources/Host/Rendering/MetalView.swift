@@ -23,6 +23,14 @@ struct EmulationFramePacer {
         accumulator = 0
     }
 
+    mutating func setTargetFrameDuration(_ duration: TimeInterval) {
+        let clamped = max(1.0 / 360.0, duration)
+        guard abs(clamped - targetFrameDuration) > .ulpOfOne else { return }
+        targetFrameDuration = clamped
+        maxDelta = max(clamped, 0.1)
+        reset()
+    }
+
     mutating func stepsToRun(at timestamp: TimeInterval) -> Int {
         guard targetFrameDuration > 0 else { return 1 }
 
@@ -62,19 +70,27 @@ public struct MetalView: UIViewRepresentable {
     private let metalRenderer: MetalRenderer
     private let tick: (() -> Void)?
     private let renderScaleProvider: (() -> Double)?
+    private let targetFrameDurationProvider: (() -> Double)?
     
     public init(
         metalRenderer: MetalRenderer,
         tick: (() -> Void)? = nil,
-        renderScale: (() -> Double)? = nil
+        renderScale: (() -> Double)? = nil,
+        targetFrameDuration: (() -> Double)? = nil
     ) {
         self.metalRenderer = metalRenderer
         self.tick = tick
         self.renderScaleProvider = renderScale
+        self.targetFrameDurationProvider = targetFrameDuration
     }
     
     public func makeCoordinator() -> Coordinator {
-        Coordinator(metalRenderer: metalRenderer, tick: tick, renderScaleProvider: renderScaleProvider)
+        Coordinator(
+            metalRenderer: metalRenderer,
+            tick: tick,
+            renderScaleProvider: renderScaleProvider,
+            targetFrameDurationProvider: targetFrameDurationProvider
+        )
     }
     
     @MainActor
@@ -93,6 +109,7 @@ public struct MetalView: UIViewRepresentable {
     public func updateUIView(_ uiView: MTKView, context: Context) {
         context.coordinator.tick = tick
         context.coordinator.renderScaleProvider = renderScaleProvider
+        context.coordinator.targetFrameDurationProvider = targetFrameDurationProvider
     }
     
     public static func dismantleUIView(_ uiView: MTKView, coordinator: Coordinator) {
@@ -107,6 +124,7 @@ public struct MetalView: UIViewRepresentable {
         private let metalRenderer: MetalRenderer
         var tick: (() -> Void)?
         var renderScaleProvider: (() -> Double)?
+        var targetFrameDurationProvider: (() -> Double)?
         private var frameCount = 0
         private var lastDrawableSize: CGSize = .zero
         private var framePacer = EmulationFramePacer()
@@ -114,11 +132,13 @@ public struct MetalView: UIViewRepresentable {
         init(
             metalRenderer: MetalRenderer,
             tick: (() -> Void)?,
-            renderScaleProvider: (() -> Double)?
+            renderScaleProvider: (() -> Double)?,
+            targetFrameDurationProvider: (() -> Double)?
         ) {
             self.metalRenderer = metalRenderer
             self.tick = tick
             self.renderScaleProvider = renderScaleProvider
+            self.targetFrameDurationProvider = targetFrameDurationProvider
             super.init()
         }
         
@@ -135,6 +155,9 @@ public struct MetalView: UIViewRepresentable {
         
         private func _drawInternal(in view: MTKView) {
             frameCount += 1
+            if let targetFrameDurationProvider {
+                framePacer.setTargetFrameDuration(targetFrameDurationProvider())
+            }
             let stepCount = framePacer.stepsToRun(at: CACurrentMediaTime())
             if stepCount > 0 {
                 for _ in 0..<stepCount {
@@ -187,19 +210,27 @@ public struct MetalView: NSViewRepresentable {
     private let metalRenderer: MetalRenderer
     private let tick: (() -> Void)?
     private let renderScaleProvider: (() -> Double)?
+    private let targetFrameDurationProvider: (() -> Double)?
     
     public init(
         metalRenderer: MetalRenderer,
         tick: (() -> Void)? = nil,
-        renderScale: (() -> Double)? = nil
+        renderScale: (() -> Double)? = nil,
+        targetFrameDuration: (() -> Double)? = nil
     ) {
         self.metalRenderer = metalRenderer
         self.tick = tick
         self.renderScaleProvider = renderScale
+        self.targetFrameDurationProvider = targetFrameDuration
     }
     
     public func makeCoordinator() -> Coordinator {
-        Coordinator(metalRenderer: metalRenderer, tick: tick, renderScaleProvider: renderScaleProvider)
+        Coordinator(
+            metalRenderer: metalRenderer,
+            tick: tick,
+            renderScaleProvider: renderScaleProvider,
+            targetFrameDurationProvider: targetFrameDurationProvider
+        )
     }
     
     @MainActor
@@ -219,6 +250,7 @@ public struct MetalView: NSViewRepresentable {
     public func updateNSView(_ nsView: MTKView, context: Context) {
         context.coordinator.tick = tick
         context.coordinator.renderScaleProvider = renderScaleProvider
+        context.coordinator.targetFrameDurationProvider = targetFrameDurationProvider
     }
     
     public static func dismantleNSView(_ nsView: MTKView, coordinator: Coordinator) {
@@ -233,17 +265,20 @@ public struct MetalView: NSViewRepresentable {
         private let metalRenderer: MetalRenderer
         var tick: (() -> Void)?
         var renderScaleProvider: (() -> Double)?
+        var targetFrameDurationProvider: (() -> Double)?
         private var lastDrawableSize: CGSize = .zero
         private var framePacer = EmulationFramePacer()
         
         init(
             metalRenderer: MetalRenderer,
             tick: (() -> Void)?,
-            renderScaleProvider: (() -> Double)?
+            renderScaleProvider: (() -> Double)?,
+            targetFrameDurationProvider: (() -> Double)?
         ) {
             self.metalRenderer = metalRenderer
             self.tick = tick
             self.renderScaleProvider = renderScaleProvider
+            self.targetFrameDurationProvider = targetFrameDurationProvider
             super.init()
         }
         
@@ -259,6 +294,9 @@ public struct MetalView: NSViewRepresentable {
         }
         
         private func _drawInternal(in view: MTKView) {
+            if let targetFrameDurationProvider {
+                framePacer.setTargetFrameDuration(targetFrameDurationProvider())
+            }
             let stepCount = framePacer.stepsToRun(at: CACurrentMediaTime())
             if stepCount > 0 {
                 for _ in 0..<stepCount {

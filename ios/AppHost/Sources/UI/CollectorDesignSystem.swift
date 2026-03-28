@@ -147,6 +147,7 @@ private enum CollectorCardMetrics {
 struct CollectorGameCard<Artwork: View>: View {
     let variant: CollectorCardVariant
     let title: String
+    let supportingTitleLine: String?
     let metadataPrimary: String
     let metadataSecondary: String?
     let platformTag: String?
@@ -157,6 +158,7 @@ struct CollectorGameCard<Artwork: View>: View {
     init(
         variant: CollectorCardVariant,
         title: String,
+        supportingTitleLine: String? = nil,
         metadataPrimary: String,
         metadataSecondary: String? = nil,
         platformTag: String? = nil,
@@ -166,6 +168,7 @@ struct CollectorGameCard<Artwork: View>: View {
     ) {
         self.variant = variant
         self.title = title
+        self.supportingTitleLine = supportingTitleLine
         self.metadataPrimary = metadataPrimary
         self.metadataSecondary = metadataSecondary
         self.platformTag = platformTag
@@ -208,17 +211,27 @@ struct CollectorGameCard<Artwork: View>: View {
             }
 
             VStack(alignment: .leading, spacing: RMSpacing.sm) {
-                Text(title)
-                    .font(CollectorCardMetrics.titleFont(for: variant))
-                    .lineLimit(2)
-                    .truncationMode(.tail)
-                    .foregroundColor(AppColors.textPrimary)
-                    .frame(
-                        maxWidth: .infinity,
-                        minHeight: CollectorCardMetrics.titleBlockHeight(for: variant),
-                        maxHeight: CollectorCardMetrics.titleBlockHeight(for: variant),
-                        alignment: .topLeading
-                    )
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(title)
+                        .font(CollectorCardMetrics.titleFont(for: variant))
+                        .lineLimit(supportingTitleLine == nil ? 2 : 1)
+                        .truncationMode(.tail)
+                        .foregroundColor(AppColors.textPrimary)
+
+                    if let supportingTitleLine, !supportingTitleLine.isEmpty {
+                        Text(supportingTitleLine)
+                            .font(.system(size: variant == .compact ? 12 : 13, weight: .semibold, design: .rounded))
+                            .foregroundColor(AppColors.textPrimary)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.84)
+                    }
+                }
+                .frame(
+                    maxWidth: .infinity,
+                    minHeight: CollectorCardMetrics.titleBlockHeight(for: variant),
+                    maxHeight: CollectorCardMetrics.titleBlockHeight(for: variant),
+                    alignment: .topLeading
+                )
 
                 HStack(spacing: 5) {
                     Image(systemName: "clock")

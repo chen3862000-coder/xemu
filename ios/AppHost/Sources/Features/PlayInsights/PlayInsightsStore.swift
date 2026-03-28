@@ -124,6 +124,13 @@ final class PlayInsightsStore {
         }
     }
 
+    func continuePlayingSummary(for gameId: String) -> ContinuePlayingSmartSummary? {
+        queue.sync {
+            guard let record = existingRecord(for: gameId) else { return nil }
+            return ContinuePlayingSummaryBuilder.makeSummary(from: record, allRecords: snapshot.records)
+        }
+    }
+
     func globalSummary(for entries: [ROMLibraryEntry]) -> GlobalPlaySummary {
         queue.sync {
             let playedRecords = snapshot.records.filter { record in

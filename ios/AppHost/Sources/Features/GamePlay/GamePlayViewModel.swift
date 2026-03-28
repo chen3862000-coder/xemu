@@ -36,6 +36,7 @@ class GamePlayViewModel: ObservableObject {
     private var activeDisplayPlatform: Platform?
     private var lastAppliedQualityProfile: PerfQualityProfile?
     private var activeAudioSampleRate: Double = 48_000
+    private var fastForwardSpeed = 1
     private var pendingReleaseTasks: [EmulatorButton: Task<Void, Never>] = [:]
     private var touchButtonStates: [EmulatorButton: Bool] = [:]
     private var currentROMHash: String = ""
@@ -124,7 +125,12 @@ class GamePlayViewModel: ObservableObject {
     }
 
     var targetFrameTime: Double {
-        1.0 / 60.0
+        Self.targetFrameTime(forSpeed: fastForwardSpeed)
+    }
+
+    static func targetFrameTime(forSpeed speed: Int) -> Double {
+        let normalizedSpeed = max(1, speed)
+        return 1.0 / (60.0 * Double(normalizedSpeed))
     }
 
     static func effectiveDisplayPlatform(
@@ -354,6 +360,7 @@ class GamePlayViewModel: ObservableObject {
             activeCore = nil
             activeDisplayPlatform = nil
             lastAppliedQualityProfile = nil
+            fastForwardSpeed = 1
             activeAudioSampleRate = 44_100
             resetAudioResamplerState()
             currentPlatform = nil
@@ -1053,8 +1060,15 @@ class GamePlayViewModel: ObservableObject {
     }
 
     func setFastForward(_ speed: Int) {
-        // TODO: Implement fast forward by adjusting frame timing
-        statusMessage = "Fast forward: \(speed)x"
+        let normalizedSpeed = max(1, speed)
+        guard fastForwardSpeed != normalizedSpeed else {
+            statusMessage = normalizedSpeed > 1 ? "Fast forward: \(normalizedSpeed)x" : "Fast forward off"
+            return
+        }
+
+        fastForwardSpeed = normalizedSpeed
+        updateFastForwardAudioState()
+        statusMessage = normalizedSpeed > 1 ? "Fast forward: \(normalizedSpeed)x" : "Fast forward off"
     }
 
     func currentRenderScale() -> Double {
@@ -1288,6 +1302,17 @@ class GamePlayViewModel: ObservableObject {
             applyDisplayColorAdjustments(for: activeDisplayPlatform)
         }
     }
+
+    private func updateFastForwardAudioState() {
+        guard let audioEngine else { return }
+        if fastForwardSpeed > 1 {
+            audioEngine.pause()
+            audioEngine.quarantineAfterStateLoad(silenceMs: 0, fadeInMs: 0)
+        } else if isRunning && !isPaused {
+            audioEngine.quarantineAfterStateLoad(silenceMs: 60, fadeInMs: 90)
+            audioEngine.resume()
+        }
+    }
 }
 
 extension GamePlayViewModel: EmulatorRenderDelegate {
@@ -1334,6 +1359,7 @@ extension GamePlayViewModel: EmulatorRenderDelegate {
     
     func emulatorDidGenerateAudio(samples: Data?, sampleRate: Int) {
         autoreleasepool {
+            guard fastForwardSpeed == 1 else { return }
             guard let samples = samples, !samples.isEmpty else { return }
             let normalizedInputRate = resolvedInputSampleRate(sampleRate)
 

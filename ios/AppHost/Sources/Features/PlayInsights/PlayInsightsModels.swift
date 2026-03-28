@@ -165,6 +165,12 @@ struct CurrentRunSummary: Equatable, Sendable {
     let badge: String?
 }
 
+struct ContinuePlayingSmartSummary: Equatable, Sendable {
+    let primaryProgressLine: String
+    let supportingStateLine: String?
+    let badgeText: String?
+}
+
 struct PlayInsightsSessionRecord: Codable, Equatable, Sendable {
     var startedAt: Date
     var endedAt: Date

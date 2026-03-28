@@ -5,6 +5,7 @@ protocol GameTelemetryFormatter {
     func makeCurrentRunSummary(snapshot: GameSpecificTelemetrySnapshot?, stats: GameEventStatsSummary) -> CurrentRunSummary?
     func makePerformanceInsight(snapshot: GameSpecificTelemetrySnapshot?, stats: GameEventStatsSummary, comparison: PlayInsightsComparison) -> String?
     func makePlayStyle(snapshot: GameSpecificTelemetrySnapshot?, stats: GameEventStatsSummary, comparison: PlayInsightsComparison) -> PlayStyleSummary?
+    func makeContinuePlayingSummary(snapshot: GameSpecificTelemetrySnapshot?, stats: GameEventStatsSummary, comparison: PlayInsightsComparison) -> ContinuePlayingSmartSummary?
 }
 
 struct PlayInsightsComparison: Equatable, Sendable {
@@ -12,6 +13,22 @@ struct PlayInsightsComparison: Equatable, Sendable {
     var isHardTitle: Bool
     var hasRiskyPattern: Bool
     var isExplorationLed: Bool
+}
+
+extension GameTelemetryFormatter {
+    func makeContinuePlayingSummary(snapshot: GameSpecificTelemetrySnapshot?, stats: GameEventStatsSummary, comparison: PlayInsightsComparison) -> ContinuePlayingSmartSummary? {
+        let progress = makeProgressSummary(snapshot: snapshot, stats: stats)
+        let currentRun = makeCurrentRunSummary(snapshot: snapshot, stats: stats)
+        let insight = makePerformanceInsight(snapshot: snapshot, stats: stats, comparison: comparison)
+        let primary = currentRun?.primary ?? progress?.primary
+        guard let primary else { return nil }
+        let support = currentRun?.secondary ?? progress?.secondary ?? insight
+        return ContinuePlayingSmartSummary(
+            primaryProgressLine: primary,
+            supportingStateLine: support,
+            badgeText: currentRun?.badge
+        )
+    }
 }
 
 enum PlayInsightsFormatterFactory {
@@ -24,6 +41,21 @@ enum PlayInsightsFormatterFactory {
         case .castlevaniaCircleOfTheMoon: return CircleOfTheMoonTelemetryFormatter()
         case .castlevaniaHarmonyOfDissonance: return HarmonyOfDissonanceTelemetryFormatter()
         }
+    }
+}
+
+enum ContinuePlayingSummaryBuilder {
+    static func makeSummary(
+        from record: PlayInsightsStoredGameRecord,
+        allRecords: [PlayInsightsStoredGameRecord]
+    ) -> ContinuePlayingSmartSummary? {
+        let formatter = PlayInsightsFormatterFactory.formatter(for: record.supportedGame)
+        let comparison = PlayInsightsSummaryBuilder.makeComparison(record: record, allRecords: allRecords)
+        return formatter.makeContinuePlayingSummary(
+            snapshot: record.latestSnapshot,
+            stats: record.eventStats,
+            comparison: comparison
+        )
     }
 }
 
@@ -220,6 +252,15 @@ private struct SMA2TelemetryFormatter: GameTelemetryFormatter {
         }
         return nil
     }
+
+    func makeContinuePlayingSummary(snapshot: GameSpecificTelemetrySnapshot?, stats: GameEventStatsSummary, comparison: PlayInsightsComparison) -> ContinuePlayingSmartSummary? {
+        guard let currentRun = makeCurrentRunSummary(snapshot: snapshot, stats: stats) else { return nil }
+        return ContinuePlayingSmartSummary(
+            primaryProgressLine: currentRun.primary,
+            supportingStateLine: currentRun.secondary,
+            badgeText: currentRun.badge
+        )
+    }
 }
 
 private struct SMA4TelemetryFormatter: GameTelemetryFormatter {
@@ -258,6 +299,15 @@ private struct SMA4TelemetryFormatter: GameTelemetryFormatter {
             )
         }
         return nil
+    }
+
+    func makeContinuePlayingSummary(snapshot: GameSpecificTelemetrySnapshot?, stats: GameEventStatsSummary, comparison: PlayInsightsComparison) -> ContinuePlayingSmartSummary? {
+        guard let currentRun = makeCurrentRunSummary(snapshot: snapshot, stats: stats) else { return nil }
+        return ContinuePlayingSmartSummary(
+            primaryProgressLine: currentRun.primary,
+            supportingStateLine: PlayInsightsL10n.string("playinsights.continue_playing.route_active", "Current route active"),
+            badgeText: currentRun.badge
+        )
     }
 }
 
@@ -304,6 +354,15 @@ private struct MetroidFusionTelemetryFormatter: GameTelemetryFormatter {
             )
         }
         return nil
+    }
+
+    func makeContinuePlayingSummary(snapshot: GameSpecificTelemetrySnapshot?, stats: GameEventStatsSummary, comparison: PlayInsightsComparison) -> ContinuePlayingSmartSummary? {
+        guard let currentRun = makeCurrentRunSummary(snapshot: snapshot, stats: stats) else { return nil }
+        return ContinuePlayingSmartSummary(
+            primaryProgressLine: currentRun.primary,
+            supportingStateLine: PlayInsightsL10n.string("playinsights.current_run.exploration_active", "Exploration active"),
+            badgeText: currentRun.badge
+        )
     }
 }
 
@@ -353,6 +412,15 @@ private struct AriaOfSorrowTelemetryFormatter: GameTelemetryFormatter {
     private func visitedAreas(_ snapshot: GameSpecificTelemetrySnapshot) -> Int {
         Int(snapshot.payloadJson["visitedAreas", default: 0].nonzeroBitCount)
     }
+
+    func makeContinuePlayingSummary(snapshot: GameSpecificTelemetrySnapshot?, stats: GameEventStatsSummary, comparison: PlayInsightsComparison) -> ContinuePlayingSmartSummary? {
+        guard let snapshot else { return nil }
+        return ContinuePlayingSmartSummary(
+            primaryProgressLine: PlayInsightsL10n.format("playinsights.progress.visited_areas_format", "Visited %@ areas", "\(visitedAreas(snapshot))"),
+            supportingStateLine: PlayInsightsL10n.string("playinsights.current_run.exploration_active", "Exploration active"),
+            badgeText: PlayInsightsL10n.string("playinsights.style.explorer.title", "Explorer")
+        )
+    }
 }
 
 private struct CircleOfTheMoonTelemetryFormatter: GameTelemetryFormatter {
@@ -378,6 +446,14 @@ private struct CircleOfTheMoonTelemetryFormatter: GameTelemetryFormatter {
     func makePlayStyle(snapshot: GameSpecificTelemetrySnapshot?, stats: GameEventStatsSummary, comparison: PlayInsightsComparison) -> PlayStyleSummary? {
         nil
     }
+
+    func makeContinuePlayingSummary(snapshot: GameSpecificTelemetrySnapshot?, stats: GameEventStatsSummary, comparison: PlayInsightsComparison) -> ContinuePlayingSmartSummary? {
+        ContinuePlayingSmartSummary(
+            primaryProgressLine: PlayInsightsL10n.string("playinsights.progress.progress_tracked", "Progress tracked"),
+            supportingStateLine: PlayInsightsL10n.string("playinsights.progress.current_state_available", "Current state available"),
+            badgeText: PlayInsightsL10n.string("playinsights.badge.tracked", "Tracked")
+        )
+    }
 }
 
 private struct HarmonyOfDissonanceTelemetryFormatter: GameTelemetryFormatter {
@@ -402,6 +478,14 @@ private struct HarmonyOfDissonanceTelemetryFormatter: GameTelemetryFormatter {
 
     func makePlayStyle(snapshot: GameSpecificTelemetrySnapshot?, stats: GameEventStatsSummary, comparison: PlayInsightsComparison) -> PlayStyleSummary? {
         nil
+    }
+
+    func makeContinuePlayingSummary(snapshot: GameSpecificTelemetrySnapshot?, stats: GameEventStatsSummary, comparison: PlayInsightsComparison) -> ContinuePlayingSmartSummary? {
+        ContinuePlayingSmartSummary(
+            primaryProgressLine: PlayInsightsL10n.string("playinsights.continue_playing.castle_progress_tracked", "Castle progress tracked"),
+            supportingStateLine: PlayInsightsL10n.string("playinsights.continue_playing.current_route_available", "Current route available"),
+            badgeText: PlayInsightsL10n.string("playinsights.badge.tracked", "Tracked")
+        )
     }
 }
 

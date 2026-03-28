@@ -484,7 +484,8 @@ struct RecentlyPlayedView: View {
                 totalPlaySeconds: Int(entry.playtimeTotal),
                 playableGame: entry.toGame(),
                 gameId: entry.id,
-                launchIssue: ROMCompatibilityService.shared.compatibility(for: entry).issue
+                launchIssue: ROMCompatibilityService.shared.compatibility(for: entry).issue,
+                smartSummary: entry.checksum.flatMap { PlayInsightsStore.shared.continuePlayingSummary(for: $0) }
             )
         }
     }

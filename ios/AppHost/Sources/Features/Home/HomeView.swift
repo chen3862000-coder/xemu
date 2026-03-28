@@ -923,6 +923,7 @@ struct LandscapeGameRow: View {
 }
 
 struct RecentGameCard: View {
+    @EnvironmentObject private var languageManager: LanguageManager
     let game: RecentGame
     let variant: CollectorCardVariant
     let onTap: () -> Void
@@ -938,6 +939,7 @@ struct RecentGameCard: View {
             CollectorGameCard(
                 variant: variant,
                 title: GameCardTitleFormatter.format(game.title, maxWords: 7),
+                supportingTitleLine: game.smartSummary?.primaryProgressLine,
                 metadataPrimary: playedDateText,
                 metadataSecondary: game.totalPlaySeconds > 0 ? totalHoursText : nil,
                 platformTag: game.console,
@@ -1019,16 +1021,23 @@ struct RecentGameCard: View {
     }
 
     private var playedDateText: String {
-        guard let date = game.lastPlayed else { return "Never" }
-        let calendar = Calendar.current
-        if calendar.isDateInToday(date) { return "Today" }
-        if calendar.isDateInYesterday(date) { return "Yesterday" }
-        return date.formatted(.dateTime.month(.abbreviated).day())
+        guard let date = game.lastPlayed else {
+            return L10n.string("common.never_played", table: "Screens", languageManager: languageManager)
+        }
+        let formatter = RelativeDateTimeFormatter()
+        formatter.locale = languageManager.formattingLocale
+        formatter.unitsStyle = .short
+        return formatter.localizedString(for: date, relativeTo: Date())
     }
 
     private var totalHoursText: String {
         let hours = max(0, game.totalPlaySeconds / 3600)
-        return "\(hours)h"
+        return L10n.format(
+            "common.duration_hours_only",
+            Int64(hours),
+            table: "Screens",
+            languageManager: languageManager
+        )
     }
 
     private var sessionProgress: CGFloat {
@@ -1036,6 +1045,7 @@ struct RecentGameCard: View {
         let capped = min(1.0, CGFloat(game.totalPlaySeconds) / CGFloat(4 * 3600))
         return max(0.08, capped)
     }
+
 }
 
 struct EmulatorCard: View {
@@ -1503,7 +1513,8 @@ final class HomeViewModel: ObservableObject {
                 totalPlaySeconds: Int(entry.playtimeTotal),
                 playableGame: entry.toGame(),
                 gameId: entry.id,
-                launchIssue: ROMCompatibilityService.shared.compatibility(for: entry).issue
+                launchIssue: ROMCompatibilityService.shared.compatibility(for: entry).issue,
+                smartSummary: entry.checksum.flatMap { PlayInsightsStore.shared.continuePlayingSummary(for: $0) }
             )
         }
 
@@ -1529,7 +1540,8 @@ final class HomeViewModel: ObservableObject {
                 totalPlaySeconds: Int(entry.playtimeTotal),
                 playableGame: entry.toGame(),
                 gameId: entry.id,
-                launchIssue: ROMCompatibilityService.shared.compatibility(for: entry).issue
+                launchIssue: ROMCompatibilityService.shared.compatibility(for: entry).issue,
+                smartSummary: entry.checksum.flatMap { PlayInsightsStore.shared.continuePlayingSummary(for: $0) }
             )
         }
     }
@@ -1565,6 +1577,7 @@ struct RecentGame: Identifiable {
     let playableGame: Game?
     let gameId: UUID
     let launchIssue: ROMLaunchIssue?
+    let smartSummary: ContinuePlayingSmartSummary?
 }
 
 struct EmulatorInfo: Identifiable {

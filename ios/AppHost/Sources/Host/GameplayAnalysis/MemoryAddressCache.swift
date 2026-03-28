@@ -8,6 +8,7 @@ final class MemoryAddressCache {
     private let cache = NSCache<NSString, CachedMemoryAddressesWrapper>()
     private let fileManager = FileManager.default
     private let cacheDirectory: URL
+    private var cachedKeys: Set<String> = []
 
     private init() {
         // Set up cache directory
@@ -34,13 +35,18 @@ final class MemoryAddressCache {
         }
 
         // Try to load from disk
-        return loadFromDisk(gameKey: gameKey)
+        guard let addresses = loadFromDisk(gameKey: gameKey) else { return nil }
+        let wrapper = CachedMemoryAddressesWrapper(addresses: addresses)
+        cache.setObject(wrapper, forKey: gameKey as NSString)
+        cachedKeys.insert(gameKey)
+        return addresses
     }
 
     /// Set cached addresses for a specific game
     func setAddresses(_ addresses: CachedMemoryAddresses, for gameKey: String) {
         let wrapper = CachedMemoryAddressesWrapper(addresses: addresses)
         cache.setObject(wrapper, forKey: gameKey as NSString)
+        cachedKeys.insert(gameKey)
 
         // Also save to disk
         saveToDisk(addresses: addresses, gameKey: gameKey)
@@ -56,8 +62,17 @@ final class MemoryAddressCache {
                 try? fileManager.removeItem(at: fileURL)
             }
         }
+        cachedKeys.removeAll()
+        GameplayAnalysisLogger.session("memory-address-cache cleared")
+    }
 
-        print("🗑️ Memory address cache cleared")
+    func cachedGameCount() -> Int {
+        cachedKeys.count
+    }
+
+    func mostRecentUpdate() -> Date? {
+        let addresses = cachedKeys.compactMap(loadFromDisk(gameKey:))
+        return addresses.map(\.lastUpdate).max()
     }
 
     // MARK: - Private Methods
@@ -71,13 +86,15 @@ final class MemoryAddressCache {
         for case let fileURL as URL in enumerator {
             if let addresses = loadFromDisk(gameKey: fileURL.deletingPathExtension().lastPathComponent) {
                 let wrapper = CachedMemoryAddressesWrapper(addresses: addresses)
-                cache.setObject(wrapper, forKey: fileURL.deletingPathExtension().lastPathComponent as NSString)
+                let key = fileURL.deletingPathExtension().lastPathComponent
+                cache.setObject(wrapper, forKey: key as NSString)
+                cachedKeys.insert(key)
                 loadedCount += 1
             }
         }
 
         if loadedCount > 0 {
-            print("📂 Loaded \(loadedCount) cached address sets from disk")
+            GameplayAnalysisLogger.session("memory-address-cache loaded=\(loadedCount)")
         }
     }
 

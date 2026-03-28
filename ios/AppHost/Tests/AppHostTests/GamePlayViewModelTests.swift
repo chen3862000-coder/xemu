@@ -171,4 +171,16 @@ final class GamePlayViewModelTests: XCTestCase {
     func testShouldAutoResumeLaunchStateAllowsOtherPlatforms() {
         XCTAssertTrue(GamePlayViewModel.shouldAutoResumeLaunchState(for: .GBA))
     }
+
+    func testTargetFrameTimeUsesNormalSpeedByDefault() {
+        XCTAssertEqual(GamePlayViewModel.targetFrameTime(forSpeed: 1), 1.0 / 60.0, accuracy: 0.000_001)
+    }
+
+    func testTargetFrameTimeAcceleratesWhenFastForwardIsEnabled() {
+        XCTAssertEqual(GamePlayViewModel.targetFrameTime(forSpeed: 3), 1.0 / 180.0, accuracy: 0.000_001)
+    }
+
+    func testTargetFrameTimeClampsInvalidFastForwardValues() {
+        XCTAssertEqual(GamePlayViewModel.targetFrameTime(forSpeed: 0), 1.0 / 60.0, accuracy: 0.000_001)
+    }
 }

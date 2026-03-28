@@ -53,6 +53,15 @@ final class EmulatorSessionCoreTests: XCTestCase {
         XCTAssertEqual(pacer.stepsToRun(at: 0.25), 3)
         XCTAssertEqual(pacer.stepsToRun(at: 0.25 + (1.0 / 60.0)), 1)
     }
+
+    func testFramePacerSupportsFasterTargetFrameDurations() {
+        var pacer = EmulationFramePacer()
+        pacer.setTargetFrameDuration(1.0 / 120.0)
+
+        XCTAssertEqual(pacer.stepsToRun(at: 0), 1)
+        XCTAssertEqual(pacer.stepsToRun(at: 1.0 / 120.0), 1)
+        XCTAssertEqual(pacer.stepsToRun(at: 1.0 / 60.0), 1)
+    }
 }
 
 private final class MockEmulatorCore: EmulatorCore {

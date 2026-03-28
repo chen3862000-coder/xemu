@@ -5281,6 +5281,16 @@
         "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "路線進行中" } }
       }
     },
+    "playinsights.badge.tracked" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Tracked" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Seguimiento" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "追跡中" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "已跟踪" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "已追蹤" } }
+      }
+    },
     "playinsights.card.damage_taken" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -5429,6 +5439,36 @@
         "ja" : { "stringUnit" : { "state" : "translated", "value" : "探索中" } },
         "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "正在探索" } },
         "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "正在探索" } }
+      }
+    },
+    "playinsights.continue_playing.castle_progress_tracked" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Castle progress tracked" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Progreso del castillo disponible" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "城の進行状況を把握" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "城堡进度可用" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "城堡進度可用" } }
+      }
+    },
+    "playinsights.continue_playing.current_route_available" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Current route available" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Ruta actual disponible" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "現在のルートを確認可能" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "当前路线可用" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "目前路線可用" } }
+      }
+    },
+    "playinsights.continue_playing.route_active" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Current route active" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Ruta actual activa" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "現在のルート進行中" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "当前路线进行中" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "目前路線進行中" } }
       }
     },
     "playinsights.current_run.level_in_progress" : {

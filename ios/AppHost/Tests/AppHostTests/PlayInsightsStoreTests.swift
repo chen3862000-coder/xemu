@@ -175,4 +175,35 @@ final class PlayInsightsStoreTests: XCTestCase {
         XCTAssertEqual(refreshedSummary.progressSecondaryValue, "Stage 2A")
         XCTAssertEqual(refreshedSummary.currentRunPrimary, "Donut Plains • Stage 2A")
     }
+
+    func testContinuePlayingSummaryUsesGameSpecificSmartContext() throws {
+        let store = PlayInsightsStore(fileURL: tempURL)
+        let now = Date(timeIntervalSince1970: 1_700_300_000)
+
+        store.recordSession(
+            .init(
+                gameId: "aria",
+                gameTitle: "Castlevania: Aria of Sorrow",
+                system: "gba",
+                supportedGame: .castlevaniaAriaOfSorrow,
+                startedAt: now.addingTimeInterval(-600),
+                endedAt: now,
+                durationSeconds: 600,
+                deaths: 0,
+                damageEvents: 0,
+                snapshot: GameSpecificTelemetrySnapshot(
+                    gameId: "aria",
+                    timestamp: now,
+                    payloadType: PlayInsightsSupportedGame.castlevaniaAriaOfSorrow.profileID,
+                    payloadJson: ["visitedAreas": 0b0011_1111]
+                ),
+                latestLocationSummary: nil
+            )
+        )
+
+        let summary = try XCTUnwrap(store.continuePlayingSummary(for: "aria"))
+        XCTAssertEqual(summary.primaryProgressLine, "Visited 6 areas")
+        XCTAssertEqual(summary.supportingStateLine, "Exploration active")
+        XCTAssertEqual(summary.badgeText, "Explorer")
+    }
 }

@@ -770,39 +770,39 @@ final class MemoryGameAnalyzer {
 
     /// Analyze game state using save state data
     func analyzeSaveState(_ saveStateData: Data, for platform: Platform) -> MemoryGameObservation? {
-        print("🧠 Memory Analysis: Analyzing save state")
-        print("   Platform: \(platform)")
-        print("   Save State Size: \(saveStateData.count) bytes")
+        GameplayAnalysisLogger.session(
+            "memory-analysis save-state platform=\(platform.rawValue) bytes=\(saveStateData.count)"
+        )
 
         // Try to find matching pattern for this platform
         let platformPatterns = marioPatterns.filter { $0.platform == platform }
 
         for pattern in platformPatterns {
             if let observation = analyzePattern(pattern, in: saveStateData) {
-                print("   ✓ Matched pattern: \(pattern.gameTitle)")
+                GameplayAnalysisLogger.session("memory-analysis matched-pattern title=\(pattern.gameTitle)")
                 return observation
             }
         }
 
-        print("✗ No pattern match found for platform: \(platform)")
+        GameplayAnalysisLogger.session("memory-analysis no-pattern-match platform=\(platform.rawValue)")
         return nil
     }
 
     /// Analyze game using heuristics based on game title
     func analyzeGameUsingHeuristics(_ platform: Platform, gameTitle: String) -> MemoryGameObservation? {
-        print("🔍 Memory Analysis: Attempting heuristic detection")
-        print("   Platform: \(platform)")
-        print("   Game Title: '\(gameTitle)'")
+        GameplayAnalysisLogger.session(
+            "memory-analysis heuristic platform=\(platform.rawValue) title=\(gameTitle)"
+        )
 
         // Normalize title: remove all non-alphanumeric characters
         let normalizedTitle = gameTitle.lowercased()
             .replacingOccurrences(of: "[^a-z0-9]", with: "", options: .regularExpression)
 
-        print("   Normalized title: '\(normalizedTitle)'")
+        GameplayAnalysisLogger.session("memory-analysis normalized-title title=\(normalizedTitle)")
 
         // Early rejection: if title contains "wario", skip Mario analysis completely
         if normalizedTitle.contains("wario") {
-            print("   ✗ Game appears to be Wario, not Mario - skipping analysis")
+            GameplayAnalysisLogger.session("memory-analysis skipped-non-mario title=\(gameTitle)")
             cachedPatternMatch = nil
             cachedGameTitle = gameTitle
             return nil
@@ -820,7 +820,7 @@ final class MemoryGameAnalyzer {
                         let patternNumbers = pattern.gameTitle.lowercased().filter { $0.isNumber }
 
                         if !titleNumbers.isEmpty && titleNumbers == patternNumbers {
-                            print("   ✓ Direct match: \(pattern.gameTitle)")
+                            GameplayAnalysisLogger.session("memory-analysis direct-match title=\(pattern.gameTitle)")
                             return createMemoryObservation(from: pattern, platform: platform)
                         }
                     }
@@ -831,13 +831,13 @@ final class MemoryGameAnalyzer {
             if normalizedTitle.contains("deluxe") || normalizedTitle.contains("mariodeluxe") {
                 for pattern in marioPatterns where pattern.platform == platform {
                     if pattern.gameTitle.lowercased().contains("deluxe") {
-                        print("   ✓ Direct match: \(pattern.gameTitle)")
+                        GameplayAnalysisLogger.session("memory-analysis direct-match title=\(pattern.gameTitle)")
                         return createMemoryObservation(from: pattern, platform: platform)
                     }
                 }
             }
 
-            print("   ✗ No GB/GBC Mario match found")
+            GameplayAnalysisLogger.session("memory-analysis no-gb-match title=\(gameTitle)")
             return nil
         }
 
@@ -858,7 +858,7 @@ final class MemoryGameAnalyzer {
             for keyword in pattern.keywords {
                 if normalizedTitle.contains(keyword.lowercased()) {
                     matchScore += 20  // Fixed points per keyword
-                    print("   ✓ Keyword match: '\(keyword)' in title (+20 points)")
+                    GameplayAnalysisLogger.session("memory-analysis keyword-match keyword=\(keyword)")
                 }
             }
 
@@ -866,17 +866,19 @@ final class MemoryGameAnalyzer {
             if matchScore > bestScore && matchScore >= 30 {
                 bestScore = matchScore
                 bestMatch = pattern
-                print("   📊 Pattern '\(pattern.gameTitle)' score: \(matchScore)%")
+                GameplayAnalysisLogger.session("memory-analysis pattern-score title=\(pattern.gameTitle) score=\(matchScore)")
             }
         }
 
         // Return best match if found
         if let bestMatch = bestMatch {
-            print("   ✓ Best matched pattern: \(bestMatch.gameTitle) with \(bestScore)% confidence")
+            GameplayAnalysisLogger.session(
+                "memory-analysis best-match title=\(bestMatch.gameTitle) confidence=\(bestScore)"
+            )
             return createMemoryObservation(from: bestMatch, platform: platform)
         }
 
-        print("✗ No suitable pattern match found")
+        GameplayAnalysisLogger.session("memory-analysis no-suitable-pattern title=\(gameTitle)")
         return nil
     }
 
@@ -918,7 +920,7 @@ final class MemoryGameAnalyzer {
         let previousLivesValue = previousLives[livesIndex]
         if currentLives < previousLivesValue && previousLivesValue > 0 {
             events.append(.deathDetected)
-            print("   💀 Life loss detected: \(previousLivesValue) → \(currentLives)")
+            GameplayAnalysisLogger.event("life-loss previous=\(previousLivesValue) current=\(currentLives)")
         }
 
         // Detect health loss
@@ -926,13 +928,13 @@ final class MemoryGameAnalyzer {
         if currentHealth < previousHealthValue && previousHealthValue > 0 {
             let damageSeverity: GameplayEvent = (previousHealthValue - currentHealth) > 2 ? .damageHeavy : .damageLight
             events.append(damageSeverity)
-            print("   💔 Health loss detected: \(previousHealthValue) → \(currentHealth)")
+            GameplayAnalysisLogger.event("health-loss previous=\(previousHealthValue) current=\(currentHealth)")
         }
 
         // Detect power-up collection
         if currentPowerUp > 0 && previousHealth[healthIndex] == 0 {
             events.append(.powerUpCollected)
-            print("   ⭐ Power-up detected")
+            GameplayAnalysisLogger.event("power-up detected value=\(currentPowerUp)")
         }
 
         // Store current values for next comparison

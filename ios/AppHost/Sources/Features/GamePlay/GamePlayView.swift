@@ -21,6 +21,8 @@ struct GamePlayView: View {
         case medium
     }
 
+    private static let fastForwardSpeeds = [1, 2, 3, 6]
+
     let game: Game
     let onExit: () -> Void
     
@@ -553,8 +555,7 @@ struct GamePlayView: View {
                                     gbUtilityIcon(systemName: "square.and.arrow.up.fill", tint: .orange) { viewModel.quickLoad() }
                                     Spacer()
                                     gbUtilityIcon(systemName: "forward.fill", tint: .yellow) {
-                                        fastForwardSpeed = fastForwardSpeed == 2 ? 1 : 2
-                                        viewModel.setFastForward(fastForwardSpeed)
+                                        cycleFastForwardSpeed()
                                     }
                                     gbUtilityIcon(systemName: "speaker.wave.2.fill", tint: .cyan) {}
                                 }
@@ -690,8 +691,7 @@ struct GamePlayView: View {
                             gbUtilityIcon(systemName: "square.and.arrow.down", tint: .white) { viewModel.quickSave() }
                             gbUtilityIcon(systemName: "square.and.arrow.up", tint: .white) { viewModel.quickLoad() }
                             gbUtilityIcon(systemName: "forward.fill", tint: .white) {
-                                fastForwardSpeed = fastForwardSpeed == 2 ? 1 : 2
-                                viewModel.setFastForward(fastForwardSpeed)
+                                cycleFastForwardSpeed()
                             }
                             gbUtilityIcon(systemName: "speaker.wave.2", tint: .white) {}
                         }
@@ -831,8 +831,7 @@ struct GamePlayView: View {
                             gbUtilityIcon(systemName: "square.and.arrow.up", tint: .white) { viewModel.quickLoad() }
                             Spacer()
                             gbUtilityIcon(systemName: "forward.fill", tint: .white) {
-                                fastForwardSpeed = fastForwardSpeed == 2 ? 1 : 2
-                                viewModel.setFastForward(fastForwardSpeed)
+                                cycleFastForwardSpeed()
                             }
                             gbUtilityIcon(systemName: "speaker.wave.2", tint: .white) {}
                         }
@@ -1049,8 +1048,7 @@ struct GamePlayView: View {
                                 gbUtilityIcon(systemName: "square.and.arrow.up.fill", tint: .orange) { viewModel.quickLoad() }
                                 Spacer()
                                 gbUtilityIcon(systemName: "forward.fill", tint: .yellow) {
-                                    fastForwardSpeed = fastForwardSpeed == 2 ? 1 : 2
-                                    viewModel.setFastForward(fastForwardSpeed)
+                                    cycleFastForwardSpeed()
                                 }
                                 gbUtilityIcon(systemName: "speaker.wave.2.fill", tint: .cyan) {}
                             }
@@ -1177,8 +1175,7 @@ struct GamePlayView: View {
                         gbUtilityIcon(systemName: "square.and.arrow.down", tint: .white) { viewModel.quickSave() }
                         gbUtilityIcon(systemName: "square.and.arrow.up", tint: .white) { viewModel.quickLoad() }
                         gbUtilityIcon(systemName: "forward.fill", tint: .white) {
-                            fastForwardSpeed = fastForwardSpeed == 2 ? 1 : 2
-                            viewModel.setFastForward(fastForwardSpeed)
+                            cycleFastForwardSpeed()
                         }
                         gbUtilityIcon(systemName: "speaker.wave.2", tint: .white) {}
                     }
@@ -1318,8 +1315,7 @@ struct GamePlayView: View {
                                 gbUtilityIcon(systemName: "square.and.arrow.down", tint: .white) { viewModel.quickSave() }
                                 gbUtilityIcon(systemName: "square.and.arrow.up", tint: .white) { viewModel.quickLoad() }
                                 gbUtilityIcon(systemName: "forward.fill", tint: .white) {
-                                    fastForwardSpeed = fastForwardSpeed == 2 ? 1 : 2
-                                    viewModel.setFastForward(fastForwardSpeed)
+                                    cycleFastForwardSpeed()
                                 }
                                 gbUtilityIcon(systemName: "speaker.wave.2", tint: .white) {}
                             }
@@ -1531,8 +1527,7 @@ struct GamePlayView: View {
                             gbUtilityIcon(systemName: "square.and.arrow.down", tint: .white) { viewModel.quickSave() }
                             gbUtilityIcon(systemName: "square.and.arrow.up", tint: .white) { viewModel.quickLoad() }
                             gbUtilityIcon(systemName: "forward.fill", tint: .white) {
-                                fastForwardSpeed = fastForwardSpeed == 2 ? 1 : 2
-                                viewModel.setFastForward(fastForwardSpeed)
+                                cycleFastForwardSpeed()
                             }
                             gbUtilityIcon(systemName: "speaker.wave.2", tint: .white) {}
                         }
@@ -1708,8 +1703,7 @@ struct GamePlayView: View {
                                 gbUtilityIcon(systemName: "square.and.arrow.down", tint: .white) { viewModel.quickSave() }
                                 gbUtilityIcon(systemName: "square.and.arrow.up", tint: .white) { viewModel.quickLoad() }
                                 gbUtilityIcon(systemName: "forward.fill", tint: .white) {
-                                    fastForwardSpeed = fastForwardSpeed == 2 ? 1 : 2
-                                    viewModel.setFastForward(fastForwardSpeed)
+                                    cycleFastForwardSpeed()
                                 }
                                 gbUtilityIcon(systemName: "speaker.wave.2", tint: .white) {}
                             }
@@ -2123,8 +2117,7 @@ struct GamePlayView: View {
             ndsLandscapeUtilitySegment(icon: "square.and.arrow.up") { viewModel.quickLoad() }
             Rectangle().fill(Color.black.opacity(0.18)).frame(width: 1, height: height - 8)
             ndsLandscapeUtilitySegment(icon: "forward.fill") {
-                fastForwardSpeed = fastForwardSpeed == 2 ? 1 : 2
-                viewModel.setFastForward(fastForwardSpeed)
+                cycleFastForwardSpeed()
             }
             Rectangle().fill(Color.black.opacity(0.18)).frame(width: 1, height: height - 8)
             ndsLandscapeUtilitySegment(icon: "speaker.wave.2") {}
@@ -3016,8 +3009,7 @@ struct GamePlayView: View {
                 viewModel.quickLoad()
             }
             gbUtilityIcon(systemName: "forward.fill", tint: .yellow, customSize: iconSize) {
-                fastForwardSpeed = fastForwardSpeed == 2 ? 1 : 2
-                viewModel.setFastForward(fastForwardSpeed)
+                cycleFastForwardSpeed()
             }
             gbUtilityIcon(systemName: "speaker.wave.2.fill", tint: .cyan, customSize: iconSize) {}
         }
@@ -3470,7 +3462,8 @@ struct GamePlayView: View {
                 MetalView(
                     metalRenderer: renderer,
                     tick: advancesEmulation ? viewModel.tick : nil,
-                    renderScale: viewModel.currentRenderScale
+                    renderScale: viewModel.currentRenderScale,
+                    targetFrameDuration: { viewModel.targetFrameTime }
                 )
             } else {
                 retroMindPlaceholderView
@@ -3569,6 +3562,18 @@ struct GamePlayView: View {
             }
             .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
         }
+    }
+
+    private func cycleFastForwardSpeed() {
+        guard let currentIndex = Self.fastForwardSpeeds.firstIndex(of: fastForwardSpeed) else {
+            fastForwardSpeed = Self.fastForwardSpeeds[0]
+            viewModel.setFastForward(fastForwardSpeed)
+            return
+        }
+
+        let nextIndex = (currentIndex + 1) % Self.fastForwardSpeeds.count
+        fastForwardSpeed = Self.fastForwardSpeeds[nextIndex]
+        viewModel.setFastForward(fastForwardSpeed)
     }
 
     private var loadingPlatformName: String {
@@ -4318,7 +4323,7 @@ struct GamePlayView: View {
                             }
                         }
                         HStack(spacing: 8) {
-                            ForEach([1, 2, 3, 6], id: \.self) { speed in
+                            ForEach(Self.fastForwardSpeeds, id: \.self) { speed in
                                 Button {
                                     triggerHaptic(.light)
                                     fastForwardSpeed = speed

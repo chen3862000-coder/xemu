@@ -8,6 +8,9 @@ final class MemoryAddressDiscovery {
     private let cache = MemoryAddressCache.shared
     private let cheatParser = CheatCodeParser.shared
     private var discoveryInProgress: Set<String> = []
+    private var validationAttemptCount = 0
+    private var validationSuccessCount = 0
+    private var lastDiscoveryAt: Date?
 
     private init() {}
 
@@ -17,7 +20,7 @@ final class MemoryAddressDiscovery {
 
         // Check if discovery is already in progress for this game
         if discoveryInProgress.contains(gameKey) {
-            print("⏳ Address discovery already in progress for: \(gameTitle)")
+            GameplayAnalysisLogger.session("memory-address-discovery in-progress title=\(gameTitle)")
             return nil
         }
 
@@ -26,17 +29,17 @@ final class MemoryAddressDiscovery {
 
         // Check cache first
         if let cached = cache.getAddresses(for: gameKey) {
-            print("✅ Using cached addresses for: \(gameTitle)")
+            GameplayAnalysisLogger.session("memory-address-discovery cache-hit title=\(gameTitle)")
             return cached
         }
 
-        print("🔍 Starting address discovery for: \(gameTitle)")
+        GameplayAnalysisLogger.session("memory-address-discovery start title=\(gameTitle) platform=\(platform.rawValue)")
 
         // Get known cheats for the game
         let knownCheats = cheatParser.getKnownCheats(for: gameTitle)
 
         if knownCheats.isEmpty {
-            print("⚠️ No known cheats found for: \(gameTitle)")
+            GameplayAnalysisLogger.session("memory-address-discovery no-known-cheats title=\(gameTitle)")
             // Use heuristic discovery
             return await heuristicDiscovery(for: gameTitle, platform: platform)
         }
@@ -46,7 +49,9 @@ final class MemoryAddressDiscovery {
         var healthAddress: UInt32?
 
         for (description, cheat) in knownCheats {
-            print("🎮 Found cheat: \(description) at address: 0x\(String(format: "%04X", cheat.address))")
+            GameplayAnalysisLogger.session(
+                "memory-address-discovery cheat title=\(gameTitle) description=\(description) address=0x\(String(format: "%04X", cheat.address))"
+            )
 
             if description.lowercased().contains("lives") {
                 livesAddress = cheat.address
@@ -66,22 +71,27 @@ final class MemoryAddressDiscovery {
 
         // Cache the discovered addresses
         cache.setAddresses(addresses, for: gameKey)
-        print("✅ Discovered and cached addresses for: \(gameTitle)")
+        lastDiscoveryAt = addresses.lastUpdate
+        GameplayAnalysisLogger.session("memory-address-discovery cached title=\(gameTitle)")
 
         return addresses
     }
 
     /// Heuristic discovery using memory analysis patterns
     private func heuristicDiscovery(for gameTitle: String, platform: Platform) async -> CachedMemoryAddresses? {
-        print("🔍 Using heuristic discovery for: \(gameTitle)")
+        GameplayAnalysisLogger.session("memory-address-discovery heuristic title=\(gameTitle) platform=\(platform.rawValue)")
 
         // Use pattern matching based on game type
         if gameTitle.lowercased().contains("mario") {
-            return discoverMarioAddresses(for: gameTitle, platform: platform)
+            let addresses = discoverMarioAddresses(for: gameTitle, platform: platform)
+            lastDiscoveryAt = addresses?.lastUpdate
+            return addresses
         }
 
         // Generic discovery fallback
-        return discoverGenericAddresses(for: gameTitle, platform: platform)
+        let addresses = discoverGenericAddresses(for: gameTitle, platform: platform)
+        lastDiscoveryAt = addresses?.lastUpdate
+        return addresses
     }
 
     /// Discover addresses for Mario games using known memory patterns
@@ -144,7 +154,7 @@ final class MemoryAddressDiscovery {
 
     /// Generic address discovery for unknown games
     private func discoverGenericAddresses(for gameTitle: String, platform: Platform) -> CachedMemoryAddresses? {
-        print("⚠️ Using generic discovery patterns for: \(gameTitle)")
+        GameplayAnalysisLogger.session("memory-address-discovery generic title=\(gameTitle) platform=\(platform.rawValue)")
 
         switch platform {
         case .GB, .GBC:
@@ -189,21 +199,25 @@ final class MemoryAddressDiscovery {
             return false
         }
 
-        print("🔍 Validating addresses for: \(gameTitle)")
+        validationAttemptCount += 1
+        GameplayAnalysisLogger.session("memory-address-discovery validate title=\(gameTitle)")
 
         // Read lives value from save state
         if livesAddr < UInt32(saveStateData.count) {
             let livesValue = saveStateData[Int(livesAddr)]
-            print("   Lives value: \(livesValue) at address: 0x\(String(format: "%04X", livesAddr))")
+            GameplayAnalysisLogger.session(
+                "memory-address-discovery lives-value title=\(gameTitle) value=\(livesValue) address=0x\(String(format: "%04X", livesAddr))"
+            )
 
             // Lives should be in reasonable range (0-99 typically)
             if livesValue <= 99 {
-                print("✅ Address validation passed")
+                validationSuccessCount += 1
+                GameplayAnalysisLogger.session("memory-address-discovery validate-pass title=\(gameTitle)")
                 return true
             }
         }
 
-        print("❌ Address validation failed")
+        GameplayAnalysisLogger.session("memory-address-discovery validate-fail title=\(gameTitle)")
         return false
     }
 
@@ -214,16 +228,23 @@ final class MemoryAddressDiscovery {
 
     /// Clear all cached addresses (useful for testing or when game updates)
     func clearCache() {
-        // This would need to be implemented in MemoryAddressCache
-        print("🗑️ Address cache cleared")
+        cache.clearAll()
+        lastDiscoveryAt = nil
     }
 
     /// Get discovery statistics
     func getDiscoveryStats() -> AddressDiscoveryStats {
+        let validationSuccessRate: Double
+        if validationAttemptCount > 0 {
+            validationSuccessRate = Double(validationSuccessCount) / Double(validationAttemptCount)
+        } else {
+            validationSuccessRate = 0
+        }
+
         return AddressDiscoveryStats(
-            totalGamesCached: 0, // Would need to be implemented
-            lastDiscoveryTime: Date(),
-            validationSuccessRate: 0.0
+            totalGamesCached: cache.cachedGameCount(),
+            lastDiscoveryTime: cache.mostRecentUpdate() ?? lastDiscoveryAt ?? Date.distantPast,
+            validationSuccessRate: validationSuccessRate
         )
     }
 }
