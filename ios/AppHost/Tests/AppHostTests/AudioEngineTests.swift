@@ -115,6 +115,17 @@ struct AudioEngineTests {
         #expect(sanitized.wasSilenced)
     }
 
+    @Test("Low-latency sanitizer preserves square-wave handheld audio")
+    func testLowLatencySanitizerPreservesSquareWaveAudio() async throws {
+        let audioEngine = AudioEngine(sampleRate: 48_000, latencyProfile: .lowLatency)
+        let samples = makePCMChunk([12_000, -12_000, 12_000, -12_000], repeating: 96)
+
+        let sanitized = audioEngine.sanitizeCorruptedAudioChunk(samples)
+
+        #expect(sanitized.samples == samples)
+        #expect(!sanitized.wasSilenced)
+    }
+
     @Test("Low-latency tuning starts sooner and keeps a smaller queue")
     func testLowLatencyTuningUsesSmallerQueueThanBalanced() async throws {
         let lowLatency = AudioEngine.tuning(sampleRate: 44_100, latencyProfile: .lowLatency)
@@ -138,10 +149,10 @@ struct AudioEngineTests {
         #expect(streaming.maxQueuedFrames > streaming.softLatencyCapFrames)
     }
 
-    @Test("Bluetooth routes get a larger playback cushion than speaker routes")
+    @Test("Bluetooth A2DP routes get a larger playback cushion than speaker routes")
     func testBluetoothTuningIncreasesQueueDepth() async throws {
         let base = AudioEngine.tuning(sampleRate: 44_100, latencyProfile: .balanced)
-        let bluetooth = AudioEngine.tuned(base, for: .bluetooth, sampleRate: 44_100)
+        let bluetooth = AudioEngine.tuned(base, for: .bluetoothA2DP, sampleRate: 44_100)
 
         #expect(bluetooth.minStartQueuedFrames > base.minStartQueuedFrames)
         #expect(bluetooth.preferredScheduleFrames > base.preferredScheduleFrames)
@@ -150,11 +161,32 @@ struct AudioEngineTests {
         #expect(bluetooth.preferredIOBufferDuration >= 0.04)
     }
 
+    @Test("AirPlay and external routes get explicit high-latency tuning")
+    func testExtendedRouteTuningHierarchy() async throws {
+        let base = AudioEngine.tuning(sampleRate: 48_000, latencyProfile: .balanced)
+        let bluetooth = AudioEngine.tuned(base, for: .bluetoothA2DP, sampleRate: 48_000)
+        let airPlay = AudioEngine.tuned(base, for: .airPlay, sampleRate: 48_000)
+        let external = AudioEngine.tuned(base, for: .externalHighLatency, sampleRate: 48_000)
+        let bluetoothVoice = AudioEngine.tuned(base, for: .bluetoothVoice, sampleRate: 48_000)
+
+        #expect(external.minStartQueuedFrames > base.minStartQueuedFrames)
+        #expect(external.preferredScheduleFrames > base.preferredScheduleFrames)
+        #expect(bluetoothVoice.minStartQueuedFrames >= bluetooth.minStartQueuedFrames)
+        #expect(airPlay.minStartQueuedFrames >= bluetooth.minStartQueuedFrames)
+        #expect(airPlay.maxQueuedFrames >= bluetooth.maxQueuedFrames)
+        #expect(airPlay.preferredIOBufferDuration >= bluetooth.preferredIOBufferDuration)
+    }
+
     #if os(iOS)
-    @Test("Route detection recognizes bluetooth outputs")
-    func testRouteKindDetectsBluetoothOutputs() async throws {
+    @Test("Route detection recognizes audio output classes")
+    func testRouteKindDetectsOutputClasses() async throws {
         #expect(AudioEngine.routeKind(for: [.builtInSpeaker]) == .speakerOrWired)
-        #expect(AudioEngine.routeKind(for: [.bluetoothA2DP]) == .bluetooth)
+        #expect(AudioEngine.routeKind(for: [.bluetoothA2DP]) == .bluetoothA2DP)
+        #expect(AudioEngine.routeKind(for: [.bluetoothHFP]) == .bluetoothVoice)
+        #expect(AudioEngine.routeKind(for: [.bluetoothLE]) == .bluetoothVoice)
+        #expect(AudioEngine.routeKind(for: [.airPlay]) == .airPlay)
+        #expect(AudioEngine.routeKind(for: [.usbAudio]) == .externalHighLatency)
+        #expect(AudioEngine.routeKind(for: [.carAudio]) == .externalHighLatency)
     }
 
     @Test("Category-only session churn does not trigger a route rebuild")

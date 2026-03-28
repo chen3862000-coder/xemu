@@ -158,7 +158,7 @@ struct PlayerStatsView: View {
         }
         .padding(.horizontal, 14)
         .padding(.vertical, hero ? 14 : 12)
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .frame(maxWidth: .infinity, minHeight: hero ? 128 : 104, alignment: .topLeading)
         .background(
             RoundedRectangle(cornerRadius: 16, style: .continuous)
                 .fill(AppColors.surface.opacity(0.95))

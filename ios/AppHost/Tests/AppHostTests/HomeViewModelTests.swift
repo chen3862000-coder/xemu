@@ -71,11 +71,12 @@ final class HomeViewModelTests: XCTestCase {
         )
         try context.save()
 
-        let viewModel = HomeViewModel()
+        let languageManager = makeLanguageManager(language: .zhHans)
+        let viewModel = HomeViewModel(languageManager: languageManager)
         viewModel.loadData(in: context)
 
         XCTAssertEqual(viewModel.totalGames, 6)
-        XCTAssertEqual(viewModel.totalHours, "4h")
+        XCTAssertEqual(viewModel.totalHours, "4小时")
         XCTAssertEqual(viewModel.recentGames.count, 5)
         XCTAssertEqual(viewModel.recentGames.first?.title, "Tetris")
         XCTAssertEqual(viewModel.recentlyAddedGames.first?.title, "F-Zero")
@@ -109,5 +110,16 @@ final class HomeViewModelTests: XCTestCase {
         entry.lastPlayedAt = lastPlayedAt
         entry.dateAdded = dateAdded
         return id
+    }
+
+    private func makeLanguageManager(language: SupportedLanguage) -> LanguageManager {
+        let defaults = UserDefaults(suiteName: "HomeViewModelTests-\(UUID().uuidString)")!
+        defaults.set(language.rawValue, forKey: "app.language")
+        return LanguageManager(
+            userDefaults: defaults,
+            preferredLanguagesProvider: { [language] in
+                [language.localeIdentifier ?? "en"]
+            }
+        )
     }
 }

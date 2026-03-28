@@ -194,7 +194,11 @@ class GamePlayViewModel: ObservableObject {
         isNDSCore: Bool
     ) -> AudioEngine.LatencyProfile {
         if requestedPlatform == .GB || requestedPlatform == .GBC {
+            #if os(iOS)
+            return .balanced
+            #else
             return .lowLatency
+            #endif
         }
         if requestedPlatform == .NDS || isNDSCore {
             return .streaming
@@ -309,21 +313,20 @@ class GamePlayViewModel: ObservableObject {
             audioEngine?.configureAudioSession()
             #if os(iOS)
             let session = AVAudioSession.sharedInstance()
-            let bluetoothPorts: Set<AVAudioSession.Port> = [.bluetoothA2DP, .bluetoothHFP, .bluetoothLE]
-            let isBluetoothRouteActive = session.currentRoute.outputs.contains { bluetoothPorts.contains($0.portType) }
-            audioEngine?.applyRouteOverride(isBluetooth: isBluetoothRouteActive)
+            let activeRouteKind = AudioEngine.routeKind(for: session.currentRoute.outputs)
+            audioEngine?.applyRouteOverride(routeKind: activeRouteKind)
 
             let activatedHardwareSampleRate = session.sampleRate
             if activatedHardwareSampleRate > 0, abs(activatedHardwareSampleRate - activeAudioSampleRate) >= 1 {
                 rebuildAudioEngineForHardwareChange(sampleRate: activatedHardwareSampleRate)
             }
             NSLog(
-                "[AudioLaunch] platform=%@ requestedRate=%d activatedRate=%d ioBufferMs=%d bluetooth=%@ route=%@",
+                "[AudioLaunch] platform=%@ requestedRate=%d activatedRate=%d ioBufferMs=%d routeKind=%@ route=%@",
                 platform.rawValue,
                 Int(audioEngineRate.rounded()),
                 Int(session.sampleRate.rounded()),
                 Int((session.ioBufferDuration * 1000).rounded()),
-                isBluetoothRouteActive ? "1" : "0",
+                String(describing: activeRouteKind),
                 session.currentRoute.outputs.map { "\($0.portType.rawValue):\($0.portName)" }.joined(separator: ",")
             )
             #endif

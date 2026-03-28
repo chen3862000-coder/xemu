@@ -10,7 +10,10 @@ public final class AudioEngine {
 
     enum RouteKind: Equatable {
         case speakerOrWired
-        case bluetooth
+        case bluetoothA2DP
+        case bluetoothVoice
+        case airPlay
+        case externalHighLatency
     }
 
     struct Tuning: Equatable {
@@ -220,21 +223,77 @@ public final class AudioEngine {
     }
 
     static func tuned(_ tuning: Tuning, for routeKind: RouteKind, sampleRate: Double) -> Tuning {
-        guard routeKind == .bluetooth else { return tuning }
-        let minimumScheduleFrames = UInt32(max(2_048, Int(sampleRate * 0.042)))
-        let minimumPartialFrames = UInt32(max(1_024, Int(sampleRate * 0.021)))
-        let minimumStartFrames = UInt32(max(8_192, Int(sampleRate * 0.18)))
-        let minimumSoftCapFrames = UInt32(max(16_384, Int(sampleRate * 0.35)))
-        let minimumHardResetFrames = UInt32(max(24_576, Int(sampleRate * 0.7)))
-        let minimumMaxQueuedFrames = UInt32(max(32_768, Int(sampleRate * 1.1)))
+        let multipliers: (
+            maxQueuedFrames: UInt32,
+            minStartQueuedFrames: UInt32,
+            hardResetQueuedFrames: UInt32,
+            softLatencyCapFrames: UInt32,
+            preferredScheduleFrames: UInt32,
+            minPartialScheduleFrames: UInt32,
+            preferredIOBufferDuration: TimeInterval
+        )
+        let minimums: (
+            scheduleFrames: UInt32,
+            partialFrames: UInt32,
+            startFrames: UInt32,
+            softCapFrames: UInt32,
+            hardResetFrames: UInt32,
+            maxQueuedFrames: UInt32
+        )
+
+        switch routeKind {
+        case .speakerOrWired:
+            return tuning
+        case .bluetoothA2DP:
+            multipliers = (3, 4, 3, 4, 3, 3, 0.04)
+            minimums = (
+                UInt32(max(2_048, Int(sampleRate * 0.042))),
+                UInt32(max(1_024, Int(sampleRate * 0.021))),
+                UInt32(max(8_192, Int(sampleRate * 0.18))),
+                UInt32(max(16_384, Int(sampleRate * 0.35))),
+                UInt32(max(24_576, Int(sampleRate * 0.7))),
+                UInt32(max(32_768, Int(sampleRate * 1.1)))
+            )
+        case .bluetoothVoice:
+            multipliers = (4, 5, 4, 5, 4, 4, 0.05)
+            minimums = (
+                UInt32(max(2_560, Int(sampleRate * 0.055))),
+                UInt32(max(1_280, Int(sampleRate * 0.028))),
+                UInt32(max(10_240, Int(sampleRate * 0.22))),
+                UInt32(max(18_432, Int(sampleRate * 0.4))),
+                UInt32(max(28_672, Int(sampleRate * 0.8))),
+                UInt32(max(36_864, Int(sampleRate * 1.25)))
+            )
+        case .airPlay:
+            multipliers = (5, 6, 5, 6, 4, 4, 0.06)
+            minimums = (
+                UInt32(max(3_072, Int(sampleRate * 0.064))),
+                UInt32(max(1_536, Int(sampleRate * 0.032))),
+                UInt32(max(12_288, Int(sampleRate * 0.26))),
+                UInt32(max(24_576, Int(sampleRate * 0.52))),
+                UInt32(max(32_768, Int(sampleRate * 0.95))),
+                UInt32(max(49_152, Int(sampleRate * 1.6)))
+            )
+        case .externalHighLatency:
+            multipliers = (2, 3, 2, 3, 2, 2, 0.03)
+            minimums = (
+                UInt32(max(1_536, Int(sampleRate * 0.032))),
+                UInt32(max(768, Int(sampleRate * 0.016))),
+                UInt32(max(4_096, Int(sampleRate * 0.1))),
+                UInt32(max(8_192, Int(sampleRate * 0.2))),
+                UInt32(max(12_288, Int(sampleRate * 0.45))),
+                UInt32(max(16_384, Int(sampleRate * 0.7)))
+            )
+        }
+
         return Tuning(
-            maxQueuedFrames: max(tuning.maxQueuedFrames * 3, minimumMaxQueuedFrames),
-            minStartQueuedFrames: max(tuning.minStartQueuedFrames * 4, minimumStartFrames),
-            hardResetQueuedFrames: max(tuning.hardResetQueuedFrames * 3, minimumHardResetFrames),
-            softLatencyCapFrames: max(tuning.softLatencyCapFrames * 4, minimumSoftCapFrames),
-            preferredScheduleFrames: max(tuning.preferredScheduleFrames * 3, minimumScheduleFrames),
-            minPartialScheduleFrames: max(tuning.minPartialScheduleFrames * 3, minimumPartialFrames),
-            preferredIOBufferDuration: max(tuning.preferredIOBufferDuration, 0.04)
+            maxQueuedFrames: max(tuning.maxQueuedFrames * multipliers.maxQueuedFrames, minimums.maxQueuedFrames),
+            minStartQueuedFrames: max(tuning.minStartQueuedFrames * multipliers.minStartQueuedFrames, minimums.startFrames),
+            hardResetQueuedFrames: max(tuning.hardResetQueuedFrames * multipliers.hardResetQueuedFrames, minimums.hardResetFrames),
+            softLatencyCapFrames: max(tuning.softLatencyCapFrames * multipliers.softLatencyCapFrames, minimums.softCapFrames),
+            preferredScheduleFrames: max(tuning.preferredScheduleFrames * multipliers.preferredScheduleFrames, minimums.scheduleFrames),
+            minPartialScheduleFrames: max(tuning.minPartialScheduleFrames * multipliers.minPartialScheduleFrames, minimums.partialFrames),
+            preferredIOBufferDuration: max(tuning.preferredIOBufferDuration, multipliers.preferredIOBufferDuration)
         )
     }
 
@@ -249,7 +308,8 @@ public final class AudioEngine {
         minPartialScheduleFrames = effective.minPartialScheduleFrames
         preferredIOBufferDuration = effective.preferredIOBufferDuration
 
-        if latencyProfile == .streaming || routeKind == .bluetooth {
+        let bridgeEnabledKinds: Set<RouteKind> = [.bluetoothA2DP, .bluetoothVoice, .airPlay, .externalHighLatency]
+        if latencyProfile == .streaming || bridgeEnabledKinds.contains(routeKind) {
             recoveryStartQueuedFrames = max(
                 effective.preferredScheduleFrames * 3,
                 effective.minStartQueuedFrames
@@ -258,7 +318,7 @@ public final class AudioEngine {
                 effective.minPartialScheduleFrames,
                 effective.preferredScheduleFrames
             )
-            maxConsecutiveBridgeBuffers = routeKind == .bluetooth ? 6 : 4
+            maxConsecutiveBridgeBuffers = routeKind == .speakerOrWired ? 4 : 6
         } else {
             recoveryStartQueuedFrames = max(
                 effective.preferredScheduleFrames * 2,
@@ -273,8 +333,26 @@ public final class AudioEngine {
 
     #if os(iOS)
     static func routeKind(for portTypes: [AVAudioSession.Port]) -> RouteKind {
-        let bluetoothPorts: Set<AVAudioSession.Port> = [.bluetoothA2DP, .bluetoothHFP, .bluetoothLE]
-        return portTypes.contains(where: { bluetoothPorts.contains($0) }) ? .bluetooth : .speakerOrWired
+        if portTypes.contains(.airPlay) {
+            return .airPlay
+        }
+        if portTypes.contains(.bluetoothHFP) || portTypes.contains(.bluetoothLE) {
+            return .bluetoothVoice
+        }
+        if portTypes.contains(.bluetoothA2DP) {
+            return .bluetoothA2DP
+        }
+        let externalHighLatencyRawValues: Set<String> = [
+            AVAudioSession.Port.carAudio.rawValue,
+            AVAudioSession.Port.usbAudio.rawValue,
+            AVAudioSession.Port.lineOut.rawValue,
+            "HDMI",
+            "DisplayPort"
+        ]
+        if portTypes.contains(where: { externalHighLatencyRawValues.contains($0.rawValue) }) {
+            return .externalHighLatency
+        }
+        return .speakerOrWired
     }
 
     static func routeKind(for outputs: [AVAudioSessionPortDescription]) -> RouteKind {
@@ -354,10 +432,19 @@ public final class AudioEngine {
             }
         }
 
-        let isLikelyCorrupted =
-            maxSaturatedRun >= 12 ||
-            saturatedSamples * 5 >= checkCount ||
-            abruptTransitions * 3 >= checkCount
+        let isLikelyCorrupted: Bool
+        if latencyProfile == .lowLatency {
+            // Square-wave heavy handheld cores can have many abrupt transitions
+            // without the chunk actually being corrupted.
+            isLikelyCorrupted =
+                maxSaturatedRun >= 12 ||
+                saturatedSamples * 5 >= checkCount
+        } else {
+            isLikelyCorrupted =
+                maxSaturatedRun >= 12 ||
+                saturatedSamples * 5 >= checkCount ||
+                abruptTransitions * 3 >= checkCount
+        }
 
         guard isLikelyCorrupted else { return (samples, false, "ok") }
         let reason = "sat=\(saturatedSamples)/\(checkCount) abrupt=\(abruptTransitions) run=\(maxSaturatedRun)"
@@ -591,13 +678,12 @@ public final class AudioEngine {
     }
 
     #if os(iOS)
-    public func applyRouteOverride(isBluetooth: Bool) {
+    func applyRouteOverride(routeKind: RouteKind) {
         queue.sync {
-            let overrideRouteKind: RouteKind = isBluetooth ? .bluetooth : .speakerOrWired
             let baseTuning = Self.tuning(sampleRate: sampleRate, latencyProfile: latencyProfile)
-            applyTuning(baseTuning, routeKind: overrideRouteKind)
+            applyTuning(baseTuning, routeKind: routeKind)
             rebuildEngineGraph()
-            debugLog("startup_route_override bluetooth=\(isBluetooth) preparedFrames=\(preferredScheduleFrames * 4)")
+            debugLog("startup_route_override routeKind=\(routeKind) preparedFrames=\(preferredScheduleFrames * 4)")
         }
     }
     #endif

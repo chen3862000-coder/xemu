@@ -1462,9 +1462,14 @@ final class HomeViewModel: ObservableObject {
     @Published var recentlyAddedGames: [RecentGame] = []
     @Published var emulators: [EmulatorInfo] = []
     private var entriesByID: [UUID: ROMLibraryEntry] = [:]
+    private let languageManager: LanguageManager
     
     private var fetchedResultsController: NSFetchedResultsController<ROMLibraryEntry>?
     private weak var viewContext: NSManagedObjectContext?
+
+    init(languageManager: LanguageManager = .shared) {
+        self.languageManager = languageManager
+    }
     
     func loadData(in context: NSManagedObjectContext) {
         viewContext = context
@@ -1494,9 +1499,11 @@ final class HomeViewModel: ObservableObject {
         entriesByID = Dictionary(uniqueKeysWithValues: entries.map { ($0.id, $0) })
         totalGames = entries.count
         
-        let totalSeconds = entries.reduce(0) { $0 + $1.playtimeTotal }
-        let hours = totalSeconds / 3600
-        totalHours = hours > 0 ? "\(hours)h" : "0h"
+        let totalSeconds = Int(entries.reduce(0) { $0 + $1.playtimeTotal })
+        totalHours = LocaleFormatting.shortDuration(
+            seconds: totalSeconds,
+            languageManager: languageManager
+        )
         
         let recentEntries = entries.filter { $0.lastPlayedAt != nil }.prefix(5)
         recentGames = recentEntries.map { entry in
