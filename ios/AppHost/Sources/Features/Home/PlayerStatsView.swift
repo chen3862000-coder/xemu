@@ -623,8 +623,8 @@ final class PlayerStatsViewModel: ObservableObject {
 
             return PlayerAchievement(
                 id: definition.id,
-                title: definition.title,
-                detail: definition.detail,
+                title: definition.localizedTitle(languageManager: languageManager),
+                detail: definition.localizedDetail(languageManager: languageManager),
                 icon: definition.icon,
                 color: colorsByID[definition.id] ?? AppColors.primary,
                 progress: progress,
