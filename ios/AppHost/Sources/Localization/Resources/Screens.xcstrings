@@ -5250,6 +5250,876 @@
         "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "请检查 ROM 导入元数据" } },
         "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "請檢查 ROM 匯入中繼資料" } }
       }
+    },
+    "playinsights.badge.exploration" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Exploration" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Exploración" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "探索" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "探索" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "探索" } }
+      }
+    },
+    "playinsights.badge.platforming" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Platforming" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Plataformas" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "アクション" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "平台动作" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "平台動作" } }
+      }
+    },
+    "playinsights.badge.route_active" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Route active" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Ruta activa" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "進行中ルート" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "路线进行中" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "路線進行中" } }
+      }
+    },
+    "playinsights.card.damage_taken" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Damage Taken" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Daño recibido" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "被ダメージ" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "受到伤害" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "受到傷害" } }
+      }
+    },
+    "playinsights.card.deaths" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Deaths" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Muertes" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "ミス回数" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "死亡次数" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "死亡次數" } }
+      }
+    },
+    "playinsights.card.performance_insight" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Performance Insight" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Insight de rendimiento" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "プレイ分析" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "表现洞察" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "表現洞察" } }
+      }
+    },
+    "playinsights.card.play_style" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Play Style" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Estilo de juego" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "プレイスタイル" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "游玩风格" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "遊玩風格" } }
+      }
+    },
+    "playinsights.card.progress" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Progress" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Progreso" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "進行状況" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "进度" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "進度" } }
+      }
+    },
+    "playinsights.chip.controlled" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Controlled" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Controlado" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "安定" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "稳定控制" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "穩定控制" } }
+      }
+    },
+    "playinsights.chip.high_pressure" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "High Pressure" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Alta presión" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "高圧" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "高压力" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "高壓力" } }
+      }
+    },
+    "playinsights.chip.high_risk" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "High Risk" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Alto riesgo" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "高リスク" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "高风险" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "高風險" } }
+      }
+    },
+    "playinsights.chip.improving" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Improving" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Mejorando" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "改善中" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "正在进步" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "正在進步" } }
+      }
+    },
+    "playinsights.chip.low_pressure" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Low Pressure" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Baja presión" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "低圧" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "低压力" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "低壓力" } }
+      }
+    },
+    "playinsights.chip.stable" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Stable" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Estable" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "安定" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "稳定" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "穩定" } }
+      }
+    },
+    "playinsights.chip.struggling" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Struggling" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Complicado" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "苦戦中" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "陷入苦战" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "陷入苦戰" } }
+      }
+    },
+    "playinsights.current_run.castle_progress_in_motion" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Castle progress in motion" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Progreso del castillo en marcha" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "城の探索が進行中" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "城堡进度进行中" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "城堡進度進行中" } }
+      }
+    },
+    "playinsights.current_run.current_state_tracked" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Current state tracked" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Estado actual disponible" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "現在の状態を把握" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "当前状态可用" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "目前狀態可用" } }
+      }
+    },
+    "playinsights.current_run.exploration_active" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Exploration active" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Exploración activa" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "探索中" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "正在探索" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "正在探索" } }
+      }
+    },
+    "playinsights.current_run.level_in_progress" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Level in progress" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Nivel en progreso" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "ステージ進行中" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "关卡进行中" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "關卡進行中" } }
+      }
+    },
+    "playinsights.current_run.map_node_tracked" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Current map node tracked" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Nodo actual del mapa disponible" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "現在のマップノードを把握" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "当前地图节点可用" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "目前地圖節點可用" } }
+      }
+    },
+    "playinsights.current_run.map_position_available" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Map position available" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Posición del mapa disponible" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "マップ位置を確認可能" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "地图位置可用" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "地圖位置可用" } }
+      }
+    },
+    "playinsights.current_run.overworld" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Overworld" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Mapa general" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "ワールドマップ" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "世界地图" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "世界地圖" } }
+      }
+    },
+    "playinsights.current_run.recent_progress_available" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Recent progress available" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Progreso reciente disponible" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "直近の進行状況を確認可能" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "近期进度可用" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "近期進度可用" } }
+      }
+    },
+    "playinsights.current_run.room_tracked" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Room tracked" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Sala actual" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "現在の部屋" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "当前房间" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "目前房間" } }
+      }
+    },
+    "playinsights.current_run.section_title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Current Run" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Partida actual" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "現在のプレイ" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "当前游玩" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "目前遊玩" } }
+      }
+    },
+    "playinsights.empty.body" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Start playing to unlock performance and progress insights for this game." } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Empieza a jugar para desbloquear estadísticas y progreso de este juego." } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "このゲームを遊ぶと、プレイ分析と進行状況が表示されます。" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "开始游玩后即可解锁本作的表现与进度洞察。" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "開始遊玩後即可解鎖本作的表現與進度洞察。" } }
+      }
+    },
+    "playinsights.global.hardest_badge.challenging" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Challenging" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Desafiante" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "手ごわい" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "有挑战" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "有挑戰" } }
+      }
+    },
+    "playinsights.global.hardest_badge.highest_total" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Highest total" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Total más alto" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "最多記録" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "最高总数" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "最高總數" } }
+      }
+    },
+    "playinsights.global.hardest_badge.improving" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Improving" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Mejorando" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "改善中" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "正在进步" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "正在進步" } }
+      }
+    },
+    "playinsights.global.hardest_metric.damage_events" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "%@ damage events" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "%@ eventos de daño" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "被ダメージ %@ 回" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "%@ 次伤害事件" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "%@ 次傷害事件" } }
+      }
+    },
+    "playinsights.global.hardest_metric.deaths" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "%@ deaths" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "%@ muertes" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "ミス %@ 回" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "%@ 次死亡" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "%@ 次死亡" } }
+      }
+    },
+    "playinsights.global.hero.active_progressing" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "You’re actively progressing across several games." } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Estás avanzando activamente en varios juegos." } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "複数のゲームで着実に進行しています。" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "你正在多款游戏中持续推进进度。" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "你正在多款遊戲中持續推進進度。" } }
+      }
+    },
+    "playinsights.global.hero.exploration_momentum" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Your strongest momentum right now is in exploration-heavy games." } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Tu mejor momento ahora mismo está en los juegos centrados en la exploración." } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "今もっとも勢いがあるのは探索寄りのゲームです。" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "你当前最强的势头来自探索型游戏。" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "你目前最強的勢頭來自探索型遊戲。" } }
+      }
+    },
+    "playinsights.global.hero.meaningful_progress" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Your supported games are tracking meaningful play progress." } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Tus juegos compatibles están registrando un progreso de juego valioso." } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "対応ゲームでは意味のあるプレイ進行が記録されています。" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "受支持游戏正在记录有意义的游玩进度。" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "支援遊戲正在記錄有意義的遊玩進度。" } }
+      }
+    },
+    "playinsights.global.hero.more_consistent" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "You’ve become more consistent lately." } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Últimamente te has vuelto más constante." } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "最近はプレイの安定感が増しています。" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "你最近的表现更加稳定了。" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "你最近的表現更加穩定了。" } }
+      }
+    },
+    "playinsights.global.hero.platformers_challenge" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Platformers remain your biggest challenge." } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Los juegos de plataformas siguen siendo tu mayor reto." } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "プラットフォームアクションが今も最大の難関です。" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "平台游戏仍然是你最大的挑战。" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "平台遊戲仍然是你最大的挑戰。" } }
+      }
+    },
+    "playinsights.global.insight.progress_tracked" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Progress is being tracked." } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "El progreso se está registrando." } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "進行状況を記録しています。" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "进度正在被记录。" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "進度正在被記錄。" } }
+      }
+    },
+    "playinsights.global.performance_line.current_run_available" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Current run available" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Partida actual disponible" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "現在のプレイを確認可能" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "当前游玩信息可用" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "目前遊玩資訊可用" } }
+      }
+    },
+    "playinsights.global.performance_line.damage_only" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Damage Events: %@" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Eventos de daño: %@" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "被ダメージ: %@" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "伤害事件：%@" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "傷害事件：%@" } }
+      }
+    },
+    "playinsights.global.performance_line.deaths_damage" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Deaths: %@ • Damage: %@" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Muertes: %@ • Daño: %@" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "ミス: %@ ・ ダメージ: %@" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "死亡：%@ • 伤害：%@" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "死亡：%@ • 傷害：%@" } }
+      }
+    },
+    "playinsights.insight.exploration_focused" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "This title is currently exploration-focused." } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Este juego está centrado en la exploración en este momento." } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "このタイトルは現在、探索中心の進行です。" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "这款游戏当前更偏向探索推进。" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "這款遊戲目前更偏向探索推進。" } }
+      }
+    },
+    "playinsights.insight.harder_games" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "This is still one of your harder games." } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Este sigue siendo uno de tus juegos más difíciles." } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "このゲームは今も手ごわい一本です。" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "这仍然是你较难的一款游戏。" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "這仍然是你較難的一款遊戲。" } }
+      }
+    },
+    "playinsights.insight.improving_recent" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "You’re improving in recent sessions." } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Estás mejorando en las sesiones recientes." } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "最近のセッションでは上達が見られます。" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "你在最近几次游玩中有所进步。" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "你在最近幾次遊玩中有所進步。" } }
+      }
+    },
+    "playinsights.insight.more_consistent" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Your recent runs look more consistent." } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Tus partidas recientes se ven más consistentes." } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "最近のプレイはより安定しています。" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "你最近的表现看起来更稳定了。" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "你最近的表現看起來更穩定了。" } }
+      }
+    },
+    "playinsights.insight.progress_tracked_recent" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Your progress is being tracked across recent sessions." } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Tu progreso se está registrando en las sesiones recientes." } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "最近のセッションを通じて進行状況を記録しています。" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "你的近期进度正在持续记录中。" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "你的近期進度正在持續記錄中。" } }
+      }
+    },
+    "playinsights.insight.remains_hardest" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "This remains one of your hardest games." } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Este sigue siendo uno de tus juegos más difíciles." } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "このゲームは今も特に難しい一本です。" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "这仍然是你最难的游戏之一。" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "這仍然是你最難的遊戲之一。" } }
+      }
+    },
+    "playinsights.insight.risky_sections" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "You tend to push forward through risky sections." } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Sueles avanzar a través de secciones arriesgadas." } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "危険な場面でも前へ進む傾向があります。" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "你倾向于在高风险区段继续推进。" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "你傾向於在高風險區段繼續推進。" } }
+      }
+    },
+    "playinsights.insight.steady_exploration" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Your recent runs are focused on steady exploration." } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Tus partidas recientes se centran en una exploración constante." } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "最近のプレイは着実な探索が中心です。" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "你最近的游玩更专注于稳步探索。" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "你最近的遊玩更專注於穩步探索。" } }
+      }
+    },
+    "playinsights.metric.avg_per_session" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Avg / Session: %@" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Prom. / sesión: %@" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "平均 / セッション: %@" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "平均 / 场次：%@" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "平均 / 場次：%@" } }
+      }
+    },
+    "playinsights.metric.best_session" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Best Session: %@" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Mejor sesión: %@" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "ベストセッション: %@" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "最佳场次：%@" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "最佳場次：%@" } }
+      }
+    },
+    "playinsights.metric.this_session" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "This Session: %@" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Esta sesión: %@" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "このセッション: %@" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "本次场次：%@" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "本次場次：%@" } }
+      }
+    },
+    "playinsights.my_play.active_runs" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Active Runs" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Partidas activas" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "進行中のプレイ" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "活跃游玩" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "活躍遊玩" } }
+      }
+    },
+    "playinsights.my_play.empty.body" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Play supported games to unlock tracked deaths, damage, and game-aware progress summaries." } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Juega títulos compatibles para desbloquear muertes, daño y resúmenes de progreso." } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "対応ゲームを遊ぶと、ミスや被ダメージ、進行状況の要約が表示されます。" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "游玩受支持的游戏即可解锁死亡、伤害和进度摘要。" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "遊玩支援的遊戲即可解鎖死亡、傷害與進度摘要。" } }
+      }
+    },
+    "playinsights.my_play.games_tracked" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Games Tracked" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Juegos registrados" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "追跡中のゲーム" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "已追踪游戏" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "已追蹤遊戲" } }
+      }
+    },
+    "playinsights.my_play.hardest_games" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Hardest Games" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Juegos más difíciles" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "苦戦中のゲーム" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "最难的游戏" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "最難的遊戲" } }
+      }
+    },
+    "playinsights.my_play.metric.damage_events" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Damage Events" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Eventos de daño" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "被ダメージイベント" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "伤害事件" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "傷害事件" } }
+      }
+    },
+    "playinsights.my_play.metric.supported_games" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Supported Games" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Juegos compatibles" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "対応ゲーム" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "受支持游戏" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "支援遊戲" } }
+      }
+    },
+    "playinsights.my_play.metric.tracked_deaths" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Tracked Deaths" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Muertes registradas" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "記録されたミス" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "已追踪死亡" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "已追蹤死亡" } }
+      }
+    },
+    "playinsights.my_play.performance_totals" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Performance Totals" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Totales de rendimiento" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "累計パフォーマンス" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "表现总计" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "表現總計" } }
+      }
+    },
+    "playinsights.my_play.supported_games" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Supported Games" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Juegos compatibles" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "対応ゲーム" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "受支持游戏" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "支援遊戲" } }
+      }
+    },
+    "playinsights.my_play.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "My Play" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Mi juego" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "マイプレイ" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "我的游玩" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "我的遊玩" } }
+      }
+    },
+    "playinsights.my_play.total_damage" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Total Damage" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Daño total" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "総被ダメージ" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "总伤害" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "總傷害" } }
+      }
+    },
+    "playinsights.my_play.total_deaths" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Total Deaths" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Muertes totales" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "総ミス回数" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "总死亡数" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "總死亡數" } }
+      }
+    },
+    "playinsights.progress.castle_exploration_tracked" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Castle exploration tracked" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Exploración del castillo disponible" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "城の探索状況を把握" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "城堡探索进度可用" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "城堡探索進度可用" } }
+      }
+    },
+    "playinsights.progress.current_route_state_available" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Current route/state available" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Ruta o estado actual disponible" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "現在のルート/状態を確認可能" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "当前路线/状态可用" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "目前路線/狀態可用" } }
+      }
+    },
+    "playinsights.progress.current_state_available" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Current state available" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Estado actual disponible" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "現在の状態を確認可能" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "当前状态可用" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "目前狀態可用" } }
+      }
+    },
+    "playinsights.progress.overworld_tracked" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Overworld progress tracked" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Progreso del mapa general disponible" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "ワールドマップの進行状況を把握" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "世界地图进度可用" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "世界地圖進度可用" } }
+      }
+    },
+    "playinsights.progress.progress_tracked" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Progress tracked" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Progreso disponible" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "進行状況を把握" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "进度可用" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "進度可用" } }
+      }
+    },
+    "playinsights.progress.room_map_tracked" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Room and map position tracked" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Sala y posición del mapa disponibles" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "部屋とマップ位置を把握" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "房间与地图位置可用" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "房間與地圖位置可用" } }
+      }
+    },
+    "playinsights.progress.sector_format" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Sector %@" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Sector %@" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "セクター %@" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "区域 %@" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "區域 %@" } }
+      }
+    },
+    "playinsights.progress.stage_format" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Stage %@" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Fase %@" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "ステージ %@" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "关卡 %@" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "關卡 %@" } }
+      }
+    },
+    "playinsights.progress.visited_areas_format" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Visited %@ areas" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "%@ áreas visitadas" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "訪問済みエリア %@ 箇所" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "已访问 %@ 个区域" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "已造訪 %@ 個區域" } }
+      }
+    },
+    "playinsights.progress.world_format" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "World %@" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Mundo %@" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "ワールド %@" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "世界 %@" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "世界 %@" } }
+      }
+    },
+    "playinsights.section.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Play Insights" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Insights de juego" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "プレイ分析" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "游玩洞察" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "遊玩洞察" } }
+      }
+    },
+    "playinsights.status.active" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Active" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Activo" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "進行中" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "进行中" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "進行中" } }
+      }
+    },
+    "playinsights.style.aggressive_mover.body" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Forward momentum stays high through rough sections." } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Mantienes el impulso incluso en tramos difíciles." } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "厳しい場面でも前進の勢いを保っています。" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "即使在艰难区段也保持着前进势头。" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "即使在艱難區段也保持著前進勢頭。" } }
+      }
+    },
+    "playinsights.style.aggressive_mover.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Aggressive Mover" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Avance agresivo" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "アグレッシブプレイヤー" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "激进推进者" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "激進推進者" } }
+      }
+    },
+    "playinsights.style.explorer.area_body" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Steady area discovery defines your recent runs." } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Tus partidas recientes se definen por descubrir nuevas áreas." } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "最近のプレイは着実なエリア発見が特徴です。" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "近期游玩的特点是稳步发现新区域。" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "近期遊玩的特點是穩步發現新區域。" } }
+      }
+    },
+    "playinsights.style.explorer.sector_body" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Steady sector discovery keeps progress moving." } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Descubrir sectores de forma constante mantiene el progreso." } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "着実なセクター探索が進行を後押ししています。" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "稳定探索新区域让进度持续推进。" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "穩定探索新區域讓進度持續推進。" } }
+      }
+    },
+    "playinsights.style.explorer.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Explorer" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Explorador" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "探索者" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "探索者" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "探索者" } }
+      }
+    },
+    "playinsights.style.persistent_challenger.body" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "You keep pushing through repeat attempts." } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Sigues adelante incluso tras varios intentos." } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "何度挑戦しても前へ進み続けています。" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "即使反复尝试，你也会继续推进。" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "即使反覆嘗試，你也會繼續推進。" } }
+      }
+    },
+    "playinsights.style.persistent_challenger.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Persistent Challenger" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Retador persistente" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "粘り強い挑戦者" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "坚持挑战者" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "堅持挑戰者" } }
+      }
+    },
+    "playinsights.style.precision_player.body" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Precise control with minimal damage taken." } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Control preciso con daño mínimo recibido." } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "被ダメージを抑えた正確な操作が光ります。" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "操作精准，承受的伤害很少。" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "操作精準，承受的傷害很少。" } }
+      }
+    },
+    "playinsights.style.precision_player.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Precision Player" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Jugador preciso" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "精密プレイヤー" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "精准玩家" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "精準玩家" } }
+      }
+    },
+    "playinsights.style.risk_taker.body" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Fast progress with higher damage pressure." } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Avance rápido con mayor presión de daño." } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "被ダメージを受けながらも速く進む傾向があります。" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "推进速度很快，但承受的伤害压力更高。" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "推進速度很快，但承受的傷害壓力更高。" } }
+      }
+    },
+    "playinsights.style.risk_taker.combat_body" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "You keep momentum through combat-heavy routes." } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Mantienes el ritmo incluso en rutas con mucho combate." } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "戦闘の多いルートでも勢いを保っています。" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "即使在战斗密集路线中也保持着推进节奏。" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "即使在戰鬥密集路線中也保持著推進節奏。" } }
+      }
+    },
+    "playinsights.style.risk_taker.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Risk Taker" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Jugador arriesgado" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "リスクテイカー" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "冒险型玩家" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "冒險型玩家" } }
+      }
     }
   },
   "version" : "1.0"

@@ -11,6 +11,7 @@
 		01B534B17B3992875AA763F5 /* RetroThemeComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 16CF948434019E8544A04B26 /* RetroThemeComponents.swift */; };
 		035053A54A3D1B64E486DB50 /* ExperimentalGatingManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A2F6AE1AF2BA016009F25D8 /* ExperimentalGatingManager.swift */; };
 		036F7DDCD64203C8C3D9AB22 /* PerformanceProfiler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4143CBD12B5F19B2A461EDBB /* PerformanceProfiler.swift */; };
+		0491E79326FCAD8FFC33CB07 /* PlayInsightsViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 13965683E9C1151612A41403 /* PlayInsightsViews.swift */; };
 		05462121291FF35EF75836C7 /* LanguageManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = E514B341D6F387B8E9C152D7 /* LanguageManager.swift */; };
 		055C08E8A307D8622BD26E7B /* Toggle.swift in Sources */ = {isa = PBXBuildFile; fileRef = C626FB0CA4B289019CD0CF84 /* Toggle.swift */; };
 		05A9CB5DF1F89AF0D90C72EB /* AppUI.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = BFD7C80C8636F1390EBEC1A2 /* AppUI.xcstrings */; };
@@ -24,6 +25,7 @@
 		1BFE8C580B6A09CD9FCAD335 /* RomMetadataExtractor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97BC0CC6295F572F92C10E41 /* RomMetadataExtractor.swift */; };
 		1C682FA5B84F7CAFDFE538E4 /* AudioQualityView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F325654DBB4B2E065090133B /* AudioQualityView.swift */; };
 		1CAE37E11D321DFE401906F5 /* TouchControlPad.swift in Sources */ = {isa = PBXBuildFile; fileRef = 672346EA96FF9A193B231B97 /* TouchControlPad.swift */; };
+		2140C004396845863E6AE966 /* PlayInsightsFormatter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E951C433E39C060D784675A /* PlayInsightsFormatter.swift */; };
 		2144EF6B095E672D5D2CE1DA /* SaveStatesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4364291217649D6912F145F5 /* SaveStatesView.swift */; };
 		22C18070CD46FA11A3A8ED2E /* CoverArtService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A61D48EE7E53BE6C1BD2B88 /* CoverArtService.swift */; };
 		250ACED17721F0EA48663E86 /* ControllerMappingEditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1B23E4D49D3B071A781925F8 /* ControllerMappingEditor.swift */; };
@@ -33,6 +35,7 @@
 		2BAF496DE48A814C1EE6C0D3 /* EmulatorButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = C3216A674D49C406C9C7954E /* EmulatorButton.swift */; };
 		2C2483EBEDF1562D319DB5D7 /* GenesisCore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60B84588246FDDF326A5906A /* GenesisCore.swift */; };
 		2E2B3D772EACB032C643D5A7 /* GameplayEventDiagnosticsOverlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = ED11458A4C1FEBC6757494A9 /* GameplayEventDiagnosticsOverlay.swift */; };
+		2E90CC36A0C1537C4D6FAB02 /* PlayInsightsStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09FF15B245EA94EDA98157E4 /* PlayInsightsStore.swift */; };
 		2FA0C4C780E6636C2A347303 /* PersistenceController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0D3DA034CE85C6DE2CF3193A /* PersistenceController.swift */; };
 		382072FAFD010B7BA5C59BCD /* RomValidator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 30FC9FACDF41646D250AECF7 /* RomValidator.swift */; };
 		38249D9760BBE224E8DCD36B /* iOSApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 08312D695D16BF9B8D76B549 /* iOSApp.swift */; };
@@ -49,6 +52,7 @@
 		553CCA8B5EAA9193B86AFB41 /* StringCatalogFallback.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3F3E1AAA8D6B877E3675F23F /* StringCatalogFallback.swift */; };
 		60CC3D8F51F23131BDE11143 /* Dialog.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA7B69F5DDE2C4A434A51CB6 /* Dialog.swift */; };
 		60F896E4EFDBDD31BC068F4A /* InputBus.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9485665368CFC41E8D938D95 /* InputBus.swift */; };
+		6437DFE8F6E3E05E992BE4CF /* PlayInsightsModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = B7649E18D80FCB86DED47AF9 /* PlayInsightsModels.swift */; };
 		6B5759AF17C87B632334A256 /* PlaceholderPatterns.swift in Sources */ = {isa = PBXBuildFile; fileRef = CE8DE758ED002F2F23925456 /* PlaceholderPatterns.swift */; };
 		6BF5DB9F11A6B7451FDEB47C /* ROMLibraryOperations.swift in Sources */ = {isa = PBXBuildFile; fileRef = 486B84BFA72CBA7EA3DCDA05 /* ROMLibraryOperations.swift */; };
 		6C43BB1441A648A7ADCA6932 /* MarioFrameAnalyzer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9B6CD57B365D1FB41987065D /* MarioFrameAnalyzer.swift */; };
@@ -142,6 +146,7 @@
 		F63D716EE9C219A0C0E33B00 /* CollectorShelfViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C7281AD7B7E76D709350D98 /* CollectorShelfViews.swift */; };
 		F6A9D719B001FB418B539549 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 51E656E584201333675159E7 /* Assets.xcassets */; };
 		F79EDB3B261ED6E9DF624801 /* ShellThemes.swift in Sources */ = {isa = PBXBuildFile; fileRef = EBFCD24F74EE4522EAE30B33 /* ShellThemes.swift */; };
+		F7E5073A4BBB4A1724A8EC5E /* MyPlayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D6140F3FC5529F6F387CF2DB /* MyPlayView.swift */; };
 		F93E44807879255BA51E06C3 /* Header.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAF6A9A7B47722A9EEE63EDF /* Header.swift */; };
 		F9D1A50FAD98039DD70E3956 /* MemoryAddressDiscovery.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2E22B3F3D1F98341DC6554F2 /* MemoryAddressDiscovery.swift */; };
 		FB4D93CE12BDD499797A63C6 /* EmulatorSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = 867BF8EE76C4FEC72E94EBDC /* EmulatorSession.swift */; };
@@ -155,6 +160,7 @@
 		04636AFBB1C5B621101AE08A /* GameDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameDetailView.swift; sourceTree = "<group>"; };
 		05114C577092C384F97A551D /* GamePlayViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GamePlayViewModel.swift; sourceTree = "<group>"; };
 		08312D695D16BF9B8D76B549 /* iOSApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = iOSApp.swift; sourceTree = "<group>"; };
+		09FF15B245EA94EDA98157E4 /* PlayInsightsStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayInsightsStore.swift; sourceTree = "<group>"; };
 		0A2F6AE1AF2BA016009F25D8 /* ExperimentalGatingManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExperimentalGatingManager.swift; sourceTree = "<group>"; };
 		0CBA3662153947F4A0A92E40 /* LibraryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibraryView.swift; sourceTree = "<group>"; };
 		0D3DA034CE85C6DE2CF3193A /* PersistenceController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PersistenceController.swift; sourceTree = "<group>"; };
@@ -162,6 +168,7 @@
 		0E27256B3C3C7FB89F1F47DE /* Card.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Card.swift; sourceTree = "<group>"; };
 		0EC16E530DB4C49A1BD9CF73 /* EmulatorCore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmulatorCore.swift; sourceTree = "<group>"; };
 		116AD7A4945F9AE8BE364572 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		13965683E9C1151612A41403 /* PlayInsightsViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayInsightsViews.swift; sourceTree = "<group>"; };
 		1401482B9019897D45053268 /* HapticManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HapticManager.swift; sourceTree = "<group>"; };
 		14E56CF820786BE24AC1E077 /* MemoryAddressCache.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MemoryAddressCache.swift; sourceTree = "<group>"; };
 		153169A0519B5D36DA5ED8C1 /* GBACore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GBACore.swift; sourceTree = "<group>"; };
@@ -227,6 +234,7 @@
 		7BC15F83843091487D6BA3FF /* GameLibraryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameLibraryView.swift; sourceTree = "<group>"; };
 		7C7281AD7B7E76D709350D98 /* CollectorShelfViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CollectorShelfViews.swift; sourceTree = "<group>"; };
 		7CD8EC90E1B08EEC7D2AE206 /* CoreDataMigration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoreDataMigration.swift; sourceTree = "<group>"; };
+		7E951C433E39C060D784675A /* PlayInsightsFormatter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayInsightsFormatter.swift; sourceTree = "<group>"; };
 		867BF8EE76C4FEC72E94EBDC /* EmulatorSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmulatorSession.swift; sourceTree = "<group>"; };
 		87CAE0469FD01C9174AA65D6 /* MetalView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MetalView.swift; sourceTree = "<group>"; };
 		8832955480EAD662E523AC13 /* PrivacyPolicyView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrivacyPolicyView.swift; sourceTree = "<group>"; };
@@ -256,6 +264,7 @@
 		B65C2B2E7E71454EF6AA5F9B /* module.modulemap */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.module-map"; path = module.modulemap; sourceTree = "<group>"; };
 		B7061432D55E2D3F403DF94A /* GameplayAnalysisLogger.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameplayAnalysisLogger.swift; sourceTree = "<group>"; };
 		B7590148A026C7627A4511DC /* AzureApiStub.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AzureApiStub.swift; sourceTree = "<group>"; };
+		B7649E18D80FCB86DED47AF9 /* PlayInsightsModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayInsightsModels.swift; sourceTree = "<group>"; };
 		B77DB84F7D6B83B354E369C2 /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
 		BA7B69F5DDE2C4A434A51CB6 /* Dialog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Dialog.swift; sourceTree = "<group>"; };
 		BB3A9B2AC6BEA25CD41D0DA3 /* CollectorDesignSystem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CollectorDesignSystem.swift; sourceTree = "<group>"; };
@@ -276,6 +285,7 @@
 		D24F51E4490BD43AE3AE7DE1 /* ControllerOverlayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ControllerOverlayView.swift; sourceTree = "<group>"; };
 		D3598A04582EA6802C14ED20 /* libsqlite3.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = libsqlite3.tbd; path = usr/lib/libsqlite3.tbd; sourceTree = SDKROOT; };
 		D3D6F286E7DF172700DA65DD /* LocalizationDiagnostics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalizationDiagnostics.swift; sourceTree = "<group>"; };
+		D6140F3FC5529F6F387CF2DB /* MyPlayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MyPlayView.swift; sourceTree = "<group>"; };
 		D7A97E34F6714D55B2ED6121 /* Button.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Button.swift; sourceTree = "<group>"; };
 		D96C91DB35FC25FB8CA6F9A9 /* cover_metadata.sqlite-shm */ = {isa = PBXFileReference; lastKnownFileType = file; path = "cover_metadata.sqlite-shm"; sourceTree = "<group>"; };
 		D9B06594522E3AB0385931D9 /* RomImportCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RomImportCoordinator.swift; sourceTree = "<group>"; };
@@ -531,6 +541,18 @@
 			path = XemuCores;
 			sourceTree = "<group>";
 		};
+		8ACE9953CE839F34121A8B9A /* PlayInsights */ = {
+			isa = PBXGroup;
+			children = (
+				D6140F3FC5529F6F387CF2DB /* MyPlayView.swift */,
+				7E951C433E39C060D784675A /* PlayInsightsFormatter.swift */,
+				B7649E18D80FCB86DED47AF9 /* PlayInsightsModels.swift */,
+				09FF15B245EA94EDA98157E4 /* PlayInsightsStore.swift */,
+				13965683E9C1151612A41403 /* PlayInsightsViews.swift */,
+			);
+			path = PlayInsights;
+			sourceTree = "<group>";
+		};
 		8BE58110C6C169656886202F /* Settings */ = {
 			isa = PBXGroup;
 			children = (
@@ -698,6 +720,7 @@
 				2957041B76FDED93F7E4B07A /* Home */,
 				AC2FB453688257147F9D74C2 /* Import */,
 				98C6EF507520433BE415B803 /* Library */,
+				8ACE9953CE839F34121A8B9A /* PlayInsights */,
 				242EF002429E2844372A40F1 /* Preview */,
 				C64A42AAA29D40AEC22BD8B3 /* SaveStates */,
 				8BE58110C6C169656886202F /* Settings */,
@@ -957,6 +980,7 @@
 				D5E4A38D3B851CFC45B3A830 /* MetalView.swift in Sources */,
 				B980E3B9A207E365C1B177C6 /* Misc.swift in Sources */,
 				B37543A64132C38CB17F63F5 /* Model.xcdatamodeld in Sources */,
+				F7E5073A4BBB4A1724A8EC5E /* MyPlayView.swift in Sources */,
 				99C42C50A5FFA9103329348A /* NDSCore.swift in Sources */,
 				B0A2A37751DCB3ED0A2E77CD /* NESCore.swift in Sources */,
 				E62C630456F0C5BAC8E91B7A /* OfflineGraceManager.swift in Sources */,
@@ -964,6 +988,10 @@
 				036F7DDCD64203C8C3D9AB22 /* PerformanceProfiler.swift in Sources */,
 				2FA0C4C780E6636C2A347303 /* PersistenceController.swift in Sources */,
 				6B5759AF17C87B632334A256 /* PlaceholderPatterns.swift in Sources */,
+				2140C004396845863E6AE966 /* PlayInsightsFormatter.swift in Sources */,
+				6437DFE8F6E3E05E992BE4CF /* PlayInsightsModels.swift in Sources */,
+				2E90CC36A0C1537C4D6FAB02 /* PlayInsightsStore.swift in Sources */,
+				0491E79326FCAD8FFC33CB07 /* PlayInsightsViews.swift in Sources */,
 				785516E5F54E0C4E5FB2CADC /* PlayerProgressStore.swift in Sources */,
 				89346E79C7ECC3CA6117990B /* PlayerStatsView.swift in Sources */,
 				FC29632A501B73BD78BA8FD8 /* PrivacyPolicyView.swift in Sources */,

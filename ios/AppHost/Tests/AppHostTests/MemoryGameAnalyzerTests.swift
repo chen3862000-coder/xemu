@@ -49,6 +49,23 @@ final class MemoryGameAnalyzerTests: XCTestCase {
         XCTAssertEqual(result?.gameplayPhase, .deathSequence)
     }
 
+    func testSMA2DeathStateDoesNotDoubleCountWhenLivesDropDuringSameDeathSequence() {
+        let analyzer = MemoryGameAnalyzer()
+
+        let baseline = MarioLiveMemorySample(lives: 4, powerUpState: 0, gameplayState: 0, invulnerabilityTimer: 0)
+        let deathSequenceStart = MarioLiveMemorySample(lives: 4, powerUpState: 0, gameplayState: 0x09, invulnerabilityTimer: 0)
+        let lifeDropDuringSameSequence = MarioLiveMemorySample(lives: 3, powerUpState: 0, gameplayState: 0x09, invulnerabilityTimer: 0)
+
+        _ = analyzer.analyzeLiveMemory(baseline, profile: .sma2SuperMarioWorld)
+        let firstDeath = analyzer.analyzeLiveMemory(deathSequenceStart, profile: .sma2SuperMarioWorld)
+        let duplicateCandidate = analyzer.analyzeLiveMemory(lifeDropDuringSameSequence, profile: .sma2SuperMarioWorld)
+
+        XCTAssertEqual(firstDeath?.events, [.deathDetected])
+        XCTAssertTrue(duplicateCandidate?.events.isEmpty ?? false)
+        XCTAssertEqual(duplicateCandidate?.playerState, .dead)
+        XCTAssertEqual(duplicateCandidate?.gameplayPhase, .deathSequence)
+    }
+
     func testSMBDPowerDownEmitsDamageFromLiveMemory() {
         let analyzer = MemoryGameAnalyzer()
 

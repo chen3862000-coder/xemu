@@ -161,13 +161,16 @@ final class MemoryGameAnalyzer {
         }
 
         var events: [GameplayEvent] = []
+        let previousWasDeathSequence = previousLiveSample.gameplayState.map { memoryMap.deathStateValues.contains($0) } ?? false
 
         if let previousGameplayState = previousLiveSample.gameplayState,
            memoryMap.deathStateValues.contains(gameplayState),
            !memoryMap.deathStateValues.contains(previousGameplayState) {
             events.append(.deathDetected)
         } else if let previousLives = previousLiveSample.lives,
-                  lives < previousLives {
+                  lives < previousLives,
+                  gameplayPhase != .deathSequence,
+                  !previousWasDeathSequence {
             events.append(.deathDetected)
         } else if nonDeathEventsArmed,
                   let previousPowerUpState = previousLiveSample.powerUpState,

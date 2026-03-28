@@ -42,6 +42,12 @@ class GamePlayViewModel: ObservableObject {
     private var currentPlatform: Platform?
     private var currentGameTitle: String = ""
     private var frameAnalysisCoordinator: FrameAnalysisCoordinator?
+    private var activePlayInsightsGame: PlayInsightsSupportedGame?
+    private var latestPlayInsightsLiveSample: MarioLiveMemorySample?
+    private var lastPublishedPlayInsightsPayload: [String: UInt16] = [:]
+    private var lastPublishedPlayInsightsLocationSummary: String?
+    private var sessionDeathEvents = 0
+    private var sessionDamageEvents = 0
     private var sessionStartedAt: Date?
     private var lastFrameSnapshot: (data: Data, width: Int, height: Int, bytesPerRow: Int)?
     private var frameWidth = 160
@@ -355,6 +361,12 @@ class GamePlayViewModel: ObservableObject {
             currentGameTitle = ""
             frameAnalysisCoordinator?.reset()
             frameAnalysisCoordinator = nil
+            activePlayInsightsGame = nil
+            latestPlayInsightsLiveSample = nil
+            lastPublishedPlayInsightsPayload = [:]
+            lastPublishedPlayInsightsLocationSummary = nil
+            sessionDeathEvents = 0
+            sessionDamageEvents = 0
             sessionStartedAt = nil
             lastFrameSnapshot = nil
             hasAutoResumedStateThisSession = false
@@ -570,10 +582,12 @@ class GamePlayViewModel: ObservableObject {
     }
 
     private func configureGameplayAnalysisIfNeeded(platform: Platform) {
-        guard hpDeathDetectionEnabled else {
-            GameplayAnalysisLogger.session("disabled title=\(currentGameTitle) platform=\(platform.rawValue)")
+        // Completely disable analysis for GB/GBC platforms due to performance issues
+        guard platform != .GB && platform != .GBC else {
+            GameplayAnalysisLogger.session("gb-gbc-analysis-disabled platform=\(platform.rawValue)")
             frameAnalysisCoordinator = nil
             gameplayAnalysisSnapshot = nil
+            activePlayInsightsGame = nil
             return
         }
 
@@ -585,8 +599,16 @@ class GamePlayViewModel: ObservableObject {
             GameplayAnalysisLogger.session("no-profile title=\(currentGameTitle) platform=\(platform.rawValue) romHash=\(currentROMHash)")
             frameAnalysisCoordinator = nil
             gameplayAnalysisSnapshot = nil
+            activePlayInsightsGame = nil
             return
         }
+
+        activePlayInsightsGame = PlayInsightsSupportedGame(profileID: profile.id)
+        latestPlayInsightsLiveSample = nil
+        lastPublishedPlayInsightsPayload = [:]
+        lastPublishedPlayInsightsLocationSummary = nil
+        sessionDeathEvents = 0
+        sessionDamageEvents = 0
 
         GameplayAnalysisLogger.session(
             "configured profile=\(profile.id) title=\(currentGameTitle) platform=\(platform.rawValue) romHash=\(currentROMHash)"
@@ -595,6 +617,10 @@ class GamePlayViewModel: ObservableObject {
             guard let self else { return }
             guard self.isRunning else { return }
             self.gameplayAnalysisSnapshot = snapshot
+            self.refreshPlayInsightsLiveSnapshotIfNeeded(with: snapshot)
+            self.sessionDeathEvents += events.filter { $0 == .deathDetected }.count
+            self.sessionDamageEvents += events.filter { $0 == .damageLight || $0 == .damageHeavy }.count
+            guard self.hpDeathDetectionEnabled else { return }
             for event in events {
                 HapticManager.shared.gameplayEvent(event)
             }
@@ -647,12 +673,70 @@ class GamePlayViewModel: ObservableObject {
             endTime: endedAt,
             durationSeconds: elapsed
         )
+        if let supportedGame = activePlayInsightsGame {
+            let payload = latestPlayInsightsLiveSample.map {
+                GameSpecificTelemetrySnapshot(
+                    gameId: currentROMHash,
+                    timestamp: endedAt,
+                    payloadType: supportedGame.profileID,
+                    payloadJson: $0.contextValues
+                )
+            }
+            PlayInsightsStore.shared.recordSession(
+                .init(
+                    gameId: currentROMHash,
+                    gameTitle: resolvedTitle,
+                    system: resolvedSystem,
+                    supportedGame: supportedGame,
+                    startedAt: startedAt,
+                    endedAt: endedAt,
+                    durationSeconds: elapsed,
+                    deaths: sessionDeathEvents,
+                    damageEvents: sessionDamageEvents,
+                    snapshot: payload,
+                    latestLocationSummary: gameplayAnalysisSnapshot?.locationDebugSummary
+                )
+            )
+        }
+        NotificationCenter.default.post(name: .romLibraryDidChange, object: nil)
         if let firstUnlock = unlocks.first {
             latestUnlockedAchievement = firstUnlock
             if isRunning && !isPaused {
                 statusMessage = "🏆 \(firstUnlock.title) unlocked"
             }
         }
+    }
+
+    private func refreshPlayInsightsLiveSnapshotIfNeeded(with snapshot: MarioAnalysisSnapshot) {
+        guard let supportedGame = activePlayInsightsGame,
+              !currentROMHash.isEmpty,
+              let liveSample = latestPlayInsightsLiveSample else { return }
+
+        let payload = liveSample.contextValues
+        let locationSummary = snapshot.locationDebugSummary
+        guard payload != lastPublishedPlayInsightsPayload || locationSummary != lastPublishedPlayInsightsLocationSummary else {
+            return
+        }
+
+        lastPublishedPlayInsightsPayload = payload
+        lastPublishedPlayInsightsLocationSummary = locationSummary
+
+        PlayInsightsStore.shared.refreshLiveSnapshot(
+            .init(
+                gameId: currentROMHash,
+                gameTitle: currentGameTitle,
+                system: currentPlatform?.rawValue.lowercased() ?? "",
+                supportedGame: supportedGame,
+                snapshot: GameSpecificTelemetrySnapshot(
+                    gameId: currentROMHash,
+                    timestamp: snapshot.sampledAt,
+                    payloadType: supportedGame.profileID,
+                    payloadJson: payload
+                ),
+                latestLocationSummary: locationSummary
+            )
+        )
+        NotificationCenter.default.post(name: .romLibraryDidChange, object: nil)
     }
 
     private func refreshSaveStateDebugLine() {
@@ -681,8 +765,7 @@ class GamePlayViewModel: ObservableObject {
     }
 
     private func currentLiveMemorySample() -> MarioLiveMemorySample? {
-        guard hpDeathDetectionEnabled,
-              let platform = currentPlatform,
+        guard let platform = currentPlatform,
               let profile = MarioGameProfile.activeProfile(
                   title: currentGameTitle,
                   platform: platform,
@@ -693,7 +776,7 @@ class GamePlayViewModel: ObservableObject {
         }
 
         if platform == .GBA, let gbaCore = activeCore as? GBACore {
-            return MarioLiveMemorySample(
+            let sample = MarioLiveMemorySample(
                 lives: gbaCore.readMemory8(at: liveMemory.livesAddress),
                 powerUpState: gbaCore.readMemory8(at: liveMemory.powerUpAddress),
                 gameplayState: gbaCore.readMemory8(at: liveMemory.gameplayStateAddress),
@@ -710,6 +793,8 @@ class GamePlayViewModel: ObservableObject {
                     }
                 }
             )
+            latestPlayInsightsLiveSample = sample
+            return sample
         }
 
         if (platform == .GB || platform == .GBC),
@@ -718,7 +803,7 @@ class GamePlayViewModel: ObservableObject {
            liveMemory.powerUpAddress <= UInt32(UInt16.max),
            liveMemory.gameplayStateAddress <= UInt32(UInt16.max),
            liveMemory.invulnerabilityTimerAddress <= UInt32(UInt16.max) {
-            return MarioLiveMemorySample(
+            let sample = MarioLiveMemorySample(
                 lives: gbcCore.readMemory8(at: UInt16(liveMemory.livesAddress)),
                 powerUpState: gbcCore.readMemory8(at: UInt16(liveMemory.powerUpAddress)),
                 gameplayState: gbcCore.readMemory8(at: UInt16(liveMemory.gameplayStateAddress)),
@@ -741,6 +826,8 @@ class GamePlayViewModel: ObservableObject {
                     }
                 }
             )
+            latestPlayInsightsLiveSample = sample
+            return sample
         }
 
         GameplayAnalysisLogger.event("live-memory unsupported profile=\(profile.id) platform=\(platform.rawValue)")

@@ -247,12 +247,19 @@ struct RomDetailView: View {
     @State private var launchErrorMessage: String?
     @State private var heroCoverSettled = false
     @State private var isShowingSaveStates = false
+    @State private var playInsightsSummary: GamePlayInsightsSummary?
 
     var body: some View {
         ScrollView(showsIndicators: false) {
             VStack(alignment: .leading, spacing: RomDetailLayout.sectionSpacing) {
                 heroSection
                 statsSection
+                if let playInsightsSummary {
+                    VStack(alignment: .leading, spacing: 28) {
+                        playInsightsSection(summary: playInsightsSummary)
+                        currentRunSection(summary: playInsightsSummary)
+                    }
+                }
                 collectorDataSection
                 fileDetailsSection
             }
@@ -329,6 +336,10 @@ struct RomDetailView: View {
             withAnimation(.spring(response: 0.6, dampingFraction: 0.82)) {
                 heroCoverSettled = true
             }
+            reloadPlayInsights()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .romLibraryDidChange)) { _ in
+            reloadPlayInsights()
         }
     }
 
@@ -565,6 +576,98 @@ struct RomDetailView: View {
         }
     }
 
+    @ViewBuilder
+    private func playInsightsSection(summary: GamePlayInsightsSummary) -> some View {
+        if summary.playInsightsEnabled {
+            VStack(alignment: .leading, spacing: 16) {
+                InsightsSectionHeaderView(title: screenString("playinsights.section.title", "Play Insights"))
+
+                HStack(alignment: .top, spacing: 16) {
+                    if let value = summary.deathsPrimaryValue {
+                        InsightsMetricCardView(
+                            icon: "xmark.circle.fill",
+                            title: screenString("playinsights.card.deaths", "Deaths"),
+                            primaryValue: value,
+                            secondaryLine1: summary.deathsSecondaryLine1,
+                            secondaryLine2: summary.deathsSecondaryLine2
+                        )
+                    }
+
+                    if let value = summary.damagePrimaryValue {
+                        InsightsMetricCardView(
+                            icon: "shield.slash.fill",
+                            title: screenString("playinsights.card.damage_taken", "Damage Taken"),
+                            primaryValue: value,
+                            secondaryLine1: summary.damageSecondaryLine1,
+                            secondaryLine2: summary.damageSecondaryLine2
+                        )
+                    }
+                }
+
+                HStack(alignment: .top, spacing: 16) {
+                    if let progressPrimary = summary.progressPrimaryValue,
+                       let progressSecondary = summary.progressSecondaryValue {
+                        InsightsNarrativeCardView(
+                            title: screenString("playinsights.card.progress", "Progress"),
+                            bodyText: "\(progressPrimary)\n\(progressSecondary)",
+                            icon: "location.circle.fill",
+                            tinted: true
+                        )
+                    }
+
+                    if let text = summary.performanceInsightText {
+                        InsightsNarrativeCardView(
+                            title: screenString("playinsights.card.performance_insight", "Performance Insight"),
+                            bodyText: text,
+                            icon: "sparkles",
+                            emphasized: true
+                        )
+                    }
+                }
+
+                if let title = summary.playStyleTitle {
+                    VStack(alignment: .leading, spacing: 16) {
+                        Label(screenString("playinsights.card.play_style", "Play Style"), systemImage: "figure.run")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundStyle(AppColors.textPrimary)
+                        PlayStyleBadgeView(text: title)
+                        if let description = summary.playStyleBullet1 {
+                            Text(description)
+                                .font(.system(size: 13, weight: .medium))
+                                .foregroundStyle(AppColors.textSecondary.opacity(0.88))
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                    }
+                    .playInsightsCardStyle(padding: 18)
+                }
+            }
+        } else if rom.lastPlayedAt != nil, playInsightsSupported {
+            VStack(alignment: .leading, spacing: 16) {
+                InsightsSectionHeaderView(title: screenString("playinsights.section.title", "Play Insights"))
+                InsightsEmptyStateView(
+                    title: screenString("playinsights.section.title", "Play Insights"),
+                    bodyText: screenString(
+                        "playinsights.empty.body",
+                        "Start playing to unlock performance and progress insights for this game."
+                    )
+                )
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func currentRunSection(summary: GamePlayInsightsSummary) -> some View {
+        if summary.currentRunEnabled,
+           let primary = summary.currentRunPrimary,
+           let secondary = summary.currentRunSecondary {
+            VStack(alignment: .leading, spacing: 16) {
+                InsightsSectionHeaderView(title: screenString("playinsights.current_run.section_title", "Current Run"))
+                CurrentRunCardView(primary: primary, secondary: secondary)
+            }
+            .padding(.top, 8)
+        }
+    }
+
     private var fileDetailsSection: some View {
         CollectorInfoCard(title: screenString("library.detail.file_details", "File Details"), icon: "doc.text.magnifyingglass") {
             DetailRow(label: "SHA-1", value: shortSHA1)
@@ -675,6 +778,18 @@ struct RomDetailView: View {
         return "\(estimatedSessions)"
     }
 
+    private var playInsightsSupported: Bool {
+        guard let game = rom.toGame(),
+              let profile = MarioGameProfile.activeProfile(
+                  title: game.title ?? "",
+                  platform: game.gamePlatform ?? .GBA,
+                  romHash: rom.checksum ?? ""
+              ) else {
+            return false
+        }
+        return PlayInsightsSupportedGame(profileID: profile.id) != nil
+    }
+
     private func launchGame() {
         let compatibility = ROMCompatibilityService.shared.compatibility(for: rom)
         if let issue = compatibility.issue {
@@ -771,6 +886,14 @@ struct RomDetailView: View {
 
     private func screenString(_ key: String, _ fallback: String) -> String {
         L10n.string(key, table: "Screens", fallback: fallback, languageManager: languageManager)
+    }
+
+    private func reloadPlayInsights() {
+        guard let checksum = rom.checksum else {
+            playInsightsSummary = nil
+            return
+        }
+        playInsightsSummary = PlayInsightsStore.shared.summary(for: checksum)
     }
 
     @ViewBuilder

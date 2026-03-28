@@ -141,6 +141,12 @@ struct SettingsView: View {
                 subtitle: L10n.string("settings.boot_intro.subtitle", languageManager: languageManager),
                 isOn: hapticBinding($showCartridgeLaunchIntro)
             )
+
+            ToggleSettingsRow(
+                title: L10n.string("settings.game_events_detection.title", languageManager: languageManager),
+                subtitle: L10n.string("settings.game_events_detection.subtitle", languageManager: languageManager),
+                isOn: hapticBinding($devHPDeathDetection)
+            )
         }
     }
 
@@ -235,9 +241,16 @@ struct SettingsView: View {
             ToggleSettingsRow(title: L10n.string("settings.dev.fps_overlay", languageManager: languageManager), isOn: hapticBinding($showFPSMeter))
             ToggleSettingsRow(title: L10n.string("settings.dev.memory_monitor", languageManager: languageManager), isOn: hapticBinding($devMemoryMonitor))
             ToggleSettingsRow(title: L10n.string("settings.dev.thermal_logging", languageManager: languageManager), isOn: hapticBinding($devThermalLogging))
-            ToggleSettingsRow(title: "HP vibration / Death detection", subtitle: "Enable haptic feedback for Mario damage and death events", isOn: hapticBinding($devHPDeathDetection))
-            ToggleSettingsRow(title: "Gameplay event overlay", subtitle: "Show Mario damage/death detector confidence during gameplay", isOn: hapticBinding($devGameplayEventOverlay))
-            ToggleSettingsRow(title: "Gameplay event logs", subtitle: "Write Mario detector events to the simulator console", isOn: hapticBinding($devGameplayEventLogging))
+            ToggleSettingsRow(
+                title: L10n.string("settings.dev.gameplay_event_overlay", languageManager: languageManager),
+                subtitle: L10n.string("settings.dev.gameplay_event_overlay.subtitle", languageManager: languageManager),
+                isOn: hapticBinding($devGameplayEventOverlay)
+            )
+            ToggleSettingsRow(
+                title: L10n.string("settings.dev.gameplay_event_logging", languageManager: languageManager),
+                subtitle: L10n.string("settings.dev.gameplay_event_logging.subtitle", languageManager: languageManager),
+                isOn: hapticBinding($devGameplayEventLogging)
+            )
 
             NavigationSettingsRow(title: L10n.string("settings.dev.debug_controller_input", languageManager: languageManager)) {
                 ControllerInputDebugView()
