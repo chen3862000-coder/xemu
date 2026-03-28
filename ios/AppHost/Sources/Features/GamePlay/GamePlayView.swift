@@ -4579,9 +4579,8 @@ struct GamePlayView: View {
         triggerHaptic(.medium)
         #if canImport(AVFoundation) && canImport(UIKit)
         let session = AVAudioSession.sharedInstance()
-        let bluetoothPorts: Set<AVAudioSession.Port> = [.bluetoothA2DP, .bluetoothHFP, .bluetoothLE]
-        let isBluetoothRouteActive = session.currentRoute.outputs.contains { bluetoothPorts.contains($0.portType) }
-        guard !isBluetoothRouteActive else { return }
+        let activeRouteKind = AudioEngine.routeKind(for: session.currentRoute.outputs)
+        guard activeRouteKind == .speakerOrWired else { return }
         let played = BootClickAudioPlayer.shared.play()
         if !played {
             #if canImport(AudioToolbox)
