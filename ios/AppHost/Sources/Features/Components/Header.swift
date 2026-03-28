@@ -1,6 +1,8 @@
 import SwiftUI
 
 struct Header: View {
+    @EnvironmentObject private var languageManager: LanguageManager
+
     let onAddTapped: () -> Void
     let onSettingsTapped: () -> Void
 
@@ -30,13 +32,13 @@ struct Header: View {
                             .frame(width: 26, height: 26)
                     }
 
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("RetroMind")
-                            .font(.system(size: 22, weight: .semibold))
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text(L10n.string("app.brand.title", languageManager: languageManager))
+                            .font(RMTypeScale.sectionTitle)
                             .foregroundStyle(AppColors.Text.primary)
 
-                        Text("Classic Gaming Hub")
-                            .font(.system(size: 13, weight: .medium))
+                        Text(L10n.string("app.brand.subtitle", languageManager: languageManager))
+                            .font(RMTypeScale.meta)
                             .foregroundStyle(AppColors.Text.tertiary)
                     }
                 }
@@ -49,17 +51,19 @@ struct Header: View {
                             .font(.system(size: 15, weight: .medium))
                     }
                     .buttonStyle(RMIconCircleButtonStyle())
+                    .accessibilityLabel(L10n.string("header.add_game", languageManager: languageManager))
 
                     Button(action: onSettingsTapped) {
                         Image(systemName: "gearshape.fill")
                             .font(.system(size: 15, weight: .medium))
                     }
                     .buttonStyle(RMIconCircleButtonStyle())
+                    .accessibilityLabel(L10n.string("header.open_settings", languageManager: languageManager))
                 }
             }
-            .padding(.horizontal, 20)
-            .padding(.top, 16)
-            .padding(.bottom, 12)
+            .padding(.horizontal, RMSpacing.screenMargin)
+            .padding(.top, RMSpacing.lg)
+            .padding(.bottom, RMSpacing.lg)
         }
         .background(AppColors.Background.appPrimary)
     }
@@ -127,5 +131,6 @@ private struct XemuBrandIconGlyph: View {
         onAddTapped: {},
         onSettingsTapped: {}
     )
+    .environmentObject(LanguageManager.shared)
     .background(AppColors.background)
 }

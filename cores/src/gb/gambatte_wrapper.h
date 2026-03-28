@@ -49,6 +49,7 @@ public:
     bool saveBattery(uint8_t* buffer, size_t size);
     bool loadBattery(const uint8_t* buffer, size_t size);
     size_t getBatterySaveSize() const;
+    bool readMemory8(uint16_t address, uint8_t& value) const;
 
     bool isCGBMode() const;
     const char* getROMTitle() const;

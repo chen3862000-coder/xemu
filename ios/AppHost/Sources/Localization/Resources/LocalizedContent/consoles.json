@@ -1,0 +1,36 @@
+[
+  {
+    "consoleID": "gb",
+    "localizedNames": {
+      "en": "Game Boy",
+      "zh-Hans": "Game Boy",
+      "zh-Hant": "Game Boy",
+      "ja": "ゲームボーイ",
+      "es": "Game Boy"
+    },
+    "localizedDescriptions": {
+      "en": "Nintendo's original handheld line with iconic monochrome adventures.",
+      "zh-Hans": "任天堂最初的掌机系列，承载了经典的黑白冒险。",
+      "zh-Hant": "任天堂最初的掌機系列，承載了經典的黑白冒險。",
+      "ja": "象徴的なモノクロ作品を支えた任天堂初代ハンドヘルドシリーズ。",
+      "es": "La línea portátil original de Nintendo, con aventuras monocromas icónicas."
+    }
+  },
+  {
+    "consoleID": "gba",
+    "localizedNames": {
+      "en": "Game Boy Advance",
+      "zh-Hans": "Game Boy Advance",
+      "zh-Hant": "Game Boy Advance",
+      "ja": "ゲームボーイアドバンス",
+      "es": "Game Boy Advance"
+    },
+    "localizedDescriptions": {
+      "en": "A polished 32-bit handheld catalog with RPGs, platformers, and multiplayer favorites.",
+      "zh-Hans": "成熟的 32 位掌机作品库，拥有 RPG、平台跳跃和多人经典。",
+      "zh-Hant": "成熟的 32 位掌機作品庫，擁有 RPG、平台動作與多人經典。",
+      "ja": "RPG、アクション、マルチプレイ作品が充実した洗練された 32 ビット携帯機ライブラリ。",
+      "es": "Un catálogo portátil de 32 bits muy pulido, con RPG, plataformas y favoritos multijugador."
+    }
+  }
+]

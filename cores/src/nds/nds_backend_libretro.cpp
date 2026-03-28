@@ -83,6 +83,8 @@ static std::string extractDefaultOptionValueV2(const retro_core_option_v2_defini
 
 class LibretroBackend final : public Backend {
 public:
+    static constexpr double kNativeDSSampleRate = 33513982.0 / 1024.0;
+
     LibretroBackend() {
         activeInstance_ = this;
         updateCompositedBufferForLayout(layout_);
@@ -102,6 +104,7 @@ public:
         }
 
         lastLoadError_ = XEMU_OK;
+        clearAudioState();
 
         if (!initializeCoreIfNeeded()) {
             romLoaded_ = false;
@@ -148,6 +151,7 @@ public:
         if (romLoaded_ && api_.retro_unload_game) {
             api_.retro_unload_game();
         }
+        clearAudioState();
         romLoaded_ = false;
         return XEMU_OK;
     }
@@ -177,6 +181,7 @@ public:
         buttons_ = 0;
         touch_ = {0, 0, 0};
         inputPollCount_ = 0;
+        clearAudioState();
         if (coreInitialized_ && api_.retro_reset) {
             api_.retro_reset();
         }
@@ -188,10 +193,14 @@ public:
     }
 
     xemu_audio_buffer_t getAudioBuffer() override {
-        const int count = static_cast<int>(audio_.size());
+        // Consume the newly produced PCM exactly once. `swap` is fine here, but
+        // only after we clear the previously exported chunk; otherwise stale
+        // samples move back into `audio_` and get replayed on the next frame.
+        exportedAudio_.clear();
+        exportedAudio_.swap(audio_);
+        const int count = static_cast<int>(exportedAudio_.size());
         audioBuffer_.sample_count = count;
-        audioBuffer_.data = count > 0 ? audio_.data() : nullptr;
-        audio_.clear();
+        audioBuffer_.data = count > 0 ? exportedAudio_.data() : nullptr;
         return audioBuffer_;
     }
 
@@ -228,6 +237,7 @@ public:
         if (!coreInitialized_ || !api_.retro_unserialize) {
             return XEMU_ERROR_LOAD_STATE_FAILED;
         }
+        clearAudioState();
         return api_.retro_unserialize(state->data, state->size) ? XEMU_OK : XEMU_ERROR_LOAD_STATE_FAILED;
     }
 
@@ -239,6 +249,16 @@ public:
     xemu_nds_screen_layout_t getScreenLayout() const override { return layout_; }
 
 private:
+    static int sanitizeSampleRate(double reportedRate) {
+        if (!(reportedRate > 1.0)) {
+            return static_cast<int>(kNativeDSSampleRate);
+        }
+        if (reportedRate >= 43500.0 && reportedRate <= 44500.0) {
+            return static_cast<int>(kNativeDSSampleRate);
+        }
+        return static_cast<int>(reportedRate);
+    }
+
     bool initializeCoreIfNeeded() {
         if (coreInitialized_) {
             return true;
@@ -254,7 +274,7 @@ private:
         if (api_.retro_get_system_av_info) {
             retro_system_av_info av = {};
             api_.retro_get_system_av_info(&av);
-            sampleRate_ = (av.timing.sample_rate > 1.0) ? static_cast<int>(av.timing.sample_rate) : 44100;
+            sampleRate_ = sanitizeSampleRate(av.timing.sample_rate);
             if (av.geometry.base_width > 0 && av.geometry.base_height > 0) {
                 coreBaseWidth_ = static_cast<int>(av.geometry.base_width);
                 coreBaseHeight_ = static_cast<int>(av.geometry.base_height);
@@ -811,7 +831,7 @@ private:
 
     void applySystemAVInfo(const retro_system_av_info& av) {
         if (av.timing.sample_rate > 1.0) {
-            sampleRate_ = static_cast<int>(av.timing.sample_rate);
+            sampleRate_ = sanitizeSampleRate(av.timing.sample_rate);
             audioBuffer_.sample_rate = sampleRate_;
         }
         retro_game_geometry geometry = {
@@ -894,6 +914,13 @@ private:
 
     void applyCoreOptionOverrides() {
         coreOptions_["melonds_sysfile_mode"] = "builtin";
+        // Favor cleaner BGM output in the app frontend. melonDS defaults to
+        // DS-authentic 10-bit audio with interpolation disabled, which tends
+        // to sound harsher than the GB/GBA paths in our host. Use 16-bit
+        // output plus the highest-quality interpolation exposed by the
+        // modern melonDS DS libretro core as the frontend baseline.
+        coreOptions_["melonds_audio_bitdepth"] = "16bit";
+        coreOptions_["melonds_audio_interpolation"] = "gaussian";
     }
 
     bool getCoreOptionVariable(void* data) {
@@ -931,6 +958,13 @@ private:
         mkdir(saveDir_.c_str(), 0755);
     }
 
+    void clearAudioState() {
+        audio_.clear();
+        exportedAudio_.clear();
+        audioBuffer_.data = nullptr;
+        audioBuffer_.sample_count = 0;
+    }
+
     static LibretroBackend* activeInstance_;
 
     LibretroCoreAPI api_ = createMelonDSLibretroCoreAPI();
@@ -949,7 +983,7 @@ private:
     int width_ = 256;
     int height_ = 384;
     int pitch_ = 256 * 4;
-    int sampleRate_ = 44100;
+    int sampleRate_ = static_cast<int>(kNativeDSSampleRate);
     int coreBaseWidth_ = 256;
     int coreBaseHeight_ = 384;
     int coreFrameWidth_ = 0;
@@ -962,13 +996,14 @@ private:
     std::vector<uint8_t> video_;
     std::vector<uint8_t> coreFrameScratch_;
     std::vector<int16_t> audio_;
+    std::vector<int16_t> exportedAudio_;
     std::map<std::string, std::string> coreOptions_;
     std::string frontendRootDir_;
     std::string systemDir_;
     std::string saveDir_;
     std::string validExtensions_;
     xemu_video_buffer_t videoBuffer_ = {nullptr, 0, 0, 0};
-    xemu_audio_buffer_t audioBuffer_ = {nullptr, 0, 44100};
+    xemu_audio_buffer_t audioBuffer_ = {nullptr, 0, static_cast<int>(kNativeDSSampleRate)};
 };
 
 LibretroBackend* LibretroBackend::activeInstance_ = nullptr;

@@ -10,7 +10,7 @@ private enum HomeShelfMetrics {
     }
 
     static func collectorRecentGameCardWidth(for availableWidth: CGFloat) -> CGFloat {
-        min(330, max(260, availableWidth - 52))
+        min(250, max(228, availableWidth - 72))
     }
 }
 
@@ -24,6 +24,7 @@ struct HomeView: View {
     @Environment(\.managedObjectContext) private var viewContext
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.verticalSizeClass) private var verticalSizeClass
+    @EnvironmentObject private var languageManager: LanguageManager
     @StateObject private var viewModel = HomeViewModel()
     @StateObject private var performanceProfiler = PerformanceProfiler.shared
     @State private var showingSettings = false
@@ -77,7 +78,7 @@ struct HomeView: View {
                 headerSection
 
                 ScrollView {
-                    VStack(spacing: isCollectorMode ? 18 : 24) {
+                    VStack(spacing: isCollectorMode ? 18 : RMSpacing.sectionGap) {
                         if isCollectorMode {
                             collectorModeContent
                         } else {
@@ -87,7 +88,7 @@ struct HomeView: View {
                         }
                     }
                     .padding(.top, 8)
-                    .padding(.horizontal, 16)
+                    .padding(.horizontal, RMSpacing.lg)
                     .padding(.bottom, 32)
                 }
             }
@@ -153,41 +154,41 @@ struct HomeView: View {
             switch state.kind {
             case .launchError(let message):
                 return Alert(
-                    title: Text("Unable to Open Game"),
+                    title: Text(L10n.string("home.alert.launch_failed", languageManager: languageManager)),
                     message: Text(message),
-                    dismissButton: .cancel(Text("OK"))
+                    dismissButton: .cancel(Text(L10n.string("common.ok", languageManager: languageManager)))
                 )
             case .confirmDelete(let candidate):
                 return Alert(
                     title: Text(candidate.mode.displayName),
                     message: Text(candidate.mode.firstConfirmation),
-                    primaryButton: .default(Text("Continue")) {
+                    primaryButton: .default(Text(L10n.string("common.continue", languageManager: languageManager))) {
                         activeAlert = HomeAlertState(kind: .confirmFinalDelete(candidate))
                     },
                     secondaryButton: .cancel()
                 )
             case .confirmFinalDelete(let candidate):
                 return Alert(
-                    title: Text("Final Confirmation"),
+                    title: Text(L10n.string("home.alert.final_confirmation", languageManager: languageManager)),
                     message: Text(candidate.mode.secondConfirmation),
-                    primaryButton: .destructive(Text("Delete")) {
+                    primaryButton: .destructive(Text(L10n.string("common.delete", languageManager: languageManager))) {
                         performDeletion(candidate)
                     },
                     secondaryButton: .cancel()
                 )
             }
         }
-        .alert("Rename Game", isPresented: renameDialogPresented) {
-            TextField("Game title", text: $renameTitle)
-            Button("Cancel", role: .cancel) {
+        .alert(L10n.string("common.rename_game", languageManager: languageManager), isPresented: renameDialogPresented) {
+            TextField(L10n.string("common.game_title", languageManager: languageManager), text: $renameTitle)
+            Button(L10n.string("common.cancel", languageManager: languageManager), role: .cancel) {
                 clearRenameDraft()
             }
-            Button("Save") {
+            Button(L10n.string("common.save", languageManager: languageManager)) {
                 commitRename()
             }
             .disabled(renameTitle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
         } message: {
-            Text("Enter a new display title for this game.")
+            Text(L10n.string("home.rename_game.message", languageManager: languageManager))
         }
         .onAppear {
             refreshHome()
@@ -310,7 +311,7 @@ struct HomeView: View {
                 HStack(spacing: 6) {
                     Image(systemName: "square.grid.2x2")
                         .font(.system(size: 12, weight: .semibold))
-                    Text("Library")
+                    Text(L10n.string("home.library", languageManager: languageManager))
                         .font(.system(size: 13, weight: .semibold))
                 }
                 .foregroundStyle(AppColors.Text.primary)
@@ -328,7 +329,7 @@ struct HomeView: View {
                 HStack(spacing: 6) {
                     Image(systemName: "chart.bar.fill")
                         .font(.system(size: 12, weight: .semibold))
-                    Text("Stats")
+                    Text(L10n.string("home.stats", languageManager: languageManager))
                         .font(.system(size: 13, weight: .semibold))
                 }
                 .foregroundStyle(AppColors.Text.primary)
@@ -346,21 +347,21 @@ struct HomeView: View {
 
     private var collectorContinueSection: some View {
         VStack(alignment: .leading, spacing: 10) {
-            HStack {
-                Text("Continue Playing")
+            HStack(alignment: .firstTextBaseline) {
+                Text(L10n.string("home.continue_playing", languageManager: languageManager))
                     .font(.system(size: 24, weight: .bold))
                     .foregroundStyle(AppColors.Text.primary)
                 Spacer()
-                Button("View All") {
+                Button(L10n.string("home.view_all", languageManager: languageManager)) {
                     showingRecentlyPlayed = true
                 }
                 .buttonStyle(.plain)
-                .font(.system(size: 15, weight: .semibold))
+                .font(RMTypeScale.body)
                 .foregroundStyle(AppColors.Text.accent)
             }
 
             if viewModel.recentGames.isEmpty {
-                Text("No recent games")
+                Text(L10n.string("home.no_recent_games", languageManager: languageManager))
                     .font(.system(size: 13, weight: .medium))
                     .foregroundStyle(AppColors.Text.tertiary)
                     .frame(maxWidth: .infinity, minHeight: 120)
@@ -372,12 +373,12 @@ struct HomeView: View {
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: 20) {
                             ForEach(viewModel.recentGames) { game in
-                                RecentGameCard(game: game, variant: .featured) {
+                                RecentGameCard(game: game, variant: .compact) {
                                     launchRecentGame(game)
                                 }
                                 .frame(
                                     width: HomeShelfMetrics.collectorRecentGameCardWidth(for: proxy.size.width),
-                                    height: 280
+                                    height: 216
                                 )
                                 .contextMenu {
                                     recentGameContextMenu(game)
@@ -387,7 +388,7 @@ struct HomeView: View {
                         .padding(.horizontal, 24)
                     }
                 }
-                .frame(height: 280)
+                .frame(height: 216)
 #if os(iOS)
                 .scrollTargetBehavior(.viewAligned)
 #endif
@@ -402,11 +403,11 @@ struct HomeView: View {
     private var collectorSystemsSection: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack {
-                Text("Your Consoles")
+                Text(L10n.string("home.your_consoles", languageManager: languageManager))
                     .font(.system(size: 24, weight: .bold))
                     .foregroundStyle(AppColors.Text.primary)
                 Spacer()
-                Text("\(viewModel.emulators.count) systems")
+                Text(L10n.format("home.systems.count", Int64(viewModel.emulators.count), languageManager: languageManager))
                     .font(.system(size: 13, weight: .medium))
                     .foregroundStyle(AppColors.Text.tertiary)
                     .padding(.horizontal, 10)
@@ -439,7 +440,7 @@ struct HomeView: View {
     private var collectorRecentlyAddedSection: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack {
-                Text("Recently Added")
+                Text(L10n.string("home.recently_added", languageManager: languageManager))
                     .font(.system(size: 22, weight: .bold))
                     .foregroundStyle(AppColors.Text.primary)
                 Spacer()
@@ -475,15 +476,15 @@ struct HomeView: View {
     }
     
     private var statsGrid: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: RMSpacing.lg) {
             Button(action: {
                 showingGameLibrary = true
             }) {
                 StatCard(
-                    title: "Total Games",
+                    title: L10n.string("home.total_games", languageManager: languageManager),
                     value: "\(viewModel.totalGames)",
                     icon: "gamecontroller.fill",
-                    helper: "Across \(viewModel.emulators.count) systems",
+                    helper: L10n.format("home.total_games.helper", Int64(viewModel.emulators.count), languageManager: languageManager),
                     gradient: [AppColors.primary, AppColors.accent]
                 )
             }
@@ -493,10 +494,10 @@ struct HomeView: View {
                 showingPlayerStats = true
             }) {
                 StatCard(
-                    title: "Game Stats",
+                    title: L10n.string("home.game_stats", languageManager: languageManager),
                     value: viewModel.totalHours,
                     icon: "chart.bar.fill",
-                    helper: "No recent play yet",
+                    helper: L10n.string("home.game_stats.empty_helper", languageManager: languageManager),
                     gradient: [AppColors.info, AppColors.primary]
                 )
             }
@@ -513,26 +514,28 @@ struct HomeView: View {
     
     private var recentGamesSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            HStack {
+            HStack(alignment: .firstTextBaseline) {
                 HStack(spacing: 8) {
                     Image(systemName: "clock.fill")
                         .font(.system(size: 17, weight: .semibold))
                         .foregroundColor(AppColors.primary)
-                    Text("Continue Playing")
-                        .font(.system(size: 20, weight: .bold))
+                    Text(L10n.string("home.continue_playing", languageManager: languageManager))
+                        .font(RMTypeScale.sectionTitle)
                         .foregroundColor(AppColors.textPrimary)
                 }
                 
                 Spacer()
                 
-                Button("View All") {
+                Button(L10n.string("home.view_all", languageManager: languageManager)) {
                     selectedGame = nil
                     showingRecentlyPlayed = true
                 }
                 .buttonStyle(.plain)
-                .font(.system(size: 16, weight: .semibold))
+                .font(RMTypeScale.body)
                 .foregroundColor(AppColors.primary)
             }
+            .padding(.top, RMSpacing.xl)
+            .padding(.bottom, RMSpacing.md)
             .contentShape(Rectangle())
             .zIndex(2)
             
@@ -541,7 +544,7 @@ struct HomeView: View {
                     Image(systemName: "clock.arrow.circlepath")
                         .font(.system(size: 24, weight: .medium))
                         .foregroundColor(AppColors.textMuted)
-                    Text("No recent games")
+                    Text(L10n.string("home.no_recent_games", languageManager: languageManager))
                         .font(.subheadline)
                         .foregroundColor(AppColors.textSecondary)
                 }
@@ -583,14 +586,14 @@ struct HomeView: View {
                     Image(systemName: "gamecontroller.fill")
                         .font(.system(size: 16, weight: .semibold))
                         .foregroundColor(AppColors.primary)
-                    Text("All Emulators")
+                    Text(L10n.string("home.all_emulators", languageManager: languageManager))
                         .font(.system(size: 20, weight: .bold))
                         .foregroundColor(AppColors.textPrimary)
                 }
 
                 Spacer()
 
-                Text("\(viewModel.emulators.count) systems")
+                Text(L10n.format("home.systems.count", Int64(viewModel.emulators.count), languageManager: languageManager))
                     .font(.system(size: 14, weight: .medium))
                     .foregroundColor(AppColors.primary)
             }
@@ -625,25 +628,25 @@ struct HomeView: View {
             Button {
                 beginRename(entry)
             } label: {
-                Label("Rename", systemImage: "pencil")
+                Label(L10n.string("home.context.rename", languageManager: languageManager), systemImage: "pencil")
             }
 
             Button {
                 showDetails(entry)
             } label: {
-                Label("Details", systemImage: "info.circle")
+                Label(L10n.string("home.context.details", languageManager: languageManager), systemImage: "info.circle")
             }
 
             Button(role: .destructive) {
                 activeAlert = HomeAlertState(kind: .confirmDelete(HomeDeleteCandidate(entry: entry, mode: .removeROMOnly)))
             } label: {
-                Label("Remove ROM Only", systemImage: "eject")
+                Label(L10n.string("home.context.remove_rom_only", languageManager: languageManager), systemImage: "eject")
             }
 
             Button(role: .destructive) {
                 activeAlert = HomeAlertState(kind: .confirmDelete(HomeDeleteCandidate(entry: entry, mode: .removeAll)))
             } label: {
-                Label("Remove", systemImage: "trash")
+                Label(L10n.string("home.context.remove", languageManager: languageManager), systemImage: "trash")
             }
         }
     }
@@ -733,19 +736,19 @@ struct StatCard: View {
     let gradient: [Color]
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
+        VStack(alignment: .leading, spacing: RMSpacing.xs) {
             HStack(alignment: .top) {
                 Text(title)
-                    .font(.system(size: 15, weight: .medium))
+                    .font(RMTypeScale.body)
                     .foregroundStyle(AppColors.Text.secondary)
                 Spacer()
                 ZStack {
                     Circle()
                         .fill(AppColors.Surface.accentTint)
-                        .frame(width: 44, height: 44)
+                        .frame(width: 36, height: 36)
 
                     Image(systemName: icon)
-                        .font(.system(size: 18, weight: .semibold))
+                        .font(.system(size: 22, weight: .semibold))
                         .foregroundStyle(AppColors.Text.accent)
                 }
             }
@@ -899,8 +902,16 @@ struct LandscapeGameRow: View {
     }
 
     private var totalHoursText: String {
-        let hours = max(0, game.totalPlaySeconds / 3600)
-        return "\(hours)h"
+        let minutes = max(1, game.totalPlaySeconds / 60)
+        if minutes < 60 {
+            return "\(minutes)m played"
+        }
+        let hours = minutes / 60
+        let remainder = minutes % 60
+        if remainder == 0 {
+            return "\(hours)h played"
+        }
+        return "\(hours)h \(remainder)m played"
     }
 
     private var sessionProgress: CGFloat {
@@ -912,6 +923,7 @@ struct LandscapeGameRow: View {
 }
 
 struct RecentGameCard: View {
+    @EnvironmentObject private var languageManager: LanguageManager
     let game: RecentGame
     let variant: CollectorCardVariant
     let onTap: () -> Void
@@ -927,6 +939,7 @@ struct RecentGameCard: View {
             CollectorGameCard(
                 variant: variant,
                 title: GameCardTitleFormatter.format(game.title, maxWords: 7),
+                supportingTitleLine: game.smartSummary?.primaryProgressLine,
                 metadataPrimary: playedDateText,
                 metadataSecondary: game.totalPlaySeconds > 0 ? totalHoursText : nil,
                 platformTag: game.console,
@@ -1008,16 +1021,23 @@ struct RecentGameCard: View {
     }
 
     private var playedDateText: String {
-        guard let date = game.lastPlayed else { return "Never" }
-        let calendar = Calendar.current
-        if calendar.isDateInToday(date) { return "Today" }
-        if calendar.isDateInYesterday(date) { return "Yesterday" }
-        return date.formatted(.dateTime.month(.abbreviated).day())
+        guard let date = game.lastPlayed else {
+            return L10n.string("common.never_played", table: "Screens", languageManager: languageManager)
+        }
+        let formatter = RelativeDateTimeFormatter()
+        formatter.locale = languageManager.formattingLocale
+        formatter.unitsStyle = .short
+        return formatter.localizedString(for: date, relativeTo: Date())
     }
 
     private var totalHoursText: String {
         let hours = max(0, game.totalPlaySeconds / 3600)
-        return "\(hours)h"
+        return L10n.format(
+            "common.duration_hours_only",
+            Int64(hours),
+            table: "Screens",
+            languageManager: languageManager
+        )
     }
 
     private var sessionProgress: CGFloat {
@@ -1025,6 +1045,7 @@ struct RecentGameCard: View {
         let capped = min(1.0, CGFloat(game.totalPlaySeconds) / CGFloat(4 * 3600))
         return max(0.08, capped)
     }
+
 }
 
 struct EmulatorCard: View {
@@ -1092,10 +1113,10 @@ struct EmulatorCard: View {
                             .font(.system(size: 17, weight: .bold))
                             .foregroundColor(AppColors.textPrimary)
 
-                        HStack(spacing: 4) {
-                            Text(shortName)
-                                .font(.system(size: 13, weight: .medium))
-                                .foregroundColor(AppColors.textMuted)
+            HStack(spacing: 4) {
+                Text(shortName)
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundColor(AppColors.textMuted)
 
                             Text("•")
                                 .font(.system(size: 12, weight: .medium))
@@ -1111,7 +1132,7 @@ struct EmulatorCard: View {
 
                     ZStack {
                         Circle()
-                            .fill(AppColors.primary)
+                            .fill(AppColors.accentGradient.opacity(0.9))
                             .frame(width: 44, height: 44)
                             .shadow(color: AppColors.primary.opacity(isHovered ? 0.38 : 0.22), radius: isHovered ? 16 : 10, x: 0, y: 6)
 
@@ -1492,7 +1513,8 @@ final class HomeViewModel: ObservableObject {
                 totalPlaySeconds: Int(entry.playtimeTotal),
                 playableGame: entry.toGame(),
                 gameId: entry.id,
-                launchIssue: ROMCompatibilityService.shared.compatibility(for: entry).issue
+                launchIssue: ROMCompatibilityService.shared.compatibility(for: entry).issue,
+                smartSummary: entry.checksum.flatMap { PlayInsightsStore.shared.continuePlayingSummary(for: $0) }
             )
         }
 
@@ -1518,7 +1540,8 @@ final class HomeViewModel: ObservableObject {
                 totalPlaySeconds: Int(entry.playtimeTotal),
                 playableGame: entry.toGame(),
                 gameId: entry.id,
-                launchIssue: ROMCompatibilityService.shared.compatibility(for: entry).issue
+                launchIssue: ROMCompatibilityService.shared.compatibility(for: entry).issue,
+                smartSummary: entry.checksum.flatMap { PlayInsightsStore.shared.continuePlayingSummary(for: $0) }
             )
         }
     }
@@ -1554,6 +1577,7 @@ struct RecentGame: Identifiable {
     let playableGame: Game?
     let gameId: UUID
     let launchIssue: ROMLaunchIssue?
+    let smartSummary: ContinuePlayingSmartSummary?
 }
 
 struct EmulatorInfo: Identifiable {

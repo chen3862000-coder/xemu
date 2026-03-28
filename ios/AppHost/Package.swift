@@ -42,6 +42,7 @@ let package = Package(
                 "XemuCores"
             ],
             resources: [
+                .process("Localization/Resources"),
                 .process("Features/Covers/Resources"),
                 .process("../Resources/MockData")
             ],

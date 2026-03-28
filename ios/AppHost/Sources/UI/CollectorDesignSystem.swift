@@ -1,5 +1,30 @@
 import SwiftUI
 
+enum RMSpacing {
+    static let xs: CGFloat = 4
+    static let sm: CGFloat = 8
+    static let md: CGFloat = 12
+    static let lg: CGFloat = 16
+    static let xl: CGFloat = 24
+    static let xxl: CGFloat = 32
+    static let screenMargin: CGFloat = 20
+    static let sectionGap: CGFloat = 24
+}
+
+enum RMRadius {
+    static let chip: CGFloat = 12
+    static let button: CGFloat = 16
+    static let card: CGFloat = 20
+}
+
+enum RMTypeScale {
+    static let largeTitle = Font.system(size: 28, weight: .bold)
+    static let sectionTitle = Font.system(size: 20, weight: .bold)
+    static let cardTitle = Font.system(size: 17, weight: .semibold)
+    static let body = Font.system(size: 15, weight: .medium)
+    static let meta = Font.system(size: 13, weight: .medium)
+}
+
 enum CollectorCardVariant {
     case featured
     case standard
@@ -26,9 +51,9 @@ enum CollectorPlatformStyle {
     var badgeColor: Color {
         switch self {
         case .gb: return Color(hex: "7D9A52")
-        case .gbc: return Color(red: 0.52, green: 0.31, blue: 0.88)
-        case .gba: return Color(red: 0.49, green: 0.28, blue: 0.88)
-        case .nds: return Color(red: 0.37, green: 0.52, blue: 0.88)
+        case .gbc: return Color(hex: "14B8A6")
+        case .gba: return Color(hex: "7C5CFF")
+        case .nds: return Color(hex: "4A86FF")
         case .neutral: return AppColors.primary
         }
     }
@@ -73,24 +98,24 @@ private enum CollectorCardMetrics {
     static func cardHeight(for variant: CollectorCardVariant) -> CGFloat {
         switch variant {
         case .featured: return 280
-        case .standard: return 292
-        case .compact: return 224
+        case .standard: return 286
+        case .compact: return 216
         }
     }
 
     static func artworkHeight(for variant: CollectorCardVariant) -> CGFloat {
         switch variant {
         case .featured: return 156
-        case .standard: return 160
-        case .compact: return 132
+        case .standard: return 156
+        case .compact: return 124
         }
     }
 
     static func titleFont(for variant: CollectorCardVariant) -> Font {
         switch variant {
         case .featured: return .system(size: 24, weight: .semibold)
-        case .standard: return .system(size: 20, weight: .semibold)
-        case .compact: return .system(size: 18, weight: .semibold)
+        case .standard: return RMTypeScale.cardTitle
+        case .compact: return .system(size: 16, weight: .semibold)
         }
     }
 
@@ -105,8 +130,8 @@ private enum CollectorCardMetrics {
     static func titleBlockHeight(for variant: CollectorCardVariant) -> CGFloat {
         switch variant {
         case .featured: return 74
-        case .standard: return 62
-        case .compact: return 52
+        case .standard: return 52
+        case .compact: return 48
         }
     }
 
@@ -122,6 +147,7 @@ private enum CollectorCardMetrics {
 struct CollectorGameCard<Artwork: View>: View {
     let variant: CollectorCardVariant
     let title: String
+    let supportingTitleLine: String?
     let metadataPrimary: String
     let metadataSecondary: String?
     let platformTag: String?
@@ -132,6 +158,7 @@ struct CollectorGameCard<Artwork: View>: View {
     init(
         variant: CollectorCardVariant,
         title: String,
+        supportingTitleLine: String? = nil,
         metadataPrimary: String,
         metadataSecondary: String? = nil,
         platformTag: String? = nil,
@@ -141,6 +168,7 @@ struct CollectorGameCard<Artwork: View>: View {
     ) {
         self.variant = variant
         self.title = title
+        self.supportingTitleLine = supportingTitleLine
         self.metadataPrimary = metadataPrimary
         self.metadataSecondary = metadataSecondary
         self.platformTag = platformTag
@@ -161,8 +189,8 @@ struct CollectorGameCard<Artwork: View>: View {
                     .clipped()
 
                 if let platformTag, !platformTag.isEmpty {
-                    RMOverlayBadge(title: platformTag)
-                        .padding(8)
+                    RMOverlayBadge(title: platformTag, backgroundColor: platformStyle.badgeColor)
+                        .padding(RMSpacing.sm)
                 }
 
                 if let launchIssueIconName {
@@ -182,18 +210,28 @@ struct CollectorGameCard<Artwork: View>: View {
                 }
             }
 
-            VStack(alignment: .leading, spacing: 7) {
-                Text(title)
-                    .font(CollectorCardMetrics.titleFont(for: variant))
-                    .lineLimit(2)
-                    .truncationMode(.tail)
-                    .foregroundColor(AppColors.textPrimary)
-                    .frame(
-                        maxWidth: .infinity,
-                        minHeight: CollectorCardMetrics.titleBlockHeight(for: variant),
-                        maxHeight: CollectorCardMetrics.titleBlockHeight(for: variant),
-                        alignment: .topLeading
-                    )
+            VStack(alignment: .leading, spacing: RMSpacing.sm) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(title)
+                        .font(CollectorCardMetrics.titleFont(for: variant))
+                        .lineLimit(supportingTitleLine == nil ? 2 : 1)
+                        .truncationMode(.tail)
+                        .foregroundColor(AppColors.textPrimary)
+
+                    if let supportingTitleLine, !supportingTitleLine.isEmpty {
+                        Text(supportingTitleLine)
+                            .font(.system(size: variant == .compact ? 12 : 13, weight: .semibold, design: .rounded))
+                            .foregroundColor(AppColors.textPrimary)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.84)
+                    }
+                }
+                .frame(
+                    maxWidth: .infinity,
+                    minHeight: CollectorCardMetrics.titleBlockHeight(for: variant),
+                    maxHeight: CollectorCardMetrics.titleBlockHeight(for: variant),
+                    alignment: .topLeading
+                )
 
                 HStack(spacing: 5) {
                     Image(systemName: "clock")
@@ -201,7 +239,7 @@ struct CollectorGameCard<Artwork: View>: View {
                     Text(metadataPrimary)
                         .font(CollectorCardMetrics.metadataFont(for: variant))
                     if let metadataSecondary, !metadataSecondary.isEmpty {
-                        Text("•")
+                        Text("·")
                             .font(.system(size: 13, weight: .medium))
                             .opacity(0.55)
                         Text(metadataSecondary)
@@ -218,27 +256,27 @@ struct CollectorGameCard<Artwork: View>: View {
                     alignment: .leading
                 )
 
-                GeometryReader { geo in
-                    RMProgressBar(value: progress ?? 0, height: 8)
+                GeometryReader { _ in
+                    RMProgressBar(value: progress ?? 0, height: 4)
                 }
-                .frame(height: 8)
+                .frame(height: 4)
             }
             .frame(maxWidth: .infinity, alignment: .topLeading)
-            .padding(.horizontal, 14)
-            .padding(.top, 14)
-            .padding(.bottom, 16)
+            .padding(.horizontal, RMSpacing.lg)
+            .padding(.top, RMSpacing.lg)
+            .padding(.bottom, RMSpacing.lg)
             .background(AppColors.Surface.cardPrimary)
         }
         .frame(maxWidth: .infinity)
         .background(AppColors.Surface.cardPrimary)
         .overlay(
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
+            RoundedRectangle(cornerRadius: RMRadius.card, style: .continuous)
                 .stroke(AppColors.Border.subtle, lineWidth: 1)
         )
         .shadow(color: AppColors.Shadow.card, radius: 14, x: 0, y: 8)
         .shadow(color: AppColors.Shadow.ambientGlow.opacity(0.45), radius: 16, x: 0, y: 8)
         .frame(height: CollectorCardMetrics.cardHeight(for: variant))
-        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: RMRadius.card, style: .continuous))
     }
 }
 

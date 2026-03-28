@@ -254,10 +254,10 @@ final class CoverArtService {
         cacheHit: Bool,
         placeholderReason: String?
     ) {
-        let reason = placeholderReason ?? "n/a"
-        logger.debug(
-            "cover.resolve id=\(request.id.uuidString, privacy: .private(mask: .hash)) source=\(source.rawValue, privacy: .public) cache=\(cacheHit ? "hit" : "miss", privacy: .public) placeholder_reason=\(reason, privacy: .public)"
-        )
+        _ = request
+        _ = source
+        _ = cacheHit
+        _ = placeholderReason
     }
 
     private func coverDirectoryURL() -> URL {

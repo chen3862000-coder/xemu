@@ -216,4 +216,12 @@ int xemu_gb_is_cgb_mode(xemu_gb_handle_t handle) {
     return handle->wrapper.isCGBMode() ? 1 : 0;
 }
 
+xemu_error_t xemu_gb_read_memory8(xemu_gb_handle_t handle, uint16_t address, uint8_t* value) {
+    if (!handle || !value) {
+        return XEMU_ERROR_INVALID_ARGUMENT;
+    }
+
+    return handle->wrapper.readMemory8(address, *value) ? XEMU_OK : XEMU_ERROR_UNKNOWN;
+}
+
 } // extern "C"

@@ -21,10 +21,13 @@ struct GamePlayView: View {
         case medium
     }
 
+    private static let fastForwardSpeeds = [1, 2, 3, 6]
+
     let game: Game
     let onExit: () -> Void
     
     @EnvironmentObject private var shellThemeManager: ShellThemeManager
+    @EnvironmentObject private var languageManager: LanguageManager
     @Environment(\.emulatorShellTheme) private var shellTheme
     @StateObject private var viewModel = GamePlayViewModel()
     @State private var showPauseMenu = false
@@ -34,6 +37,7 @@ struct GamePlayView: View {
     @State private var fastForwardSpeed: Int = 1
     @State private var startTask: Task<Void, Never>?
     @State private var showCartridgeIntro = false
+    @State private var cartridgeOverlayOpacity: CGFloat = 0
     @State private var cartridgeInsertionProgress: CGFloat = 0
     @State private var cartridgeRevealProgress: CGFloat = 0
     @State private var showCartridgePowerOnGlow = false
@@ -46,6 +50,9 @@ struct GamePlayView: View {
     @AppStorage("resumeLaunchPolicy") private var resumeLaunchPolicyRaw = ResumeLaunchPolicy.autoResumeLatest.rawValue
     @AppStorage("showFPSMeter") private var showFPSMeter = false
     @AppStorage("showCartridgeLaunchIntro") private var showCartridgeLaunchIntro = true
+    @AppStorage("settings.dev.memoryMonitor") private var devMemoryMonitor = false
+    @AppStorage("settings.dev.thermalLogging") private var devThermalLogging = false
+    @AppStorage("settings.dev.gameplayEventOverlay") private var showGameplayEventOverlay = false
     @StateObject private var performanceProfiler = PerformanceProfiler.shared
     #if DEBUG
     @AppStorage("showPerformanceHUD") private var showPerformanceHUD = false
@@ -103,6 +110,26 @@ struct GamePlayView: View {
                         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
                 }
 
+                if viewModel.isRunning && (devMemoryMonitor || devThermalLogging) {
+                    DeveloperDiagnosticsOverlay(
+                        snapshot: performanceProfiler.hudSnapshot,
+                        showMemoryMonitor: devMemoryMonitor,
+                        showThermalStatus: devThermalLogging
+                    )
+                    .padding(.top, developerDiagnosticsTopPadding)
+                    .padding(.leading, 12)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                }
+
+                if viewModel.isRunning,
+                   showGameplayEventOverlay,
+                   let gameplayAnalysisSnapshot = viewModel.gameplayAnalysisSnapshot {
+                    GameplayEventDiagnosticsOverlay(snapshot: gameplayAnalysisSnapshot)
+                        .padding(.top, developerDiagnosticsTopPadding + 76)
+                        .padding(.leading, 12)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                }
+
                 if let achievementToast {
                     achievementToastOverlay(achievementToast)
                         .padding(.bottom, 32)
@@ -130,6 +157,7 @@ struct GamePlayView: View {
             achievementToastTask?.cancel()
             achievementToastTask = nil
             showCartridgeIntro = false
+            cartridgeOverlayOpacity = 0
             cartridgeInsertionProgress = 0
             cartridgeRevealProgress = 0
             showCartridgePowerOnGlow = false
@@ -203,6 +231,14 @@ struct GamePlayView: View {
         ResumeLaunchPolicy(rawValue: resumeLaunchPolicyRaw) ?? .autoResumeLatest
     }
 
+    private var developerDiagnosticsTopPadding: CGFloat {
+        #if DEBUG
+        showPerformanceHUD ? 84 : 12
+        #else
+        12
+        #endif
+    }
+
     private var heavyUIEffectsEnabled: Bool {
         performanceProfiler.currentQualityProfile.heavyUIEffects
     }
@@ -213,48 +249,49 @@ struct GamePlayView: View {
             pendingLaunchResumeFlow = false
             if showCartridgeLaunchIntro {
                 showCartridgeIntro = true
+                cartridgeOverlayOpacity = 1
                 showCartridgePowerOnGlow = false
                 showRetroBootSequence = false
                 cartridgeInsertionProgress = 0
                 cartridgeRevealProgress = 0
                 retroBootProgress = 0
-                try? await Task.sleep(nanoseconds: 120_000_000)
+                try? await Task.sleep(nanoseconds: 180_000_000)
                 guard !Task.isCancelled else { return }
 
-                withAnimation(.timingCurve(0.20, 0.80, 0.22, 1.0, duration: 0.62)) {
+                withAnimation(.timingCurve(0.18, 0.82, 0.22, 1.0, duration: 0.82)) {
                     cartridgeInsertionProgress = 0.84
                 }
-                try? await Task.sleep(nanoseconds: 560_000_000)
+                try? await Task.sleep(nanoseconds: 740_000_000)
                 guard !Task.isCancelled else { return }
 
-                withAnimation(.spring(response: 0.30, dampingFraction: 0.76, blendDuration: 0.12)) {
+                withAnimation(.spring(response: 0.38, dampingFraction: 0.78, blendDuration: 0.12)) {
                     cartridgeInsertionProgress = 1.03
-                }
-
-                try? await Task.sleep(nanoseconds: 130_000_000)
-                guard !Task.isCancelled else { return }
-
-                playCartridgeInsertionFeedback()
-                withAnimation(.spring(response: 0.30, dampingFraction: 0.90, blendDuration: 0.10)) {
-                    cartridgeInsertionProgress = 1.0
                 }
 
                 try? await Task.sleep(nanoseconds: 180_000_000)
                 guard !Task.isCancelled else { return }
 
-                withAnimation(.easeOut(duration: 0.24)) {
-                    showCartridgePowerOnGlow = true
-                }
-                withAnimation(.easeInOut(duration: 0.30)) {
-                    cartridgeRevealProgress = 0.58
+                playCartridgeInsertionFeedback()
+                withAnimation(.spring(response: 0.34, dampingFraction: 0.90, blendDuration: 0.10)) {
+                    cartridgeInsertionProgress = 1.0
                 }
 
-                try? await Task.sleep(nanoseconds: 140_000_000)
+                try? await Task.sleep(nanoseconds: 260_000_000)
+                guard !Task.isCancelled else { return }
+
+                withAnimation(.easeOut(duration: 0.34)) {
+                    showCartridgePowerOnGlow = true
+                }
+                withAnimation(.easeInOut(duration: 0.42)) {
+                    cartridgeRevealProgress = 0.46
+                }
+
+                try? await Task.sleep(nanoseconds: 240_000_000)
                 guard !Task.isCancelled else { return }
 
                 launchGame(allowResumeFlow: allowResumeFlow, deferResumeFlow: true)
 
-                for _ in 0..<14 {
+                for _ in 0..<18 {
                     if viewModel.isRunning { break }
                     try? await Task.sleep(nanoseconds: 100_000_000)
                     guard !Task.isCancelled else { return }
@@ -265,21 +302,29 @@ struct GamePlayView: View {
                     handleLaunchResumeFlowIfNeeded()
                 }
 
-                withAnimation(.easeInOut(duration: 0.38)) {
+                withAnimation(.easeInOut(duration: 0.58)) {
                     cartridgeRevealProgress = 1.0
+                }
+
+                try? await Task.sleep(nanoseconds: 560_000_000)
+                guard !Task.isCancelled else { return }
+
+                withAnimation(.easeInOut(duration: 0.56)) {
+                    showCartridgePowerOnGlow = false
+                    cartridgeOverlayOpacity = 0
                 }
 
                 try? await Task.sleep(nanoseconds: 420_000_000)
                 guard !Task.isCancelled else { return }
-                withAnimation(.easeInOut(duration: 0.42)) {
-                    showCartridgePowerOnGlow = false
-                    showRetroBootSequence = false
-                    showCartridgeIntro = false
-                    cartridgeRevealProgress = 0
-                    cartridgeInsertionProgress = 0
-                }
+
+                showRetroBootSequence = false
+                showCartridgeIntro = false
+                cartridgeRevealProgress = 0
+                cartridgeInsertionProgress = 0
+                cartridgeOverlayOpacity = 0
             } else {
                 showCartridgeIntro = false
+                cartridgeOverlayOpacity = 0
                 showCartridgePowerOnGlow = false
                 showRetroBootSequence = false
                 cartridgeInsertionProgress = 0
@@ -510,8 +555,7 @@ struct GamePlayView: View {
                                     gbUtilityIcon(systemName: "square.and.arrow.up.fill", tint: .orange) { viewModel.quickLoad() }
                                     Spacer()
                                     gbUtilityIcon(systemName: "forward.fill", tint: .yellow) {
-                                        fastForwardSpeed = fastForwardSpeed == 2 ? 1 : 2
-                                        viewModel.setFastForward(fastForwardSpeed)
+                                        cycleFastForwardSpeed()
                                     }
                                     gbUtilityIcon(systemName: "speaker.wave.2.fill", tint: .cyan) {}
                                 }
@@ -647,8 +691,7 @@ struct GamePlayView: View {
                             gbUtilityIcon(systemName: "square.and.arrow.down", tint: .white) { viewModel.quickSave() }
                             gbUtilityIcon(systemName: "square.and.arrow.up", tint: .white) { viewModel.quickLoad() }
                             gbUtilityIcon(systemName: "forward.fill", tint: .white) {
-                                fastForwardSpeed = fastForwardSpeed == 2 ? 1 : 2
-                                viewModel.setFastForward(fastForwardSpeed)
+                                cycleFastForwardSpeed()
                             }
                             gbUtilityIcon(systemName: "speaker.wave.2", tint: .white) {}
                         }
@@ -788,8 +831,7 @@ struct GamePlayView: View {
                             gbUtilityIcon(systemName: "square.and.arrow.up", tint: .white) { viewModel.quickLoad() }
                             Spacer()
                             gbUtilityIcon(systemName: "forward.fill", tint: .white) {
-                                fastForwardSpeed = fastForwardSpeed == 2 ? 1 : 2
-                                viewModel.setFastForward(fastForwardSpeed)
+                                cycleFastForwardSpeed()
                             }
                             gbUtilityIcon(systemName: "speaker.wave.2", tint: .white) {}
                         }
@@ -1006,8 +1048,7 @@ struct GamePlayView: View {
                                 gbUtilityIcon(systemName: "square.and.arrow.up.fill", tint: .orange) { viewModel.quickLoad() }
                                 Spacer()
                                 gbUtilityIcon(systemName: "forward.fill", tint: .yellow) {
-                                    fastForwardSpeed = fastForwardSpeed == 2 ? 1 : 2
-                                    viewModel.setFastForward(fastForwardSpeed)
+                                    cycleFastForwardSpeed()
                                 }
                                 gbUtilityIcon(systemName: "speaker.wave.2.fill", tint: .cyan) {}
                             }
@@ -1134,8 +1175,7 @@ struct GamePlayView: View {
                         gbUtilityIcon(systemName: "square.and.arrow.down", tint: .white) { viewModel.quickSave() }
                         gbUtilityIcon(systemName: "square.and.arrow.up", tint: .white) { viewModel.quickLoad() }
                         gbUtilityIcon(systemName: "forward.fill", tint: .white) {
-                            fastForwardSpeed = fastForwardSpeed == 2 ? 1 : 2
-                            viewModel.setFastForward(fastForwardSpeed)
+                            cycleFastForwardSpeed()
                         }
                         gbUtilityIcon(systemName: "speaker.wave.2", tint: .white) {}
                     }
@@ -1275,8 +1315,7 @@ struct GamePlayView: View {
                                 gbUtilityIcon(systemName: "square.and.arrow.down", tint: .white) { viewModel.quickSave() }
                                 gbUtilityIcon(systemName: "square.and.arrow.up", tint: .white) { viewModel.quickLoad() }
                                 gbUtilityIcon(systemName: "forward.fill", tint: .white) {
-                                    fastForwardSpeed = fastForwardSpeed == 2 ? 1 : 2
-                                    viewModel.setFastForward(fastForwardSpeed)
+                                    cycleFastForwardSpeed()
                                 }
                                 gbUtilityIcon(systemName: "speaker.wave.2", tint: .white) {}
                             }
@@ -1488,8 +1527,7 @@ struct GamePlayView: View {
                             gbUtilityIcon(systemName: "square.and.arrow.down", tint: .white) { viewModel.quickSave() }
                             gbUtilityIcon(systemName: "square.and.arrow.up", tint: .white) { viewModel.quickLoad() }
                             gbUtilityIcon(systemName: "forward.fill", tint: .white) {
-                                fastForwardSpeed = fastForwardSpeed == 2 ? 1 : 2
-                                viewModel.setFastForward(fastForwardSpeed)
+                                cycleFastForwardSpeed()
                             }
                             gbUtilityIcon(systemName: "speaker.wave.2", tint: .white) {}
                         }
@@ -1665,8 +1703,7 @@ struct GamePlayView: View {
                                 gbUtilityIcon(systemName: "square.and.arrow.down", tint: .white) { viewModel.quickSave() }
                                 gbUtilityIcon(systemName: "square.and.arrow.up", tint: .white) { viewModel.quickLoad() }
                                 gbUtilityIcon(systemName: "forward.fill", tint: .white) {
-                                    fastForwardSpeed = fastForwardSpeed == 2 ? 1 : 2
-                                    viewModel.setFastForward(fastForwardSpeed)
+                                    cycleFastForwardSpeed()
                                 }
                                 gbUtilityIcon(systemName: "speaker.wave.2", tint: .white) {}
                             }
@@ -2080,8 +2117,7 @@ struct GamePlayView: View {
             ndsLandscapeUtilitySegment(icon: "square.and.arrow.up") { viewModel.quickLoad() }
             Rectangle().fill(Color.black.opacity(0.18)).frame(width: 1, height: height - 8)
             ndsLandscapeUtilitySegment(icon: "forward.fill") {
-                fastForwardSpeed = fastForwardSpeed == 2 ? 1 : 2
-                viewModel.setFastForward(fastForwardSpeed)
+                cycleFastForwardSpeed()
             }
             Rectangle().fill(Color.black.opacity(0.18)).frame(width: 1, height: height - 8)
             ndsLandscapeUtilitySegment(icon: "speaker.wave.2") {}
@@ -2973,8 +3009,7 @@ struct GamePlayView: View {
                 viewModel.quickLoad()
             }
             gbUtilityIcon(systemName: "forward.fill", tint: .yellow, customSize: iconSize) {
-                fastForwardSpeed = fastForwardSpeed == 2 ? 1 : 2
-                viewModel.setFastForward(fastForwardSpeed)
+                cycleFastForwardSpeed()
             }
             gbUtilityIcon(systemName: "speaker.wave.2.fill", tint: .cyan, customSize: iconSize) {}
         }
@@ -3427,7 +3462,8 @@ struct GamePlayView: View {
                 MetalView(
                     metalRenderer: renderer,
                     tick: advancesEmulation ? viewModel.tick : nil,
-                    renderScale: viewModel.currentRenderScale
+                    renderScale: viewModel.currentRenderScale,
+                    targetFrameDuration: { viewModel.targetFrameTime }
                 )
             } else {
                 retroMindPlaceholderView
@@ -3528,6 +3564,18 @@ struct GamePlayView: View {
         }
     }
 
+    private func cycleFastForwardSpeed() {
+        guard let currentIndex = Self.fastForwardSpeeds.firstIndex(of: fastForwardSpeed) else {
+            fastForwardSpeed = Self.fastForwardSpeeds[0]
+            viewModel.setFastForward(fastForwardSpeed)
+            return
+        }
+
+        let nextIndex = (currentIndex + 1) % Self.fastForwardSpeeds.count
+        fastForwardSpeed = Self.fastForwardSpeeds[nextIndex]
+        viewModel.setFastForward(fastForwardSpeed)
+    }
+
     private var loadingPlatformName: String {
         switch game.gamePlatform {
         case .GB:
@@ -3613,13 +3661,35 @@ struct GamePlayView: View {
 
     private func cartridgeLaunchOverlay(in geometry: GeometryProxy) -> some View {
         let style = cartridgeLaunchStyle
+        let isNDSLandscapeIntro = game.gamePlatform == .NDS && isLandscape(geometry)
         let insertionProgress = max(0.0, min(1.0, cartridgeInsertionProgress))
         let revealProgress = max(0.0, min(1.0, cartridgeRevealProgress))
         let bootProgress = max(0.0, min(1.0, retroBootProgress))
         let depthProgress = 1.0 - insertionProgress
         let easedDepth = depthProgress * depthProgress
         let travel = max(108.0, min(180.0, geometry.size.height * 0.18))
-        let centerYOffset = -max(42.0, min(92.0, geometry.size.height * 0.08))
+        let finalLift = max(18.0, min(36.0, geometry.size.height * 0.035)) * revealProgress
+        let centerYOffset: CGFloat = {
+            if isNDSLandscapeIntro {
+                return -max(10.0, min(26.0, geometry.size.height * 0.03)) - (finalLift * 0.35)
+            }
+            return -max(58.0, min(118.0, geometry.size.height * 0.11)) - finalLift
+        }()
+        let centerXOffset: CGFloat = {
+            guard isNDSLandscapeIntro else { return 0 }
+            let safeLeading = geometry.safeAreaInsets.leading
+            let safeTrailing = geometry.safeAreaInsets.trailing
+            let cameraSideExclusionInset: CGFloat = 34
+            let cameraOnLeadingSide = safeLeading > safeTrailing
+            let cameraLeadingInset = cameraOnLeadingSide ? cameraSideExclusionInset : 0
+            let cameraTrailingInset = cameraOnLeadingSide ? 0 : cameraSideExclusionInset
+            return ndsLandscapeHorizontalOffset(
+                safeLeading: safeLeading,
+                safeTrailing: safeTrailing,
+                cameraLeadingInset: cameraLeadingInset,
+                cameraTrailingInset: cameraTrailingInset
+            )
+        }()
         let sinkDistance = style.height * 0.46 * revealProgress
         let cartridgeY = (-travel + (travel * 2.0 * insertionProgress)) + centerYOffset + sinkDistance
         let slotY = travel + (style.height * 0.34) + centerYOffset
@@ -3632,16 +3702,6 @@ struct GamePlayView: View {
         let sideCompression = 1.0 - (0.13 * easedDepth)
         let cardShadowOpacity = 0.20 + (0.22 * depthProgress)
         let cardVisibility = max(0.0, 1.0 - revealProgress * 1.2 - (showRetroBootSequence ? (0.20 + 0.65 * bootProgress) : 0))
-        let statusYOffset = max(94.0, min(154.0, geometry.size.height * 0.13))
-        let statusText: String = {
-            if revealProgress > 0.08 { return "Launching \(loadingPlatformName)" }
-            if showRetroBootSequence { return "Booting \(loadingPlatformName)" }
-            if showCartridgePowerOnGlow { return "Booting \(loadingPlatformName)" }
-            if insertionProgress < 0.5 { return "Inserting \(loadingPlatformName) Cartridge" }
-            if insertionProgress < 1.0 { return "Locking Cartridge" }
-            return "Powering On \(loadingPlatformName)"
-        }()
-
         return ZStack {
             Color.black.opacity(max(0.02, (0.24 - (0.12 * insertionProgress)) * (1.0 - 0.92 * revealProgress)))
                 .ignoresSafeArea()
@@ -3711,6 +3771,7 @@ struct GamePlayView: View {
                     .opacity(cardVisibility)
                     .blur(radius: 4.0 * revealProgress, opaque: false)
             }
+            .offset(x: centerXOffset)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
 
             if showCartridgePowerOnGlow {
@@ -3720,6 +3781,7 @@ struct GamePlayView: View {
                     startRadius: 10,
                     endRadius: max(120, min(240, geometry.size.width * 0.34))
                 )
+                .offset(x: centerXOffset)
                 .ignoresSafeArea()
                 .transition(.opacity)
             }
@@ -3727,14 +3789,8 @@ struct GamePlayView: View {
             Color.black.opacity(0.20 * revealProgress)
                 .ignoresSafeArea()
                 .blendMode(.multiply)
-
-            Text(statusText)
-                .font(.system(size: 13, weight: .semibold))
-                .foregroundColor(.white.opacity(0.82))
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
-                .offset(y: statusYOffset)
-                .opacity(max(0.0, (1.0 - revealProgress * 2.1) * (showRetroBootSequence ? 0.62 : 1.0)))
         }
+        .opacity(cartridgeOverlayOpacity)
         .allowsHitTesting(true)
     }
 
@@ -4203,10 +4259,10 @@ struct GamePlayView: View {
                 VStack(spacing: 12) {
                     HStack {
                         VStack(alignment: .leading, spacing: 4) {
-                            Text("Game Paused")
+                            Text(screenString("gameplay.pause.title", "Game Paused"))
                                 .font(SubpageUI.Font.title)
                                 .foregroundColor(AppColors.textPrimary)
-                            Text(game.title ?? "Current game")
+                            Text(game.title ?? screenString("gameplay.pause.current_game", "Current game"))
                                 .font(SubpageUI.Font.subtitle)
                                 .foregroundColor(AppColors.textMuted)
                                 .lineLimit(1)
@@ -4226,37 +4282,37 @@ struct GamePlayView: View {
                     }
 
                     if !viewModel.statusMessage.isEmpty {
-                        Text(viewModel.statusMessage)
+                        Text(localizedPauseStatusMessage)
                             .font(.system(size: 12, weight: .medium))
                             .foregroundColor(AppColors.textSecondary)
                             .frame(maxWidth: .infinity, alignment: .leading)
                             .padding(.horizontal, 2)
                     }
 
-                    pauseActionButton(title: "Resume", icon: "play.fill", style: .primary) {
+                    pauseActionButton(title: screenString("gameplay.pause.resume", "Resume"), icon: "play.fill", style: .primary) {
                         triggerHaptic(.light)
                         viewModel.resumeEmulation()
                         showPauseMenu = false
                     }
 
                     HStack(spacing: 10) {
-                        pauseActionButton(title: "Quick Save", icon: "square.and.arrow.down.fill") {
+                        pauseActionButton(title: screenString("gameplay.pause.quick_save", "Quick Save"), icon: "square.and.arrow.down.fill") {
                             triggerHaptic(.medium)
                             viewModel.quickSave()
                             saveSlotSummaries = viewModel.saveSlotSummaries()
                         }
-                        pauseActionButton(title: "Quick Load", icon: "square.and.arrow.up.fill") {
+                        pauseActionButton(title: screenString("gameplay.pause.quick_load", "Quick Load"), icon: "square.and.arrow.up.fill") {
                             triggerHaptic(.medium)
                             viewModel.quickLoad()
                         }
                     }
 
-                    pauseActionButton(title: "Restart Game", icon: "arrow.counterclockwise") {
+                    pauseActionButton(title: screenString("gameplay.pause.restart", "Restart Game"), icon: "arrow.counterclockwise") {
                         restartGameFromPause()
                     }
 
                     HStack(spacing: 10) {
-                        pauseActionButton(title: pauseSheetMode == .advanced ? "Back" : "Save States", icon: pauseSheetMode == .advanced ? "chevron.left" : "tray.full.fill") {
+                        pauseActionButton(title: pauseSheetMode == .advanced ? screenString("gameplay.pause.back", "Back") : screenString("gameplay.pause.save_states", "Save States"), icon: pauseSheetMode == .advanced ? "chevron.left" : "tray.full.fill") {
                             withAnimation(.easeOut(duration: 0.2)) {
                                 if pauseSheetMode == .advanced {
                                     pauseSheetMode = .quick
@@ -4267,7 +4323,7 @@ struct GamePlayView: View {
                             }
                         }
                         HStack(spacing: 8) {
-                            ForEach([1, 2, 3, 6], id: \.self) { speed in
+                            ForEach(Self.fastForwardSpeeds, id: \.self) { speed in
                                 Button {
                                     triggerHaptic(.light)
                                     fastForwardSpeed = speed
@@ -4297,13 +4353,13 @@ struct GamePlayView: View {
                     if pauseSheetMode == .advanced {
                         VStack(spacing: 10) {
                             HStack(spacing: 10) {
-                                pauseActionButton(title: showSaveSlotsPanel ? "Hide Saves" : "Manage Saves", icon: "tray.full.fill") {
+                                pauseActionButton(title: showSaveSlotsPanel ? screenString("gameplay.pause.hide_saves", "Hide Saves") : screenString("gameplay.pause.manage_saves", "Manage Saves"), icon: "tray.full.fill") {
                                     saveSlotSummaries = viewModel.saveSlotSummaries()
                                     withAnimation(.easeOut(duration: 0.2)) {
                                         showSaveSlotsPanel.toggle()
                                     }
                                 }
-                                pauseActionButton(title: "Controls", icon: "gamecontroller") {
+                                pauseActionButton(title: screenString("gameplay.pause.controls", "Controls"), icon: "gamecontroller") {
                                     // Reserved for future in-game controls editor
                                 }
                             }
@@ -4311,11 +4367,11 @@ struct GamePlayView: View {
                             if showSaveSlotsPanel {
                                 VStack(alignment: .leading, spacing: 10) {
                                     HStack {
-                                        Text("Save States")
+                                        Text(screenString("gameplay.pause.save_states", "Save States"))
                                             .font(.system(size: 15, weight: .semibold))
                                             .foregroundColor(AppColors.textPrimary)
                                         Spacer()
-                                        Text("Quick + 10 Slots")
+                                        Text(screenString("gameplay.pause.slot_overview", "Quick + 10 Slots"))
                                             .font(.system(size: 11))
                                             .foregroundColor(AppColors.textMuted)
                                     }
@@ -4342,7 +4398,7 @@ struct GamePlayView: View {
                         }
                     }
 
-                    pauseActionButton(title: "Exit to Library", icon: "xmark", style: .destructive) {
+                    pauseActionButton(title: screenString("gameplay.pause.exit_to_library", "Exit to Library"), icon: "xmark", style: .destructive) {
                         startTask?.cancel()
                         startTask = nil
                         viewModel.stopEmulation()
@@ -4366,10 +4422,10 @@ struct GamePlayView: View {
                 .overlay(.ultraThinMaterial.opacity(0.14))
             VStack(alignment: .leading, spacing: 16) {
                 VStack(alignment: .leading, spacing: 6) {
-                    Text("Resume From Save State?")
+                    Text(screenString("gameplay.pause.resume_from_save_state", "Resume From Save State?"))
                         .font(SubpageUI.Font.title)
                         .foregroundColor(AppColors.textPrimary)
-                    Text("Choose a save to continue, or start fresh.")
+                    Text(screenString("gameplay.pause.resume_from_save_state_message", "Choose a save to continue, or start fresh."))
                         .font(SubpageUI.Font.body)
                         .foregroundColor(AppColors.textMuted)
                 }
@@ -4390,10 +4446,10 @@ struct GamePlayView: View {
                 .frame(maxHeight: 220)
 
                 HStack(spacing: 10) {
-                    pauseActionButton(title: "Start Fresh", icon: "sparkles") {
+                    pauseActionButton(title: screenString("gameplay.pause.start_fresh", "Start Fresh"), icon: "sparkles") {
                         showLaunchStatePicker = false
                     }
-                    pauseActionButton(title: "Open Pause Menu", icon: "line.3.horizontal") {
+                    pauseActionButton(title: screenString("gameplay.pause.open_pause_menu", "Open Pause Menu"), icon: "line.3.horizontal") {
                         showLaunchStatePicker = false
                         showPauseMenu = true
                     }
@@ -4416,7 +4472,7 @@ struct GamePlayView: View {
                 Image(systemName: "exclamationmark.triangle.fill")
                     .font(.system(size: 24, weight: .semibold))
                     .foregroundColor(AppColors.warning)
-                Text("Unable to Start Game")
+                Text(screenString("gameplay.pause.unable_to_start", "Unable to Start Game"))
                     .font(SubpageUI.Font.title)
                     .foregroundColor(AppColors.textPrimary)
                 Text(viewModel.statusMessage)
@@ -4426,10 +4482,10 @@ struct GamePlayView: View {
                     .lineLimit(3)
 
                 HStack(spacing: 10) {
-                    pauseActionButton(title: "Retry", icon: "arrow.clockwise", style: .primary) {
+                    pauseActionButton(title: screenString("gameplay.pause.retry", "Retry"), icon: "arrow.clockwise", style: .primary) {
                         beginLaunchSequence(allowResumeFlow: true)
                     }
-                    pauseActionButton(title: "Back", icon: "xmark") {
+                    pauseActionButton(title: screenString("gameplay.pause.back", "Back"), icon: "xmark") {
                         onExit()
                     }
                 }
@@ -4439,6 +4495,23 @@ struct GamePlayView: View {
             .subpagePopup(cornerRadius: 22)
             .padding(.horizontal, 18)
         }
+    }
+
+    private var localizedPauseStatusMessage: String {
+        switch viewModel.statusMessage {
+        case "Paused":
+            return screenString("gameplay.pause.paused", "Paused")
+        default:
+            return viewModel.statusMessage
+        }
+    }
+
+    private func screenString(_ key: String, _ fallback: String) -> String {
+        L10n.string(key, table: "Screens", fallback: fallback, languageManager: languageManager)
+    }
+
+    private func screenFormat(_ key: String, _ fallback: String, _ value: CVarArg) -> String {
+        L10n.format(key, value, table: "Screens", fallback: fallback, languageManager: languageManager)
     }
 
     private enum PauseActionStyle {
@@ -4535,14 +4608,14 @@ struct GamePlayView: View {
             if mode == .launchPicker {
                 VStack(alignment: .leading, spacing: 6) {
                     HStack(spacing: 8) {
-                        Text(summary.isQuickSlot ? "Quick Save" : "Slot \(summary.displayName)")
+                        Text(summary.isQuickSlot ? screenString("gameplay.pause.quick_save", "Quick Save") : screenFormat("gameplay.pause.slot_format", "Slot %@", summary.displayName))
                             .font(.system(size: 15, weight: .semibold))
                             .foregroundColor(AppColors.textPrimary)
                             .lineLimit(1)
                             .layoutPriority(1)
                         consoleIdentityBadge
                         if isRecommended {
-                            Text("Recommended")
+                            Text(screenString("gameplay.pause.recommended", "Recommended"))
                                 .font(.system(size: 10, weight: .semibold))
                                 .foregroundColor(AppColors.primary)
                                 .padding(.horizontal, 7)
@@ -4550,12 +4623,12 @@ struct GamePlayView: View {
                                 .background(Capsule().fill(AppColors.primary.opacity(0.10)))
                         }
                     }
-                    Text(summary.metadata?.createdAt.formatted(date: .abbreviated, time: .shortened) ?? "No save yet")
+                    Text(summary.metadata?.createdAt.formatted(date: .abbreviated, time: .shortened) ?? screenString("gameplay.pause.no_save_yet", "No save yet"))
                         .font(.system(size: 12))
                         .foregroundColor(AppColors.textMuted)
                         .lineLimit(1)
 
-                    Text(game.title ?? "Unknown Game")
+                    Text(game.title ?? screenString("gameplay.pause.unknown_game", "Unknown Game"))
                         .font(.system(size: 11, weight: .medium))
                         .foregroundColor(AppColors.textSecondary)
                         .lineLimit(1)
@@ -4571,14 +4644,14 @@ struct GamePlayView: View {
             } else {
                 VStack(alignment: .leading, spacing: 8) {
                     HStack(spacing: 8) {
-                        Text(summary.isQuickSlot ? "Quick Save" : "Slot \(summary.displayName)")
+                        Text(summary.isQuickSlot ? screenString("gameplay.pause.quick_save", "Quick Save") : screenFormat("gameplay.pause.slot_format", "Slot %@", summary.displayName))
                             .font(.system(size: 15, weight: .semibold))
                             .foregroundColor(AppColors.textPrimary)
                             .lineLimit(1)
                             .layoutPriority(1)
                         consoleIdentityBadge
 
-                        Text(summary.isEmpty ? "Empty" : "Saved")
+                        Text(summary.isEmpty ? screenString("gameplay.pause.empty", "Empty") : screenString("gameplay.pause.saved", "Saved"))
                             .font(.system(size: 10, weight: .semibold))
                             .foregroundColor(summary.isEmpty ? AppColors.textMuted : AppColors.primary)
                             .padding(.horizontal, 7)
@@ -4586,12 +4659,12 @@ struct GamePlayView: View {
                             .background(Capsule().fill(AppColors.surfaceLight.opacity(summary.isEmpty ? 0.35 : 0.55)))
                     }
 
-                    Text(summary.metadata?.createdAt.formatted(date: .abbreviated, time: .shortened) ?? "No save yet")
+                    Text(summary.metadata?.createdAt.formatted(date: .abbreviated, time: .shortened) ?? screenString("gameplay.pause.no_save_yet", "No save yet"))
                         .font(.system(size: 12))
                         .foregroundColor(AppColors.textMuted)
                         .lineLimit(1)
 
-                    Text(game.title ?? "Unknown Game")
+                    Text(game.title ?? screenString("gameplay.pause.unknown_game", "Unknown Game"))
                         .font(.system(size: 11, weight: .medium))
                         .foregroundColor(AppColors.textSecondary)
                         .lineLimit(1)

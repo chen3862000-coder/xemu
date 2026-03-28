@@ -12,7 +12,7 @@ public final class NDSCore: EmulatorCore, @unchecked Sendable {
     private var loadedROMData: Data?
     private var loadedROMPath: String?
     private var pendingBatterySaveData: Data?
-    private var lastAudioSampleRate: Int = 44_100
+    private var lastAudioSampleRate: Int = 32_728
     private var inputState: [Int: Float] = [:]
 
     public init() {}

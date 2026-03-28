@@ -51,11 +51,31 @@ public struct AudioSampleInfo {
     public let sampleCount: Int
     public let sampleRate: Int
     public let samples: UnsafePointer<Int16>?
-    
+
     public init(sampleCount: Int, sampleRate: Int, samples: UnsafePointer<Int16>?) {
         self.sampleCount = sampleCount
         self.sampleRate = sampleRate
         self.samples = samples
+    }
+}
+
+// Memory regions for game state analysis
+public enum MemoryRegion: Int32 {
+    case systemRAM = 0
+    case workRAM
+    case videoRAM
+    case cartridgeRAM
+    case saveRAM
+}
+
+// Memory access info
+public struct MemoryAccessInfo {
+    public let data: UnsafePointer<UInt8>?
+    public let size: Int
+
+    public init(data: UnsafePointer<UInt8>?, size: Int) {
+        self.data = data
+        self.size = size
     }
 }
 
@@ -285,6 +305,17 @@ public class GBCCoreWrapper: CEmulatorCore {
         guard size > 0 else { return nil }
 
         return Data(bytes: samples, count: size)
+    }
+
+    public func readMemory8(address: UInt16) -> UInt8? {
+        nativeLock.lock()
+        defer { nativeLock.unlock() }
+
+        guard useNative, let handle = handle, isROMLoaded else { return nil }
+
+        var value: UInt8 = 0
+        let result = xemu_gb_read_memory8(handle, address, &value)
+        return result == XEMU_OK ? value : nil
     }
     
     public func setInput(button: Int, pressed: Bool) {
@@ -679,6 +710,36 @@ public class GBACoreWrapper: CEmulatorCore {
         guard result == XEMU_OK else {
             throw XemuCoresError.saveStateFailed("Failed to import GBA battery save")
         }
+    }
+
+    public func readMemory8(address: UInt32) -> UInt8? {
+        nativeLock.lock()
+        defer { nativeLock.unlock() }
+
+        guard useNative, let handle = handle, isROMLoaded else { return nil }
+        var value: UInt8 = 0
+        let result = xemu_gba_read_memory8(handle, address, &value)
+        return result == XEMU_OK ? value : nil
+    }
+
+    public func readMemory16(address: UInt32) -> UInt16? {
+        nativeLock.lock()
+        defer { nativeLock.unlock() }
+
+        guard useNative, let handle = handle, isROMLoaded else { return nil }
+        var value: UInt16 = 0
+        let result = xemu_gba_read_memory16(handle, address, &value)
+        return result == XEMU_OK ? value : nil
+    }
+
+    public func readMemory32(address: UInt32) -> UInt32? {
+        nativeLock.lock()
+        defer { nativeLock.unlock() }
+
+        guard useNative, let handle = handle, isROMLoaded else { return nil }
+        var value: UInt32 = 0
+        let result = xemu_gba_read_memory32(handle, address, &value)
+        return result == XEMU_OK ? value : nil
     }
     
     public func shutdown() {

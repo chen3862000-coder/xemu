@@ -1,0 +1,38 @@
+[
+  {
+    "termKey": "save_state",
+    "source": "Save State",
+    "description": "An emulator snapshot save, not the game's native save system.",
+    "translations": {
+      "en": "Save State",
+      "zh-Hans": "即时存档",
+      "zh-Hant": "即時存檔",
+      "ja": "ステート保存",
+      "es": "Guardar estado"
+    }
+  },
+  {
+    "termKey": "load_state",
+    "source": "Load State",
+    "description": "Restore an emulator snapshot created by Save State.",
+    "translations": {
+      "en": "Load State",
+      "zh-Hans": "读取即时存档",
+      "zh-Hant": "讀取即時存檔",
+      "ja": "ステート読込",
+      "es": "Cargar estado"
+    }
+  },
+  {
+    "termKey": "fast_forward",
+    "source": "Fast Forward",
+    "description": "Temporarily run emulation faster than normal speed.",
+    "translations": {
+      "en": "Fast Forward",
+      "zh-Hans": "快进",
+      "zh-Hant": "快轉",
+      "ja": "早送り",
+      "es": "Avance rápido"
+    }
+  }
+]

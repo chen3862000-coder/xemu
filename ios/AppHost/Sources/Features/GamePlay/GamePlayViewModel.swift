@@ -23,7 +23,9 @@ class GamePlayViewModel: ObservableObject {
     @Published var currentFPS = 0
     @Published var saveStateDebugLine = ""
     @Published var latestUnlockedAchievement: PlayerAchievementUnlock?
+    @Published private(set) var gameplayAnalysisSnapshot: MarioAnalysisSnapshot?
     @AppStorage("audioQuality") private var audioQuality = 1
+    @AppStorage("settings.dev.hpDeathDetection") private var hpDeathDetectionEnabled = false
 
     private var emulatorSession: EmulatorSession?
     private(set) var metalRenderer: MetalRenderer?
@@ -34,16 +36,21 @@ class GamePlayViewModel: ObservableObject {
     private var activeDisplayPlatform: Platform?
     private var lastAppliedQualityProfile: PerfQualityProfile?
     private var activeAudioSampleRate: Double = 48_000
+    private var fastForwardSpeed = 1
     private var pendingReleaseTasks: [EmulatorButton: Task<Void, Never>] = [:]
     private var touchButtonStates: [EmulatorButton: Bool] = [:]
     private var currentROMHash: String = ""
     private var currentPlatform: Platform?
     private var currentGameTitle: String = ""
+    private var frameAnalysisCoordinator: FrameAnalysisCoordinator?
+    private var activePlayInsightsGame: PlayInsightsSupportedGame?
+    private var latestPlayInsightsLiveSample: MarioLiveMemorySample?
+    private var lastPublishedPlayInsightsPayload: [String: UInt16] = [:]
+    private var lastPublishedPlayInsightsLocationSummary: String?
+    private var sessionDeathEvents = 0
+    private var sessionDamageEvents = 0
     private var sessionStartedAt: Date?
     private var lastFrameSnapshot: (data: Data, width: Int, height: Int, bytesPerRow: Int)?
-    private var audioDebugChunkCount: Int = 0
-    private var ndsRateNormalizationLogCount: Int = 0
-    
     private var frameWidth = 160
     private var frameHeight = 144
     private var lastFPSTime: Double = 0
@@ -60,6 +67,7 @@ class GamePlayViewModel: ObservableObject {
     private var ndsTouchPressedAtNs: UInt64 = 0
     private var pendingNDSTouchReleaseTask: Task<Void, Never>?
     @Published private(set) var currentNDSDisplayLayout: NDSScreenLayout = .stacked
+    private var currentSaveStateData: Data? = nil
     #if canImport(UIKit)
     private var lifecycleObservers: [NSObjectProtocol] = []
     #endif
@@ -117,7 +125,85 @@ class GamePlayViewModel: ObservableObject {
     }
 
     var targetFrameTime: Double {
-        1.0 / 60.0
+        Self.targetFrameTime(forSpeed: fastForwardSpeed)
+    }
+
+    static func targetFrameTime(forSpeed speed: Int) -> Double {
+        let normalizedSpeed = max(1, speed)
+        return 1.0 / (60.0 * Double(normalizedSpeed))
+    }
+
+    static func effectiveDisplayPlatform(
+        requestedPlatform: Platform,
+        isCGBModeDetected: Bool
+    ) -> Platform {
+        switch requestedPlatform {
+        case .GBC:
+            // Preserve the GBC display pipeline for explicit GBC launches even if
+            // runtime detection is late or temporarily unavailable.
+            return .GBC
+        case .GB:
+            return isCGBModeDetected ? .GBC : .GB
+        default:
+            return requestedPlatform
+        }
+    }
+
+    static func shouldEnablePostProcessing(
+        for profile: PerfQualityProfile,
+        displayPlatform: Platform?
+    ) -> Bool {
+        if displayPlatform == .GBC {
+            return true
+        }
+        return profile.shadersEnabled
+    }
+
+    static func initialAudioEngineRate(
+        requestedPlatform: Platform,
+        isNDSCore: Bool,
+        audioQuality: Int,
+        nativeRateHint: Int? = nil
+    ) -> Double {
+        switch audioQuality {
+        case 0:
+            return 48_000
+        case 1, 2:
+            if requestedPlatform == .GB || requestedPlatform == .GBC {
+                return Double(GBCore.nativeAudioSampleRate)
+            }
+            if requestedPlatform == .NDS || isNDSCore {
+                let hintedRate = nativeRateHint ?? 32_728
+                return Double(max(8_000, hintedRate))
+            }
+            return 44_100
+        default:
+            return 44_100
+        }
+    }
+
+    static func audioLatencyProfile(
+        requestedPlatform: Platform,
+        isNDSCore: Bool
+    ) -> AudioEngine.LatencyProfile {
+        if requestedPlatform == .GB || requestedPlatform == .GBC {
+            return .lowLatency
+        }
+        if requestedPlatform == .NDS || isNDSCore {
+            return .streaming
+        }
+        return .balanced
+    }
+
+    static func shouldAutoResumeLaunchState(for platform: Platform?) -> Bool {
+        _ = platform
+        return true
+    }
+
+    static func resolvedAudioSampleRate(_ sampleRate: Int, platform: Platform?) -> Int {
+        guard platform == .NDS else { return sampleRate }
+        guard sampleRate > 0 else { return sampleRate }
+        return sampleRate
     }
 
     func startEmulation(romPath: String, platform: Platform, gameTitle: String? = nil, romHash: String? = nil) {
@@ -131,6 +217,7 @@ class GamePlayViewModel: ObservableObject {
             currentPlatform = platform
             currentGameTitle = gameTitle ?? ""
             currentROMHash = romHash ?? deriveROMHash(from: romPath)
+            configureGameplayAnalysisIfNeeded(platform: platform)
             
             switch platform {
             case .GB, .GBC:
@@ -164,6 +251,10 @@ class GamePlayViewModel: ObservableObject {
                 statusMessage = "Failed to load ROM"
                 return
             }
+
+            // Reset save state data for new game
+            currentSaveStateData = nil
+
             if platform != .NDS {
                 restoreNativeSaveIfAvailable(for: core)
             }
@@ -188,51 +279,28 @@ class GamePlayViewModel: ObservableObject {
                 textureSize = CGSize(width: 160, height: 144)
             }
             metalRenderer = MetalRenderer(textureSize: textureSize)
-            let effectiveDisplayPlatform: Platform = {
-                switch platform {
-                case .GB, .GBC:
-                    if let gbCore = core as? GBCore, gbCore.isCGBModeDetected {
-                        return .GBC
-                    } else {
-                        return .GB
-                    }
-                default:
-                    return platform
-                }
-            }()
+            let effectiveDisplayPlatform = Self.effectiveDisplayPlatform(
+                requestedPlatform: platform,
+                isCGBModeDetected: (core as? GBCore)?.isCGBModeDetected ?? false
+            )
             activeDisplayPlatform = effectiveDisplayPlatform
             applyDisplayColorAdjustments(for: effectiveDisplayPlatform)
 
             let isNDSCore = core is NDSCore
-            let audioEngineRate: Double
-            switch audioQuality {
-            case 0:  // Sound First - 48kHz for best quality
-                audioEngineRate = 48_000
-            case 1:  // Balanced - stable 44.1kHz output
-                if platform == .GB || platform == .GBC {
-                    audioEngineRate = Double(GBCore.nativeAudioSampleRate)
-                } else if platform == .NDS || isNDSCore {
-                    // Keep NDS output pinned to hardware-friendly 48kHz.
-                    audioEngineRate = 48_000
-                } else {
-                    audioEngineRate = 44_100
-                }
-            default:  // Frame First - direct pass-through; keep GB/GBC native
-                if platform == .GB || platform == .GBC {
-                    audioEngineRate = Double(GBCore.nativeAudioSampleRate)
-                } else if platform == .NDS || isNDSCore {
-                    audioEngineRate = 48_000
-                } else {
-                    audioEngineRate = 44_100
-                }
-            }
-            NSLog("[AudioTune] start platform=%@ core=%@ quality=%d initRate=%.1f",
-                  platform.rawValue,
-                  String(describing: type(of: core)),
-                  audioQuality,
-                  audioEngineRate)
+            let audioEngineRate = Self.initialAudioEngineRate(
+                requestedPlatform: platform,
+                isNDSCore: isNDSCore,
+                audioQuality: audioQuality,
+                nativeRateHint: core.getAudioSampleRate()
+            )
             activeAudioSampleRate = audioEngineRate
-            audioEngine = AudioEngine(sampleRate: audioEngineRate)
+            audioEngine = AudioEngine(
+                sampleRate: audioEngineRate,
+                latencyProfile: Self.audioLatencyProfile(
+                    requestedPlatform: platform,
+                    isNDSCore: isNDSCore
+                )
+            )
             audioEngine?.configureAudioSession()
             try? audioEngine?.start()
             audioEngine?.setVolume(0.8)
@@ -292,11 +360,20 @@ class GamePlayViewModel: ObservableObject {
             activeCore = nil
             activeDisplayPlatform = nil
             lastAppliedQualityProfile = nil
+            fastForwardSpeed = 1
             activeAudioSampleRate = 44_100
             resetAudioResamplerState()
             currentPlatform = nil
             currentROMHash = ""
             currentGameTitle = ""
+            frameAnalysisCoordinator?.reset()
+            frameAnalysisCoordinator = nil
+            activePlayInsightsGame = nil
+            latestPlayInsightsLiveSample = nil
+            lastPublishedPlayInsightsPayload = [:]
+            lastPublishedPlayInsightsLocationSummary = nil
+            sessionDeathEvents = 0
+            sessionDamageEvents = 0
             sessionStartedAt = nil
             lastFrameSnapshot = nil
             hasAutoResumedStateThisSession = false
@@ -304,6 +381,7 @@ class GamePlayViewModel: ObservableObject {
             ndsTouchIsPressed = false
             ndsTouchPressedAtNs = 0
             latestUnlockedAchievement = nil
+            gameplayAnalysisSnapshot = nil
         }
         
         isRunning = false
@@ -359,6 +437,7 @@ class GamePlayViewModel: ObservableObject {
             defer { performanceProfiler.endOperation(op) }
             do {
                 let data = try session.saveState(to: 0)
+                currentSaveStateData = data // Track save state for memory analysis
                 let metadata = makeMetadata(slot: 0)
                 try await SaveStateStorage.shared.persist(data: data, metadata: metadata, screenshotData: makeSaveStateScreenshotData())
                 let (verifyData, _, _) = try SaveStateStorage.shared.load(slot: 0, romHash: currentROMHash)
@@ -509,6 +588,53 @@ class GamePlayViewModel: ObservableObject {
         return hash.lowercased()
     }
 
+    private func configureGameplayAnalysisIfNeeded(platform: Platform) {
+        // Completely disable analysis for GB/GBC platforms due to performance issues
+        guard platform != .GB && platform != .GBC else {
+            GameplayAnalysisLogger.session("gb-gbc-analysis-disabled platform=\(platform.rawValue)")
+            frameAnalysisCoordinator = nil
+            gameplayAnalysisSnapshot = nil
+            activePlayInsightsGame = nil
+            return
+        }
+
+        guard let profile = MarioGameProfile.activeProfile(
+            title: currentGameTitle,
+            platform: platform,
+            romHash: currentROMHash
+        ) else {
+            GameplayAnalysisLogger.session("no-profile title=\(currentGameTitle) platform=\(platform.rawValue) romHash=\(currentROMHash)")
+            frameAnalysisCoordinator = nil
+            gameplayAnalysisSnapshot = nil
+            activePlayInsightsGame = nil
+            return
+        }
+
+        activePlayInsightsGame = PlayInsightsSupportedGame(profileID: profile.id)
+        latestPlayInsightsLiveSample = nil
+        lastPublishedPlayInsightsPayload = [:]
+        lastPublishedPlayInsightsLocationSummary = nil
+        sessionDeathEvents = 0
+        sessionDamageEvents = 0
+
+        GameplayAnalysisLogger.session(
+            "configured profile=\(profile.id) title=\(currentGameTitle) platform=\(platform.rawValue) romHash=\(currentROMHash)"
+        )
+        frameAnalysisCoordinator = FrameAnalysisCoordinator(profile: profile) { [weak self] events, snapshot in
+            guard let self else { return }
+            guard self.isRunning else { return }
+            self.gameplayAnalysisSnapshot = snapshot
+            self.refreshPlayInsightsLiveSnapshotIfNeeded(with: snapshot)
+            self.sessionDeathEvents += events.filter { $0 == .deathDetected }.count
+            self.sessionDamageEvents += events.filter { $0 == .damageLight || $0 == .damageHeavy }.count
+            guard self.hpDeathDetectionEnabled else { return }
+            for event in events {
+                HapticManager.shared.gameplayEvent(event)
+            }
+        }
+        frameAnalysisCoordinator?.setLaunchInfo(platform: platform, gameTitle: currentGameTitle, romHash: currentROMHash)
+    }
+
     private func makeMetadata(slot: Int) -> SaveStateMetadata {
         SaveStateMetadata(
             slot: slot,
@@ -554,12 +680,70 @@ class GamePlayViewModel: ObservableObject {
             endTime: endedAt,
             durationSeconds: elapsed
         )
+        if let supportedGame = activePlayInsightsGame {
+            let payload = latestPlayInsightsLiveSample.map {
+                GameSpecificTelemetrySnapshot(
+                    gameId: currentROMHash,
+                    timestamp: endedAt,
+                    payloadType: supportedGame.profileID,
+                    payloadJson: $0.contextValues
+                )
+            }
+            PlayInsightsStore.shared.recordSession(
+                .init(
+                    gameId: currentROMHash,
+                    gameTitle: resolvedTitle,
+                    system: resolvedSystem,
+                    supportedGame: supportedGame,
+                    startedAt: startedAt,
+                    endedAt: endedAt,
+                    durationSeconds: elapsed,
+                    deaths: sessionDeathEvents,
+                    damageEvents: sessionDamageEvents,
+                    snapshot: payload,
+                    latestLocationSummary: gameplayAnalysisSnapshot?.locationDebugSummary
+                )
+            )
+        }
+        NotificationCenter.default.post(name: .romLibraryDidChange, object: nil)
         if let firstUnlock = unlocks.first {
             latestUnlockedAchievement = firstUnlock
             if isRunning && !isPaused {
                 statusMessage = "🏆 \(firstUnlock.title) unlocked"
             }
         }
+    }
+
+    private func refreshPlayInsightsLiveSnapshotIfNeeded(with snapshot: MarioAnalysisSnapshot) {
+        guard let supportedGame = activePlayInsightsGame,
+              !currentROMHash.isEmpty,
+              let liveSample = latestPlayInsightsLiveSample else { return }
+
+        let payload = liveSample.contextValues
+        let locationSummary = snapshot.locationDebugSummary
+        guard payload != lastPublishedPlayInsightsPayload || locationSummary != lastPublishedPlayInsightsLocationSummary else {
+            return
+        }
+
+        lastPublishedPlayInsightsPayload = payload
+        lastPublishedPlayInsightsLocationSummary = locationSummary
+
+        PlayInsightsStore.shared.refreshLiveSnapshot(
+            .init(
+                gameId: currentROMHash,
+                gameTitle: currentGameTitle,
+                system: currentPlatform?.rawValue.lowercased() ?? "",
+                supportedGame: supportedGame,
+                snapshot: GameSpecificTelemetrySnapshot(
+                    gameId: currentROMHash,
+                    timestamp: snapshot.sampledAt,
+                    payloadType: supportedGame.profileID,
+                    payloadJson: payload
+                ),
+                latestLocationSummary: locationSummary
+            )
+        )
+        NotificationCenter.default.post(name: .romLibraryDidChange, object: nil)
     }
 
     private func refreshSaveStateDebugLine() {
@@ -585,6 +769,89 @@ class GamePlayViewModel: ObservableObject {
     private func supportsNativeBatterySave(_ platform: Platform?) -> Bool {
         guard let platform else { return false }
         return platform == .GB || platform == .GBC || platform == .GBA || platform == .NDS
+    }
+
+    private func currentLiveMemorySample() -> MarioLiveMemorySample? {
+        guard let platform = currentPlatform,
+              let profile = MarioGameProfile.activeProfile(
+                  title: currentGameTitle,
+                  platform: platform,
+                  romHash: currentROMHash
+              ),
+              let liveMemory = profile.liveMemory else {
+            return nil
+        }
+
+        if platform == .GBA, let gbaCore = activeCore as? GBACore {
+            let sample = MarioLiveMemorySample(
+                lives: gbaCore.readMemory8(at: liveMemory.livesAddress),
+                powerUpState: gbaCore.readMemory8(at: liveMemory.powerUpAddress),
+                gameplayState: gbaCore.readMemory8(at: liveMemory.gameplayStateAddress),
+                invulnerabilityTimer: gbaCore.readMemory8(at: liveMemory.invulnerabilityTimerAddress),
+                health: liveMemory.healthAddress16.flatMap { gbaCore.readMemory16(at: $0) },
+                maxHealth: liveMemory.maxHealthAddress16.flatMap { gbaCore.readMemory16(at: $0) },
+                gameMode: liveMemory.gameModeAddress.flatMap { gbaCore.readMemory8(at: $0) },
+                contextValues: readContextValues(fields: liveMemory.contextFields) { field in
+                    switch field.width {
+                    case .u8:
+                        return gbaCore.readMemory8(at: field.address).map(UInt16.init)
+                    case .u16:
+                        return gbaCore.readMemory16(at: field.address)
+                    }
+                }
+            )
+            latestPlayInsightsLiveSample = sample
+            return sample
+        }
+
+        if (platform == .GB || platform == .GBC),
+           let gbcCore = activeCore as? GBCore,
+           liveMemory.livesAddress <= UInt32(UInt16.max),
+           liveMemory.powerUpAddress <= UInt32(UInt16.max),
+           liveMemory.gameplayStateAddress <= UInt32(UInt16.max),
+           liveMemory.invulnerabilityTimerAddress <= UInt32(UInt16.max) {
+            let sample = MarioLiveMemorySample(
+                lives: gbcCore.readMemory8(at: UInt16(liveMemory.livesAddress)),
+                powerUpState: gbcCore.readMemory8(at: UInt16(liveMemory.powerUpAddress)),
+                gameplayState: gbcCore.readMemory8(at: UInt16(liveMemory.gameplayStateAddress)),
+                invulnerabilityTimer: gbcCore.readMemory8(at: UInt16(liveMemory.invulnerabilityTimerAddress)),
+                health: nil,
+                maxHealth: nil,
+                gameMode: nil,
+                contextValues: readContextValues(fields: liveMemory.contextFields) { field in
+                    guard field.address <= UInt32(UInt16.max) else { return nil }
+                    switch field.width {
+                    case .u8:
+                        return gbcCore.readMemory8(at: UInt16(field.address)).map(UInt16.init)
+                    case .u16:
+                        let low = gbcCore.readMemory8(at: UInt16(field.address))
+                        let high = field.address < UInt32(UInt16.max)
+                            ? gbcCore.readMemory8(at: UInt16(field.address + 1))
+                            : nil
+                        guard let low, let high else { return nil }
+                        return UInt16(low) | (UInt16(high) << 8)
+                    }
+                }
+            )
+            latestPlayInsightsLiveSample = sample
+            return sample
+        }
+
+        GameplayAnalysisLogger.event("live-memory unsupported profile=\(profile.id) platform=\(platform.rawValue)")
+        return nil
+    }
+
+    private func readContextValues(
+        fields: [MarioLiveMemoryContextField],
+        reader: (MarioLiveMemoryContextField) -> UInt16?
+    ) -> [String: UInt16] {
+        var values: [String: UInt16] = [:]
+        for field in fields {
+            if let value = reader(field) {
+                values[field.key] = value
+            }
+        }
+        return values
     }
 
     private func nativeSaveDirectoryURL() -> URL? {
@@ -793,8 +1060,15 @@ class GamePlayViewModel: ObservableObject {
     }
 
     func setFastForward(_ speed: Int) {
-        // TODO: Implement fast forward by adjusting frame timing
-        statusMessage = "Fast forward: \(speed)x"
+        let normalizedSpeed = max(1, speed)
+        guard fastForwardSpeed != normalizedSpeed else {
+            statusMessage = normalizedSpeed > 1 ? "Fast forward: \(normalizedSpeed)x" : "Fast forward off"
+            return
+        }
+
+        fastForwardSpeed = normalizedSpeed
+        updateFastForwardAudioState()
+        statusMessage = normalizedSpeed > 1 ? "Fast forward: \(normalizedSpeed)x" : "Fast forward off"
     }
 
     func currentRenderScale() -> Double {
@@ -822,6 +1096,10 @@ class GamePlayViewModel: ObservableObject {
 
     func autoResumeLaunchState(_ summary: SaveStateSlotSummary) {
         guard !summary.isEmpty else { return }
+        guard Self.shouldAutoResumeLaunchState(for: currentPlatform) else {
+            NSLog("[StateLoadGuard] auto-resume skipped reason=nds_audio_guard slot=%d rom=%@", summary.slot, currentROMHash)
+            return
+        }
         guard !hasAutoResumedStateThisSession else {
             NSLog("[StateLoadGuard] auto-resume skipped reason=already_loaded slot=%d rom=%@", summary.slot, currentROMHash)
             return
@@ -900,31 +1178,99 @@ class GamePlayViewModel: ObservableObject {
         let height = snapshot.height
         guard width > 0, height > 0, snapshot.bytesPerRow >= width * 4 else { return nil }
 
-        let data = snapshot.data as CFData
-        guard let provider = CGDataProvider(data: data) else { return nil }
-        let colorSpace = CGColorSpaceCreateDeviceRGB()
-        let bitmapInfo = CGBitmapInfo.byteOrder32Little.union(
-            CGBitmapInfo(rawValue: CGImageAlphaInfo.premultipliedFirst.rawValue)
-        )
-        guard let cgImage = CGImage(
-            width: width,
-            height: height,
-            bitsPerComponent: 8,
-            bitsPerPixel: 32,
-            bytesPerRow: snapshot.bytesPerRow,
-            space: colorSpace,
-            bitmapInfo: bitmapInfo,
-            provider: provider,
-            decode: nil,
-            shouldInterpolate: false,
-            intent: .defaultIntent
-        ) else { return nil }
+        guard let swappedData = swapRBChannels(in: snapshot.data, width: width, height: height, bytesPerRow: snapshot.bytesPerRow) else {
+            return nil
+        }
+        
+        var mutableData = swappedData
+        let dataCount = mutableData.count
+        let result = mutableData.withUnsafeMutableBytes { ptr -> Data? in
+            guard let baseAddress = ptr.baseAddress else { return nil }
+            let cfData = CFDataCreate(nil, baseAddress.assumingMemoryBound(to: UInt8.self), dataCount)
+            guard let cfData = cfData, let provider = CGDataProvider(data: cfData) else { return nil }
+            let colorSpace = CGColorSpaceCreateDeviceRGB()
+            let bitmapInfo = CGBitmapInfo.byteOrder32Little.union(
+                CGBitmapInfo(rawValue: CGImageAlphaInfo.noneSkipFirst.rawValue)
+            )
+            guard let cgImage = CGImage(
+                width: width,
+                height: height,
+                bitsPerComponent: 8,
+                bitsPerPixel: 32,
+                bytesPerRow: snapshot.bytesPerRow,
+                space: colorSpace,
+                bitmapInfo: bitmapInfo,
+                provider: provider,
+                decode: nil,
+                shouldInterpolate: false,
+                intent: .defaultIntent
+            ) else { return nil }
 
-        return UIImage(cgImage: cgImage).jpegData(compressionQuality: 0.72)
+            var uiImage = UIImage(cgImage: cgImage)
+            
+            if currentPlatform == .GBC {
+                uiImage = applyGBCColorAdjustments(to: uiImage) ?? uiImage
+            }
+
+            return uiImage.jpegData(compressionQuality: 0.72)
+        }
+        
+        return result
         #else
         return nil
         #endif
     }
+    
+    #if canImport(UIKit)
+    private func swapRBChannels(in data: Data, width: Int, height: Int, bytesPerRow: Int) -> Data? {
+        var result = Data(count: data.count)
+        
+        for y in 0..<height {
+            for x in 0..<width {
+                let offset = y * bytesPerRow + x * 4
+                guard offset + 3 < data.count else { break }
+                
+                // BGRA -> RGBA (swap R and B)
+                let b = data[offset]
+                let g = data[offset + 1]
+                let r = data[offset + 2]
+                let a = data[offset + 3]
+                
+                result[offset] = r
+                result[offset + 1] = g
+                result[offset + 2] = b
+                result[offset + 3] = a
+            }
+        }
+        
+        return result
+    }
+    #endif
+    
+    #if canImport(UIKit)
+    private func applyGBCColorAdjustments(to image: UIImage) -> UIImage? {
+        guard let ciImage = CIImage(image: image) else { return nil }
+        
+        guard let contrastFilter = CIFilter(name: "CIColorControls") else { return nil }
+        contrastFilter.setValue(ciImage, forKey: kCIInputImageKey)
+        contrastFilter.setValue(1.10, forKey: kCIInputContrastKey)
+        contrastFilter.setValue(1.22, forKey: kCIInputSaturationKey)
+        contrastFilter.setValue(0.72, forKey: kCIInputBrightnessKey)
+        
+        guard let contrastAdjusted = contrastFilter.outputImage else { return nil }
+        
+        guard let gammaFilter = CIFilter(name: "CIGamma") else { return nil }
+        gammaFilter.setValue(contrastAdjusted, forKey: kCIInputImageKey)
+        gammaFilter.setValue(1.86, forKey: "inputPower")
+        
+        guard let gammaAdjusted = gammaFilter.outputImage else { return nil }
+        
+        let context = CIContext()
+        guard let cgOutput = context.createCGImage(gammaAdjusted, from: gammaAdjusted.extent) else { return nil }
+        
+        return UIImage(cgImage: cgOutput)
+    }
+    #endif
 
     private func applyDisplayColorAdjustments(for displayPlatform: Platform?) {
         switch displayPlatform {
@@ -946,10 +1292,25 @@ class GamePlayViewModel: ObservableObject {
         guard let renderer = metalRenderer else { return }
         guard lastAppliedQualityProfile != profile else { return }
         lastAppliedQualityProfile = profile
-        emulatorSession?.setRenderFrameSkip(max(0, profile.frameSkip))
-        renderer.setPostProcessingEnabled(profile.shadersEnabled)
-        if profile.shadersEnabled {
+        emulatorSession?.setRenderFrameSkip(profile.frameSkip)
+        let shouldEnablePostProcessing = Self.shouldEnablePostProcessing(
+            for: profile,
+            displayPlatform: activeDisplayPlatform
+        )
+        renderer.setPostProcessingEnabled(shouldEnablePostProcessing)
+        if shouldEnablePostProcessing {
             applyDisplayColorAdjustments(for: activeDisplayPlatform)
+        }
+    }
+
+    private func updateFastForwardAudioState() {
+        guard let audioEngine else { return }
+        if fastForwardSpeed > 1 {
+            audioEngine.pause()
+            audioEngine.quarantineAfterStateLoad(silenceMs: 0, fadeInMs: 0)
+        } else if isRunning && !isPaused {
+            audioEngine.quarantineAfterStateLoad(silenceMs: 60, fadeInMs: 90)
+            audioEngine.resume()
         }
     }
 }
@@ -975,6 +1336,12 @@ extension GamePlayViewModel: EmulatorRenderDelegate {
                 )
             }
             lastFrameSnapshot = (data: data, width: width, height: height, bytesPerRow: pitch)
+            frameAnalysisCoordinator?.enqueue(
+                frameBufferInfo: frameBufferInfo,
+                timestamp: Date(),
+                liveMemorySample: currentLiveMemorySample(),
+                saveStateData: currentSaveStateData
+            )
             let qualityProfile = performanceProfiler.currentQualityProfile
             applyPerformanceProfileIfNeeded(qualityProfile)
 
@@ -992,23 +1359,21 @@ extension GamePlayViewModel: EmulatorRenderDelegate {
     
     func emulatorDidGenerateAudio(samples: Data?, sampleRate: Int) {
         autoreleasepool {
+            guard fastForwardSpeed == 1 else { return }
             guard let samples = samples, !samples.isEmpty else { return }
-            let normalizedInputRate = normalizedInputSampleRate(sampleRate)
+            let normalizedInputRate = resolvedInputSampleRate(sampleRate)
 
             if audioQuality != 0,
                prefersNativeAudioRateForCurrentPlatform(),
-               normalizedInputRate > 0,
-               currentPlatform != .NDS {
+               normalizedInputRate > 0 {
                 retuneAudioEngineIfNeeded(to: normalizedInputRate)
             }
 
             var outputSamples = samples
-            var outputRate = normalizedInputRate
 
             switch audioQuality {
             case 0:  // Sound First - resample to 48kHz for best quality
                 let targetRate = 48_000
-                outputRate = targetRate
                 if normalizedInputRate != targetRate {
                     guard let resampled = resampleAudioLinearStreaming(samples: samples, fromRate: normalizedInputRate, toRate: targetRate) else {
                         return
@@ -1020,8 +1385,7 @@ extension GamePlayViewModel: EmulatorRenderDelegate {
                 
             case 1:  // Balanced
                 if currentPlatform == .NDS {
-                    let targetRate = 48_000
-                    outputRate = targetRate
+                    let targetRate = Int(activeAudioSampleRate.rounded())
                     if normalizedInputRate != targetRate {
                         guard let resampled = resampleAudioLinearStreaming(samples: samples, fromRate: normalizedInputRate, toRate: targetRate) else {
                             return
@@ -1032,11 +1396,9 @@ extension GamePlayViewModel: EmulatorRenderDelegate {
                     }
                 } else if prefersNativeAudioRateForCurrentPlatform() {
                     outputSamples = samples
-                    outputRate = normalizedInputRate
                     resetAudioResamplerState()
                 } else {
                     let targetRate = 44_100
-                    outputRate = targetRate
                     if normalizedInputRate != targetRate {
                         guard let resampled = resampleAudioLinearStreaming(samples: samples, fromRate: normalizedInputRate, toRate: targetRate) else {
                             return
@@ -1049,8 +1411,7 @@ extension GamePlayViewModel: EmulatorRenderDelegate {
                 
             case 2:  // Frame First
                 if currentPlatform == .NDS {
-                    let targetRate = 48_000
-                    outputRate = targetRate
+                    let targetRate = Int(activeAudioSampleRate.rounded())
                     if normalizedInputRate != targetRate {
                         guard let resampled = resampleAudioLinearStreaming(samples: samples, fromRate: normalizedInputRate, toRate: targetRate) else {
                             return
@@ -1070,29 +1431,15 @@ extension GamePlayViewModel: EmulatorRenderDelegate {
             }
 
             audioEngine?.updateAudioBuffer(outputSamples)
-            logAudioABIfNeeded(rawSamples: samples,
-                               rawRate: normalizedInputRate,
-                               outputSamples: outputSamples,
-                               outputRate: outputRate)
         }
     }
 
-    private func normalizedInputSampleRate(_ sampleRate: Int) -> Int {
-        guard currentPlatform == .NDS else { return sampleRate }
-        guard sampleRate > 0 else { return sampleRate }
+    private func resolvedInputSampleRate(_ sampleRate: Int) -> Int {
+        let resolvedRate = Self.resolvedAudioSampleRate(sampleRate, platform: currentPlatform)
+        guard currentPlatform == .NDS else { return resolvedRate }
+        guard resolvedRate > 0 else { return resolvedRate }
 
-        // melonDS/libretro occasionally reports a near-32k value (e.g. 32728).
-        // Normalize near-native DS rates so resampling ratio stays stable.
-        if abs(sampleRate - 32_768) <= 300 {
-            if sampleRate != 32_768 {
-                ndsRateNormalizationLogCount += 1
-                if ndsRateNormalizationLogCount <= 3 || ndsRateNormalizationLogCount % 240 == 0 {
-                    NSLog("[AudioTune] normalize nds inputRate from=%d to=32768", sampleRate)
-                }
-            }
-            return 32_768
-        }
-        return sampleRate
+        return resolvedRate
     }
 
     private func prefersNativeAudioRateForCurrentPlatform() -> Bool {
@@ -1107,16 +1454,17 @@ extension GamePlayViewModel: EmulatorRenderDelegate {
         guard targetRate >= 8_000, targetRate <= 96_000 else { return }
         guard abs(activeAudioSampleRate - targetRate) >= 12 else { return }
 
-        NSLog("[AudioTune] retune from=%.1f to=%.1f platform=%@",
-              activeAudioSampleRate,
-              targetRate,
-              currentPlatform?.rawValue ?? "unknown")
-
         audioEngine?.stop()
         audioEngine?.deactivateAudioSession()
 
         activeAudioSampleRate = targetRate
-        let engine = AudioEngine(sampleRate: targetRate)
+        let engine = AudioEngine(
+            sampleRate: targetRate,
+            latencyProfile: Self.audioLatencyProfile(
+                requestedPlatform: currentPlatform ?? .GB,
+                isNDSCore: activeCore is NDSCore
+            )
+        )
         engine.configureAudioSession()
         try? engine.start()
         engine.setVolume(0.8)
@@ -1215,47 +1563,18 @@ extension GamePlayViewModel: EmulatorRenderDelegate {
         }
     }
 
-    private func logAudioABIfNeeded(rawSamples: Data,
-                                    rawRate: Int,
-                                    outputSamples: Data,
-                                    outputRate: Int) {
-        guard currentPlatform == .GBA || currentPlatform == .NDS else { return }
-        guard UserDefaults.standard.bool(forKey: "dev.audio.debugAB") else { return }
-
-        audioDebugChunkCount += 1
-        guard audioDebugChunkCount % 120 == 0 else { return }
-
-        let rawMetrics = audioMetrics(for: rawSamples)
-        let outMetrics = audioMetrics(for: outputSamples)
-        let title = currentGameTitle.isEmpty ? "unknown" : currentGameTitle
-        let hashPrefix = String(currentROMHash.prefix(8))
-        NSLog("[AudioAB] game=%@ hash=%@ chunk=%d quality=%d rawRate=%d outRate=%d rawFrames=%d outFrames=%d rawPeak=%d outPeak=%d rawDcL=%.1f rawDcR=%.1f outDcL=%.1f outDcR=%.1f",
-              title,
-              hashPrefix,
-              audioDebugChunkCount,
-              audioQuality,
-              rawRate,
-              outputRate,
-              rawSamples.count / 4,
-              outputSamples.count / 4,
-              rawMetrics.peak,
-              outMetrics.peak,
-              rawMetrics.dcL,
-              rawMetrics.dcR,
-              outMetrics.dcL,
-              outMetrics.dcR)
-    }
-
-    private func audioMetrics(for samples: Data) -> (peak: Int, dcL: Double, dcR: Double) {
-        guard samples.count >= 4 else { return (0, 0, 0) }
+    private func audioMetrics(for samples: Data) -> (peak: Int, rms: Double, clippedSamples: Int, dcL: Double, dcR: Double) {
+        guard samples.count >= 4 else { return (0, 0, 0, 0, 0) }
         let sampleCount = samples.count / 2
-        guard sampleCount >= 2 else { return (0, 0, 0) }
+        guard sampleCount >= 2 else { return (0, 0, 0, 0, 0) }
 
         return samples.withUnsafeBytes { raw in
             guard let ptr = raw.baseAddress?.assumingMemoryBound(to: Int16.self) else {
-                return (0, 0, 0)
+                return (0, 0, 0, 0, 0)
             }
             var peak = 0
+            var sumSquares: Double = 0
+            var clippedSamples = 0
             var sumL: Double = 0
             var sumR: Double = 0
             var frames = 0
@@ -1267,13 +1586,19 @@ extension GamePlayViewModel: EmulatorRenderDelegate {
                 let absR = Swift.abs(r)
                 if absL > peak { peak = absL }
                 if absR > peak { peak = absR }
+                sumSquares += Double(l * l)
+                sumSquares += Double(r * r)
+                if absL >= 32_000 { clippedSamples += 1 }
+                if absR >= 32_000 { clippedSamples += 1 }
                 sumL += Double(l)
                 sumR += Double(r)
                 frames += 1
                 idx += 2
             }
-            guard frames > 0 else { return (peak, 0, 0) }
-            return (peak, sumL / Double(frames), sumR / Double(frames))
+            guard frames > 0 else { return (peak, 0, clippedSamples, 0, 0) }
+            let channelSamples = Double(frames * 2)
+            let rms = sqrt(sumSquares / max(1.0, channelSamples))
+            return (peak, rms, clippedSamples, sumL / Double(frames), sumR / Double(frames))
         }
     }
 

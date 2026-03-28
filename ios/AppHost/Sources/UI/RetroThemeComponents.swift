@@ -129,7 +129,7 @@ struct RMProgressBar: View {
         GeometryReader { proxy in
             ZStack(alignment: .leading) {
                 Capsule()
-                    .fill(AppColors.Surface.cardElevated)
+                    .fill(AppColors.primary.opacity(0.15))
 
                 Capsule()
                     .fill(AppColors.primary)
@@ -137,6 +137,7 @@ struct RMProgressBar: View {
                     .shadow(color: AppColors.Shadow.ambientGlow, radius: 8, x: 0, y: 2)
             }
         }
+        .animation(.easeOut(duration: 0.3), value: value)
         .frame(height: height)
     }
 }
@@ -177,15 +178,15 @@ struct RMIconCircleButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .foregroundStyle(AppColors.Text.primary)
-            .frame(width: 40, height: 40)
+            .frame(width: 44, height: 44)
             .background(AppColors.Surface.cardElevated)
             .overlay(
-                Circle()
+                RoundedRectangle(cornerRadius: RMRadius.button, style: .continuous)
                     .stroke(AppColors.Border.subtle, lineWidth: 1)
             )
-            .clipShape(Circle())
-            .scaleEffect(configuration.isPressed ? 0.96 : 1.0)
-            .animation(.easeOut(duration: 0.16), value: configuration.isPressed)
+            .clipShape(RoundedRectangle(cornerRadius: RMRadius.button, style: .continuous))
+            .scaleEffect(configuration.isPressed ? 0.97 : 1.0)
+            .animation(.easeOut(duration: 0.12), value: configuration.isPressed)
     }
 }
 
@@ -251,6 +252,7 @@ struct RMIconBadge: View {
 struct RMOverlayBadge: View {
     let title: String
     var systemName: String? = nil
+    var backgroundColor: Color = AppColors.Surface.cardOverlay.opacity(0.92)
 
     var body: some View {
         HStack(spacing: 6) {
@@ -262,13 +264,13 @@ struct RMOverlayBadge: View {
             Text(title)
                 .font(.system(size: 11, weight: .semibold))
         }
-        .foregroundStyle(AppColors.Text.primary)
-        .padding(.horizontal, 10)
-        .frame(height: 28)
-        .background(AppColors.Surface.cardOverlay.opacity(0.92))
+        .foregroundStyle(Color.white)
+        .padding(.horizontal, 6)
+        .frame(minWidth: 44, minHeight: 28)
+        .background(backgroundColor)
         .overlay(
             Capsule()
-                .stroke(AppColors.Border.subtle, lineWidth: 1)
+                .stroke(Color.white.opacity(0.18), lineWidth: 1)
         )
         .clipShape(Capsule())
     }

@@ -214,4 +214,16 @@ public final class GBACore: EmulatorCore {
             pitch: frame.pitch
         )
     }
+
+    public func readMemory8(at address: UInt32) -> UInt8? {
+        coreWrapper?.readMemory8(address: address)
+    }
+
+    public func readMemory16(at address: UInt32) -> UInt16? {
+        coreWrapper?.readMemory16(address: address)
+    }
+
+    public func readMemory32(at address: UInt32) -> UInt32? {
+        coreWrapper?.readMemory32(address: address)
+    }
 }

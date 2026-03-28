@@ -263,3 +263,6 @@ Keep this guide synchronized with reality; outdated automation instructions harm
 - Phase 3.6 completed: Game playback and emulation engine with Metal rendering, AVAudioEngine audio, touch controls, input mapping, save states, fast-forward, and frame skip
 - Added 30+ new tests for Phase 3.6 features (EmulatorCoreFactory, AudioEngine, MetalRenderer, GamePlayViewModel, TouchControlPad)
 - Added iOS Simulator testing workflow with xcodegen support
+- Added a localization foundation under `ios/AppHost/Sources/Localization/` with `SupportedLanguage`, `LanguageManager`, `L10n`, String Catalog resources, and structured localized content/glossary JSON; app root now supports Follow System plus in-app overrides for `en`, `zh-Hans`, `zh-Hant`, `ja`, and `es`
+- Expanded localization coverage with `Screens.xcstrings`, localized `GameListView`, `RecentlyPlayedView`, and `PlayerStatsView`, added `LocaleFormatting` and raw `.xcstrings` fallback loading for SwiftPM tests/runtime, and added a test that asserts every string catalog key contains all five launch locales
+- Added an experimental Mario GBA gameplay-analysis stack under `ios/AppHost/Sources/Host/GameplayAnalysis/` for profile-driven damage/death detection, gameplay haptics, and a developer diagnostics overlay, with the first profile targeting `Super Mario Advance 2`

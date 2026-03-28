@@ -126,7 +126,7 @@ enum InputEventType: String, Codable {
     case triggerPull
 }
 
-public enum ControllerButton: String, Codable, Sendable {
+public enum ControllerButton: String, Codable, Sendable, Hashable {
     case a
     case b
     case x

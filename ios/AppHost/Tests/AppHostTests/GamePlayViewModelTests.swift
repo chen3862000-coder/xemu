@@ -46,4 +46,141 @@ final class GamePlayViewModelTests: XCTestCase {
 
         XCTAssertEqual(resolved, .bottomOnly)
     }
+
+    func testEffectiveDisplayPlatformPreservesExplicitGBCLaunches() {
+        let resolved = GamePlayViewModel.effectiveDisplayPlatform(
+            requestedPlatform: .GBC,
+            isCGBModeDetected: false
+        )
+
+        XCTAssertEqual(resolved, .GBC)
+    }
+
+    func testEffectiveDisplayPlatformUpgradesGBLaunchesWhenCGBModeIsDetected() {
+        let resolved = GamePlayViewModel.effectiveDisplayPlatform(
+            requestedPlatform: .GB,
+            isCGBModeDetected: true
+        )
+
+        XCTAssertEqual(resolved, .GBC)
+    }
+
+    func testEffectiveDisplayPlatformKeepsPlainGBLaunchesAsGB() {
+        let resolved = GamePlayViewModel.effectiveDisplayPlatform(
+            requestedPlatform: .GB,
+            isCGBModeDetected: false
+        )
+
+        XCTAssertEqual(resolved, .GB)
+    }
+
+    func testShouldEnablePostProcessingKeepsGBCCorrectionInReducedProfiles() {
+        let enabled = GamePlayViewModel.shouldEnablePostProcessing(
+            for: .fair,
+            displayPlatform: .GBC
+        )
+
+        XCTAssertTrue(enabled)
+    }
+
+    func testShouldEnablePostProcessingRespectsProfileForNonGBCSystems() {
+        let enabled = GamePlayViewModel.shouldEnablePostProcessing(
+            for: .fair,
+            displayPlatform: .GBA
+        )
+
+        XCTAssertFalse(enabled)
+    }
+
+    func testInitialAudioEngineRateKeepsBalancedNDSAtNativeHint() {
+        let rate = GamePlayViewModel.initialAudioEngineRate(
+            requestedPlatform: .NDS,
+            isNDSCore: true,
+            audioQuality: 1,
+            nativeRateHint: 32_768
+        )
+
+        XCTAssertEqual(rate, 32_768)
+    }
+
+    func testInitialAudioEngineRateKeepsFrameFirstNDSAtNativeHint() {
+        let rate = GamePlayViewModel.initialAudioEngineRate(
+            requestedPlatform: .NDS,
+            isNDSCore: true,
+            audioQuality: 2,
+            nativeRateHint: 32_768
+        )
+
+        XCTAssertEqual(rate, 32_768)
+    }
+
+    func testInitialAudioEngineRateUses48kForSoundFirstNDS() {
+        let rate = GamePlayViewModel.initialAudioEngineRate(
+            requestedPlatform: .NDS,
+            isNDSCore: true,
+            audioQuality: 0,
+            nativeRateHint: 32_768
+        )
+
+        XCTAssertEqual(rate, 48_000)
+    }
+
+    func testResolvedAudioSampleRatePreservesNativeMelonDSNDSRate() {
+        let rate = GamePlayViewModel.resolvedAudioSampleRate(32_728, platform: .NDS)
+
+        XCTAssertEqual(rate, 32_728)
+    }
+
+    func testResolvedAudioSampleRateLeavesNonNDSRatesUntouched() {
+        let rate = GamePlayViewModel.resolvedAudioSampleRate(44_100, platform: .GBA)
+
+        XCTAssertEqual(rate, 44_100)
+    }
+
+    func testAudioLatencyProfileUsesLowLatencyForGB() {
+        let profile = GamePlayViewModel.audioLatencyProfile(
+            requestedPlatform: .GB,
+            isNDSCore: false
+        )
+
+        XCTAssertEqual(profile, .lowLatency)
+    }
+
+    func testAudioLatencyProfileUsesStreamingForNDS() {
+        let profile = GamePlayViewModel.audioLatencyProfile(
+            requestedPlatform: .NDS,
+            isNDSCore: true
+        )
+
+        XCTAssertEqual(profile, .streaming)
+    }
+
+    func testAudioLatencyProfileUsesBalancedForGBA() {
+        let profile = GamePlayViewModel.audioLatencyProfile(
+            requestedPlatform: .GBA,
+            isNDSCore: false
+        )
+
+        XCTAssertEqual(profile, .balanced)
+    }
+
+    func testShouldAutoResumeLaunchStateAllowsNDS() {
+        XCTAssertTrue(GamePlayViewModel.shouldAutoResumeLaunchState(for: .NDS))
+    }
+
+    func testShouldAutoResumeLaunchStateAllowsOtherPlatforms() {
+        XCTAssertTrue(GamePlayViewModel.shouldAutoResumeLaunchState(for: .GBA))
+    }
+
+    func testTargetFrameTimeUsesNormalSpeedByDefault() {
+        XCTAssertEqual(GamePlayViewModel.targetFrameTime(forSpeed: 1), 1.0 / 60.0, accuracy: 0.000_001)
+    }
+
+    func testTargetFrameTimeAcceleratesWhenFastForwardIsEnabled() {
+        XCTAssertEqual(GamePlayViewModel.targetFrameTime(forSpeed: 3), 1.0 / 180.0, accuracy: 0.000_001)
+    }
+
+    func testTargetFrameTimeClampsInvalidFastForwardValues() {
+        XCTAssertEqual(GamePlayViewModel.targetFrameTime(forSpeed: 0), 1.0 / 60.0, accuracy: 0.000_001)
+    }
 }

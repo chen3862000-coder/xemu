@@ -60,6 +60,9 @@ public:
     bool saveBattery(uint8_t* buffer, size_t size);
     bool loadBattery(const uint8_t* buffer, size_t size);
     size_t getBatterySaveSize() const;
+    bool readMemory8(uint32_t address, uint8_t& value) const;
+    bool readMemory16(uint32_t address, uint16_t& value) const;
+    bool readMemory32(uint32_t address, uint32_t& value) const;
 
     // System info
     const char* getROMTitle() const;

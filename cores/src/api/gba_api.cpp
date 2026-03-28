@@ -190,4 +190,34 @@ xemu_error_t xemu_gba_load_battery(xemu_gba_handle_t handle, const xemu_save_sta
     return success ? XEMU_OK : XEMU_ERROR_LOAD_STATE_FAILED;
 }
 
+xemu_error_t xemu_gba_read_memory8(xemu_gba_handle_t handle, uint32_t address, uint8_t* value) {
+    if (!handle || !value) {
+        return XEMU_ERROR_INVALID_ARGUMENT;
+    }
+    if (!handle->wrapper.isROMLoaded()) {
+        return XEMU_ERROR_NOT_INITIALIZED;
+    }
+    return handle->wrapper.readMemory8(address, *value) ? XEMU_OK : XEMU_ERROR_UNKNOWN;
+}
+
+xemu_error_t xemu_gba_read_memory16(xemu_gba_handle_t handle, uint32_t address, uint16_t* value) {
+    if (!handle || !value) {
+        return XEMU_ERROR_INVALID_ARGUMENT;
+    }
+    if (!handle->wrapper.isROMLoaded()) {
+        return XEMU_ERROR_NOT_INITIALIZED;
+    }
+    return handle->wrapper.readMemory16(address, *value) ? XEMU_OK : XEMU_ERROR_UNKNOWN;
+}
+
+xemu_error_t xemu_gba_read_memory32(xemu_gba_handle_t handle, uint32_t address, uint32_t* value) {
+    if (!handle || !value) {
+        return XEMU_ERROR_INVALID_ARGUMENT;
+    }
+    if (!handle->wrapper.isROMLoaded()) {
+        return XEMU_ERROR_NOT_INITIALIZED;
+    }
+    return handle->wrapper.readMemory32(address, *value) ? XEMU_OK : XEMU_ERROR_UNKNOWN;
+}
+
 } // extern "C"

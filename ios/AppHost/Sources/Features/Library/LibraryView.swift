@@ -241,17 +241,25 @@ struct RomDetailView: View {
 
     @Environment(\.dismiss) private var dismiss
     @Environment(\.managedObjectContext) private var viewContext
+    @EnvironmentObject private var languageManager: LanguageManager
     @State private var isLaunching = false
     @State private var adShouldShow = false
     @State private var launchErrorMessage: String?
     @State private var heroCoverSettled = false
     @State private var isShowingSaveStates = false
+    @State private var playInsightsSummary: GamePlayInsightsSummary?
 
     var body: some View {
         ScrollView(showsIndicators: false) {
             VStack(alignment: .leading, spacing: RomDetailLayout.sectionSpacing) {
                 heroSection
                 statsSection
+                if let playInsightsSummary {
+                    VStack(alignment: .leading, spacing: 28) {
+                        playInsightsSection(summary: playInsightsSummary)
+                        currentRunSection(summary: playInsightsSummary)
+                    }
+                }
                 collectorDataSection
                 fileDetailsSection
             }
@@ -271,7 +279,7 @@ struct RomDetailView: View {
                 HStack(spacing: 8) {
                     Image(systemName: "xmark")
                         .font(.system(size: 12, weight: .bold))
-                    Text("Close")
+                    Text(screenString("library.detail.close", "Close"))
                         .font(.system(size: 14, weight: .semibold))
                 }
                 .foregroundColor(.white)
@@ -295,8 +303,8 @@ struct RomDetailView: View {
                     }
                 } else {
                     VStack {
-                        Text("Failed to load game")
-                        Text("Please verify ROM import metadata")
+                        Text(screenString("library.detail.failed_to_load", "Failed to load game"))
+                        Text(screenString("library.detail.verify_metadata", "Please verify ROM import metadata"))
                     }
                     .onAppear {
                         DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
@@ -308,18 +316,18 @@ struct RomDetailView: View {
         }
         .alert(isPresented: $adShouldShow) {
             Alert(
-                title: Text("Sponsor Message"),
-                message: Text("Watch this ad to continue playing"),
-                dismissButton: .default(Text("OK"))
+                title: Text(screenString("library.detail.sponsor_title", "Sponsor Message")),
+                message: Text(screenString("library.detail.sponsor_message", "Watch this ad to continue playing")),
+                dismissButton: .default(Text(screenString("library.detail.ok", "OK")))
             )
         }
-        .alert("Unable to Open Game", isPresented: Binding(
+        .alert(screenString("library.detail.unable_to_open", "Unable to Open Game"), isPresented: Binding(
             get: { launchErrorMessage != nil },
             set: { if !$0 { launchErrorMessage = nil } }
         )) {
-            Button("OK", role: .cancel) { launchErrorMessage = nil }
+            Button(screenString("library.detail.ok", "OK"), role: .cancel) { launchErrorMessage = nil }
         } message: {
-            Text(launchErrorMessage ?? "This game cannot be launched right now.")
+            Text(launchErrorMessage ?? screenString("library.detail.launch_fallback", "This game cannot be launched right now."))
         }
         .sheet(isPresented: $isShowingSaveStates) {
             SaveStatesView(rom: rom)
@@ -328,6 +336,10 @@ struct RomDetailView: View {
             withAnimation(.spring(response: 0.6, dampingFraction: 0.82)) {
                 heroCoverSettled = true
             }
+            reloadPlayInsights()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .romLibraryDidChange)) { _ in
+            reloadPlayInsights()
         }
     }
 
@@ -390,7 +402,7 @@ struct RomDetailView: View {
                     .frame(maxWidth: .infinity, alignment: .center)
 
                 VStack(alignment: .leading, spacing: RomDetailLayout.titleToBadgesSpacing) {
-                    Text(rom.title ?? "Unknown Title")
+                    Text(rom.title ?? screenString("library.detail.unknown_title", "Unknown Title"))
                         .font(.system(size: 30, weight: .bold, design: .rounded))
                         .tracking(0.3)
                         .foregroundColor(.white)
@@ -419,7 +431,7 @@ struct RomDetailView: View {
                         HStack(spacing: 10) {
                             Image(systemName: "play.fill")
                                 .font(.system(size: 14, weight: .bold))
-                            Text(isLaunching ? "Launching…" : "Play Game")
+                            Text(isLaunching ? screenString("library.detail.launching", "Launching…") : screenString("library.detail.play_game", "Play Game"))
                                 .font(.system(size: 16, weight: .bold, design: .rounded))
                             Spacer()
                             Text(systemBadgeText)
@@ -506,10 +518,10 @@ struct RomDetailView: View {
     }
 
     private var statsSection: some View {
-        CollectorInfoCard(title: "Statistics", icon: "chart.bar.xaxis") {
+        CollectorInfoCard(title: screenString("library.detail.statistics", "Statistics"), icon: "chart.bar.xaxis") {
             VStack(alignment: .leading, spacing: 18) {
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("Play Time")
+                    Text(screenString("library.detail.play_time", "Play Time"))
                         .font(.system(size: 13, weight: .semibold))
                         .foregroundColor(AppColors.textSecondary)
                     Text(formatPlaytime(rom.playtimeTotal))
@@ -536,13 +548,13 @@ struct RomDetailView: View {
                 .frame(height: 10)
 
                 HStack(spacing: 12) {
-                    deluxeStatPill(title: "Sessions", value: sessionCountText)
-                    deluxeStatPill(title: "Status", value: rom.lastPlayedAt == nil ? "Fresh import" : "Played")
+                    deluxeStatPill(title: screenString("library.detail.sessions", "Sessions"), value: sessionCountText)
+                    deluxeStatPill(title: screenString("library.detail.status", "Status"), value: rom.lastPlayedAt == nil ? screenString("library.detail.fresh_import", "Fresh import") : screenString("library.detail.played", "Played"))
                 }
 
                 if let lastPlayedText {
                     VStack(alignment: .leading, spacing: 8) {
-                        Text("Last Session")
+                        Text(screenString("library.detail.last_session", "Last Session"))
                             .font(.system(size: 13, weight: .semibold))
                             .foregroundColor(AppColors.textSecondary)
                         Text(lastPlayedText)
@@ -555,22 +567,114 @@ struct RomDetailView: View {
     }
 
     private var collectorDataSection: some View {
-        CollectorInfoCard(title: "Collector Data", icon: "shippingbox.fill") {
-            DetailRow(label: "Region", value: regionDetailText)
-            DetailRow(label: "ROM Size", value: formatFileSize(rom.fileSize))
-            DetailRow(label: "Save Type", value: inferredSaveType)
-            DetailRow(label: "Media", value: mediaFormat)
-            DetailRow(label: "Catalog ID", value: catalogReferenceText)
+        CollectorInfoCard(title: screenString("library.detail.collector_data", "Collector Data"), icon: "shippingbox.fill") {
+            DetailRow(label: screenString("library.detail.region", "Region"), value: regionDetailText)
+            DetailRow(label: screenString("library.detail.rom_size", "ROM Size"), value: formatFileSize(rom.fileSize))
+            DetailRow(label: screenString("library.detail.save_type", "Save Type"), value: inferredSaveType)
+            DetailRow(label: screenString("library.detail.media", "Media"), value: mediaFormat)
+            DetailRow(label: screenString("library.detail.catalog_id", "Catalog ID"), value: catalogReferenceText)
+        }
+    }
+
+    @ViewBuilder
+    private func playInsightsSection(summary: GamePlayInsightsSummary) -> some View {
+        if summary.playInsightsEnabled {
+            VStack(alignment: .leading, spacing: 16) {
+                InsightsSectionHeaderView(title: screenString("playinsights.section.title", "Play Insights"))
+
+                HStack(alignment: .top, spacing: 16) {
+                    if let value = summary.deathsPrimaryValue {
+                        InsightsMetricCardView(
+                            icon: "xmark.circle.fill",
+                            title: screenString("playinsights.card.deaths", "Deaths"),
+                            primaryValue: value,
+                            secondaryLine1: summary.deathsSecondaryLine1,
+                            secondaryLine2: summary.deathsSecondaryLine2
+                        )
+                    }
+
+                    if let value = summary.damagePrimaryValue {
+                        InsightsMetricCardView(
+                            icon: "shield.slash.fill",
+                            title: screenString("playinsights.card.damage_taken", "Damage Taken"),
+                            primaryValue: value,
+                            secondaryLine1: summary.damageSecondaryLine1,
+                            secondaryLine2: summary.damageSecondaryLine2
+                        )
+                    }
+                }
+
+                HStack(alignment: .top, spacing: 16) {
+                    if let progressPrimary = summary.progressPrimaryValue,
+                       let progressSecondary = summary.progressSecondaryValue {
+                        InsightsNarrativeCardView(
+                            title: screenString("playinsights.card.progress", "Progress"),
+                            bodyText: "\(progressPrimary)\n\(progressSecondary)",
+                            icon: "location.circle.fill",
+                            tinted: true
+                        )
+                    }
+
+                    if let text = summary.performanceInsightText {
+                        InsightsNarrativeCardView(
+                            title: screenString("playinsights.card.performance_insight", "Performance Insight"),
+                            bodyText: text,
+                            icon: "sparkles",
+                            emphasized: true
+                        )
+                    }
+                }
+
+                if let title = summary.playStyleTitle {
+                    VStack(alignment: .leading, spacing: 16) {
+                        Label(screenString("playinsights.card.play_style", "Play Style"), systemImage: "figure.run")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundStyle(AppColors.textPrimary)
+                        PlayStyleBadgeView(text: title)
+                        if let description = summary.playStyleBullet1 {
+                            Text(description)
+                                .font(.system(size: 13, weight: .medium))
+                                .foregroundStyle(AppColors.textSecondary.opacity(0.88))
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                    }
+                    .playInsightsCardStyle(padding: 18)
+                }
+            }
+        } else if rom.lastPlayedAt != nil, playInsightsSupported {
+            VStack(alignment: .leading, spacing: 16) {
+                InsightsSectionHeaderView(title: screenString("playinsights.section.title", "Play Insights"))
+                InsightsEmptyStateView(
+                    title: screenString("playinsights.section.title", "Play Insights"),
+                    bodyText: screenString(
+                        "playinsights.empty.body",
+                        "Start playing to unlock performance and progress insights for this game."
+                    )
+                )
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func currentRunSection(summary: GamePlayInsightsSummary) -> some View {
+        if summary.currentRunEnabled,
+           let primary = summary.currentRunPrimary,
+           let secondary = summary.currentRunSecondary {
+            VStack(alignment: .leading, spacing: 16) {
+                InsightsSectionHeaderView(title: screenString("playinsights.current_run.section_title", "Current Run"))
+                CurrentRunCardView(primary: primary, secondary: secondary)
+            }
+            .padding(.top, 8)
         }
     }
 
     private var fileDetailsSection: some View {
-        CollectorInfoCard(title: "File Details", icon: "doc.text.magnifyingglass") {
+        CollectorInfoCard(title: screenString("library.detail.file_details", "File Details"), icon: "doc.text.magnifyingglass") {
             DetailRow(label: "SHA-1", value: shortSHA1)
-            DetailRow(label: "Checksum", value: shortChecksum)
-            DetailRow(label: "Added", value: addedDateText)
-            DetailRow(label: "File", value: rom.fileName ?? "Unknown")
-            DetailRow(label: "Path", value: rom.romPath ?? "Unavailable")
+            DetailRow(label: screenString("library.detail.checksum", "Checksum"), value: shortChecksum)
+            DetailRow(label: screenString("library.detail.added", "Added"), value: addedDateText)
+            DetailRow(label: screenString("library.detail.file", "File"), value: rom.fileName ?? screenString("library.detail.unknown", "Unknown"))
+            DetailRow(label: screenString("library.detail.path", "Path"), value: rom.romPath ?? screenString("library.detail.unavailable", "Unavailable"))
         }
     }
 
@@ -579,7 +683,7 @@ struct RomDetailView: View {
     }
 
     private var systemBadgeText: String {
-        (rom.system ?? "Unknown").uppercased()
+        (rom.system ?? screenString("library.detail.unknown", "Unknown")).uppercased()
     }
 
     private var lastPlayedText: String? {
@@ -587,7 +691,7 @@ struct RomDetailView: View {
     }
 
     private var addedDateText: String {
-        rom.dateAdded?.formatted(date: .abbreviated, time: .omitted) ?? "Unknown"
+        rom.dateAdded?.formatted(date: .abbreviated, time: .omitted) ?? screenString("library.detail.unknown", "Unknown")
     }
 
     private var regionBadgeText: String {
@@ -599,12 +703,12 @@ struct RomDetailView: View {
     }
 
     private var shortChecksum: String {
-        guard let checksum = rom.checksum, !checksum.isEmpty else { return "Unavailable" }
+        guard let checksum = rom.checksum, !checksum.isEmpty else { return screenString("library.detail.unavailable", "Unavailable") }
         return "\(checksum.prefix(8))…\(checksum.suffix(6))"
     }
 
     private var shortSHA1: String {
-        guard let sha1 = rom.romSha1, !sha1.isEmpty else { return "Unavailable" }
+        guard let sha1 = rom.romSha1, !sha1.isEmpty else { return screenString("library.detail.unavailable", "Unavailable") }
         return "\(sha1.prefix(8))…\(sha1.suffix(6))"
     }
 
@@ -641,20 +745,20 @@ struct RomDetailView: View {
     private var inferredSaveType: String {
         switch SubpageUI.CollectorIdentity.normalizedSystemCode(rom.system) {
         case "gbc":
-            return "Battery-backed"
+            return screenString("library.detail.save_type_battery", "Battery-backed")
         case "gba":
-            return "SRAM / Flash"
+            return screenString("library.detail.save_type_sram_flash", "SRAM / Flash")
         case "nds":
-            return "EEPROM / Flash"
+            return screenString("library.detail.save_type_eeprom_flash", "EEPROM / Flash")
         default:
-            return "Unknown"
+            return screenString("library.detail.unknown", "Unknown")
         }
     }
 
     private var mediaFormat: String {
         let ext = (rom.fileName as NSString?)?.pathExtension.uppercased() ?? ""
-        guard !ext.isEmpty else { return "ROM image" }
-        return "\(ext) cartridge image"
+        guard !ext.isEmpty else { return screenString("library.detail.rom_image", "ROM image") }
+        return L10n.format("library.detail.cartridge_image_format", ext, table: "Screens", fallback: "%@ cartridge image", languageManager: languageManager)
     }
 
     private var catalogReferenceText: String {
@@ -665,13 +769,25 @@ struct RomDetailView: View {
     }
 
     private var collectorStatusText: String {
-        rom.isFavorite ? "Featured" : (rom.lastPlayedAt == nil ? "Archived" : "Active")
+        rom.isFavorite ? screenString("library.detail.featured", "Featured") : (rom.lastPlayedAt == nil ? screenString("library.detail.archived", "Archived") : screenString("library.detail.active", "Active"))
     }
 
     private var sessionCountText: String {
         let minutes = max(Int(rom.playtimeTotal / 60), 0)
         let estimatedSessions = max(rom.lastPlayedAt == nil ? 0 : 1, Int(ceil(Double(minutes) / 35.0)))
         return "\(estimatedSessions)"
+    }
+
+    private var playInsightsSupported: Bool {
+        guard let game = rom.toGame(),
+              let profile = MarioGameProfile.activeProfile(
+                  title: game.title ?? "",
+                  platform: game.gamePlatform ?? .GBA,
+                  romHash: rom.checksum ?? ""
+              ) else {
+            return false
+        }
+        return PlayInsightsSupportedGame(profileID: profile.id) != nil
     }
 
     private func launchGame() {
@@ -709,11 +825,14 @@ struct RomDetailView: View {
     private func formatPlaytime(_ seconds: Int64) -> String {
         let minutes = seconds / 60
         if minutes < 60 {
-            return "\(minutes) min"
+            return L10n.format("library.detail.playtime_minutes", minutes, table: "Screens", fallback: "%lld min", languageManager: languageManager)
         }
         let hours = minutes / 60
         let remainingMinutes = minutes % 60
-        return remainingMinutes == 0 ? "\(hours) hr" : "\(hours) hr \(remainingMinutes) min"
+        if remainingMinutes == 0 {
+            return L10n.format("library.detail.playtime_hours", hours, table: "Screens", fallback: "%lld hr", languageManager: languageManager)
+        }
+        return L10n.format("library.detail.playtime_hours_minutes", hours, remainingMinutes, table: "Screens", fallback: "%1$lld hr %2$lld min", languageManager: languageManager)
     }
 
     private func formatFileSize(_ bytes: Int64) -> String {
@@ -727,7 +846,7 @@ struct RomDetailView: View {
         HStack(spacing: 10) {
             Button(action: toggleFavorite) {
                 deluxeActionButtonLabel(
-                    title: rom.isFavorite ? "Saved" : "Favorite",
+                    title: rom.isFavorite ? screenString("library.detail.saved", "Saved") : screenString("library.detail.favorite", "Favorite"),
                     subtitle: collectorStatusText,
                     icon: rom.isFavorite ? "heart.fill" : "heart"
                 )
@@ -738,8 +857,8 @@ struct RomDetailView: View {
                 isShowingSaveStates = true
             } label: {
                 deluxeActionButtonLabel(
-                    title: "Save States",
-                    subtitle: "Quick save",
+                    title: screenString("library.detail.save_states", "Save States"),
+                    subtitle: screenString("library.detail.quick_save", "Quick save"),
                     icon: "internaldrive.fill"
                 )
             }
@@ -748,21 +867,33 @@ struct RomDetailView: View {
             if let shareURL = rom.romPath.map(URL.init(fileURLWithPath:)) {
                 ShareLink(item: shareURL) {
                     deluxeActionButtonLabel(
-                        title: "Share",
-                        subtitle: "ROM file",
+                        title: screenString("library.detail.share", "Share"),
+                        subtitle: screenString("library.detail.rom_file", "ROM file"),
                         icon: "square.and.arrow.up"
                     )
                 }
                 .buttonStyle(.plain)
             } else {
                 deluxeActionButtonLabel(
-                    title: "Share",
-                    subtitle: "Unavailable",
+                    title: screenString("library.detail.share", "Share"),
+                    subtitle: screenString("library.detail.unavailable", "Unavailable"),
                     icon: "square.and.arrow.up"
                 )
                 .opacity(0.55)
             }
         }
+    }
+
+    private func screenString(_ key: String, _ fallback: String) -> String {
+        L10n.string(key, table: "Screens", fallback: fallback, languageManager: languageManager)
+    }
+
+    private func reloadPlayInsights() {
+        guard let checksum = rom.checksum else {
+            playInsightsSummary = nil
+            return
+        }
+        playInsightsSummary = PlayInsightsStore.shared.summary(for: checksum)
     }
 
     @ViewBuilder

@@ -60,6 +60,10 @@ final class SaveStateStorage {
     }
 
     func persist(data: Data, metadata: SaveStateMetadata, screenshotData: Data? = nil) async throws {
+        try persistImmediately(data: data, metadata: metadata, screenshotData: screenshotData)
+    }
+
+    func persistImmediately(data: Data, metadata: SaveStateMetadata, screenshotData: Data? = nil) throws {
         guard metadata.slot >= 0 && metadata.slot < Self.maxSlots else {
             throw StorageError.invalidSlot
         }
@@ -97,7 +101,6 @@ final class SaveStateStorage {
         } else if FileManager.default.fileExists(atPath: screenshotURL.path) {
             try FileManager.default.removeItem(at: screenshotURL)
         }
-
     }
 
     func load(slot: Int, romHash: String? = nil) throws -> (Data, SaveStateMetadata, Data?) {

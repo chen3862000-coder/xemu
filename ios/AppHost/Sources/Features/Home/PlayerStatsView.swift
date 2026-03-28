@@ -4,6 +4,7 @@ import CoreData
 struct PlayerStatsView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.managedObjectContext) private var viewContext
+    @EnvironmentObject private var languageManager: LanguageManager
     @StateObject private var viewModel = PlayerStatsViewModel()
     @State private var selectedGame: Game?
     @State private var launchErrorMessage: String?
@@ -14,7 +15,7 @@ struct PlayerStatsView: View {
                 AppColors.background.ignoresSafeArea()
 
                 ScrollView {
-                    VStack(spacing: 20) {
+                    VStack(spacing: 28) {
                         summaryHero
                         consoleBreakdownSection
                         topGamesSection
@@ -22,15 +23,15 @@ struct PlayerStatsView: View {
                         timelineSection
                         insightsSection
                     }
-                    .padding(.horizontal, 16)
+                    .padding(.horizontal, RMSpacing.lg)
                     .padding(.top, 12)
                     .padding(.bottom, 28)
                 }
                 .refreshable {
-                    viewModel.load(in: viewContext)
+                    viewModel.load(in: viewContext, languageManager: languageManager)
                 }
             }
-            .navigationTitle("Your Gaming Stats")
+            .navigationTitle(L10n.string("playerstats.title", table: "Screens", languageManager: languageManager))
             #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)
             #endif
@@ -46,7 +47,7 @@ struct PlayerStatsView: View {
                 }
                 #else
                 ToolbarItem {
-                    Button("Close") { dismiss() }
+                    Button(L10n.string("playerstats.close", table: "Screens", languageManager: languageManager)) { dismiss() }
                 }
                 #endif
             }
@@ -59,15 +60,18 @@ struct PlayerStatsView: View {
                 GameDetailView(game: game)
             }
             #endif
-            .alert("Unable to Open Game", isPresented: Binding(
+            .alert(L10n.string("playerstats.error.title", table: "Screens", languageManager: languageManager), isPresented: Binding(
                 get: { launchErrorMessage != nil },
                 set: { if !$0 { launchErrorMessage = nil } }
             )) {
-                Button("OK", role: .cancel) { launchErrorMessage = nil }
+                Button(L10n.string("common.ok", languageManager: languageManager), role: .cancel) { launchErrorMessage = nil }
             } message: {
-                Text(launchErrorMessage ?? "This game cannot be launched right now.")
+                Text(launchErrorMessage ?? L10n.string("playerstats.error.message", table: "Screens", languageManager: languageManager))
             }
-            .onAppear { viewModel.load(in: viewContext) }
+            .onAppear { viewModel.load(in: viewContext, languageManager: languageManager) }
+            .onChange(of: languageManager.refreshID) {
+                viewModel.load(in: viewContext, languageManager: languageManager)
+            }
         }
     }
 
@@ -91,10 +95,10 @@ struct PlayerStatsView: View {
                 .shadow(color: AppColors.primary.opacity(0.28), radius: 16, x: 0, y: 10)
 
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("Player Profile")
+                    Text(L10n.string("playerstats.profile", table: "Screens", languageManager: languageManager))
                         .font(.system(size: 22, weight: .bold))
                         .foregroundColor(AppColors.textPrimary)
-                    Text("\(viewModel.playerSinceText) • Favorite: \(viewModel.favoriteSystemText)")
+                    Text(L10n.format("playerstats.favorite_format", viewModel.playerSinceText, viewModel.favoriteSystemText, table: "Screens", languageManager: languageManager))
                         .font(.system(size: 14, weight: .medium))
                         .foregroundColor(AppColors.textSecondary)
                         .lineLimit(2)
@@ -104,13 +108,13 @@ struct PlayerStatsView: View {
             }
 
             HStack(spacing: 12) {
-                metricCard(title: "Hours Played", value: viewModel.totalHoursText, icon: "clock.fill", hero: true)
-                metricCard(title: "Sessions", value: "\(viewModel.totalSessions)", icon: "bolt.fill", hero: true)
+                metricCard(title: L10n.string("playerstats.metric.hours_played", table: "Screens", languageManager: languageManager), value: viewModel.totalHoursText, icon: "clock.fill", hero: true)
+                metricCard(title: L10n.string("playerstats.metric.sessions", table: "Screens", languageManager: languageManager), value: "\(viewModel.totalSessions)", icon: "bolt.fill", hero: true)
             }
 
             HStack(spacing: 12) {
-                metricCard(title: "Games Played", value: "\(viewModel.gamesPlayedCount)", icon: "gamecontroller.fill")
-                metricCard(title: "Longest Play", value: viewModel.longestPlayText, icon: "hourglass.bottomhalf.filled")
+                metricCard(title: L10n.string("playerstats.metric.games_played", table: "Screens", languageManager: languageManager), value: "\(viewModel.gamesPlayedCount)", icon: "gamecontroller.fill")
+                metricCard(title: L10n.string("playerstats.metric.longest_play", table: "Screens", languageManager: languageManager), value: viewModel.longestPlayText, icon: "hourglass.bottomhalf.filled")
             }
         }
         .padding(16)
@@ -166,7 +170,7 @@ struct PlayerStatsView: View {
     }
 
     private var consoleBreakdownSection: some View {
-        sectionCard(title: "Where Your Time Went", trailing: nil) {
+        sectionCard(title: L10n.string("playerstats.section.where_time_went", table: "Screens", languageManager: languageManager), trailing: nil) {
             VStack(spacing: 12) {
                 ForEach(viewModel.consoleBreakdown) { item in
                     VStack(alignment: .leading, spacing: 8) {
@@ -194,7 +198,7 @@ struct PlayerStatsView: View {
                                     .frame(width: max(10, proxy.size.width * item.ratio))
                             }
                         }
-                        .frame(height: 9)
+                        .frame(height: 6)
                     }
                 }
             }
@@ -202,7 +206,7 @@ struct PlayerStatsView: View {
     }
 
     private var topGamesSection: some View {
-        sectionCard(title: "Top Games by Playtime", trailing: "\(viewModel.topGames.count)") {
+        sectionCard(title: L10n.string("playerstats.section.top_games", table: "Screens", languageManager: languageManager), trailing: "\(viewModel.topGames.count)") {
             VStack(spacing: 10) {
                 ForEach(Array(viewModel.topGames.enumerated()), id: \.element.id) { index, item in
                     Button {
@@ -213,9 +217,9 @@ struct PlayerStatsView: View {
                         selectedGame = item.game
                     } label: {
                         HStack(spacing: 12) {
-                            Text("\(index + 1)")
+                            Text("#\(index + 1)")
                                 .font(.system(size: 13, weight: .bold))
-                                .foregroundColor(AppColors.primary)
+                                .foregroundColor(index == 0 ? AppColors.primary : AppColors.textSecondary)
                                 .frame(width: 22)
 
                             VStack(alignment: .leading, spacing: 4) {
@@ -227,7 +231,7 @@ struct PlayerStatsView: View {
                                     .font(.system(size: 12, weight: .medium))
                                     .foregroundColor(AppColors.textSecondary)
                                 if item.launchIssue != nil {
-                                    Label("Unsupported Mapper", systemImage: "exclamationmark.triangle.fill")
+                                    Label(L10n.string("playerstats.unsupported_mapper", table: "Screens", languageManager: languageManager), systemImage: "exclamationmark.triangle.fill")
                                         .font(.system(size: 10, weight: .semibold))
                                         .foregroundColor(.orange)
                                 }
@@ -262,7 +266,7 @@ struct PlayerStatsView: View {
     }
 
     private var achievementsSection: some View {
-        sectionCard(title: "Achievements", trailing: "\(viewModel.unlockedAchievementCount)/\(viewModel.achievements.count)") {
+        sectionCard(title: L10n.string("playerstats.section.achievements", table: "Screens", languageManager: languageManager), trailing: "\(viewModel.unlockedAchievementCount)/\(viewModel.achievements.count)") {
             LazyVGrid(columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)], spacing: 10) {
                 ForEach(viewModel.achievements) { achievement in
                     VStack(alignment: .leading, spacing: 8) {
@@ -329,9 +333,9 @@ struct PlayerStatsView: View {
     }
 
     private var timelineSection: some View {
-        sectionCard(title: "Recent Activity", trailing: nil) {
+        sectionCard(title: L10n.string("playerstats.section.recent_activity", table: "Screens", languageManager: languageManager), trailing: nil) {
             if viewModel.timeline.isEmpty {
-                emptyState("No recent activity yet")
+                emptyState(L10n.string("playerstats.empty.recent_activity", table: "Screens", languageManager: languageManager))
             } else {
                 VStack(spacing: 10) {
                     ForEach(viewModel.timeline) { event in
@@ -372,9 +376,9 @@ struct PlayerStatsView: View {
     }
 
     private var insightsSection: some View {
-        sectionCard(title: "Insights", trailing: nil) {
+        sectionCard(title: L10n.string("playerstats.section.insights", table: "Screens", languageManager: languageManager), trailing: nil) {
             if viewModel.insights.isEmpty {
-                emptyState("Play a few more games to unlock insights")
+                emptyState(L10n.string("playerstats.empty.insights", table: "Screens", languageManager: languageManager))
             } else {
                 VStack(spacing: 10) {
                     ForEach(viewModel.insights, id: \.self) { insight in
@@ -404,10 +408,10 @@ struct PlayerStatsView: View {
     }
 
     private func sectionCard<Content: View>(title: String, trailing: String?, @ViewBuilder content: () -> Content) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: RMSpacing.md) {
             HStack {
                 Text(title)
-                    .font(.system(size: 18, weight: .bold))
+                    .font(RMTypeScale.sectionTitle)
                     .foregroundColor(AppColors.textPrimary)
                 Spacer()
                 if let trailing {
@@ -418,13 +422,13 @@ struct PlayerStatsView: View {
             }
             content()
         }
-        .padding(14)
+        .padding(RMSpacing.lg)
         .background(
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
+            RoundedRectangle(cornerRadius: RMRadius.card, style: .continuous)
                 .fill(AppColors.surface.opacity(0.96))
         )
         .overlay(
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
+            RoundedRectangle(cornerRadius: RMRadius.card, style: .continuous)
                 .stroke(AppColors.surfaceLight.opacity(0.7), lineWidth: 1)
         )
         .shadow(color: AppColors.primary.opacity(0.06), radius: 10, x: 0, y: 6)
@@ -462,7 +466,7 @@ final class PlayerStatsViewModel: ObservableObject {
 
     var unlockedAchievementCount: Int { achievements.filter(\.isUnlocked).count }
 
-    func load(in context: NSManagedObjectContext) {
+    func load(in context: NSManagedObjectContext, languageManager: LanguageManager = .shared) {
         let progressSnapshot = PlayerProgressStore.shared.currentSnapshot()
         let request: NSFetchRequest<ROMLibraryEntry> = ROMLibraryEntry.fetchRequest()
         request.sortDescriptors = [
@@ -472,20 +476,20 @@ final class PlayerStatsViewModel: ObservableObject {
 
         do {
             let entries = try context.fetch(request)
-            rebuild(from: entries, snapshot: progressSnapshot)
+            rebuild(from: entries, snapshot: progressSnapshot, languageManager: languageManager)
         } catch {
             print("Failed to load player stats: \(error)")
-            rebuild(from: [], snapshot: progressSnapshot)
+            rebuild(from: [], snapshot: progressSnapshot, languageManager: languageManager)
         }
     }
 
-    private func rebuild(from entries: [ROMLibraryEntry], snapshot: PlayerProgressSnapshot) {
+    private func rebuild(from entries: [ROMLibraryEntry], snapshot: PlayerProgressSnapshot, languageManager: LanguageManager) {
         let sessions = snapshot.sessions.sorted { $0.endTime > $1.endTime }
         let sessionSeconds = sessions.reduce(0) { $0 + $1.durationSeconds }
         let entrySeconds = Int(entries.reduce(Int64(0)) { $0 + $1.playtimeTotal })
         let totalSeconds = max(sessionSeconds, entrySeconds)
         let totalHours = Int(totalSeconds / 3600)
-        totalHoursText = totalHours > 0 ? "\(totalHours)h" : "0h"
+        totalHoursText = LocaleFormatting.shortDuration(seconds: totalSeconds, languageManager: languageManager)
 
         let playedEntries = entries.filter { $0.playtimeTotal > 0 || $0.lastPlayedAt != nil }
         let uniqueSessionGames = Set(sessions.map(\.gameID)).count
@@ -494,30 +498,41 @@ final class PlayerStatsViewModel: ObservableObject {
 
         let maxSessionSeconds = sessions.map(\.durationSeconds).max() ?? 0
         let maxGameSeconds = Int(playedEntries.map(\.playtimeTotal).max() ?? 0)
-        longestPlayText = Self.durationText(seconds: max(maxSessionSeconds, maxGameSeconds))
+        longestPlayText = Self.durationText(seconds: max(maxSessionSeconds, maxGameSeconds), languageManager: languageManager)
 
         if let firstSessionDate = sessions.map(\.startTime).min() {
-            playerSinceText = "Player since \(firstSessionDate.formatted(date: .abbreviated, time: .omitted))"
+            playerSinceText = L10n.format(
+                "playerstats.player_since_format",
+                firstSessionDate.formatted(date: .abbreviated, time: .omitted),
+                table: "Screens",
+                languageManager: languageManager
+            )
         } else if let firstDate = entries.compactMap(\.dateAdded).min() {
-            playerSinceText = "Player since \(firstDate.formatted(date: .abbreviated, time: .omitted))"
+            playerSinceText = L10n.format(
+                "playerstats.player_since_format",
+                firstDate.formatted(date: .abbreviated, time: .omitted),
+                table: "Screens",
+                languageManager: languageManager
+            )
         } else {
-            playerSinceText = "Player since today"
+            playerSinceText = L10n.string("playerstats.player_since_today", table: "Screens", languageManager: languageManager)
         }
 
-        buildConsoleBreakdown(from: entries, sessions: sessions, totalSeconds: totalSeconds)
-        favoriteSystemText = consoleBreakdown.first?.name ?? "None"
-        buildTopGames(from: playedEntries)
+        buildConsoleBreakdown(from: entries, sessions: sessions, totalSeconds: totalSeconds, languageManager: languageManager)
+        favoriteSystemText = consoleBreakdown.first?.name ?? L10n.string("playerstats.none", table: "Screens", languageManager: languageManager)
+        buildTopGames(from: playedEntries, languageManager: languageManager)
         buildAchievements(
             sessions: sessions,
             unlockedDates: snapshot.unlockedAchievementDates,
             fallbackPlayedGames: playedEntries.count,
-            fallbackTotalPlaySeconds: totalSeconds
+            fallbackTotalPlaySeconds: totalSeconds,
+            languageManager: languageManager
         )
-        buildTimeline(from: entries, sessions: sessions)
-        buildInsights(playedEntries: playedEntries, sessions: sessions, totalSeconds: totalSeconds)
+        buildTimeline(from: entries, sessions: sessions, languageManager: languageManager)
+        buildInsights(playedEntries: playedEntries, sessions: sessions, totalSeconds: totalSeconds, languageManager: languageManager)
     }
 
-    private func buildConsoleBreakdown(from entries: [ROMLibraryEntry], sessions: [PlayerHistorySession], totalSeconds: Int) {
+    private func buildConsoleBreakdown(from entries: [ROMLibraryEntry], sessions: [PlayerHistorySession], totalSeconds: Int, languageManager: LanguageManager) {
         let palette: [String: Color] = [
             "gb": .green,
             "gbc": .blue,
@@ -542,17 +557,18 @@ final class PlayerStatsViewModel: ObservableObject {
             .map { system, secs in
                 return ConsolePlayBreakdown(
                     id: system,
-                    name: displaySystemName(system),
+                    name: displaySystemName(system, languageManager: languageManager),
                     seconds: secs,
                     ratio: totalSeconds > 0 ? min(1, Double(secs) / Double(totalSeconds)) : 0,
-                    color: palette[system] ?? AppColors.primary
+                    color: palette[system] ?? AppColors.primary,
+                    languageManager: languageManager
                 )
             }
             .filter { $0.seconds > 0 }
             .sorted { $0.seconds > $1.seconds }
     }
 
-    private func buildTopGames(from entries: [ROMLibraryEntry]) {
+    private func buildTopGames(from entries: [ROMLibraryEntry], languageManager: LanguageManager) {
         topGames = entries
             .sorted { $0.playtimeTotal > $1.playtimeTotal }
             .prefix(5)
@@ -560,11 +576,12 @@ final class PlayerStatsViewModel: ObservableObject {
                 guard let game = entry.toGame() else { return nil }
                 return TopPlayedGame(
                     id: entry.objectID.uriRepresentation().absoluteString,
-                    title: entry.title ?? "Unknown Game",
-                    systemLabel: displaySystemName(normalizedSystem(entry.system)),
+                    title: entry.title ?? L10n.string("common.unknown_game", table: "Screens", languageManager: languageManager),
+                    systemLabel: displaySystemName(normalizedSystem(entry.system), languageManager: languageManager),
                     seconds: Int(entry.playtimeTotal),
                     game: game,
-                    launchIssue: ROMCompatibilityService.shared.compatibility(for: entry).issue
+                    launchIssue: ROMCompatibilityService.shared.compatibility(for: entry).issue,
+                    languageManager: languageManager
                 )
             }
     }
@@ -573,7 +590,8 @@ final class PlayerStatsViewModel: ObservableObject {
         sessions: [PlayerHistorySession],
         unlockedDates: [String: Date],
         fallbackPlayedGames: Int,
-        fallbackTotalPlaySeconds: Int
+        fallbackTotalPlaySeconds: Int,
+        languageManager: LanguageManager
     ) {
         let sessionCount = sessions.count
         let totalPlaySeconds = max(sessions.reduce(0) { $0 + $1.durationSeconds }, fallbackTotalPlaySeconds)
@@ -611,26 +629,39 @@ final class PlayerStatsViewModel: ObservableObject {
                 color: colorsByID[definition.id] ?? AppColors.primary,
                 progress: progress,
                 isUnlocked: unlocked,
-                unlockedDateText: unlockedDate.map { "Unlocked \($0.formatted(date: .abbreviated, time: .omitted))" }
+                unlockedDateText: unlockedDate.map {
+                    L10n.format(
+                        "playerstats.unlocked_on",
+                        $0.formatted(date: .abbreviated, time: .omitted),
+                        table: "Screens",
+                        languageManager: languageManager
+                    )
+                }
             )
         }
     }
 
-    private func buildTimeline(from entries: [ROMLibraryEntry], sessions: [PlayerHistorySession]) {
+    private func buildTimeline(from entries: [ROMLibraryEntry], sessions: [PlayerHistorySession], languageManager: LanguageManager) {
         if !sessions.isEmpty {
             timeline = sessions
                 .sorted { $0.endTime > $1.endTime }
                 .prefix(10)
                 .map { session in
-                    let system = displaySystemName(normalizedSystem(session.system))
-                    let systemLabel = system.isEmpty ? "Unknown System" : system
+                    let system = displaySystemName(normalizedSystem(session.system), languageManager: languageManager)
+                    let systemLabel = system.isEmpty ? L10n.string("playerstats.unknown_system", table: "Screens", languageManager: languageManager) : system
                     return PlayerActivityEvent(
                         id: session.id.uuidString,
                         date: session.endTime,
                         icon: "gamecontroller.fill",
                         color: AppColors.primary,
-                        title: "Played \(session.gameTitle)",
-                        subtitle: "\(Self.durationText(seconds: session.durationSeconds)) session · \(systemLabel)"
+                        title: L10n.format("playerstats.timeline.played", session.gameTitle, table: "Screens", languageManager: languageManager),
+                        subtitle: L10n.format(
+                            "playerstats.timeline.session_subtitle",
+                            Self.durationText(seconds: session.durationSeconds, languageManager: languageManager),
+                            systemLabel,
+                            table: "Screens",
+                            languageManager: languageManager
+                        )
                     )
                 }
             return
@@ -638,17 +669,21 @@ final class PlayerStatsViewModel: ObservableObject {
 
         var events: [PlayerActivityEvent] = []
         for entry in entries {
-            let title = entry.title ?? "Unknown Game"
+            let title = entry.title ?? L10n.string("common.unknown_game", table: "Screens", languageManager: languageManager)
             if let lastPlayed = entry.lastPlayedAt {
-                let mins = max(1, Int(entry.playtimeTotal) / 60)
+                let totalText = LocaleFormatting.shortDuration(
+                    seconds: Int(entry.playtimeTotal),
+                    minimumMinutes: 1,
+                    languageManager: languageManager
+                )
                 events.append(
                     PlayerActivityEvent(
                         id: "\(entry.objectID.uriRepresentation().absoluteString)-played",
                         date: lastPlayed,
                         icon: "gamecontroller.fill",
                         color: AppColors.primary,
-                        title: "Played \(title)",
-                        subtitle: mins > 59 ? "\(mins / 60)h total on record" : "\(mins)m total on record"
+                        title: L10n.format("playerstats.timeline.played", title, table: "Screens", languageManager: languageManager),
+                        subtitle: L10n.format("playerstats.timeline.total_on_record", totalText, table: "Screens", languageManager: languageManager)
                     )
                 )
             }
@@ -659,8 +694,8 @@ final class PlayerStatsViewModel: ObservableObject {
                         date: imported,
                         icon: "square.and.arrow.down.fill",
                         color: AppColors.info,
-                        title: "Imported \(title)",
-                        subtitle: displaySystemName(normalizedSystem(entry.system))
+                        title: L10n.format("playerstats.timeline.imported", title, table: "Screens", languageManager: languageManager),
+                        subtitle: displaySystemName(normalizedSystem(entry.system), languageManager: languageManager)
                     )
                 )
             }
@@ -672,25 +707,32 @@ final class PlayerStatsViewModel: ObservableObject {
             .map { $0 }
     }
 
-    private func buildInsights(playedEntries: [ROMLibraryEntry], sessions: [PlayerHistorySession], totalSeconds: Int) {
+    private func buildInsights(playedEntries: [ROMLibraryEntry], sessions: [PlayerHistorySession], totalSeconds: Int, languageManager: LanguageManager) {
         var items: [String] = []
 
         if let topConsole = consoleBreakdown.first {
-            items.append("You spend most of your time on \(topConsole.name) (\(topConsole.hoursText)).")
+            items.append(L10n.format("playerstats.insight.top_console", topConsole.name, topConsole.hoursText, table: "Screens", languageManager: languageManager))
         }
 
         if let topGame = topGames.first {
-            items.append("Your top game is \(topGame.title) with \(topGame.hoursText) played.")
+            items.append(L10n.format("playerstats.insight.top_game", topGame.title, topGame.hoursText, table: "Screens", languageManager: languageManager))
         }
 
         if !sessions.isEmpty {
             let averageSession = totalSeconds / max(1, sessions.count)
-            items.append("Average session length is \(Self.durationText(seconds: averageSession)).")
+            items.append(L10n.format("playerstats.insight.average_session", Self.durationText(seconds: averageSession, languageManager: languageManager), table: "Screens", languageManager: languageManager))
             let activeDays = Set(sessions.map { Calendar.current.startOfDay(for: $0.endTime) }).count
-            items.append("You have logged activity on \(activeDays) day\(activeDays == 1 ? "" : "s").")
+            items.append(
+                L10n.format(
+                    activeDays == 1 ? "playerstats.insight.active_days.one" : "playerstats.insight.active_days.other",
+                    Int64(activeDays),
+                    table: "Screens",
+                    languageManager: languageManager
+                )
+            )
         } else if gamesPlayedCount > 0 {
             let average = totalSeconds / max(1, gamesPlayedCount)
-            items.append("Average playtime per game is \(Self.durationText(seconds: average)).")
+            items.append(L10n.format("playerstats.insight.average_per_game", Self.durationText(seconds: average, languageManager: languageManager), table: "Screens", languageManager: languageManager))
         }
 
         let recentHours: [Int]
@@ -705,9 +747,9 @@ final class PlayerStatsViewModel: ObservableObject {
             let eveningCount = recentHours.filter { (18...23).contains($0) }.count
             let daytimeCount = recentHours.filter { (10...17).contains($0) }.count
             if eveningCount > daytimeCount {
-                items.append("You usually play in the evening.")
+                items.append(L10n.string("playerstats.insight.evening", table: "Screens", languageManager: languageManager))
             } else if daytimeCount > 0 {
-                items.append("You often play during the day.")
+                items.append(L10n.string("playerstats.insight.daytime", table: "Screens", languageManager: languageManager))
             }
         }
 
@@ -718,22 +760,18 @@ final class PlayerStatsViewModel: ObservableObject {
         (raw ?? "").trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
     }
 
-    private func displaySystemName(_ key: String) -> String {
+    private func displaySystemName(_ key: String, languageManager: LanguageManager) -> String {
         switch key {
-        case "gb": return "Game Boy"
-        case "gbc": return "Game Boy Color"
-        case "gba": return "Game Boy Advance"
-        case "nds": return "Nintendo DS"
+        case "gb": return L10n.string("console.gb", languageManager: languageManager)
+        case "gbc": return L10n.string("console.gbc", languageManager: languageManager)
+        case "gba": return L10n.string("console.gba", languageManager: languageManager)
+        case "nds": return L10n.string("console.nds", languageManager: languageManager)
         default: return key.uppercased()
         }
     }
 
-    nonisolated static func durationText(seconds: Int) -> String {
-        let s = max(0, seconds)
-        let h = s / 3600
-        let m = (s % 3600) / 60
-        if h > 0 { return "\(h)h \(m)m" }
-        return "\(m)m"
+    nonisolated static func durationText(seconds: Int, languageManager: LanguageManager = .shared) -> String {
+        LocaleFormatting.shortDuration(seconds: seconds, languageManager: languageManager)
     }
 }
 
@@ -743,11 +781,10 @@ struct ConsolePlayBreakdown: Identifiable {
     let seconds: Int
     let ratio: Double
     let color: Color
+    let languageManager: LanguageManager
 
     var hoursText: String {
-        let hours = Double(seconds) / 3600.0
-        if hours >= 1 { return String(format: "%.1fh", hours) }
-        return "\(max(1, seconds / 60))m"
+        LocaleFormatting.decimalHours(seconds: seconds, languageManager: languageManager)
     }
 }
 
@@ -758,8 +795,9 @@ struct TopPlayedGame: Identifiable {
     let seconds: Int
     let game: Game
     let launchIssue: ROMLaunchIssue?
+    let languageManager: LanguageManager
 
-    var hoursText: String { PlayerStatsViewModel.durationText(seconds: seconds) }
+    var hoursText: String { PlayerStatsViewModel.durationText(seconds: seconds, languageManager: languageManager) }
 }
 
 struct PlayerAchievement: Identifiable {
@@ -783,7 +821,7 @@ struct PlayerAchievement: Identifiable {
             color: color,
             progress: ratio,
             isUnlocked: unlocked,
-            unlockedDateText: unlocked ? "Unlocked locally" : nil
+            unlockedDateText: unlocked ? L10n.string("playerstats.unlocked_local", table: "Screens") : nil
         )
     }
 }

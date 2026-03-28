@@ -155,6 +155,10 @@ public final class GBCore: EmulatorCore {
             return false
         }
     }
+
+    public func readMemory8(at address: UInt16) -> UInt8? {
+        coreWrapper?.readMemory8(address: address)
+    }
     
     public func setInput(_ inputType: Int, value: Float) {
         inputState[inputType] = value
