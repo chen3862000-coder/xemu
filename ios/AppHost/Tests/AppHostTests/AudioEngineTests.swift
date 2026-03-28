@@ -138,11 +138,37 @@ struct AudioEngineTests {
         #expect(streaming.maxQueuedFrames > streaming.softLatencyCapFrames)
     }
 
+    @Test("Bluetooth routes get a larger playback cushion than speaker routes")
+    func testBluetoothTuningIncreasesQueueDepth() async throws {
+        let base = AudioEngine.tuning(sampleRate: 44_100, latencyProfile: .balanced)
+        let bluetooth = AudioEngine.tuned(base, for: .bluetooth, sampleRate: 44_100)
+
+        #expect(bluetooth.minStartQueuedFrames > base.minStartQueuedFrames)
+        #expect(bluetooth.preferredScheduleFrames > base.preferredScheduleFrames)
+        #expect(bluetooth.minStartQueuedFrames >= 8_192)
+        #expect(bluetooth.preferredScheduleFrames >= 2_048)
+        #expect(bluetooth.preferredIOBufferDuration >= 0.04)
+    }
+
+    #if os(iOS)
+    @Test("Route detection recognizes bluetooth outputs")
+    func testRouteKindDetectsBluetoothOutputs() async throws {
+        #expect(AudioEngine.routeKind(for: [.builtInSpeaker]) == .speakerOrWired)
+        #expect(AudioEngine.routeKind(for: [.bluetoothA2DP]) == .bluetooth)
+    }
+
+    @Test("Category-only session churn does not trigger a route rebuild")
+    func testCategoryChangeDoesNotTriggerRouteReconfigure() async throws {
+        #expect(!AudioEngine.shouldReconfigure(for: .categoryChange))
+        #expect(AudioEngine.shouldReconfigure(for: .newDeviceAvailable))
+    }
+    #endif
+
     @Test("Streaming queue bridges brief underruns before hard stop")
     func testStreamingQueueBridgesBriefUnderruns() async throws {
         #expect(
             AudioEngine.shouldBridgeUnderrun(
-                debugQueueMetricsEnabled: true,
+                bridgeUnderrunsEnabled: true,
                 isPlaying: true,
                 queuedFrames: 0,
                 pendingFrames: 0,
@@ -153,7 +179,7 @@ struct AudioEngineTests {
 
         #expect(
             !AudioEngine.shouldBridgeUnderrun(
-                debugQueueMetricsEnabled: true,
+                bridgeUnderrunsEnabled: true,
                 isPlaying: true,
                 queuedFrames: 0,
                 pendingFrames: 0,
@@ -164,12 +190,37 @@ struct AudioEngineTests {
 
         #expect(
             !AudioEngine.shouldBridgeUnderrun(
-                debugQueueMetricsEnabled: true,
+                bridgeUnderrunsEnabled: true,
                 isPlaying: true,
                 queuedFrames: 547,
                 pendingFrames: 0,
                 consecutiveBridgeBuffers: 0,
                 maxConsecutiveBridgeBuffers: 4
+            )
+        )
+    }
+
+    @Test("Bluetooth routes can use underrun bridging even outside streaming mode")
+    func testBluetoothUnderrunBridgeUsesBridgeFlag() async throws {
+        #expect(
+            AudioEngine.shouldBridgeUnderrun(
+                bridgeUnderrunsEnabled: true,
+                isPlaying: true,
+                queuedFrames: 0,
+                pendingFrames: 0,
+                consecutiveBridgeBuffers: 0,
+                maxConsecutiveBridgeBuffers: 6
+            )
+        )
+
+        #expect(
+            !AudioEngine.shouldBridgeUnderrun(
+                bridgeUnderrunsEnabled: false,
+                isPlaying: true,
+                queuedFrames: 0,
+                pendingFrames: 0,
+                consecutiveBridgeBuffers: 0,
+                maxConsecutiveBridgeBuffers: 6
             )
         )
     }

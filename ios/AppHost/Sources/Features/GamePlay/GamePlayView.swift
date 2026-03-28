@@ -4578,6 +4578,10 @@ struct GamePlayView: View {
     private func playCartridgeInsertionFeedback() {
         triggerHaptic(.medium)
         #if canImport(AVFoundation) && canImport(UIKit)
+        let session = AVAudioSession.sharedInstance()
+        let bluetoothPorts: Set<AVAudioSession.Port> = [.bluetoothA2DP, .bluetoothHFP, .bluetoothLE]
+        let isBluetoothRouteActive = session.currentRoute.outputs.contains { bluetoothPorts.contains($0.portType) }
+        guard !isBluetoothRouteActive else { return }
         let played = BootClickAudioPlayer.shared.play()
         if !played {
             #if canImport(AudioToolbox)
@@ -4860,7 +4864,7 @@ private final class BootClickAudioPlayer {
     private func configureAudioSession() {
         let session = AVAudioSession.sharedInstance()
         // Route through media volume so the click is audible on real devices.
-        try? session.setCategory(.playback, mode: .default, options: [.mixWithOthers])
+        try? session.setCategory(.playback, mode: .default, options: [.mixWithOthers, .allowBluetoothA2DP])
         try? session.setActive(true)
     }
 
