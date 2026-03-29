@@ -1082,7 +1082,18 @@ struct GamePlayView: View {
                                 gbUtilityIcon(systemName: "forward.fill", tint: .yellow) {
                                     cycleFastForwardSpeed()
                                 }
-                                gbUtilityIcon(systemName: "speaker.wave.2.fill", tint: .cyan) {}
+                                ZStack {
+                                    gbUtilityIcon(systemName: "speaker.wave.2.fill", tint: .cyan) {
+                                        toggleGameSound()
+                                    }
+                                    if !gameSoundEnabled {
+                                        Image(systemName: "xmark")
+                                            .font(.system(size: 18, weight: .light))
+                                            .foregroundColor(.red)
+                                            .shadow(color: .black.opacity(0.3), radius: 2, x: 0, y: 1)
+                                            .allowsHitTesting(false)
+                                    }
+                                }
                             }
                             .padding(.horizontal, 16)
                             .frame(width: displayOuterWidth, height: 54)
