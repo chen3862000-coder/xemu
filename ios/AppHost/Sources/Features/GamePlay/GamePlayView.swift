@@ -1209,7 +1209,18 @@ struct GamePlayView: View {
                         gbUtilityIcon(systemName: "forward.fill", tint: .white) {
                             cycleFastForwardSpeed()
                         }
-                        gbUtilityIcon(systemName: "speaker.wave.2", tint: .white) {}
+                        ZStack {
+                            gbUtilityIcon(systemName: "speaker.wave.2", tint: .white) {
+                                toggleGameSound()
+                            }
+                            if !gameSoundEnabled {
+                                Image(systemName: "xmark")
+                                    .font(.system(size: 20, weight: .light))
+                                    .foregroundColor(.red)
+                                    .shadow(color: .black.opacity(0.3), radius: 2, x: 0, y: 1)
+                                    .allowsHitTesting(false)
+                            }
+                        }
                     }
                     .padding(.horizontal, 10)
                     .padding(.vertical, 8)
