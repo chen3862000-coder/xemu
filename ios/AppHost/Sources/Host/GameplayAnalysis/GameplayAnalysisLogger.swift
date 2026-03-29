@@ -12,10 +12,12 @@ struct GameplayAnalysisLogger {
     static func session(_ message: String) {
         guard isEnabled else { return }
         logger.info("\(message, privacy: .public)")
+        NSLog("[GameplayAnalysis] %@", message)
     }
 
     static func event(_ message: String) {
         guard isEnabled else { return }
         logger.debug("\(message, privacy: .public)")
+        NSLog("[GameplayAnalysis] %@", message)
     }
 }

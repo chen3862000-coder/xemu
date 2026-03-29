@@ -26,24 +26,24 @@ struct PlayerAchievementDefinition: Identifiable, Equatable {
 }
 
 extension PlayerAchievementDefinition {
-    var localizedTitle: String {
+    func localizedTitle(languageManager: LanguageManager = .shared) -> String {
         switch id {
-        case "power-on": return L10n.string("achievement.power_on.title", table: "Screens")
-        case "first-hour": return L10n.string("achievement.first_hour.title", table: "Screens")
-        case "retro-fan": return L10n.string("achievement.retro_fan.title", table: "Screens")
-        case "dedicated-player": return L10n.string("achievement.dedicated_player.title", table: "Screens")
-        case "game-sampler": return L10n.string("achievement.game_sampler.title", table: "Screens")
+        case "power-on": return L10n.string("achievement.power_on.title", table: "Screens", languageManager: languageManager)
+        case "first-hour": return L10n.string("achievement.first_hour.title", table: "Screens", languageManager: languageManager)
+        case "retro-fan": return L10n.string("achievement.retro_fan.title", table: "Screens", languageManager: languageManager)
+        case "dedicated-player": return L10n.string("achievement.dedicated_player.title", table: "Screens", languageManager: languageManager)
+        case "game-sampler": return L10n.string("achievement.game_sampler.title", table: "Screens", languageManager: languageManager)
         default: return title
         }
     }
 
-    var localizedDetail: String {
+    func localizedDetail(languageManager: LanguageManager = .shared) -> String {
         switch id {
-        case "power-on": return L10n.string("achievement.power_on.detail", table: "Screens")
-        case "first-hour": return L10n.string("achievement.first_hour.detail", table: "Screens")
-        case "retro-fan": return L10n.string("achievement.retro_fan.detail", table: "Screens")
-        case "dedicated-player": return L10n.string("achievement.dedicated_player.detail", table: "Screens")
-        case "game-sampler": return L10n.string("achievement.game_sampler.detail", table: "Screens")
+        case "power-on": return L10n.string("achievement.power_on.detail", table: "Screens", languageManager: languageManager)
+        case "first-hour": return L10n.string("achievement.first_hour.detail", table: "Screens", languageManager: languageManager)
+        case "retro-fan": return L10n.string("achievement.retro_fan.detail", table: "Screens", languageManager: languageManager)
+        case "dedicated-player": return L10n.string("achievement.dedicated_player.detail", table: "Screens", languageManager: languageManager)
+        case "game-sampler": return L10n.string("achievement.game_sampler.detail", table: "Screens", languageManager: languageManager)
         default: return detail
         }
     }
@@ -206,8 +206,8 @@ final class PlayerProgressStore {
             newUnlocks.append(
                 PlayerAchievementUnlock(
                     id: definition.id,
-                    title: definition.localizedTitle,
-                    detail: definition.localizedDetail,
+                    title: definition.localizedTitle(),
+                    detail: definition.localizedDetail(),
                     unlockedAt: now
                 )
             )

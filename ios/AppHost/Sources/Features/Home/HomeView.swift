@@ -497,7 +497,7 @@ struct HomeView: View {
                     title: L10n.string("home.game_stats", languageManager: languageManager),
                     value: viewModel.totalHours,
                     icon: "chart.bar.fill",
-                    helper: L10n.string("home.game_stats.empty_helper", languageManager: languageManager),
+                    helper: viewModel.gameStatsHelper,
                     gradient: [AppColors.info, AppColors.primary]
                 )
             }
@@ -729,6 +729,9 @@ struct HomeView: View {
 }
 
 struct StatCard: View {
+    private static let minHeight: CGFloat = 120
+    private static let valueAreaHeight: CGFloat = 78
+
     let title: String
     let value: String
     let icon: String
@@ -754,19 +757,22 @@ struct StatCard: View {
             }
 
             Text(value)
-                .font(.system(size: 40, weight: .bold))
+                .font(.system(size: 34, weight: .bold))
                 .foregroundStyle(AppColors.Text.primary)
-                .lineLimit(1)
-                .minimumScaleFactor(0.8)
+                .lineLimit(2)
+                .minimumScaleFactor(0.7)
+                .multilineTextAlignment(.leading)
+                .frame(maxWidth: .infinity, minHeight: Self.valueAreaHeight, alignment: .topLeading)
 
             Text(helper)
                 .font(.system(size: 13, weight: .medium))
                 .foregroundStyle(AppColors.Text.tertiary)
+                .lineLimit(2)
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 14)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .frame(minHeight: 112, alignment: .topLeading)
+        .frame(minHeight: Self.minHeight, alignment: .topLeading)
         .background(AppColors.Surface.cardPrimary)
         .overlay(RoundedRectangle(cornerRadius: 20).stroke(AppColors.Border.subtle, lineWidth: 1))
         .shadow(color: AppColors.Shadow.card, radius: 12, x: 0, y: 8)
@@ -941,7 +947,7 @@ struct RecentGameCard: View {
                 title: GameCardTitleFormatter.format(game.title, maxWords: 7),
                 supportingTitleLine: game.smartSummary?.primaryProgressLine,
                 metadataPrimary: playedDateText,
-                metadataSecondary: game.totalPlaySeconds > 0 ? totalHoursText : nil,
+                metadataSecondary: continuePlayingMetadataSecondary,
                 platformTag: game.console,
                 launchIssueIconName: game.launchIssue?.iconName,
                 progress: sessionProgress
@@ -1028,6 +1034,13 @@ struct RecentGameCard: View {
         formatter.locale = languageManager.formattingLocale
         formatter.unitsStyle = .short
         return formatter.localizedString(for: date, relativeTo: Date())
+    }
+
+    private var continuePlayingMetadataSecondary: String? {
+        if let statusLine = game.smartSummary?.supportingStateLine, !statusLine.isEmpty {
+            return statusLine
+        }
+        return game.totalPlaySeconds > 0 ? totalHoursText : nil
     }
 
     private var totalHoursText: String {
@@ -1458,13 +1471,20 @@ struct ImportingProgressView: View {
 final class HomeViewModel: ObservableObject {
     @Published var totalGames: Int = 0
     @Published var totalHours: String = "0h"
+    @Published var gameStatsHelper: String
     @Published var recentGames: [RecentGame] = []
     @Published var recentlyAddedGames: [RecentGame] = []
     @Published var emulators: [EmulatorInfo] = []
     private var entriesByID: [UUID: ROMLibraryEntry] = [:]
+    private let languageManager: LanguageManager
     
     private var fetchedResultsController: NSFetchedResultsController<ROMLibraryEntry>?
     private weak var viewContext: NSManagedObjectContext?
+
+    init(languageManager: LanguageManager = .shared) {
+        self.languageManager = languageManager
+        self.gameStatsHelper = L10n.string("home.game_stats.empty_helper", languageManager: languageManager)
+    }
     
     func loadData(in context: NSManagedObjectContext) {
         viewContext = context
@@ -1494,9 +1514,11 @@ final class HomeViewModel: ObservableObject {
         entriesByID = Dictionary(uniqueKeysWithValues: entries.map { ($0.id, $0) })
         totalGames = entries.count
         
-        let totalSeconds = entries.reduce(0) { $0 + $1.playtimeTotal }
-        let hours = totalSeconds / 3600
-        totalHours = hours > 0 ? "\(hours)h" : "0h"
+        let totalSeconds = Int(entries.reduce(0) { $0 + $1.playtimeTotal })
+        totalHours = LocaleFormatting.shortDuration(
+            seconds: totalSeconds,
+            languageManager: languageManager
+        )
         
         let recentEntries = entries.filter { $0.lastPlayedAt != nil }.prefix(5)
         recentGames = recentEntries.map { entry in
@@ -1517,6 +1539,8 @@ final class HomeViewModel: ObservableObject {
                 smartSummary: entry.checksum.flatMap { PlayInsightsStore.shared.continuePlayingSummary(for: $0) }
             )
         }
+        gameStatsHelper = recentGames.first?.title
+            ?? L10n.string("home.game_stats.empty_helper", languageManager: languageManager)
 
         let addedEntries = entries
             .sorted {

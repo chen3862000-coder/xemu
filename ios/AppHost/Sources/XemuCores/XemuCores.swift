@@ -188,10 +188,12 @@ public class GBCCoreWrapper: CEmulatorCore {
 
         if useNative, let handle = handle {
             let result = data.withUnsafeBytes { (buffer: UnsafeRawBufferPointer) -> xemu_error_t in
-                let ptr = buffer.bindMemory(to: UInt8.self).baseAddress!
+                guard let ptr = buffer.bindMemory(to: UInt8.self).baseAddress, data.count > 0 else {
+                    return XEMU_ERROR_UNKNOWN
+                }
                 return xemu_gb_load_rom(handle, nil, ptr, data.count)
             }
-            
+
             guard result == XEMU_OK else {
                 throw XemuCoresError.romLoadFailed("Load failed with error: \(result.rawValue)")
             }
@@ -483,10 +485,12 @@ public class GBACoreWrapper: CEmulatorCore {
 
         if useNative, let handle = handle {
             let result = data.withUnsafeBytes { (buffer: UnsafeRawBufferPointer) -> xemu_error_t in
-                let ptr = buffer.bindMemory(to: UInt8.self).baseAddress!
+                guard let ptr = buffer.bindMemory(to: UInt8.self).baseAddress, data.count > 0 else {
+                    return XEMU_ERROR_UNKNOWN
+                }
                 return xemu_gba_load_rom(handle, nil, ptr, data.count)
             }
-            
+
             guard result == XEMU_OK else {
                 throw XemuCoresError.romLoadFailed("Load failed with error: \(result.rawValue)")
             }
@@ -793,13 +797,17 @@ public final class NDSCoreWrapper: CEmulatorCore {
             if let filePath {
                 result = filePath.withCString { cPath in
                     data.withUnsafeBytes { (buffer: UnsafeRawBufferPointer) -> xemu_error_t in
-                        let ptr = buffer.bindMemory(to: UInt8.self).baseAddress!
+                        guard let ptr = buffer.bindMemory(to: UInt8.self).baseAddress, data.count > 0 else {
+                            return XEMU_ERROR_UNKNOWN
+                        }
                         return xemu_nds_load_rom(handle, cPath, ptr, data.count)
                     }
                 }
             } else {
                 result = data.withUnsafeBytes { (buffer: UnsafeRawBufferPointer) -> xemu_error_t in
-                    let ptr = buffer.bindMemory(to: UInt8.self).baseAddress!
+                    guard let ptr = buffer.bindMemory(to: UInt8.self).baseAddress, data.count > 0 else {
+                        return XEMU_ERROR_UNKNOWN
+                    }
                     return xemu_nds_load_rom(handle, nil, ptr, data.count)
                 }
             }

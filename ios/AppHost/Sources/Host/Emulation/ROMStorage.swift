@@ -38,13 +38,21 @@ public class ROMStorage {
     
     private init() {
         #if os(iOS)
-        let documentsDir = fileManager.urls(for: .documentDirectory, in: .userDomainMask).first!
-        romsDirectory = documentsDir.appendingPathComponent("ROMs")
+        if let documentsDir = fileManager.urls(for: .documentDirectory, in: .userDomainMask).first {
+            romsDirectory = documentsDir.appendingPathComponent("ROMs")
+        } else {
+            let error = NSError(domain: "com.xemu.storage", code: 1, userInfo: [
+                NSLocalizedDescriptionKey: "Unable to access documents directory"
+            ])
+            print("Failed to initialize ROMStorage: \(error.localizedDescription)")
+            // Fallback to a safe directory
+            romsDirectory = fileManager.temporaryDirectory.appendingPathComponent("ROMs")
+        }
         #else
         let documentsDir = fileManager.homeDirectoryForCurrentUser.appendingPathComponent("Documents")
         romsDirectory = documentsDir.appendingPathComponent("ROMs")
         #endif
-        
+
         createROMsDirectoryIfNeeded()
     }
     

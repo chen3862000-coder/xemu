@@ -228,7 +228,7 @@ final class MemoryGameAnalyzerTests: XCTestCase {
             maxHealth: 99,
             gameMode: 0x01,
             contextValues: [
-                "area": 0x03,
+                "area": 0x04,
                 "room": 0x1A,
                 "mapX": 12,
                 "mapY": 7
@@ -237,7 +237,7 @@ final class MemoryGameAnalyzerTests: XCTestCase {
 
         let result = analyzer.analyzeLiveMemory(sample, profile: .metroidFusion)
 
-        XCTAssertEqual(result?.locationSummary, "Loc Sector 3 • room 1A • map 12,7")
+        XCTAssertEqual(result?.locationSummary, "Loc Sector 4 (AQA) • AQA Security Access Shaft • map 12,7")
     }
 
     func testMetroidFusionDeathPoseEmitsDeathFromLiveMemory() {
@@ -264,6 +264,85 @@ final class MemoryGameAnalyzerTests: XCTestCase {
 
         _ = analyzer.analyzeLiveMemory(baseline, profile: .metroidFusion)
         let result = analyzer.analyzeLiveMemory(dead, profile: .metroidFusion)
+
+        XCTAssertEqual(result?.events, [.deathDetected])
+        XCTAssertEqual(result?.playerState, .dead)
+        XCTAssertEqual(result?.gameplayPhase, .deathSequence)
+    }
+
+    func testMetroidZeroMissionLocationSummaryIncludesAreaRoomAndMap() {
+        let analyzer = MemoryGameAnalyzer()
+        let sample = MarioLiveMemorySample(
+            lives: nil,
+            powerUpState: 0x02,
+            gameplayState: 0x10,
+            invulnerabilityTimer: 0,
+            health: 34,
+            maxHealth: 99,
+            gameMode: nil,
+            contextValues: [
+                "area": 0x06,
+                "room": 0x1C,
+                "mapX": 18,
+                "mapY": 7
+            ]
+        )
+
+        let result = analyzer.analyzeLiveMemory(sample, profile: .metroidZeroMission)
+
+        XCTAssertEqual(result?.locationSummary, "Loc Chozodia • map 18,7")
+    }
+
+    func testMetroidZeroMissionHealthDropEmitsDamageFromLiveMemory() {
+        let analyzer = MemoryGameAnalyzer()
+
+        let baseline = MarioLiveMemorySample(
+            lives: nil,
+            powerUpState: 0x02,
+            gameplayState: 0x10,
+            invulnerabilityTimer: 0,
+            health: 99,
+            maxHealth: 99
+        )
+        let damaged = MarioLiveMemorySample(
+            lives: nil,
+            powerUpState: 0x02,
+            gameplayState: 0x12,
+            invulnerabilityTimer: 24,
+            health: 84,
+            maxHealth: 99
+        )
+
+        _ = analyzer.analyzeLiveMemory(baseline, profile: .metroidZeroMission)
+        let result = analyzer.analyzeLiveMemory(damaged, profile: .metroidZeroMission)
+
+        XCTAssertEqual(result?.events, [.damageLight])
+        XCTAssertEqual(result?.playerState, .invulnerableBlink)
+        XCTAssertEqual(result?.gameplayPhase, .gameplayActive)
+    }
+
+    func testMetroidZeroMissionZeroHealthEmitsDeathFromLiveMemory() {
+        let analyzer = MemoryGameAnalyzer()
+
+        let baseline = MarioLiveMemorySample(
+            lives: nil,
+            powerUpState: 0x02,
+            gameplayState: 0x10,
+            invulnerabilityTimer: 0,
+            health: 34,
+            maxHealth: 99
+        )
+        let dead = MarioLiveMemorySample(
+            lives: nil,
+            powerUpState: 0x02,
+            gameplayState: 0x40,
+            invulnerabilityTimer: 0,
+            health: 0,
+            maxHealth: 99
+        )
+
+        _ = analyzer.analyzeLiveMemory(baseline, profile: .metroidZeroMission)
+        let result = analyzer.analyzeLiveMemory(dead, profile: .metroidZeroMission)
 
         XCTAssertEqual(result?.events, [.deathDetected])
         XCTAssertEqual(result?.playerState, .dead)
@@ -373,6 +452,24 @@ final class MemoryGameAnalyzerTests: XCTestCase {
         XCTAssertEqual(result?.gameplayPhase, .gameplayActive)
     }
 
+    func testDragonBallAdvancedAdventureKnownStageBuildsLocationSummary() {
+        let analyzer = MemoryGameAnalyzer()
+        let sample = MarioLiveMemorySample(
+            lives: 3,
+            powerUpState: 0,
+            gameplayState: 0,
+            invulnerabilityTimer: 0,
+            health: 206,
+            maxHealth: 512,
+            gameMode: nil,
+            contextValues: ["stage": 0x4F2C]
+        )
+
+        let result = analyzer.analyzeLiveMemory(sample, profile: .dragonBallAdvancedAdventure)
+
+        XCTAssertEqual(result?.locationSummary, "Loc Goku's House")
+    }
+
     func testCastlevaniaAriaOfSorrowHealthDropEmitsDamageFromLiveMemory() {
         let analyzer = MemoryGameAnalyzer()
 
@@ -448,6 +545,228 @@ final class MemoryGameAnalyzerTests: XCTestCase {
 
         _ = analyzer.analyzeLiveMemory(baseline, profile: .castlevaniaAriaOfSorrow)
         let result = analyzer.analyzeLiveMemory(dead, profile: .castlevaniaAriaOfSorrow)
+
+        XCTAssertEqual(result?.events, [.deathDetected])
+        XCTAssertEqual(result?.playerState, .dead)
+        XCTAssertEqual(result?.gameplayPhase, .deathSequence)
+    }
+
+    func testOnePieceHealthDropEmitsDamageFromLiveMemory() {
+        let analyzer = MemoryGameAnalyzer()
+
+        let baseline = MarioLiveMemorySample(
+            lives: 3,
+            powerUpState: 1,
+            gameplayState: 0x01,
+            invulnerabilityTimer: 0x06,
+            health: 5
+        )
+        let damaged = MarioLiveMemorySample(
+            lives: 3,
+            powerUpState: 1,
+            gameplayState: 0x01,
+            invulnerabilityTimer: 0x06,
+            health: 4
+        )
+
+        _ = analyzer.analyzeLiveMemory(baseline, profile: .onePiece)
+        let result = analyzer.analyzeLiveMemory(damaged, profile: .onePiece)
+
+        XCTAssertEqual(result?.events, [.damageLight])
+        XCTAssertEqual(result?.playerState, .superState)
+        XCTAssertEqual(result?.gameplayPhase, .gameplayActive)
+    }
+
+    func testOnePieceZeroHealthEmitsDeathFromLiveMemory() {
+        let analyzer = MemoryGameAnalyzer()
+
+        let baseline = MarioLiveMemorySample(
+            lives: 3,
+            powerUpState: 1,
+            gameplayState: 0x01,
+            invulnerabilityTimer: 0x06,
+            health: 5
+        )
+        let dead = MarioLiveMemorySample(
+            lives: 2,
+            powerUpState: 0,
+            gameplayState: 0x01,
+            invulnerabilityTimer: 0x06,
+            health: 0
+        )
+
+        _ = analyzer.analyzeLiveMemory(baseline, profile: .onePiece)
+        let result = analyzer.analyzeLiveMemory(dead, profile: .onePiece)
+
+        XCTAssertEqual(result?.events, [.deathDetected])
+        XCTAssertEqual(result?.playerState, .dead)
+        XCTAssertEqual(result?.gameplayPhase, .deathSequence)
+    }
+
+    func testOnePieceMappedProgressStateEmitsNamedLocationSummary() {
+        let analyzer = MemoryGameAnalyzer()
+        let sample = MarioLiveMemorySample(
+            lives: 3,
+            powerUpState: 2,
+            gameplayState: 1,
+            invulnerabilityTimer: 0,
+            health: 84,
+            maxHealth: nil,
+            gameMode: nil,
+            contextValues: ["progressState": 0x307D]
+        )
+
+        let result = analyzer.analyzeLiveMemory(sample, profile: .onePiece)
+
+        XCTAssertEqual(result?.locationSummary, "Loc Port Town")
+    }
+
+    func testOnePieceUnknownProgressStateOmitsUnreadableLocationSummary() {
+        let analyzer = MemoryGameAnalyzer()
+        let sample = MarioLiveMemorySample(
+            lives: 3,
+            powerUpState: 2,
+            gameplayState: 1,
+            invulnerabilityTimer: 0,
+            health: 84,
+            maxHealth: nil,
+            gameMode: nil,
+            contextValues: ["progressState": 0xFFFF]
+        )
+
+        let result = analyzer.analyzeLiveMemory(sample, profile: .onePiece)
+
+        XCTAssertNil(result?.locationSummary)
+    }
+
+    func testOnePieceKnownNavyBaseProgressStateBuildsLocationSummary() {
+        let analyzer = MemoryGameAnalyzer()
+        let sample = MarioLiveMemorySample(
+            lives: 2,
+            powerUpState: 3,
+            gameplayState: 1,
+            invulnerabilityTimer: 6,
+            health: 1024,
+            maxHealth: nil,
+            gameMode: nil,
+            contextValues: ["progressState": 0x2BA1]
+        )
+
+        let result = analyzer.analyzeLiveMemory(sample, profile: .onePiece)
+
+        XCTAssertEqual(result?.locationSummary, "Loc Navy Base")
+    }
+
+    func testKingdomHeartsChainOfMemoriesHealthDropEmitsDamageFromLiveMemory() {
+        let analyzer = MemoryGameAnalyzer()
+
+        let baseline = MarioLiveMemorySample(
+            lives: 12,
+            powerUpState: 90,
+            gameplayState: 0x00,
+            invulnerabilityTimer: 0x20,
+            health: 180,
+            maxHealth: 200
+        )
+        let damaged = MarioLiveMemorySample(
+            lives: 12,
+            powerUpState: 90,
+            gameplayState: 0x00,
+            invulnerabilityTimer: 0x20,
+            health: 168,
+            maxHealth: 200
+        )
+
+        _ = analyzer.analyzeLiveMemory(baseline, profile: .kingdomHeartsChainOfMemories)
+        let result = analyzer.analyzeLiveMemory(damaged, profile: .kingdomHeartsChainOfMemories)
+
+        XCTAssertEqual(result?.events, [.damageLight])
+        XCTAssertEqual(result?.playerState, .superState)
+        XCTAssertEqual(result?.gameplayPhase, .gameplayActive)
+    }
+
+    func testKingdomHeartsChainOfMemoriesZeroHealthEmitsDeathFromLiveMemory() {
+        let analyzer = MemoryGameAnalyzer()
+
+        let baseline = MarioLiveMemorySample(
+            lives: 12,
+            powerUpState: 90,
+            gameplayState: 0x00,
+            invulnerabilityTimer: 0x20,
+            health: 180,
+            maxHealth: 200
+        )
+        let dead = MarioLiveMemorySample(
+            lives: 12,
+            powerUpState: 90,
+            gameplayState: 0x00,
+            invulnerabilityTimer: 0x20,
+            health: 0,
+            maxHealth: 200
+        )
+
+        _ = analyzer.analyzeLiveMemory(baseline, profile: .kingdomHeartsChainOfMemories)
+        let result = analyzer.analyzeLiveMemory(dead, profile: .kingdomHeartsChainOfMemories)
+
+        XCTAssertEqual(result?.events, [.deathDetected])
+        XCTAssertEqual(result?.playerState, .dead)
+        XCTAssertEqual(result?.gameplayPhase, .deathSequence)
+    }
+
+    func testZeldaMinishCapHealthDropEmitsDamageFromLiveMemory() {
+        let analyzer = MemoryGameAnalyzer()
+
+        let baseline = MarioLiveMemorySample(
+            lives: 0x03,
+            powerUpState: 0x1C,
+            gameplayState: 0x03,
+            invulnerabilityTimer: 0x00,
+            health: 8,
+            maxHealth: 10,
+            contextValues: ["map": 0x03, "room": 0x1C]
+        )
+        let damaged = MarioLiveMemorySample(
+            lives: 0x03,
+            powerUpState: 0x1C,
+            gameplayState: 0x03,
+            invulnerabilityTimer: 0x00,
+            health: 7,
+            maxHealth: 10,
+            contextValues: ["map": 0x03, "room": 0x1C]
+        )
+
+        _ = analyzer.analyzeLiveMemory(baseline, profile: .zeldaMinishCap)
+        let result = analyzer.analyzeLiveMemory(damaged, profile: .zeldaMinishCap)
+
+        XCTAssertEqual(result?.events, [.damageLight])
+        XCTAssertEqual(result?.playerState, .superState)
+        XCTAssertEqual(result?.gameplayPhase, .gameplayActive)
+    }
+
+    func testZeldaMinishCapZeroHealthEmitsDeathFromLiveMemory() {
+        let analyzer = MemoryGameAnalyzer()
+
+        let baseline = MarioLiveMemorySample(
+            lives: 0x03,
+            powerUpState: 0x1C,
+            gameplayState: 0x03,
+            invulnerabilityTimer: 0x00,
+            health: 6,
+            maxHealth: 10,
+            contextValues: ["map": 0x03, "room": 0x1C]
+        )
+        let dead = MarioLiveMemorySample(
+            lives: 0x03,
+            powerUpState: 0x1C,
+            gameplayState: 0x03,
+            invulnerabilityTimer: 0x00,
+            health: 0,
+            maxHealth: 10,
+            contextValues: ["map": 0x03, "room": 0x1C]
+        )
+
+        _ = analyzer.analyzeLiveMemory(baseline, profile: .zeldaMinishCap)
+        let result = analyzer.analyzeLiveMemory(dead, profile: .zeldaMinishCap)
 
         XCTAssertEqual(result?.events, [.deathDetected])
         XCTAssertEqual(result?.playerState, .dead)

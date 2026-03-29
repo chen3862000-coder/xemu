@@ -3297,7 +3297,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Hours Played"
+            "value" : "Time Played"
           }
         },
         "es" : {
@@ -5441,6 +5441,36 @@
         "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "正在探索" } }
       }
     },
+    "playinsights.current_run.combat_active" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Combat active" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Combate activo" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "戦闘中" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "战斗中" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "戰鬥中" } }
+      }
+    },
+    "playinsights.current_run.adventure_active" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Adventure active" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Aventura activa" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "冒険中" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "冒险中" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "冒險中" } }
+      }
+    },
+    "playinsights.current_run.recovering_after_defeat" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Recovering after defeat" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Recuperándose tras la derrota" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "敗北後の立て直し中" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "失败后恢复中" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "失敗後恢復中" } }
+      }
+    },
     "playinsights.continue_playing.castle_progress_tracked" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -5981,6 +6011,16 @@
         "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "房間與地圖位置可用" } }
       }
     },
+    "playinsights.progress.room_format" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Room %@" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Sala %@" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "部屋 %@" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "房间 %@" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "房間 %@" } }
+      }
+    },
     "playinsights.progress.sector_format" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -5999,6 +6039,66 @@
         "ja" : { "stringUnit" : { "state" : "translated", "value" : "ステージ %@" } },
         "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "关卡 %@" } },
         "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "關卡 %@" } }
+      }
+    },
+    "playinsights.progress.area_stage_format" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Area %@ • Stage %@" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Área %@ • Fase %@" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "エリア %@ • ステージ %@" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "区域 %@ • 关卡 %@" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "區域 %@ • 關卡 %@" } }
+      }
+    },
+    "playinsights.progress.adventure_in_progress" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Adventure in progress" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Aventura en progreso" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "冒険進行中" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "冒险进行中" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "冒險進行中" } }
+      }
+    },
+    "playinsights.progress.combat_in_progress" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Combat in progress" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Combate en progreso" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "戦闘進行中" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "战斗进行中" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "戰鬥進行中" } }
+      }
+    },
+    "playinsights.progress.current_stage_tracked" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Current stage tracked" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Fase actual detectada" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "現在のステージを検出" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "已检测当前关卡" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "已偵測目前關卡" } }
+      }
+    },
+    "playinsights.progress.state_format" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "State %@" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Estado %@" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "状態 %@" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "状态 %@" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "狀態 %@" } }
+      }
+    },
+    "playinsights.progress.recovering_after_defeat" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Recovering after defeat" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Recuperándose tras la derrota" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "敗北後の立て直し中" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "失败后恢复中" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "失敗後恢復中" } }
       }
     },
     "playinsights.progress.visited_areas_format" : {
@@ -6029,6 +6129,36 @@
         "ja" : { "stringUnit" : { "state" : "translated", "value" : "プレイ分析" } },
         "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "游玩洞察" } },
         "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "遊玩洞察" } }
+      }
+    },
+    "playinsights.vitals.hp_current_format" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "HP %@" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "PS %@" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "HP %@" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "HP %@" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "HP %@" } }
+      }
+    },
+    "playinsights.vitals.hp_max_format" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "HP %@/%@" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "PS %@/%@" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "HP %@/%@" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "HP %@/%@" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "HP %@/%@" } }
+      }
+    },
+    "playinsights.vitals.lives_left_format" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "%@ lives left" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "%@ vidas restantes" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "残り %@ 機" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "剩余 %@ 条命" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "剩餘 %@ 條命" } }
       }
     },
     "playinsights.status.active" : {

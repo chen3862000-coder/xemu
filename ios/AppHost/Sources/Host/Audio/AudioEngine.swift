@@ -8,6 +8,14 @@ public final class AudioEngine {
         case streaming
     }
 
+    enum RouteKind: Equatable {
+        case speakerOrWired
+        case bluetoothA2DP
+        case bluetoothVoice
+        case airPlay
+        case externalHighLatency
+    }
+
     struct Tuning: Equatable {
         let maxQueuedFrames: UInt32
         let minStartQueuedFrames: UInt32
@@ -18,9 +26,10 @@ public final class AudioEngine {
         let preferredIOBufferDuration: TimeInterval
     }
 
-    private let engine: AVAudioEngine
-    private let playerNode: AVAudioPlayerNode
+    private var engine: AVAudioEngine
+    private var playerNode: AVAudioPlayerNode
     private let queue = DispatchQueue(label: "com.xemu.audio", qos: .userInteractive)
+    private let latencyProfile: LatencyProfile
     
     private var isPlaying = false
     private var queuedFrames: UInt32 = 0
@@ -29,26 +38,33 @@ public final class AudioEngine {
     private let sampleRate: Double
     private let channels: AVAudioChannelCount
     private let outputFormat: AVAudioFormat
-    private let maxQueuedFrames: UInt32
-    private let minStartQueuedFrames: UInt32
-    private let hardResetQueuedFrames: UInt32
-    private let softLatencyCapFrames: UInt32
-    private let preferredScheduleFrames: UInt32
-    private let minPartialScheduleFrames: UInt32
-    private let recoveryStartQueuedFrames: UInt32
-    private let underrunBridgeFrames: UInt32
-    private let maxConsecutiveBridgeBuffers: Int
+    private var maxQueuedFrames: UInt32
+    private var minStartQueuedFrames: UInt32
+    private var hardResetQueuedFrames: UInt32
+    private var softLatencyCapFrames: UInt32
+    private var preferredScheduleFrames: UInt32
+    private var minPartialScheduleFrames: UInt32
+    private var recoveryStartQueuedFrames: UInt32
+    private var underrunBridgeFrames: UInt32
+    private var maxConsecutiveBridgeBuffers: Int
     private var postLoadSilenceUntil: CFTimeInterval = 0
     private var postLoadFadeStart: CFTimeInterval = 0
     private var postLoadFadeUntil: CFTimeInterval = 0
     private let saturationThreshold: Int32 = 32_200
     private let abruptDeltaThreshold: Int32 = 30_000
-    private let preferredIOBufferDuration: TimeInterval
+    private var preferredIOBufferDuration: TimeInterval
     private let debugQueueMetricsEnabled: Bool
     private var debugChunkCount: Int = 0
     private var debugLastNonZeroQueuedFrames: UInt32 = 0
+    private var debugLoggedEnqueueEvents = 0
     private var shouldUseRecoveryStartThreshold = false
     private var consecutiveBridgeBuffers = 0
+    private var routeKind: RouteKind = .speakerOrWired
+    private var volume: Float
+    #if os(iOS)
+    private var routeObserver: NSObjectProtocol?
+    public var onHardwareConfigurationChanged: ((Double) -> Void)?
+    #endif
 
     static func tuning(sampleRate: Double, latencyProfile: LatencyProfile) -> Tuning {
         let targetFPS: Double = 60.0
@@ -96,8 +112,10 @@ public final class AudioEngine {
         volume: Float = 1.0,
         latencyProfile: LatencyProfile = .balanced
     ) {
+        self.volume = max(0.0, min(1.0, volume))
         self.sampleRate = sampleRate
         self.channels = AVAudioChannelCount(channels)
+        self.latencyProfile = latencyProfile
         self.engine = AVAudioEngine()
         self.playerNode = AVAudioPlayerNode()
         let tuning = Self.tuning(sampleRate: sampleRate, latencyProfile: latencyProfile)
@@ -107,40 +125,81 @@ public final class AudioEngine {
         softLatencyCapFrames = tuning.softLatencyCapFrames
         preferredScheduleFrames = tuning.preferredScheduleFrames
         minPartialScheduleFrames = tuning.minPartialScheduleFrames
+        let initialTuning = Self.tuned(tuning, for: .speakerOrWired, sampleRate: sampleRate)
+        maxQueuedFrames = initialTuning.maxQueuedFrames
+        minStartQueuedFrames = initialTuning.minStartQueuedFrames
+        hardResetQueuedFrames = initialTuning.hardResetQueuedFrames
+        softLatencyCapFrames = initialTuning.softLatencyCapFrames
+        preferredScheduleFrames = initialTuning.preferredScheduleFrames
+        minPartialScheduleFrames = initialTuning.minPartialScheduleFrames
+        preferredIOBufferDuration = initialTuning.preferredIOBufferDuration
         if latencyProfile == .streaming {
             recoveryStartQueuedFrames = max(
-                tuning.preferredScheduleFrames * 5,
-                tuning.minStartQueuedFrames
+                initialTuning.preferredScheduleFrames * 3,
+                initialTuning.minStartQueuedFrames
             )
             underrunBridgeFrames = max(
-                tuning.minPartialScheduleFrames,
-                tuning.preferredScheduleFrames
+                initialTuning.minPartialScheduleFrames,
+                initialTuning.preferredScheduleFrames
             )
             maxConsecutiveBridgeBuffers = 4
         } else {
             recoveryStartQueuedFrames = max(
-                tuning.preferredScheduleFrames * 2,
-                tuning.minPartialScheduleFrames
+                initialTuning.preferredScheduleFrames * 2,
+                initialTuning.minPartialScheduleFrames
             )
-            underrunBridgeFrames = tuning.minPartialScheduleFrames
+            underrunBridgeFrames = initialTuning.minPartialScheduleFrames
             maxConsecutiveBridgeBuffers = 0
         }
-        preferredIOBufferDuration = tuning.preferredIOBufferDuration
         debugQueueMetricsEnabled = latencyProfile == .streaming
-        
-        outputFormat = AVAudioFormat(commonFormat: .pcmFormatInt16,
-                                     sampleRate: sampleRate,
-                                     channels: self.channels,
-                                     interleaved: true)!
-        
-        setupEngine()
-        setVolume(volume)
+
+        guard let format = AVAudioFormat(commonFormat: .pcmFormatInt16,
+                                        sampleRate: sampleRate,
+                                        channels: self.channels,
+                                        interleaved: true) else {
+            fatalError("Failed to create audio format - sampleRate: \(sampleRate), channels: \(self.channels)")
+        }
+        outputFormat = format
+
+        rebuildEngineGraph()
+        #if os(iOS)
+        routeObserver = NotificationCenter.default.addObserver(
+            forName: AVAudioSession.routeChangeNotification,
+            object: AVAudioSession.sharedInstance(),
+            queue: nil
+        ) { [weak self] notification in
+            self?.handleRouteChange(notification)
+        }
+        #endif
+    }
+
+    deinit {
+        #if os(iOS)
+        if let routeObserver {
+            NotificationCenter.default.removeObserver(routeObserver)
+        }
+        #endif
     }
     
     private func setupEngine() {
         engine.attach(playerNode)
         engine.connect(playerNode, to: engine.mainMixerNode, format: outputFormat)
         playerNode.prepare(withFrameCount: preferredScheduleFrames * 4)
+        engine.mainMixerNode.outputVolume = volume
+    }
+
+    private func rebuildEngineGraph() {
+        if engine.isRunning {
+            engine.stop()
+        }
+
+        playerNode.stop()
+        playerNode.reset()
+
+        engine = AVAudioEngine()
+        playerNode = AVAudioPlayerNode()
+        setupEngine()
+        debugLog("graph_rebuilt outputRate=\(Int(outputFormat.sampleRate.rounded())) preparedFrames=\(preferredScheduleFrames * 4)")
     }
     
     public var isEngineRunning: Bool {
@@ -150,7 +209,159 @@ public final class AudioEngine {
     public func start() throws {
         guard !engine.isRunning else { return }
         try engine.start()
+        debugLog("engine_started outputNodeRate=\(Int(engine.outputNode.outputFormat(forBus: 0).sampleRate.rounded()))")
     }
+
+    static func preferredHardwareSampleRate(fallback: Double) -> Double {
+        #if os(iOS)
+        let session = AVAudioSession.sharedInstance()
+        try? session.setCategory(.playback, mode: .default, options: [.allowBluetoothA2DP])
+        try? session.setPreferredSampleRate(fallback)
+        try? session.setActive(true)
+        let actual = session.sampleRate
+        return actual > 0 ? actual : fallback
+        #else
+        return fallback
+        #endif
+    }
+
+    static func tuned(_ tuning: Tuning, for routeKind: RouteKind, sampleRate: Double) -> Tuning {
+        let multipliers: (
+            maxQueuedFrames: UInt32,
+            minStartQueuedFrames: UInt32,
+            hardResetQueuedFrames: UInt32,
+            softLatencyCapFrames: UInt32,
+            preferredScheduleFrames: UInt32,
+            minPartialScheduleFrames: UInt32,
+            preferredIOBufferDuration: TimeInterval
+        )
+        let minimums: (
+            scheduleFrames: UInt32,
+            partialFrames: UInt32,
+            startFrames: UInt32,
+            softCapFrames: UInt32,
+            hardResetFrames: UInt32,
+            maxQueuedFrames: UInt32
+        )
+
+        switch routeKind {
+        case .speakerOrWired:
+            return tuning
+        case .bluetoothA2DP:
+            multipliers = (3, 4, 3, 4, 3, 3, 0.04)
+            minimums = (
+                UInt32(max(2_048, Int(sampleRate * 0.042))),
+                UInt32(max(1_024, Int(sampleRate * 0.021))),
+                UInt32(max(8_192, Int(sampleRate * 0.18))),
+                UInt32(max(16_384, Int(sampleRate * 0.35))),
+                UInt32(max(24_576, Int(sampleRate * 0.7))),
+                UInt32(max(32_768, Int(sampleRate * 1.1)))
+            )
+        case .bluetoothVoice:
+            multipliers = (4, 5, 4, 5, 4, 4, 0.05)
+            minimums = (
+                UInt32(max(2_560, Int(sampleRate * 0.055))),
+                UInt32(max(1_280, Int(sampleRate * 0.028))),
+                UInt32(max(10_240, Int(sampleRate * 0.22))),
+                UInt32(max(18_432, Int(sampleRate * 0.4))),
+                UInt32(max(28_672, Int(sampleRate * 0.8))),
+                UInt32(max(36_864, Int(sampleRate * 1.25)))
+            )
+        case .airPlay:
+            multipliers = (5, 6, 5, 6, 4, 4, 0.06)
+            minimums = (
+                UInt32(max(3_072, Int(sampleRate * 0.064))),
+                UInt32(max(1_536, Int(sampleRate * 0.032))),
+                UInt32(max(12_288, Int(sampleRate * 0.26))),
+                UInt32(max(24_576, Int(sampleRate * 0.52))),
+                UInt32(max(32_768, Int(sampleRate * 0.95))),
+                UInt32(max(49_152, Int(sampleRate * 1.6)))
+            )
+        case .externalHighLatency:
+            multipliers = (2, 3, 2, 3, 2, 2, 0.03)
+            minimums = (
+                UInt32(max(1_536, Int(sampleRate * 0.032))),
+                UInt32(max(768, Int(sampleRate * 0.016))),
+                UInt32(max(4_096, Int(sampleRate * 0.1))),
+                UInt32(max(8_192, Int(sampleRate * 0.2))),
+                UInt32(max(12_288, Int(sampleRate * 0.45))),
+                UInt32(max(16_384, Int(sampleRate * 0.7)))
+            )
+        }
+
+        return Tuning(
+            maxQueuedFrames: max(tuning.maxQueuedFrames * multipliers.maxQueuedFrames, minimums.maxQueuedFrames),
+            minStartQueuedFrames: max(tuning.minStartQueuedFrames * multipliers.minStartQueuedFrames, minimums.startFrames),
+            hardResetQueuedFrames: max(tuning.hardResetQueuedFrames * multipliers.hardResetQueuedFrames, minimums.hardResetFrames),
+            softLatencyCapFrames: max(tuning.softLatencyCapFrames * multipliers.softLatencyCapFrames, minimums.softCapFrames),
+            preferredScheduleFrames: max(tuning.preferredScheduleFrames * multipliers.preferredScheduleFrames, minimums.scheduleFrames),
+            minPartialScheduleFrames: max(tuning.minPartialScheduleFrames * multipliers.minPartialScheduleFrames, minimums.partialFrames),
+            preferredIOBufferDuration: max(tuning.preferredIOBufferDuration, multipliers.preferredIOBufferDuration)
+        )
+    }
+
+    private func applyTuning(_ tuning: Tuning, routeKind: RouteKind) {
+        let effective = Self.tuned(tuning, for: routeKind, sampleRate: sampleRate)
+        self.routeKind = routeKind
+        maxQueuedFrames = effective.maxQueuedFrames
+        minStartQueuedFrames = effective.minStartQueuedFrames
+        hardResetQueuedFrames = effective.hardResetQueuedFrames
+        softLatencyCapFrames = effective.softLatencyCapFrames
+        preferredScheduleFrames = effective.preferredScheduleFrames
+        minPartialScheduleFrames = effective.minPartialScheduleFrames
+        preferredIOBufferDuration = effective.preferredIOBufferDuration
+
+        let bridgeEnabledKinds: Set<RouteKind> = [.bluetoothA2DP, .bluetoothVoice, .airPlay, .externalHighLatency]
+        if latencyProfile == .streaming || bridgeEnabledKinds.contains(routeKind) {
+            recoveryStartQueuedFrames = max(
+                effective.preferredScheduleFrames * 3,
+                effective.minStartQueuedFrames
+            )
+            underrunBridgeFrames = max(
+                effective.minPartialScheduleFrames,
+                effective.preferredScheduleFrames
+            )
+            maxConsecutiveBridgeBuffers = routeKind == .speakerOrWired ? 4 : 6
+        } else {
+            recoveryStartQueuedFrames = max(
+                effective.preferredScheduleFrames * 2,
+                effective.minPartialScheduleFrames
+            )
+            underrunBridgeFrames = effective.minPartialScheduleFrames
+            maxConsecutiveBridgeBuffers = 0
+        }
+
+        playerNode.prepare(withFrameCount: preferredScheduleFrames * 6)
+    }
+
+    #if os(iOS)
+    static func routeKind(for portTypes: [AVAudioSession.Port]) -> RouteKind {
+        if portTypes.contains(.airPlay) {
+            return .airPlay
+        }
+        if portTypes.contains(.bluetoothHFP) || portTypes.contains(.bluetoothLE) {
+            return .bluetoothVoice
+        }
+        if portTypes.contains(.bluetoothA2DP) {
+            return .bluetoothA2DP
+        }
+        let externalHighLatencyRawValues: Set<String> = [
+            AVAudioSession.Port.carAudio.rawValue,
+            AVAudioSession.Port.usbAudio.rawValue,
+            AVAudioSession.Port.lineOut.rawValue,
+            "HDMI",
+            "DisplayPort"
+        ]
+        if portTypes.contains(where: { externalHighLatencyRawValues.contains($0.rawValue) }) {
+            return .externalHighLatency
+        }
+        return .speakerOrWired
+    }
+
+    static func routeKind(for outputs: [AVAudioSessionPortDescription]) -> RouteKind {
+        routeKind(for: outputs.map(\.portType))
+    }
+    #endif
     
     public func updateAudioBuffer(_ samples: Data) {
         let bytesPerFrame = 2 * Int(channels)
@@ -224,10 +435,19 @@ public final class AudioEngine {
             }
         }
 
-        let isLikelyCorrupted =
-            maxSaturatedRun >= 12 ||
-            saturatedSamples * 5 >= checkCount ||
-            abruptTransitions * 3 >= checkCount
+        let isLikelyCorrupted: Bool
+        if latencyProfile == .lowLatency {
+            // Square-wave heavy handheld cores can have many abrupt transitions
+            // without the chunk actually being corrupted.
+            isLikelyCorrupted =
+                maxSaturatedRun >= 12 ||
+                saturatedSamples * 5 >= checkCount
+        } else {
+            isLikelyCorrupted =
+                maxSaturatedRun >= 12 ||
+                saturatedSamples * 5 >= checkCount ||
+                abruptTransitions * 3 >= checkCount
+        }
 
         guard isLikelyCorrupted else { return (samples, false, "ok") }
         let reason = "sat=\(saturatedSamples)/\(checkCount) abrupt=\(abruptTransitions) run=\(maxSaturatedRun)"
@@ -312,14 +532,14 @@ public final class AudioEngine {
     }
 
     static func shouldBridgeUnderrun(
-        debugQueueMetricsEnabled: Bool,
+        bridgeUnderrunsEnabled: Bool,
         isPlaying: Bool,
         queuedFrames: UInt32,
         pendingFrames: UInt32,
         consecutiveBridgeBuffers: Int,
         maxConsecutiveBridgeBuffers: Int
     ) -> Bool {
-        guard debugQueueMetricsEnabled, isPlaying else { return false }
+        guard bridgeUnderrunsEnabled, isPlaying else { return false }
         guard queuedFrames == 0, pendingFrames == 0 else { return false }
         return consecutiveBridgeBuffers < maxConsecutiveBridgeBuffers
     }
@@ -363,7 +583,7 @@ public final class AudioEngine {
                 self.drainPendingPCM(bytesPerFrame: bytesPerFrame)
                 let pendingFrames = UInt32(self.pendingPCM.count / bytesPerFrame)
                 if Self.shouldBridgeUnderrun(
-                    debugQueueMetricsEnabled: self.debugQueueMetricsEnabled,
+                    bridgeUnderrunsEnabled: self.maxConsecutiveBridgeBuffers > 0,
                     isPlaying: self.isPlaying,
                     queuedFrames: self.queuedFrames,
                     pendingFrames: pendingFrames,
@@ -380,7 +600,7 @@ public final class AudioEngine {
                     self.playBufferOnQueue(bridgeBuffer, isBridgeBuffer: true)
                     return
                 }
-                if self.debugQueueMetricsEnabled,
+                if (self.debugQueueMetricsEnabled || self.maxConsecutiveBridgeBuffers > 0),
                    self.isPlaying,
                    self.queuedFrames == 0,
                    pendingFrames == 0,
@@ -455,8 +675,21 @@ public final class AudioEngine {
     }
     
     public func setVolume(_ volume: Float) {
-        engine.mainMixerNode.outputVolume = max(0.0, min(1.0, volume))
+        let clamped = max(0.0, min(1.0, volume))
+        self.volume = clamped
+        engine.mainMixerNode.outputVolume = clamped
     }
+
+    #if os(iOS)
+    func applyRouteOverride(routeKind: RouteKind) {
+        queue.sync {
+            let baseTuning = Self.tuning(sampleRate: sampleRate, latencyProfile: latencyProfile)
+            applyTuning(baseTuning, routeKind: routeKind)
+            rebuildEngineGraph()
+            debugLog("startup_route_override routeKind=\(routeKind) preparedFrames=\(preferredScheduleFrames * 4)")
+        }
+    }
+    #endif
 
     /// Flush queued audio and quarantine output briefly after state restore,
     /// then fade-in to avoid audible glitches from transient bad core samples.
@@ -524,10 +757,18 @@ public final class AudioEngine {
         #if os(iOS)
         do {
             let session = AVAudioSession.sharedInstance()
-            try session.setCategory(.playback, mode: .default, options: [.mixWithOthers])
+            try session.setCategory(.playback, mode: .default, options: [.allowBluetoothA2DP])
             try session.setPreferredSampleRate(sampleRate)
-            try session.setPreferredIOBufferDuration(preferredIOBufferDuration)
             try session.setActive(true)
+            refreshSessionConfiguration(session)
+            rebuildEngineGraph()
+            let actualSampleRate = session.sampleRate > 0 ? session.sampleRate : sampleRate
+            debugLog(sessionSnapshot(prefix: "configure_session", session: session))
+            if abs(actualSampleRate - sampleRate) >= 1 {
+                DispatchQueue.main.async { [weak self] in
+                    self?.onHardwareConfigurationChanged?(actualSampleRate)
+                }
+            }
         } catch {
         }
         #endif
@@ -546,6 +787,58 @@ public final class AudioEngine {
     public var isPlayingAudio: Bool {
         return isPlaying && engine.isRunning
     }
+
+    #if os(iOS)
+    private static func shouldReconfigure(for reason: AVAudioSession.RouteChangeReason?) -> Bool {
+        switch reason {
+        case .some(.categoryChange):
+            return false
+        default:
+            return true
+        }
+    }
+
+    private func handleRouteChange(_ notification: Notification) {
+        let reasonRawValue = notification.userInfo?[AVAudioSessionRouteChangeReasonKey] as? UInt
+        let reason = reasonRawValue.flatMap(AVAudioSession.RouteChangeReason.init(rawValue:))
+        guard Self.shouldReconfigure(for: reason) else { return }
+
+        queue.async { [weak self] in
+            guard let self else { return }
+            let session = AVAudioSession.sharedInstance()
+            try? session.setCategory(.playback, mode: .default, options: [.allowBluetoothA2DP])
+            try? session.setPreferredSampleRate(self.sampleRate)
+            try? session.setActive(true)
+            let actualSampleRate = session.sampleRate > 0 ? session.sampleRate : self.sampleRate
+            self.refreshSessionConfiguration(session)
+            self.rebuildEngineGraph()
+            self.debugLog(self.sessionSnapshot(prefix: "route_change reason=\(reason?.rawValue ?? 0)", session: session))
+            if abs(actualSampleRate - self.sampleRate) >= 1 {
+                DispatchQueue.main.async { [weak self] in
+                    self?.onHardwareConfigurationChanged?(actualSampleRate)
+                }
+                return
+            }
+            self.playerNode.stop()
+            self.playerNode.reset()
+            self.queuedFrames = 0
+            self.pendingPCM.removeAll(keepingCapacity: true)
+            self.pendingPCMReadOffset = 0
+            self.isPlaying = false
+            self.shouldUseRecoveryStartThreshold = true
+            self.consecutiveBridgeBuffers = 0
+            try? self.start()
+        }
+    }
+
+    private func refreshSessionConfiguration(_ session: AVAudioSession) {
+        let newRouteKind = Self.routeKind(for: session.currentRoute.outputs)
+        let baseTuning = Self.tuning(sampleRate: sampleRate, latencyProfile: latencyProfile)
+        applyTuning(baseTuning, routeKind: newRouteKind)
+        try? session.setPreferredIOBufferDuration(preferredIOBufferDuration)
+        debugLog("session_config route=\(routeDescription(session)) routeKind=\(newRouteKind) sessionRate=\(Int(session.sampleRate.rounded())) ioBufferMs=\(Int((session.ioBufferDuration * 1000).rounded())) start=\(minStartQueuedFrames) sched=\(preferredScheduleFrames) partial=\(minPartialScheduleFrames) softCap=\(softLatencyCapFrames) max=\(maxQueuedFrames)")
+    }
+    #endif
 
     private func compactPendingPCMIfNeeded() {
         guard pendingPCMReadOffset > 0 else { return }
@@ -575,9 +868,29 @@ public final class AudioEngine {
         if queuedFrames > 0 {
             debugLastNonZeroQueuedFrames = queuedFrames
         }
-        _ = event
-        _ = incomingFrames
-        _ = pendingFrames
-        _ = extra
+        let shouldLog = event == "underrun" || event == "bridge" || event == "hard_reset" || event == "start_playback"
+        if shouldLog {
+            debugLog("queue event=\(event) incoming=\(incomingFrames) pending=\(pendingFrames) queued=\(queuedFrames) extra=\(extra)")
+            return
+        }
+        guard debugLoggedEnqueueEvents < 4 else { return }
+        debugLoggedEnqueueEvents += 1
+        debugLog("queue event=\(event) incoming=\(incomingFrames) pending=\(pendingFrames) queued=\(queuedFrames) extra=\(extra)")
     }
+
+    private func debugLog(_ message: String) {
+        NSLog("[AudioEngine] %@", message)
+    }
+
+    #if os(iOS)
+    private func routeDescription(_ session: AVAudioSession) -> String {
+        let outputs = session.currentRoute.outputs.map { "\($0.portType.rawValue):\($0.portName)" }
+        return outputs.isEmpty ? "none" : outputs.joined(separator: ",")
+    }
+
+    private func sessionSnapshot(prefix: String, session: AVAudioSession) -> String {
+        let outputNodeRate = Int(engine.outputNode.outputFormat(forBus: 0).sampleRate.rounded())
+        return "\(prefix) sessionRate=\(Int(session.sampleRate.rounded())) outputNodeRate=\(outputNodeRate) ioBufferMs=\(Int((session.ioBufferDuration * 1000).rounded())) route=\(routeDescription(session))"
+    }
+    #endif
 }

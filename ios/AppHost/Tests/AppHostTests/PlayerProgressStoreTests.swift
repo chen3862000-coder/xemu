@@ -91,4 +91,20 @@ final class PlayerProgressStoreTests: XCTestCase {
         XCTAssertNotNil(snapshot.unlockedAchievementDates["power-on"])
         XCTAssertNotNil(snapshot.unlockedAchievementDates["first-hour"])
     }
+
+    func testAchievementDefinitionUsesProvidedLanguageManager() {
+        let suiteName = "PlayerProgressStoreTests.Language.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        let languageManager = LanguageManager(
+            userDefaults: defaults,
+            preferredLanguagesProvider: { ["zh-Hans"] }
+        )
+        languageManager.setLanguage(.zhHans)
+
+        let definition = PlayerProgressStore.achievementDefinitions.first { $0.id == "power-on" }
+        XCTAssertEqual(definition?.localizedTitle(languageManager: languageManager), "开机启动")
+        XCTAssertEqual(definition?.localizedDetail(languageManager: languageManager), "启动你的第一款复古游戏")
+    }
 }

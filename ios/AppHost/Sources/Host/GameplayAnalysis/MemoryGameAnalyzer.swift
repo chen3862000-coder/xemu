@@ -104,8 +104,20 @@ final class MemoryGameAnalyzer {
         if memoryMap.kind == .metroidFusion {
             return analyzeMetroidFusionLiveMemory(liveSample, memoryMap: memoryMap)
         }
+        if memoryMap.kind == .metroidZeroMission {
+            return analyzeMetroidZeroMissionLiveMemory(liveSample, memoryMap: memoryMap)
+        }
         if memoryMap.kind == .dragonBallAdvancedAdventure {
             return analyzeDragonBallAdvancedAdventureLiveMemory(liveSample, memoryMap: memoryMap)
+        }
+        if memoryMap.kind == .kingdomHeartsChainOfMemories {
+            return analyzeKingdomHeartsChainOfMemoriesLiveMemory(liveSample, memoryMap: memoryMap)
+        }
+        if memoryMap.kind == .onePiece {
+            return analyzeOnePieceLiveMemory(liveSample, memoryMap: memoryMap)
+        }
+        if memoryMap.kind == .zeldaMinishCap {
+            return analyzeZeldaMinishCapLiveMemory(liveSample, memoryMap: memoryMap)
         }
         if memoryMap.kind == .castlevaniaAriaOfSorrow {
             return analyzeCastlevaniaAriaOfSorrowLiveMemory(liveSample, memoryMap: memoryMap)
@@ -479,6 +491,107 @@ final class MemoryGameAnalyzer {
         )
     }
 
+    private func analyzeMetroidZeroMissionLiveMemory(
+        _ liveSample: MarioLiveMemorySample,
+        memoryMap: MarioLiveMemoryMap
+    ) -> MemoryGameObservation? {
+        guard let health = liveSample.health,
+              let maxHealth = liveSample.maxHealth,
+              let equipment = liveSample.powerUpState,
+              let animation = liveSample.gameplayState,
+              let invulnerabilityTimer = liveSample.invulnerabilityTimer else {
+            previousLiveSample = liveSample
+            return nil
+        }
+
+        let isDeathState = health == 0
+        let isInvulnerable = invulnerabilityTimer > 0
+        let playerState: MarioPlayerState
+        if isDeathState {
+            playerState = .dead
+        } else if isInvulnerable {
+            playerState = .invulnerableBlink
+        } else if equipment == 0 {
+            playerState = .superState
+        } else {
+            playerState = .poweredUp
+        }
+        let gameplayPhase: MarioGameplayPhase = isDeathState ? .deathSequence : .gameplayActive
+
+        guard let previousLiveSample else {
+            self.previousLiveSample = liveSample
+            if health > 0 && !isInvulnerable {
+                lastStableLiveSample = liveSample
+                nonDeathEventsArmed = true
+            }
+            return MemoryGameObservation(
+                events: [],
+                confidence: 0.98,
+                lives: Int(maxHealth),
+                health: Int(health),
+                powerUp: Int(equipment),
+                playerState: playerState,
+                gameplayPhase: gameplayPhase,
+                blinkConfidence: isInvulnerable ? 0.90 : 0.0,
+                debugSummary: metroidZeroMissionDebugSummary(
+                    health: health,
+                    maxHealth: maxHealth,
+                    equipment: equipment,
+                    animation: animation,
+                    invulnerabilityTimer: invulnerabilityTimer
+                ),
+                locationSummary: metroidZeroMissionLocationSummary(liveSample: liveSample),
+                pattern: nil
+            )
+        }
+
+        let previousHealth = previousLiveSample.health
+        let previousWasDeath = previousHealth == 0
+
+        var events: [GameplayEvent] = []
+        if isDeathState && !previousWasDeath {
+            events.append(.deathDetected)
+        } else if nonDeathEventsArmed,
+                  let previousHealth,
+                  previousHealth > health,
+                  health > 0 {
+            let healthDelta = previousHealth - health
+            events.append(healthDelta >= 30 ? .damageHeavy : .damageLight)
+        }
+
+        if events.contains(.deathDetected) {
+            lastStableLiveSample = nil
+            invulnerabilityWindowReported = false
+            nonDeathEventsArmed = false
+        } else if health > 0 && !isInvulnerable {
+            lastStableLiveSample = liveSample
+            invulnerabilityWindowReported = false
+            nonDeathEventsArmed = true
+        }
+
+        self.previousLiveSample = liveSample
+
+        return MemoryGameObservation(
+            events: events,
+            confidence: 0.98,
+            lives: Int(maxHealth),
+            health: Int(health),
+            powerUp: Int(equipment),
+            playerState: playerState,
+            gameplayPhase: gameplayPhase,
+            blinkConfidence: isInvulnerable ? 0.95 : 0.0,
+            debugSummary: metroidZeroMissionDebugSummary(
+                health: health,
+                maxHealth: maxHealth,
+                equipment: equipment,
+                animation: animation,
+                invulnerabilityTimer: invulnerabilityTimer
+            ),
+            locationSummary: metroidZeroMissionLocationSummary(liveSample: liveSample),
+            pattern: nil
+        )
+    }
+
     private func analyzeDragonBallAdvancedAdventureLiveMemory(
         _ liveSample: MarioLiveMemorySample,
         memoryMap: MarioLiveMemoryMap
@@ -495,6 +608,7 @@ final class MemoryGameAnalyzer {
         let isDeathState = health == 0
         let playerState: MarioPlayerState = isDeathState ? .dead : .superState
         let gameplayPhase: MarioGameplayPhase = isDeathState ? .deathSequence : .gameplayActive
+        let locationSummary = dragonBallLocationSummary(liveSample: liveSample)
 
         guard let previousLiveSample else {
             self.previousLiveSample = liveSample
@@ -518,7 +632,7 @@ final class MemoryGameAnalyzer {
                     health: health,
                     maxHealth: maxHealth
                 ),
-                locationSummary: nil,
+                locationSummary: locationSummary,
                 pattern: nil
             )
         }
@@ -576,6 +690,194 @@ final class MemoryGameAnalyzer {
                 timer: timer,
                 health: health,
                 maxHealth: maxHealth
+            ),
+            locationSummary: locationSummary,
+            pattern: nil
+        )
+    }
+
+    private func analyzeOnePieceLiveMemory(
+        _ liveSample: MarioLiveMemorySample,
+        memoryMap: MarioLiveMemoryMap
+    ) -> MemoryGameObservation? {
+        guard let lives = liveSample.lives,
+              let health = liveSample.health else {
+            previousLiveSample = liveSample
+            return nil
+        }
+
+        let state = liveSample.gameplayState ?? 0
+        let stateAux = liveSample.invulnerabilityTimer ?? 0
+        let special = liveSample.powerUpState ?? 0
+        let isDeathState = health == 0
+        let playerState: MarioPlayerState = isDeathState ? .dead : .superState
+        let gameplayPhase: MarioGameplayPhase = isDeathState ? .deathSequence : .gameplayActive
+
+        guard let previousLiveSample else {
+            self.previousLiveSample = liveSample
+            if health > 0 && lives > 0 {
+                lastStableLiveSample = liveSample
+                nonDeathEventsArmed = true
+            }
+            return MemoryGameObservation(
+                events: [],
+                confidence: 0.98,
+                lives: Int(lives),
+                health: Int(health),
+                powerUp: Int(special),
+                playerState: playerState,
+                gameplayPhase: gameplayPhase,
+                blinkConfidence: 0.0,
+                debugSummary: onePieceDebugSummary(
+                    lives: lives,
+                    health: health,
+                    state: state,
+                    stateAux: stateAux,
+                    special: special
+                ),
+                locationSummary: onePieceLocationSummary(liveSample: liveSample),
+                pattern: nil
+            )
+        }
+
+        let previousHealth = previousLiveSample.health
+        let previousLives = previousLiveSample.lives
+        let previousWasDeath = previousHealth == 0
+
+        var events: [GameplayEvent] = []
+        if isDeathState && !previousWasDeath {
+            events.append(.deathDetected)
+        } else if let previousLives, lives < previousLives {
+            events.append(.deathDetected)
+        } else if nonDeathEventsArmed,
+                  let previousHealth,
+                  previousHealth > health,
+                  health > 0 {
+            let delta = previousHealth - health
+            events.append(delta >= 2 ? .damageHeavy : .damageLight)
+        }
+
+        if events.contains(.deathDetected) {
+            lastStableLiveSample = nil
+            invulnerabilityWindowReported = false
+            nonDeathEventsArmed = false
+        } else if health > 0 && lives > 0 {
+            lastStableLiveSample = liveSample
+            invulnerabilityWindowReported = false
+            nonDeathEventsArmed = true
+        }
+
+        self.previousLiveSample = liveSample
+
+        return MemoryGameObservation(
+            events: events,
+            confidence: 0.98,
+            lives: Int(lives),
+            health: Int(health),
+            powerUp: Int(special),
+            playerState: playerState,
+            gameplayPhase: gameplayPhase,
+            blinkConfidence: 0.0,
+            debugSummary: onePieceDebugSummary(
+                lives: lives,
+                health: health,
+                state: state,
+                stateAux: stateAux,
+                special: special
+            ),
+            locationSummary: onePieceLocationSummary(liveSample: liveSample),
+            pattern: nil
+        )
+    }
+
+    private func analyzeKingdomHeartsChainOfMemoriesLiveMemory(
+        _ liveSample: MarioLiveMemorySample,
+        memoryMap: MarioLiveMemoryMap
+    ) -> MemoryGameObservation? {
+        guard let health = liveSample.health,
+              let maxHealth = liveSample.maxHealth else {
+            previousLiveSample = liveSample
+            return nil
+        }
+
+        let level = liveSample.lives ?? 0
+        let cp = liveSample.powerUpState ?? 0
+        let state = liveSample.gameplayState ?? 0
+        let stateAux = liveSample.invulnerabilityTimer ?? 0
+        let isDeathState = health == 0
+        let playerState: MarioPlayerState = isDeathState ? .dead : .superState
+        let gameplayPhase: MarioGameplayPhase = isDeathState ? .deathSequence : .gameplayActive
+
+        guard let previousLiveSample else {
+            self.previousLiveSample = liveSample
+            if health > 0 {
+                lastStableLiveSample = liveSample
+                nonDeathEventsArmed = true
+            }
+            return MemoryGameObservation(
+                events: [],
+                confidence: 0.98,
+                lives: Int(level),
+                health: Int(health),
+                powerUp: Int(cp),
+                playerState: playerState,
+                gameplayPhase: gameplayPhase,
+                blinkConfidence: 0.0,
+                debugSummary: kingdomHeartsDebugSummary(
+                    health: health,
+                    maxHealth: maxHealth,
+                    level: level,
+                    cp: cp,
+                    state: state,
+                    stateAux: stateAux
+                ),
+                locationSummary: nil,
+                pattern: nil
+            )
+        }
+
+        let previousHealth = previousLiveSample.health
+        let previousWasDeath = previousHealth == 0
+
+        var events: [GameplayEvent] = []
+        if isDeathState && !previousWasDeath {
+            events.append(.deathDetected)
+        } else if nonDeathEventsArmed,
+                  let previousHealth,
+                  previousHealth > health,
+                  health > 0 {
+            let delta = previousHealth - health
+            events.append(delta >= 30 ? .damageHeavy : .damageLight)
+        }
+
+        if events.contains(.deathDetected) {
+            lastStableLiveSample = nil
+            invulnerabilityWindowReported = false
+            nonDeathEventsArmed = false
+        } else if health > 0 {
+            lastStableLiveSample = liveSample
+            invulnerabilityWindowReported = false
+            nonDeathEventsArmed = true
+        }
+
+        self.previousLiveSample = liveSample
+
+        return MemoryGameObservation(
+            events: events,
+            confidence: 0.98,
+            lives: Int(level),
+            health: Int(health),
+            powerUp: Int(cp),
+            playerState: playerState,
+            gameplayPhase: gameplayPhase,
+            blinkConfidence: 0.0,
+            debugSummary: kingdomHeartsDebugSummary(
+                health: health,
+                maxHealth: maxHealth,
+                level: level,
+                cp: cp,
+                state: state,
+                stateAux: stateAux
             ),
             locationSummary: nil,
             pattern: nil
@@ -753,6 +1055,90 @@ final class MemoryGameAnalyzer {
                 gameMode: nil
             ),
             locationSummary: castlevaniaHarmonyLocationSummary(liveSample: liveSample),
+            pattern: nil
+        )
+    }
+
+    private func analyzeZeldaMinishCapLiveMemory(
+        _ liveSample: MarioLiveMemorySample,
+        memoryMap: MarioLiveMemoryMap
+    ) -> MemoryGameObservation? {
+        guard let health = liveSample.health,
+              let maxHealth = liveSample.maxHealth else {
+            previousLiveSample = liveSample
+            return nil
+        }
+
+        let state = liveSample.gameplayState ?? 0
+        let invulnerability = liveSample.invulnerabilityTimer ?? 0
+        let isInvulnerable = memoryMap.invulnerabilityStateValues.contains(invulnerability)
+        let isDeathState = health == 0
+        let playerState: MarioPlayerState = isDeathState ? .dead : (isInvulnerable ? .invulnerableBlink : .superState)
+        let gameplayPhase: MarioGameplayPhase = isDeathState ? .deathSequence : .gameplayActive
+
+        guard let previousLiveSample else {
+            self.previousLiveSample = liveSample
+            if health > 0 {
+                lastStableLiveSample = liveSample
+                nonDeathEventsArmed = true
+            }
+            return MemoryGameObservation(
+                events: [],
+                confidence: 0.95,
+                lives: Int(maxHealth),
+                health: Int(health),
+                powerUp: Int(state),
+                playerState: playerState,
+                gameplayPhase: gameplayPhase,
+                blinkConfidence: isInvulnerable ? 0.95 : 0.0,
+                debugSummary: zeldaMinishCapDebugSummary(
+                    health: health,
+                    maxHealth: maxHealth,
+                    state: state,
+                    invulnerability: invulnerability
+                ),
+                locationSummary: zeldaMinishCapLocationSummary(liveSample: liveSample),
+                pattern: nil
+            )
+        }
+
+        var events: [GameplayEvent] = []
+        if health == 0 && previousLiveSample.health != 0 {
+            events.append(.deathDetected)
+        } else if nonDeathEventsArmed,
+                  let previousHealth = previousLiveSample.health,
+                  previousHealth > health,
+                  health > 0 {
+            let delta = previousHealth - health
+            events.append(delta >= 2 ? .damageHeavy : .damageLight)
+        }
+
+        if events.contains(.deathDetected) {
+            lastStableLiveSample = nil
+            nonDeathEventsArmed = false
+        } else if health > 0 {
+            lastStableLiveSample = liveSample
+            nonDeathEventsArmed = true
+        }
+
+        self.previousLiveSample = liveSample
+
+        return MemoryGameObservation(
+            events: events,
+            confidence: 0.95,
+            lives: Int(maxHealth),
+            health: Int(health),
+            powerUp: Int(state),
+            playerState: playerState,
+            gameplayPhase: gameplayPhase,
+            blinkConfidence: isInvulnerable ? 0.95 : 0.0,
+            debugSummary: zeldaMinishCapDebugSummary(
+                health: health,
+                maxHealth: maxHealth,
+                state: state,
+                invulnerability: invulnerability
+            ),
+            locationSummary: zeldaMinishCapLocationSummary(liveSample: liveSample),
             pattern: nil
         )
     }
@@ -1081,6 +1467,96 @@ final class MemoryGameAnalyzer {
         )
     }
 
+    private func onePieceDebugSummary(
+        lives: UInt8,
+        health: UInt16,
+        state: UInt8,
+        stateAux: UInt8,
+        special: UInt8
+    ) -> String {
+        String(
+            format: "onepiece lives=%d health=%d state=%02X aux=%02X special=%d",
+            Int(lives),
+            Int(health),
+            Int(state),
+            Int(stateAux),
+            Int(special)
+        )
+    }
+
+    private func metroidZeroMissionDebugSummary(
+        health: UInt16,
+        maxHealth: UInt16,
+        equipment: UInt8,
+        animation: UInt8,
+        invulnerabilityTimer: UInt8
+    ) -> String {
+        String(
+            format: "zm H=%u/%u E=%02X A=%02X I=%u",
+            Int(health),
+            Int(maxHealth),
+            Int(equipment),
+            Int(animation),
+            Int(invulnerabilityTimer)
+        )
+    }
+
+    private func onePieceLocationSummary(liveSample: MarioLiveMemorySample) -> String? {
+        guard let progressState = liveSample.contextValues["progressState"] else { return nil }
+        guard let locationName = onePieceLocationName(Int(progressState)) else {
+            GameplayAnalysisLogger.event("one-piece location unmapped progressState=\(hex16(progressState))")
+            return nil
+        }
+        return "Loc \(locationName)"
+    }
+
+    private func dragonBallLocationSummary(liveSample: MarioLiveMemorySample) -> String? {
+        if liveSample.contextValues.isEmpty {
+            GameplayAnalysisLogger.event("dragon-ball location missing-context")
+        }
+        if let stage = liveSample.contextValues["stage"] {
+            if let locationName = dragonBallLocationName(Int(stage)) {
+                return "Loc \(locationName)"
+            }
+            GameplayAnalysisLogger.event("dragon-ball location unmapped stage=\(hex16(stage))")
+        }
+        return nil
+    }
+
+    private func kingdomHeartsDebugSummary(
+        health: UInt16,
+        maxHealth: UInt16,
+        level: UInt8,
+        cp: UInt8,
+        state: UInt8,
+        stateAux: UInt8
+    ) -> String {
+        String(
+            format: "khcom level=%d health=%d/%d cp=%d state=%02X aux=%02X",
+            Int(level),
+            Int(health),
+            Int(maxHealth),
+            Int(cp),
+            Int(state),
+            Int(stateAux)
+        )
+    }
+
+    private func zeldaMinishCapDebugSummary(
+        health: UInt16,
+        maxHealth: UInt16,
+        state: UInt8,
+        invulnerability: UInt8
+    ) -> String {
+        String(
+            format: "zelda_mc health=%d/%d state=%02X invuln=%02X",
+            Int(health),
+            Int(maxHealth),
+            Int(state),
+            Int(invulnerability)
+        )
+    }
+
     private func marioLocationSummary(for profile: MarioGameProfile, liveSample: MarioLiveMemorySample) -> String? {
         switch profile.id {
         case MarioGameProfile.sma2SuperMarioWorld.id:
@@ -1108,7 +1584,25 @@ final class MemoryGameAnalyzer {
         }
         let mapX = liveSample.contextValues["mapX"].map(String.init) ?? "?"
         let mapY = liveSample.contextValues["mapY"].map(String.init) ?? "?"
-        return "Loc \(metroidAreaName(UInt8(area))) • room \(hex8(room)) • map \(mapX),\(mapY)"
+        let areaName = metroidAreaName(UInt8(area))
+        if let roomName = metroidRoomName(area: UInt8(area), room: UInt8(room)) {
+            return "Loc \(areaName) • \(roomName) • map \(mapX),\(mapY)"
+        }
+        return "Loc \(areaName) • map \(mapX),\(mapY)"
+    }
+
+    private func metroidZeroMissionLocationSummary(liveSample: MarioLiveMemorySample) -> String? {
+        guard let area = liveSample.contextValues["area"],
+              let room = liveSample.contextValues["room"] else {
+            return nil
+        }
+        let mapX = liveSample.contextValues["mapX"].map(String.init) ?? "?"
+        let mapY = liveSample.contextValues["mapY"].map(String.init) ?? "?"
+        let areaName = metroidZeroMissionAreaName(UInt8(area))
+        if let roomName = metroidZeroMissionRoomName(area: UInt8(area), room: UInt8(room)) {
+            return "Loc \(areaName) • \(roomName) • map \(mapX),\(mapY)"
+        }
+        return "Loc \(areaName) • map \(mapX),\(mapY)"
     }
 
     private func castlevaniaAriaLocationSummary(liveSample: MarioLiveMemorySample) -> String? {
@@ -1128,6 +1622,14 @@ final class MemoryGameAnalyzer {
         let visitedAreas = liveSample.contextValues["visitedAreas"].map { String($0.nonzeroBitCount) } ?? "?"
         let level = liveSample.contextValues["level"].map(hex8(_:)) ?? "--"
         return "State level \(level) • areas \(visitedAreas)"
+    }
+
+    private func zeldaMinishCapLocationSummary(liveSample: MarioLiveMemorySample) -> String? {
+        guard let map = liveSample.contextValues["map"],
+              let room = liveSample.contextValues["room"] else {
+            return nil
+        }
+        return "Loc area \(hex8(map)) • room \(hex8(room))"
     }
 
     private func sma2MapName(_ value: UInt8) -> String {
@@ -1163,15 +1665,56 @@ final class MemoryGameAnalyzer {
     private func metroidAreaName(_ value: UInt8) -> String {
         switch value {
         case 0x00: return "Main Deck"
-        case 0x01: return "Sector 1"
-        case 0x02: return "Sector 2"
-        case 0x03: return "Sector 3"
-        case 0x04: return "Sector 4"
-        case 0x05: return "Sector 5"
-        case 0x06: return "Sector 6"
+        case 0x01: return "Sector 1 (SRX)"
+        case 0x02: return "Sector 2 (TRO)"
+        case 0x03: return "Sector 3 (PYR)"
+        case 0x04: return "Sector 4 (AQA)"
+        case 0x05: return "Sector 5 (ARC)"
+        case 0x06: return "Sector 6 (NOC)"
         case 0x07: return "Restricted Lab"
         default: return "Area \(value)"
         }
+    }
+
+    private func metroidRoomName(area: UInt8, room: UInt8) -> String? {
+        switch (area, room) {
+        case (0x04, 0x01): return "Sector 4 Main Hall"
+        case (0x04, 0x02): return "Save Room Station 4"
+        case (0x04, 0x03): return "Navigation Room Station 4"
+        case (0x04, 0x05): return "Data Room (AQA)"
+        case (0x04, 0x06): return "Sector 4 Access"
+        case (0x04, 0x07): return "Main Research Pool"
+        case (0x04, 0x08): return "Main Aquarium"
+        case (0x04, 0x09): return "Aquarium Hall"
+        case (0x04, 0x0A): return "Booster Hall"
+        case (0x04, 0x0E): return "Water Tank Storage"
+        case (0x04, 0x14): return "Main Seabed"
+        case (0x04, 0x1A): return "AQA Security Access Shaft"
+        case (0x04, 0x1D): return "Secret Aquarium"
+        case (0x04, 0x1E): return "Recharge Room Station 4"
+        case (0x04, 0x23): return "AQA Security Roof"
+        case (0x04, 0x25): return "AQA Maintenance Tunnel"
+        case (0x04, 0x26): return "AQA Maintenance Access"
+        case (0x04, 0x2B): return "Testing Tank"
+        default: return nil
+        }
+    }
+
+    private func metroidZeroMissionAreaName(_ value: UInt8) -> String {
+        switch value {
+        case 0x00: return "Brinstar"
+        case 0x01: return "Kraid"
+        case 0x02: return "Norfair"
+        case 0x03: return "Ridley"
+        case 0x04: return "Tourian"
+        case 0x05: return "Crateria"
+        case 0x06: return "Chozodia"
+        default: return "Area \(value)"
+        }
+    }
+
+    private func metroidZeroMissionRoomName(area: UInt8, room: UInt8) -> String? {
+        nil
     }
 
     private func ariaModeName(_ value: UInt8) -> String {
@@ -1209,6 +1752,10 @@ final class MemoryGameAnalyzer {
 
     private func hex8(_ value: UInt16) -> String {
         String(format: "%02X", Int(value & 0xFF))
+    }
+
+    private func hex16(_ value: UInt16) -> String {
+        String(format: "%04X", Int(value))
     }
 
 }

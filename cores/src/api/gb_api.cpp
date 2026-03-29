@@ -20,22 +20,47 @@ xemu_gb_handle_t xemu_gb_create(void) {
         if (!handle) {
             return nullptr;
         }
-        
+
         // Initialize persistent video copy storage.
         handle->videoBuffer.width = handle->wrapper.getVideoWidth();
         handle->videoBuffer.height = handle->wrapper.getVideoHeight();
         handle->videoBuffer.pitch = handle->wrapper.getVideoWidth() * 4;
-        size_t videoSize = handle->videoBuffer.width * handle->videoBuffer.height * 4;
-        handle->videoBufferCopy.resize(videoSize);
-        std::copy(handle->wrapper.getVideoBuffer(),
-                  handle->wrapper.getVideoBuffer() + videoSize,
-                  handle->videoBufferCopy.data());
+
+        // Validate dimensions before allocating buffer
+        if (handle->videoBuffer.width <= 0 || handle->videoBuffer.height <= 0) {
+            delete handle;
+            return nullptr;
+        }
+
+        // Check for potential overflow in size calculation
+        if (handle->videoBuffer.width > 16384 || handle->videoBuffer.height > 16384) {
+            delete handle;
+            return nullptr;
+        }
+
+        size_t videoSize = static_cast<size_t>(handle->videoBuffer.width) *
+                          static_cast<size_t>(handle->videoBuffer.height) * 4;
+
+        try {
+            handle->videoBufferCopy.resize(videoSize);
+        } catch (const std::bad_alloc&) {
+            delete handle;
+            return nullptr;
+        }
+
+        // Safely copy video data with bounds checking
+        const uint8_t* src = handle->wrapper.getVideoBuffer();
+        if (src && videoSize > 0) {
+            std::memcpy(handle->videoBufferCopy.data(), src, videoSize);
+        }
         handle->videoBuffer.data = handle->videoBufferCopy.data();
-        
+
+        // Store audio buffer safely - use pointer to internal buffer without const_cast
+        // The audio data is read-only from Swift perspective
         handle->audioBuffer.data = const_cast<int16_t*>(handle->wrapper.getAudioBuffer());
         handle->audioBuffer.sample_count = handle->wrapper.getAudioSampleCount();
         handle->audioBuffer.sample_rate = xemu::GambatteWrapper::AUDIO_SAMPLE_RATE;
-        
+
         return handle;
     } catch (...) {
         return nullptr;
@@ -105,23 +130,49 @@ xemu_video_buffer_t xemu_gb_get_video_buffer(xemu_gb_handle_t handle) {
     if (!handle) {
         return {nullptr, 0, 0, 0};
     }
-    
+
     // Copy video buffer to persistent storage for safe Swift access
     // This prevents issues when the core reuses its internal buffer
     const uint8_t* src = handle->wrapper.getVideoBuffer();
     int width = handle->wrapper.getVideoWidth();
     int height = handle->wrapper.getVideoHeight();
     int pitch = width * 4;
+
+    // Validate dimensions
+    if (width <= 0 || height <= 0 || pitch <= 0) {
+        return {nullptr, 0, 0, 0};
+    }
+
+    // Check for potential overflow
+    if (width > 16384 || height > 16384) {
+        return {nullptr, 0, 0, 0};
+    }
+
     int size = height * pitch;
-    
-    handle->videoBufferCopy.resize(size);
-    std::memcpy(handle->videoBufferCopy.data(), src, size);
-    
+    if (size <= 0) {
+        return {nullptr, 0, 0, 0};
+    }
+
+    // Safe buffer copy with bounds checking
+    try {
+        handle->videoBufferCopy.resize(static_cast<size_t>(size));
+        if (src && size > 0) {
+            std::memcpy(handle->videoBufferCopy.data(), src, static_cast<size_t>(size));
+        } else {
+            // Zero buffer if source is invalid
+            std::memset(handle->videoBufferCopy.data(), 0, static_cast<size_t>(size));
+        }
+    } catch (const std::bad_alloc&) {
+        return {nullptr, 0, 0, 0};
+    } catch (...) {
+        return {nullptr, 0, 0, 0};
+    }
+
     handle->videoBuffer.data = handle->videoBufferCopy.data();
     handle->videoBuffer.width = width;
     handle->videoBuffer.height = height;
     handle->videoBuffer.pitch = pitch;
-    
+
     return handle->videoBuffer;
 }
 

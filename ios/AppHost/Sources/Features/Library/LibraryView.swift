@@ -1025,9 +1025,12 @@ extension ROMLibraryEntry {
     var romPath: String? {
         guard let checksum = checksum,
               let fileName = fileName else { return nil }
-        
+
         let fileExtension = (fileName as NSString).pathExtension
-        let documentsDir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
+        guard let documentsDir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first else {
+            print("Failed to access documents directory for ROM path calculation")
+            return nil
+        }
         return documentsDir.appendingPathComponent("ROMs/\(checksum).\(fileExtension)").path
     }
     
@@ -1090,7 +1093,10 @@ extension ROMLibraryEntry {
 
         if romLocation == nil {
             // Last-resort fallback: scan by checksum prefix regardless of extension/casing.
-            let documentsDir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
+            guard let documentsDir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first else {
+                print("Failed to access documents directory for ROM fallback scan")
+                return nil
+            }
             let romDir = documentsDir.appendingPathComponent("ROMs")
             if let files = try? FileManager.default.contentsOfDirectory(at: romDir, includingPropertiesForKeys: nil),
                let match = files.first(where: { $0.lastPathComponent.lowercased().hasPrefix("\(checksum.lowercased()).") }) {

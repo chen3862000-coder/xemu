@@ -3,7 +3,12 @@ import Foundation
 enum PlayInsightsSupportedGame: String, CaseIterable, Codable, Sendable {
     case superMarioAdvance2
     case superMarioAdvance4
+    case dragonBallAdvancedAdventure
+    case onePiece
+    case kingdomHeartsChainOfMemories
+    case zeldaMinishCap
     case metroidFusion
+    case metroidZeroMission
     case castlevaniaAriaOfSorrow
     case castlevaniaCircleOfTheMoon
     case castlevaniaHarmonyOfDissonance
@@ -14,8 +19,18 @@ enum PlayInsightsSupportedGame: String, CaseIterable, Codable, Sendable {
             self = .superMarioAdvance2
         case MarioGameProfile.sma4SuperMarioBros3.id:
             self = .superMarioAdvance4
+        case MarioGameProfile.dragonBallAdvancedAdventure.id:
+            self = .dragonBallAdvancedAdventure
+        case MarioGameProfile.onePiece.id:
+            self = .onePiece
+        case MarioGameProfile.kingdomHeartsChainOfMemories.id:
+            self = .kingdomHeartsChainOfMemories
+        case MarioGameProfile.zeldaMinishCap.id:
+            self = .zeldaMinishCap
         case MarioGameProfile.metroidFusion.id:
             self = .metroidFusion
+        case MarioGameProfile.metroidZeroMission.id:
+            self = .metroidZeroMission
         case MarioGameProfile.castlevaniaAriaOfSorrow.id:
             self = .castlevaniaAriaOfSorrow
         case MarioGameProfile.castlevaniaCircleOfTheMoon.id:
@@ -31,7 +46,12 @@ enum PlayInsightsSupportedGame: String, CaseIterable, Codable, Sendable {
         switch self {
         case .superMarioAdvance2: return MarioGameProfile.sma2SuperMarioWorld.id
         case .superMarioAdvance4: return MarioGameProfile.sma4SuperMarioBros3.id
+        case .dragonBallAdvancedAdventure: return MarioGameProfile.dragonBallAdvancedAdventure.id
+        case .onePiece: return MarioGameProfile.onePiece.id
+        case .kingdomHeartsChainOfMemories: return MarioGameProfile.kingdomHeartsChainOfMemories.id
+        case .zeldaMinishCap: return MarioGameProfile.zeldaMinishCap.id
         case .metroidFusion: return MarioGameProfile.metroidFusion.id
+        case .metroidZeroMission: return MarioGameProfile.metroidZeroMission.id
         case .castlevaniaAriaOfSorrow: return MarioGameProfile.castlevaniaAriaOfSorrow.id
         case .castlevaniaCircleOfTheMoon: return MarioGameProfile.castlevaniaCircleOfTheMoon.id
         case .castlevaniaHarmonyOfDissonance: return MarioGameProfile.castlevaniaHarmonyOfDissonance.id
@@ -40,7 +60,7 @@ enum PlayInsightsSupportedGame: String, CaseIterable, Codable, Sendable {
 
     var supportsEventMetrics: Bool {
         switch self {
-        case .superMarioAdvance2, .superMarioAdvance4, .metroidFusion, .castlevaniaAriaOfSorrow:
+        case .superMarioAdvance2, .superMarioAdvance4, .dragonBallAdvancedAdventure, .onePiece, .kingdomHeartsChainOfMemories, .zeldaMinishCap, .metroidFusion, .metroidZeroMission, .castlevaniaAriaOfSorrow:
             return true
         case .castlevaniaCircleOfTheMoon, .castlevaniaHarmonyOfDissonance:
             return false
@@ -49,9 +69,9 @@ enum PlayInsightsSupportedGame: String, CaseIterable, Codable, Sendable {
 
     var prefersExplorationLanguage: Bool {
         switch self {
-        case .metroidFusion, .castlevaniaAriaOfSorrow, .castlevaniaCircleOfTheMoon, .castlevaniaHarmonyOfDissonance:
+        case .metroidFusion, .metroidZeroMission, .zeldaMinishCap, .castlevaniaAriaOfSorrow, .castlevaniaCircleOfTheMoon, .castlevaniaHarmonyOfDissonance:
             return true
-        case .superMarioAdvance2, .superMarioAdvance4:
+        case .superMarioAdvance2, .superMarioAdvance4, .dragonBallAdvancedAdventure, .onePiece, .kingdomHeartsChainOfMemories:
             return false
         }
     }
