@@ -549,8 +549,24 @@ private struct ControllerSettingsView: View {
             }
 
             Section(header: SettingsSectionHeader(L10n.string("settings.layout.section", languageManager: languageManager))) {
-                NavigationSettingsRow(title: L10n.string("settings.controller.button_mapping", languageManager: languageManager)) {
+                // GB Controller Mapping
+                NavigationSettingsRow(title: L10n.string("settings.controller.button_mapping", languageManager: languageManager), subtitle: "Game Boy") {
+                    ControllerMappingEditor(platform: .GB)
+                }
+
+                // GBC Controller Mapping
+                NavigationSettingsRow(title: L10n.string("settings.controller.button_mapping", languageManager: languageManager), subtitle: "Game Boy Color") {
+                    ControllerMappingEditor(platform: .GBC)
+                }
+
+                // GBA Controller Mapping
+                NavigationSettingsRow(title: L10n.string("settings.controller.button_mapping", languageManager: languageManager), subtitle: "Game Boy Advance") {
                     ControllerMappingEditor(platform: .GBA)
+                }
+
+                // NDS Controller Mapping
+                NavigationSettingsRow(title: L10n.string("settings.controller.button_mapping", languageManager: languageManager), subtitle: "Nintendo DS") {
+                    ControllerMappingEditor(platform: .NDS)
                 }
 
                 NavigationSettingsRow(
