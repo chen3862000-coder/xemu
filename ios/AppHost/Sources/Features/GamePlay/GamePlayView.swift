@@ -53,7 +53,7 @@ struct GamePlayView: View {
     @AppStorage("settings.dev.memoryMonitor") private var devMemoryMonitor = false
     @AppStorage("settings.dev.thermalLogging") private var devThermalLogging = false
     @AppStorage("settings.dev.gameplayEventOverlay") private var showGameplayEventOverlay = false
-    @AppStorage("gameSoundEnabled") private var gameSoundEnabled = true
+    @State private var gameSoundEnabled = true
     @StateObject private var performanceProfiler = PerformanceProfiler.shared
     #if DEBUG
     @AppStorage("showPerformanceHUD") private var showPerformanceHUD = false
@@ -208,7 +208,7 @@ struct GamePlayView: View {
                     .font(.system(size: 11, weight: .semibold))
                     .foregroundColor(.white.opacity(0.78))
                 Text(unlocked.title)
-                    .font(.system(size: 14, weight: .bold))
+                    .font(.system(size: 14, weight: .light))
                     .foregroundColor(.white.opacity(0.95))
             }
 
@@ -563,10 +563,11 @@ struct GamePlayView: View {
                                             toggleGameSound()
                                         }
                                         if !gameSoundEnabled {
-                                            Image(systemName: "xmark.circle.fill")
-                                                .font(.system(size: 24, weight: .bold))
+                                            Image(systemName: "xmark")
+                                                .font(.system(size: 20, weight: .light))
                                                 .foregroundColor(.red)
                                                 .shadow(color: .black.opacity(0.3), radius: 2, x: 0, y: 1)
+                                                .allowsHitTesting(false)
                                         }
                                     }
                                 }
@@ -709,8 +710,8 @@ struct GamePlayView: View {
                                     toggleGameSound()
                                 }
                                 if !gameSoundEnabled {
-                                    Image(systemName: "xmark.circle.fill")
-                                        .font(.system(size: 20, weight: .bold))
+                                    Image(systemName: "xmark")
+                                        .font(.system(size: 20, weight: .light))
                                         .foregroundColor(.red)
                                         .shadow(color: .black.opacity(0.3), radius: 2, x: 0, y: 1)
                                 }
@@ -859,8 +860,8 @@ struct GamePlayView: View {
                                     toggleGameSound()
                                 }
                                 if !gameSoundEnabled {
-                                    Image(systemName: "xmark.circle.fill")
-                                        .font(.system(size: 20, weight: .bold))
+                                    Image(systemName: "xmark")
+                                        .font(.system(size: 20, weight: .light))
                                         .foregroundColor(.red)
                                         .shadow(color: .black.opacity(0.3), radius: 2, x: 0, y: 1)
                                 }
@@ -1353,8 +1354,8 @@ struct GamePlayView: View {
                                     toggleGameSound()
                                 }
                                 if !gameSoundEnabled {
-                                    Image(systemName: "xmark.circle.fill")
-                                        .font(.system(size: 20, weight: .bold))
+                                    Image(systemName: "xmark")
+                                        .font(.system(size: 20, weight: .light))
                                         .foregroundColor(.red)
                                         .shadow(color: .black.opacity(0.3), radius: 2, x: 0, y: 1)
                                 }
@@ -1571,8 +1572,8 @@ struct GamePlayView: View {
                                     toggleGameSound()
                                 }
                                 if !gameSoundEnabled {
-                                    Image(systemName: "xmark.circle.fill")
-                                        .font(.system(size: 20, weight: .bold))
+                                    Image(systemName: "xmark")
+                                        .font(.system(size: 20, weight: .light))
                                         .foregroundColor(.red)
                                         .shadow(color: .black.opacity(0.3), radius: 2, x: 0, y: 1)
                                 }
@@ -1754,8 +1755,8 @@ struct GamePlayView: View {
                                     toggleGameSound()
                                 }
                                 if !gameSoundEnabled {
-                                    Image(systemName: "xmark.circle.fill")
-                                        .font(.system(size: 20, weight: .bold))
+                                    Image(systemName: "xmark")
+                                        .font(.system(size: 20, weight: .light))
                                         .foregroundColor(.red)
                                         .shadow(color: .black.opacity(0.3), radius: 2, x: 0, y: 1)
                                 }
@@ -2171,8 +2172,8 @@ struct GamePlayView: View {
                     toggleGameSound()
                 }
                 if !gameSoundEnabled {
-                    Image(systemName: "xmark.circle.fill")
-                        .font(.system(size: 16, weight: .bold))
+                    Image(systemName: "xmark")
+                        .font(.system(size: 16, weight: .light))
                         .foregroundColor(.red)
                         .shadow(color: .black.opacity(0.3), radius: 2, x: 0, y: 1)
                 }
@@ -2517,8 +2518,8 @@ struct GamePlayView: View {
                             viewModel.handleButtonPress(.r1, pressed: false)
                         }
                         if !gameSoundEnabled {
-                            Image(systemName: "xmark.circle.fill")
-                                .font(.system(size: 18, weight: .bold))
+                            Image(systemName: "xmark")
+                                .font(.system(size: 18, weight: .light))
                                 .foregroundColor(.red)
                                 .shadow(color: .black.opacity(0.3), radius: 2, x: 0, y: 1)
                                 .offset(y: -20)
@@ -2755,9 +2756,9 @@ struct GamePlayView: View {
         Button(action: action) {
             HStack(spacing: 6) {
                 Image(systemName: systemName)
-                    .font(.system(size: 10, weight: .bold))
+                    .font(.system(size: 10, weight: .light))
                 Text(title)
-                    .font(.system(size: 10, weight: .bold))
+                    .font(.system(size: 10, weight: .light))
             }
             .foregroundColor(tint.opacity(0.95))
             .padding(.horizontal, 10)
@@ -2863,7 +2864,7 @@ struct GamePlayView: View {
                     .frame(width: homeTouchWidth * 0.85, height: homeTouchHeight * 0.85)
                     .overlay(
                         Image(systemName: "house.fill")
-                            .font(.system(size: 12, weight: .bold))
+                            .font(.system(size: 12, weight: .light))
                             .foregroundColor(Color.black.opacity(0.50))
                     )
             }
@@ -3055,7 +3056,18 @@ struct GamePlayView: View {
             gbUtilityIcon(systemName: "forward.fill", tint: .yellow, customSize: iconSize) {
                 cycleFastForwardSpeed()
             }
-            gbUtilityIcon(systemName: "speaker.wave.2.fill", tint: .cyan, customSize: iconSize) {}
+            ZStack {
+                gbUtilityIcon(systemName: "speaker.wave.2.fill", tint: .cyan, customSize: iconSize) {
+                    toggleGameSound()
+                }
+                if !gameSoundEnabled {
+                    Image(systemName: "xmark")
+                        .font(.system(size: iconSize * 0.8, weight: .light))
+                        .foregroundColor(.red)
+                        .shadow(color: .black.opacity(0.3), radius: 2, x: 0, y: 1)
+                        .allowsHitTesting(false)
+                }
+            }
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 8)
@@ -4070,7 +4082,7 @@ struct GamePlayView: View {
                     .frame(height: style.labelHeight)
 
                 Text(loadingPlatformName.uppercased())
-                    .font(.system(size: 10, weight: .bold))
+                    .font(.system(size: 10, weight: .light))
                     .kerning(0.7)
                     .foregroundColor(.black.opacity(0.48))
                     .lineLimit(1)
@@ -4322,7 +4334,7 @@ struct GamePlayView: View {
                             showPauseMenu = false
                         } label: {
                             Image(systemName: "xmark")
-                                .font(.system(size: 14, weight: .bold))
+                                .font(.system(size: 14, weight: .light))
                                 .foregroundColor(AppColors.textPrimary)
                                 .frame(width: 36, height: 36)
                                 .background(AppColors.surfaceLight.opacity(0.65))
@@ -4751,7 +4763,7 @@ struct GamePlayView: View {
     private var consoleIdentityBadge: some View {
         if let console = game.consoleIdentity {
             Text(console.systemCode)
-                .font(.system(size: 10, weight: .bold))
+                .font(.system(size: 10, weight: .light))
                 .foregroundColor(.white)
                 .padding(.horizontal, 7)
                 .padding(.vertical, 3)
@@ -5409,7 +5421,7 @@ private struct GBDPadView: View {
                     .overlay(RoundedRectangle(cornerRadius: 14).stroke(shellTheme.colorPalette.controlStroke.color.opacity(0.9), lineWidth: 2))
                     .shadow(color: shellTheme.colorPalette.shellAccent.color.opacity(isPressed ? 0.10 : 0.18), radius: 6, x: 0, y: 2)
                 Image(systemName: arrowSymbol(for: direction))
-                    .font(.system(size: 20, weight: .bold))
+                    .font(.system(size: 20, weight: .light))
                     .foregroundColor(shellTheme.colorPalette.controlIcon.color.opacity(0.78))
                     .rotationEffect(arrowRotation(for: direction))
             }
@@ -5504,7 +5516,7 @@ private struct GBALightDPadView: View {
                     .shadow(color: shellTheme.colorPalette.shellShadow.color.opacity(0.55), radius: 3, x: 0, y: 2)
 
                 Image(systemName: symbol(for: direction))
-                    .font(.system(size: 20, weight: .bold))
+                    .font(.system(size: 20, weight: .light))
                     .foregroundColor(shellTheme.colorPalette.controlIcon.color.opacity(0.78))
                     .rotationEffect(rotation(for: direction))
             }
@@ -5643,7 +5655,7 @@ private struct GBAShoulderBar: View {
                             .padding(2)
                     )
                 Text(label)
-                    .font(.system(size: fontSize, weight: .bold))
+                    .font(.system(size: fontSize, weight: .light))
                     .foregroundColor(shellTheme.colorPalette.controlIcon.color.opacity(0.72))
             }
             .frame(width: width, height: height)
@@ -6044,7 +6056,7 @@ private func ndsSideRail(
                         .fill(Color.black.opacity(0.15))
                         .frame(width: 18, height: 1.5)
                     Text(buttonLabel)
-                        .font(.system(size: 12, weight: .bold))
+                        .font(.system(size: 12, weight: .light))
                     Capsule()
                         .fill(Color.black.opacity(0.15))
                         .frame(width: 18, height: 1.5)
