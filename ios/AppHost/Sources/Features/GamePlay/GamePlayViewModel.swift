@@ -47,6 +47,7 @@ class GamePlayViewModel: ObservableObject {
     private var latestPlayInsightsLiveSample: MarioLiveMemorySample?
     private var lastPublishedPlayInsightsPayload: [String: UInt16] = [:]
     private var lastPublishedPlayInsightsLocationSummary: String?
+    private var lastGameplayAnalysisProbeSignature: String?
     private var sessionDeathEvents = 0
     private var sessionDamageEvents = 0
     private var sessionStartedAt: Date?
@@ -401,6 +402,7 @@ class GamePlayViewModel: ObservableObject {
             latestPlayInsightsLiveSample = nil
             lastPublishedPlayInsightsPayload = [:]
             lastPublishedPlayInsightsLocationSummary = nil
+            lastGameplayAnalysisProbeSignature = nil
             sessionDeathEvents = 0
             sessionDamageEvents = 0
             sessionStartedAt = nil
@@ -698,11 +700,15 @@ class GamePlayViewModel: ObservableObject {
         latestPlayInsightsLiveSample = nil
         lastPublishedPlayInsightsPayload = [:]
         lastPublishedPlayInsightsLocationSummary = nil
+        lastGameplayAnalysisProbeSignature = nil
         sessionDeathEvents = 0
         sessionDamageEvents = 0
 
         GameplayAnalysisLogger.session(
             "configured profile=\(profile.id) title=\(currentGameTitle) platform=\(platform.rawValue) romHash=\(currentROMHash)"
+        )
+        GameplayAnalysisLogger.session(
+            "play-insights supportedGame=\(activePlayInsightsGame?.rawValue ?? "nil") liveMemory=\(profile.liveMemory != nil)"
         )
         frameAnalysisCoordinator = FrameAnalysisCoordinator(profile: profile) { [weak self] events, snapshot in
             guard let self else { return }
@@ -770,7 +776,7 @@ class GamePlayViewModel: ObservableObject {
                     gameId: currentROMHash,
                     timestamp: endedAt,
                     payloadType: supportedGame.profileID,
-                    payloadJson: $0.contextValues
+                    payloadJson: playInsightsPayload(for: supportedGame, liveSample: $0)
                 )
             }
             PlayInsightsStore.shared.recordSession(
@@ -788,6 +794,9 @@ class GamePlayViewModel: ObservableObject {
                     latestLocationSummary: gameplayAnalysisSnapshot?.locationDebugSummary
                 )
             )
+            GameplayAnalysisLogger.session(
+                "play-insights recordSession game=\(supportedGame.rawValue) payload=\(payload.map { formatPlayInsightsPayload($0.payloadJson) } ?? "nil") location=\(gameplayAnalysisSnapshot?.locationDebugSummary ?? "nil")"
+            )
         }
         NotificationCenter.default.post(name: .romLibraryDidChange, object: nil)
         if let firstUnlock = unlocks.first {
@@ -803,8 +812,11 @@ class GamePlayViewModel: ObservableObject {
               !currentROMHash.isEmpty,
               let liveSample = latestPlayInsightsLiveSample else { return }
 
-        let payload = liveSample.contextValues
+        let payload = playInsightsPayload(for: supportedGame, liveSample: liveSample)
         let locationSummary = snapshot.locationDebugSummary
+        GameplayAnalysisLogger.event(
+            "play-insights refreshLiveSnapshot game=\(supportedGame.rawValue) payload=\(formatPlayInsightsPayload(payload)) location=\(locationSummary ?? "nil")"
+        )
         guard payload != lastPublishedPlayInsightsPayload || locationSummary != lastPublishedPlayInsightsLocationSummary else {
             return
         }
@@ -872,8 +884,10 @@ class GamePlayViewModel: ObservableObject {
                 powerUpState: gbaCore.readMemory8(at: liveMemory.powerUpAddress),
                 gameplayState: gbaCore.readMemory8(at: liveMemory.gameplayStateAddress),
                 invulnerabilityTimer: gbaCore.readMemory8(at: liveMemory.invulnerabilityTimerAddress),
-                health: liveMemory.healthAddress16.flatMap { gbaCore.readMemory16(at: $0) },
-                maxHealth: liveMemory.maxHealthAddress16.flatMap { gbaCore.readMemory16(at: $0) },
+                health: liveMemory.healthAddress16.flatMap { gbaCore.readMemory16(at: $0) }
+                    ?? liveMemory.healthAddress8.flatMap { gbaCore.readMemory8(at: $0).map(UInt16.init) },
+                maxHealth: liveMemory.maxHealthAddress16.flatMap { gbaCore.readMemory16(at: $0) }
+                    ?? liveMemory.maxHealthAddress8.flatMap { gbaCore.readMemory8(at: $0).map(UInt16.init) },
                 gameMode: liveMemory.gameModeAddress.flatMap { gbaCore.readMemory8(at: $0) },
                 contextValues: readContextValues(fields: liveMemory.contextFields) { field in
                     switch field.width {
@@ -885,6 +899,10 @@ class GamePlayViewModel: ObservableObject {
                 }
             )
             latestPlayInsightsLiveSample = sample
+            GameplayAnalysisLogger.event(
+                "live-memory sample profile=\(profile.id) lives=\(sample.lives.map(String.init) ?? "nil") health=\(sample.health.map(String.init) ?? "nil") max=\(sample.maxHealth.map(String.init) ?? "nil") state=\(sample.gameplayState.map { String(format: "%02X", $0) } ?? "nil") aux=\(sample.invulnerabilityTimer.map(String.init) ?? "nil") context=\(formatPlayInsightsPayload(sample.contextValues))"
+            )
+            logGameplayAnalysisProbesIfNeeded(profile: profile, sample: sample, gbaCore: gbaCore)
             return sample
         }
 
@@ -918,11 +936,98 @@ class GamePlayViewModel: ObservableObject {
                 }
             )
             latestPlayInsightsLiveSample = sample
+            GameplayAnalysisLogger.event(
+                "live-memory sample profile=\(profile.id) lives=\(sample.lives.map(String.init) ?? "nil") health=\(sample.health.map(String.init) ?? "nil") max=\(sample.maxHealth.map(String.init) ?? "nil") state=\(sample.gameplayState.map { String(format: "%02X", $0) } ?? "nil") aux=\(sample.invulnerabilityTimer.map(String.init) ?? "nil") context=\(formatPlayInsightsPayload(sample.contextValues))"
+            )
             return sample
         }
 
         GameplayAnalysisLogger.event("live-memory unsupported profile=\(profile.id) platform=\(platform.rawValue)")
         return nil
+    }
+
+    private func logGameplayAnalysisProbesIfNeeded(
+        profile: MarioGameProfile,
+        sample: MarioLiveMemorySample,
+        gbaCore: GBACore
+    ) {
+        guard GameplayAnalysisLogger.isEnabled else { return }
+
+        let signature: String?
+        let message: String?
+
+        switch profile.liveMemory?.kind {
+        case .dragonBallAdvancedAdventure:
+            let coreWindow = debugProbeWindow(start: 0x02020640, length: 48) { address in
+                gbaCore.readMemory8(at: address)
+            }
+            let progressWindow = debugProbeWindow(start: 0x02029F20, length: 48) { address in
+                gbaCore.readMemory8(at: address)
+            }
+            let actor = gbaCore.readMemory8(at: 0x0202066A)
+            let coreWords = debugProbeWordWindow(start: 0x02020640, words: 12) { address in
+                gbaCore.readMemory16(at: address)
+            }
+            let progressWords = debugProbeWordWindow(start: 0x02029F20, words: 12) { address in
+                gbaCore.readMemory16(at: address)
+            }
+            signature = "db:\(coreWindow)|\(progressWindow)"
+            message = "dragon-ball probes actor=\(actor.map(hex8) ?? "nil") coreBytes=\(coreWindow) coreWords=\(coreWords) progressBytes=\(progressWindow) progressWords=\(progressWords)"
+        case .onePiece:
+            guard let progressState = sample.contextValues["progressState"] else { return }
+            let nearbyWindow = debugProbeWindow(start: 0x03003EE8, length: 12) { address in
+                gbaCore.readMemory8(at: address)
+            }
+            let nearbyWords = debugProbeWordWindow(start: 0x03003EE8, words: 4) { address in
+                gbaCore.readMemory16(at: address)
+            }
+            let areaCode = UInt8((progressState >> 8) & 0xFF)
+            let stageCode = UInt8(progressState & 0xFF)
+            signature = "op:\(progressState):\(nearbyWindow)"
+            message = "one-piece probes progressState=\(hex16(progressState)) area=\(hex8(areaCode)) stage=\(hex8(stageCode)) nearbyBytes=\(nearbyWindow) nearbyWords=\(nearbyWords)"
+        default:
+            return
+        }
+
+        guard let signature, let message, lastGameplayAnalysisProbeSignature != signature else { return }
+        lastGameplayAnalysisProbeSignature = signature
+        GameplayAnalysisLogger.event(message)
+    }
+
+    private func debugProbeWindow(
+        start: UInt32,
+        length: Int,
+        reader: (UInt32) -> UInt8?
+    ) -> String {
+        (0..<length)
+            .map { offset -> String in
+                let address = start + UInt32(offset)
+                guard let value = reader(address) else { return "??" }
+                return hex8(value)
+            }
+            .joined(separator: " ")
+    }
+
+    private func debugProbeWordWindow(
+        start: UInt32,
+        words: Int,
+        reader: (UInt32) -> UInt16?
+    ) -> String {
+        (0..<words)
+            .map { index -> String in
+                let address = start + UInt32(index * 2)
+                guard let value = reader(address) else { return "????" }
+                return hex16(value)
+            }
+            .joined(separator: " ")
+    }
+
+    private func hex8(_ value: UInt8) -> String {
+        String(format: "%02X", value)
+    }
+
+    private func hex16(_ value: UInt16) -> String {
+        String(format: "%04X", value)
     }
 
     private func readContextValues(
@@ -936,6 +1041,71 @@ class GamePlayViewModel: ObservableObject {
             }
         }
         return values
+    }
+
+    private func formatPlayInsightsPayload(_ payload: [String: UInt16]) -> String {
+        guard !payload.isEmpty else { return "[]" }
+        return payload
+            .sorted { $0.key < $1.key }
+            .map { "\($0.key)=\($0.value)" }
+            .joined(separator: ",")
+    }
+
+    private func playInsightsPayload(
+        for supportedGame: PlayInsightsSupportedGame,
+        liveSample: MarioLiveMemorySample
+    ) -> [String: UInt16] {
+        Self.playInsightsPayload(for: supportedGame, liveSample: liveSample)
+    }
+
+    static func playInsightsPayload(
+        for supportedGame: PlayInsightsSupportedGame,
+        liveSample: MarioLiveMemorySample
+    ) -> [String: UInt16] {
+        var payload = liveSample.contextValues
+
+        switch supportedGame {
+        case .superMarioAdvance2, .superMarioAdvance4:
+            if let lives = liveSample.lives {
+                // SMA titles store reserve lives; cards should show the currently playable total.
+                payload["lives"] = UInt16(lives) + 1
+            }
+        case .dragonBallAdvancedAdventure:
+            if let health = liveSample.health { payload["health"] = health }
+            if let maxHealth = liveSample.maxHealth { payload["maxHealth"] = maxHealth }
+            if let lives = liveSample.lives { payload["lives"] = UInt16(lives) }
+            if let gameplayState = liveSample.gameplayState { payload["state"] = UInt16(gameplayState) }
+        case .metroidFusion:
+            if let health = liveSample.health { payload["health"] = normalizedMetroidEnergy(health) }
+            if let maxHealth = liveSample.maxHealth { payload["maxHealth"] = normalizedMetroidEnergy(maxHealth) }
+        case .metroidZeroMission:
+            if let health = liveSample.health { payload["health"] = health }
+            if let maxHealth = liveSample.maxHealth { payload["maxHealth"] = maxHealth }
+        case .castlevaniaAriaOfSorrow, .castlevaniaCircleOfTheMoon, .castlevaniaHarmonyOfDissonance:
+            if let health = liveSample.health { payload["health"] = health }
+            if let maxHealth = liveSample.maxHealth { payload["maxHealth"] = maxHealth }
+        case .onePiece:
+            if let health = liveSample.health { payload["health"] = health }
+            if let lives = liveSample.lives { payload["lives"] = UInt16(lives) }
+            if let gameplayState = liveSample.gameplayState { payload["state"] = UInt16(gameplayState) }
+            if let special = liveSample.powerUpState { payload["special"] = UInt16(special) }
+        case .kingdomHeartsChainOfMemories:
+            if let level = liveSample.lives { payload["level"] = UInt16(level) }
+            if let health = liveSample.health { payload["health"] = health }
+            if let maxHealth = liveSample.maxHealth { payload["maxHealth"] = maxHealth }
+            if let cp = liveSample.powerUpState { payload["cp"] = UInt16(cp) }
+            if let gameplayState = liveSample.gameplayState { payload["state"] = UInt16(gameplayState) }
+        case .zeldaMinishCap:
+            if let health = liveSample.health { payload["health"] = health }
+            if let maxHealth = liveSample.maxHealth { payload["maxHealth"] = maxHealth }
+            if let gameplayState = liveSample.gameplayState { payload["state"] = UInt16(gameplayState) }
+        }
+
+        return payload
+    }
+
+    private static func normalizedMetroidEnergy(_ rawValue: UInt16) -> UInt16 {
+        rawValue >= 100 ? rawValue - 100 : rawValue
     }
 
     private func nativeSaveDirectoryURL() -> URL? {
@@ -1564,7 +1734,24 @@ extension GamePlayViewModel: EmulatorRenderDelegate {
             for channel in 0..<channelCount {
                 let s0 = Double(workingSamples[(baseFrame * channelCount) + channel])
                 let s1 = Double(workingSamples[(nextFrame * channelCount) + channel])
-                let mixed = s0 + ((s1 - s0) * frac)
+                let mixed: Double
+
+                // Use a slightly smoother interpolation curve when we have enough
+                // neighboring frames. This reduces faint grit on GB/GBC waveforms
+                // when downsampling the core's 65_536 Hz output to 48 kHz hardware.
+                if baseFrame > 0, nextFrame + 1 < workingFrames {
+                    let sMinus1 = Double(workingSamples[((baseFrame - 1) * channelCount) + channel])
+                    let sPlus2 = Double(workingSamples[((nextFrame + 1) * channelCount) + channel])
+                    mixed = cubicInterpolate(
+                        sMinus1,
+                        s0,
+                        s1,
+                        sPlus2,
+                        t: frac
+                    )
+                } else {
+                    mixed = s0 + ((s1 - s0) * frac)
+                }
                 let clamped = max(Double(Int16.min), min(Double(Int16.max), mixed.rounded()))
                 outSamples.append(Int16(clamped))
             }
@@ -1588,6 +1775,20 @@ extension GamePlayViewModel: EmulatorRenderDelegate {
             guard let base = buffer.baseAddress else { return Data() }
             return Data(bytes: base, count: buffer.count * MemoryLayout<Int16>.size)
         }
+    }
+
+    private func cubicInterpolate(
+        _ y0: Double,
+        _ y1: Double,
+        _ y2: Double,
+        _ y3: Double,
+        t: Double
+    ) -> Double {
+        let a0 = (-0.5 * y0) + (1.5 * y1) - (1.5 * y2) + (0.5 * y3)
+        let a1 = y0 - (2.5 * y1) + (2.0 * y2) - (0.5 * y3)
+        let a2 = (-0.5 * y0) + (0.5 * y2)
+        let a3 = y1
+        return ((a0 * t + a1) * t + a2) * t + a3
     }
 
     private func audioMetrics(for samples: Data) -> (peak: Int, rms: Double, clippedSamples: Int, dcL: Double, dcR: Double) {

@@ -18,17 +18,38 @@ xemu_gba_handle_t xemu_gba_create(void) {
         if (!handle) {
             return nullptr;
         }
-        
-        // Initialize buffer structures
-        handle->videoBuffer.data = const_cast<uint8_t*>(handle->wrapper.getVideoBuffer());
+
+        // Initialize buffer structures with validation
         handle->videoBuffer.width = handle->wrapper.getVideoWidth();
         handle->videoBuffer.height = handle->wrapper.getVideoHeight();
         handle->videoBuffer.pitch = handle->wrapper.getVideoWidth() * 4;
-        
+
+        // Validate dimensions
+        if (handle->videoBuffer.width <= 0 || handle->videoBuffer.height <= 0) {
+            delete handle;
+            return nullptr;
+        }
+
+        // Check for potential overflow in size calculation
+        if (handle->videoBuffer.width > 16384 || handle->videoBuffer.height > 16384) {
+            delete handle;
+            return nullptr;
+        }
+
+        // Store pointer to internal video buffer - marked const in wrapper
+        // We need to provide mutable pointer for Swift compatibility, but wrapper
+        // doesn't actually modify through this path
+        handle->videoBuffer.data = const_cast<uint8_t*>(handle->wrapper.getVideoBuffer());
+
+        // Initialize audio buffer with validation
         handle->audioBuffer.data = const_cast<int16_t*>(handle->wrapper.getAudioBuffer());
         handle->audioBuffer.sample_count = handle->wrapper.getAudioSampleCount();
-        handle->audioBuffer.sample_rate = handle->wrapper.getAudioSampleRate();
-        
+        int sampleRate = handle->wrapper.getAudioSampleRate();
+        if (sampleRate <= 0 || sampleRate > 192000) {
+            sampleRate = 44100; // Fallback to safe default
+        }
+        handle->audioBuffer.sample_rate = sampleRate;
+
         return handle;
     } catch (...) {
         return nullptr;

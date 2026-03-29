@@ -4,7 +4,11 @@ import CoreGraphics
 enum GameplayProfileKind: Sendable {
     case marioPlatformer
     case metroidFusion
+    case metroidZeroMission
     case dragonBallAdvancedAdventure
+    case kingdomHeartsChainOfMemories
+    case onePiece
+    case zeldaMinishCap
     case castlevaniaAriaOfSorrow
     case castlevaniaCircleOfTheMoon
     case castlevaniaHarmonyOfDissonance
@@ -375,7 +379,183 @@ struct MarioGameProfile: Sendable {
             healthAddress16: 0x02020646,
             maxHealthAddress16: 0x02020648,
             gameModeAddress: nil,
+            contextFields: [
+                MarioLiveMemoryContextField(key: "stage", address: 0x02029F40, width: .u16)
+            ]
+        )
+    )
+
+    static let metroidZeroMission = MarioGameProfile(
+        id: "metroid_zero_mission_gba",
+        displayName: "Metroid: Zero Mission",
+        titleMatchers: [
+            "metroid zero mission",
+            "metroid zeromission",
+            "zero mission",
+            "zeromissione",
+            "agb-bmxe",
+            "bmxe",
+            "5de8536afe1f0078ee6fe1089f890e8c7aa0a6e8"
+        ],
+        nativeResolution: CGSize(width: 240, height: 160),
+        gameplayRegion: CGRect(x: 0.0, y: 0.10, width: 1.0, height: 0.80),
+        initialSearchRegion: CGRect(x: 0.08, y: 0.18, width: 0.84, height: 0.64),
+        minSampleInterval: 0.16,
+        damageCooldown: 0.8,
+        deathCooldown: 2.0,
+        fadeConfirmationThreshold: 0.38,
+        blackoutThreshold: 0.09,
+        smallHeightRange: 10...20,
+        superHeightRange: 21...32,
+        poweredUpHeightRange: 21...32,
+        liveMemory: MarioLiveMemoryMap(
+            kind: .metroidZeroMission,
+            livesAddress: 0x03001530,
+            powerUpAddress: 0x0300153C,
+            gameplayStateAddress: 0x030013F4,
+            invulnerabilityTimerAddress: 0x030013DA,
+            deathStateValues: [],
+            invulnerabilityStateValues: [],
+            smallPowerUpValues: [],
+            superPowerUpValues: [0],
+            poweredUpValues: Set(1...UInt8.max),
+            healthAddress16: 0x03001536,
+            maxHealthAddress16: 0x03001530,
+            gameModeAddress: nil,
+            contextFields: [
+                MarioLiveMemoryContextField(key: "area", address: 0x0203809D, width: .u8),
+                MarioLiveMemoryContextField(key: "room", address: 0x020380A0, width: .u8),
+                MarioLiveMemoryContextField(key: "mapX", address: 0x020002D4, width: .u16),
+                MarioLiveMemoryContextField(key: "mapY", address: 0x020002D6, width: .u16)
+            ]
+        )
+    )
+
+    static let onePiece = MarioGameProfile(
+        id: "one_piece_gba",
+        displayName: "One Piece",
+        titleMatchers: [
+            "one piece",
+            "shonen jump's one piece",
+            "shonen jumps one piece",
+            "shonen jumps onepiece",
+            "onepiece",
+            "agb-bone-usa",
+            "bone"
+        ],
+        nativeResolution: CGSize(width: 240, height: 160),
+        gameplayRegion: CGRect(x: 0.0, y: 0.10, width: 1.0, height: 0.80),
+        initialSearchRegion: CGRect(x: 0.08, y: 0.18, width: 0.84, height: 0.64),
+        minSampleInterval: 0.16,
+        damageCooldown: 0.9,
+        deathCooldown: 2.0,
+        fadeConfirmationThreshold: 0.38,
+        blackoutThreshold: 0.09,
+        smallHeightRange: 10...20,
+        superHeightRange: 21...32,
+        poweredUpHeightRange: 21...32,
+        liveMemory: MarioLiveMemoryMap(
+            kind: .onePiece,
+            livesAddress: 0x03000938,
+            powerUpAddress: 0x03003FAB,
+            gameplayStateAddress: 0x03003F3E,
+            invulnerabilityTimerAddress: 0x03003F3F,
+            deathStateValues: [],
+            invulnerabilityStateValues: [],
+            smallPowerUpValues: [],
+            superPowerUpValues: [0],
+            poweredUpValues: Set(1...UInt8.max),
+            healthAddress16: 0x03003FA6,
+            maxHealthAddress16: nil,
+            gameModeAddress: nil,
+            contextFields: [
+                MarioLiveMemoryContextField(key: "progressState", address: 0x03003EEC, width: .u16)
+            ]
+        )
+    )
+
+    static let kingdomHeartsChainOfMemories = MarioGameProfile(
+        id: "kingdom_hearts_chain_of_memories_gba",
+        displayName: "Kingdom Hearts: Chain of Memories",
+        titleMatchers: [
+            "kingdom hearts chain of memories",
+            "chain of memories",
+            "kingdom hearts",
+            "agb-b8ce-usa",
+            "b8ce"
+        ],
+        nativeResolution: CGSize(width: 240, height: 160),
+        gameplayRegion: CGRect(x: 0.0, y: 0.10, width: 1.0, height: 0.80),
+        initialSearchRegion: CGRect(x: 0.08, y: 0.18, width: 0.84, height: 0.64),
+        minSampleInterval: 0.16,
+        damageCooldown: 0.9,
+        deathCooldown: 2.0,
+        fadeConfirmationThreshold: 0.38,
+        blackoutThreshold: 0.09,
+        smallHeightRange: 10...20,
+        superHeightRange: 21...32,
+        poweredUpHeightRange: 21...32,
+        liveMemory: MarioLiveMemoryMap(
+            kind: .kingdomHeartsChainOfMemories,
+            livesAddress: 0x02039CB8,
+            powerUpAddress: 0x02039CAA,
+            gameplayStateAddress: 0x02033174,
+            invulnerabilityTimerAddress: 0x02033175,
+            deathStateValues: [],
+            invulnerabilityStateValues: [],
+            smallPowerUpValues: [],
+            superPowerUpValues: [0],
+            poweredUpValues: Set(1...UInt8.max),
+            healthAddress16: 0x0203314C,
+            maxHealthAddress16: 0x02039CA8,
+            gameModeAddress: nil,
             contextFields: []
+        )
+    )
+
+    static let zeldaMinishCap = MarioGameProfile(
+        id: "zelda_minish_cap_gba",
+        displayName: "The Legend of Zelda: The Minish Cap",
+        titleMatchers: [
+            "the legend of zelda the minish cap",
+            "legend of zelda the minish cap",
+            "zelda the minish cap",
+            "minish cap",
+            "zeldamcpu",
+            "agb-bzme-usa",
+            "bzme"
+        ],
+        nativeResolution: CGSize(width: 240, height: 160),
+        gameplayRegion: CGRect(x: 0.0, y: 0.10, width: 1.0, height: 0.80),
+        initialSearchRegion: CGRect(x: 0.08, y: 0.18, width: 0.84, height: 0.64),
+        minSampleInterval: 0.16,
+        damageCooldown: 0.9,
+        deathCooldown: 2.0,
+        fadeConfirmationThreshold: 0.38,
+        blackoutThreshold: 0.09,
+        smallHeightRange: 10...20,
+        superHeightRange: 21...32,
+        poweredUpHeightRange: 21...32,
+        liveMemory: MarioLiveMemoryMap(
+            kind: .zeldaMinishCap,
+            livesAddress: 0x03000BF4,
+            powerUpAddress: 0x03000BF5,
+            gameplayStateAddress: 0x03000BF4,
+            invulnerabilityTimerAddress: 0x0300119D,
+            deathStateValues: [],
+            invulnerabilityStateValues: [0x03],
+            smallPowerUpValues: [],
+            superPowerUpValues: [0],
+            poweredUpValues: Set(1...UInt8.max),
+            healthAddress16: nil,
+            maxHealthAddress16: nil,
+            healthAddress8: 0x02002AEA,
+            maxHealthAddress8: 0x02002AEB,
+            gameModeAddress: nil,
+            contextFields: [
+                MarioLiveMemoryContextField(key: "map", address: 0x03000BF4, width: .u8),
+                MarioLiveMemoryContextField(key: "room", address: 0x03000BF5, width: .u8)
+            ]
         )
     )
 
@@ -512,7 +692,11 @@ struct MarioGameProfile: Sendable {
         sma3YoshisIsland,
         sma4SuperMarioBros3,
         metroidFusion,
+        metroidZeroMission,
         dragonBallAdvancedAdventure,
+        onePiece,
+        kingdomHeartsChainOfMemories,
+        zeldaMinishCap,
         castlevaniaAriaOfSorrow,
         castlevaniaCircleOfTheMoon,
         castlevaniaHarmonyOfDissonance
@@ -542,8 +726,46 @@ struct MarioLiveMemoryMap: Sendable {
     let poweredUpValues: Set<UInt8>
     let healthAddress16: UInt32?
     let maxHealthAddress16: UInt32?
+    let healthAddress8: UInt32?
+    let maxHealthAddress8: UInt32?
     let gameModeAddress: UInt32?
     let contextFields: [MarioLiveMemoryContextField]
+
+    init(
+        kind: GameplayProfileKind,
+        livesAddress: UInt32,
+        powerUpAddress: UInt32,
+        gameplayStateAddress: UInt32,
+        invulnerabilityTimerAddress: UInt32,
+        deathStateValues: Set<UInt8>,
+        invulnerabilityStateValues: Set<UInt8>,
+        smallPowerUpValues: Set<UInt8>,
+        superPowerUpValues: Set<UInt8>,
+        poweredUpValues: Set<UInt8>,
+        healthAddress16: UInt32?,
+        maxHealthAddress16: UInt32?,
+        healthAddress8: UInt32? = nil,
+        maxHealthAddress8: UInt32? = nil,
+        gameModeAddress: UInt32?,
+        contextFields: [MarioLiveMemoryContextField]
+    ) {
+        self.kind = kind
+        self.livesAddress = livesAddress
+        self.powerUpAddress = powerUpAddress
+        self.gameplayStateAddress = gameplayStateAddress
+        self.invulnerabilityTimerAddress = invulnerabilityTimerAddress
+        self.deathStateValues = deathStateValues
+        self.invulnerabilityStateValues = invulnerabilityStateValues
+        self.smallPowerUpValues = smallPowerUpValues
+        self.superPowerUpValues = superPowerUpValues
+        self.poweredUpValues = poweredUpValues
+        self.healthAddress16 = healthAddress16
+        self.maxHealthAddress16 = maxHealthAddress16
+        self.healthAddress8 = healthAddress8
+        self.maxHealthAddress8 = maxHealthAddress8
+        self.gameModeAddress = gameModeAddress
+        self.contextFields = contextFields
+    }
 }
 
 enum MarioLiveMemoryContextWidth: Sendable {

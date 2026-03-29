@@ -2,6 +2,9 @@ import SwiftUI
 import CoreData
 
 struct PlayerStatsView: View {
+    private static let metricCardHeight: CGFloat = 120
+    private static let metricValueAreaHeight: CGFloat = 64
+
     @Environment(\.dismiss) private var dismiss
     @Environment(\.managedObjectContext) private var viewContext
     @EnvironmentObject private var languageManager: LanguageManager
@@ -151,14 +154,16 @@ struct PlayerStatsView: View {
             }
 
             Text(value)
-                .font(.system(size: hero ? 28 : 22, weight: .bold))
+                .font(.system(size: hero ? 28 : 24, weight: .bold))
                 .foregroundColor(AppColors.textPrimary)
-                .minimumScaleFactor(0.8)
-                .lineLimit(1)
+                .minimumScaleFactor(0.72)
+                .lineLimit(2)
+                .multilineTextAlignment(.leading)
+                .frame(maxWidth: .infinity, minHeight: Self.metricValueAreaHeight, alignment: .topLeading)
         }
         .padding(.horizontal, 14)
         .padding(.vertical, hero ? 14 : 12)
-        .frame(maxWidth: .infinity, minHeight: hero ? 128 : 104, alignment: .topLeading)
+        .frame(maxWidth: .infinity, minHeight: Self.metricCardHeight, alignment: .topLeading)
         .background(
             RoundedRectangle(cornerRadius: 16, style: .continuous)
                 .fill(AppColors.surface.opacity(0.95))

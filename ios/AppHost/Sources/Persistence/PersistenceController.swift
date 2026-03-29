@@ -2,7 +2,7 @@ import CoreData
 import Foundation
 
 @MainActor
-final class PersistenceController: @unchecked Sendable {
+final class PersistenceController: Sendable {
     static let shared = PersistenceController()
 
     let container: NSPersistentContainer
@@ -39,11 +39,13 @@ final class PersistenceController: @unchecked Sendable {
         runCoverDataMigrationIfNeeded(skipPersistenceFlag: inMemory)
     }
 
-    nonisolated var viewContext: NSManagedObjectContext {
+    // Thread-safe access to view context
+    var viewContext: NSManagedObjectContext {
         container.viewContext
     }
 
-    nonisolated func saveContext() {
+    // Thread-safe context saving
+    func saveContext() {
         let context = container.viewContext
         guard context.hasChanges else { return }
 
@@ -51,7 +53,8 @@ final class PersistenceController: @unchecked Sendable {
             try context.save()
         } catch {
             context.rollback()
-            assertionFailure("Failed to save context: \(error)")
+            print("Failed to save context: \(error)")
+            // Consider implementing retry logic or user notification
         }
     }
 
@@ -64,7 +67,13 @@ final class PersistenceController: @unchecked Sendable {
     }
 
     private static func createDirectory(named name: String) throws -> URL {
-        let baseURL = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
+        guard let baseURL = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first else {
+            let error = NSError(domain: "com.xemu.persistence", code: 1, userInfo: [
+                NSLocalizedDescriptionKey: "Unable to access application support directory"
+            ])
+            throw error
+        }
+
         var directory = baseURL.appendingPathComponent("AppHost", isDirectory: true).appendingPathComponent(name, isDirectory: true)
 
         if !FileManager.default.fileExists(atPath: directory.path) {

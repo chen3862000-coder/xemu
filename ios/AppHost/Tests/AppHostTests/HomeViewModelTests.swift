@@ -76,7 +76,8 @@ final class HomeViewModelTests: XCTestCase {
         viewModel.loadData(in: context)
 
         XCTAssertEqual(viewModel.totalGames, 6)
-        XCTAssertEqual(viewModel.totalHours, "4小时")
+        XCTAssertEqual(viewModel.totalHours, "4 小时")
+        XCTAssertEqual(viewModel.gameStatsHelper, "Tetris")
         XCTAssertEqual(viewModel.recentGames.count, 5)
         XCTAssertEqual(viewModel.recentGames.first?.title, "Tetris")
         XCTAssertEqual(viewModel.recentlyAddedGames.first?.title, "F-Zero")
@@ -87,6 +88,24 @@ final class HomeViewModelTests: XCTestCase {
         XCTAssertEqual(countsByShortName["GBC"], 1)
         XCTAssertEqual(countsByShortName["GBA"], 2)
         XCTAssertEqual(countsByShortName["NDS"], 1)
+    }
+
+    func testLoadDataUsesEmptyGameStatsHelperWhenNothingWasPlayed() throws {
+        _ = try makeEntry(
+            title: "F-Zero",
+            checksum: "gba-2",
+            system: "gba",
+            playtimeSeconds: 0,
+            lastPlayedAt: nil,
+            dateAdded: Date()
+        )
+        try context.save()
+
+        let languageManager = makeLanguageManager(language: .zhHans)
+        let viewModel = HomeViewModel(languageManager: languageManager)
+        viewModel.loadData(in: context)
+
+        XCTAssertEqual(viewModel.gameStatsHelper, "还没有最近游玩记录")
     }
 
     @discardableResult

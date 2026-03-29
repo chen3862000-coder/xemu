@@ -41,6 +41,9 @@ final class HybridGameplayAnalyzer {
             if let debugSummary = memoryObservation.debugSummary, GameplayAnalysisLogger.isEnabled {
                 GameplayAnalysisLogger.event(debugSummary)
             }
+            GameplayAnalysisLogger.event(
+                "memory-observation profile=\(profile.id) location=\(memoryObservation.locationSummary ?? "nil") events=\(memoryObservation.events.map { $0.rawValue }.joined(separator: ","))"
+            )
             if !memoryObservation.events.isEmpty {
                 GameplayAnalysisLogger.event(
                     "memory events=\(memoryObservation.events.map { $0.rawValue }.joined(separator: ",")) confidence=\(String(format: "%.2f", memoryObservation.confidence))"

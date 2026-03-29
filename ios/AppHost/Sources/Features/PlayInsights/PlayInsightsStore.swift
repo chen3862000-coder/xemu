@@ -42,8 +42,9 @@ final class PlayInsightsStore {
 
     func recordSession(_ update: SessionUpdate) {
         queue.sync {
-            let stats = existingRecord(for: update.gameId)?.eventStats ?? GameEventStatsSummary(gameId: update.gameId)
-            let priorSessions = existingRecord(for: update.gameId)?.sessions ?? []
+            let existing = existingRecord(for: update.gameId)
+            let stats = existing?.eventStats ?? GameEventStatsSummary(gameId: update.gameId)
+            let priorSessions = existing?.sessions ?? []
             let session = PlayInsightsSessionRecord(
                 startedAt: update.startedAt,
                 endedAt: update.endedAt,
@@ -81,7 +82,7 @@ final class PlayInsightsStore {
                 ),
                 sessions: sessions,
                 latestSnapshot: update.snapshot,
-                latestLocationSummary: update.latestLocationSummary,
+                latestLocationSummary: update.latestLocationSummary ?? existing?.latestLocationSummary,
                 updatedAt: update.endedAt
             )
 
@@ -93,8 +94,9 @@ final class PlayInsightsStore {
     func refreshLiveSnapshot(_ update: LiveSnapshotUpdate) {
         queue.sync {
             let existing = existingRecord(for: update.gameId)
+            let resolvedLocationSummary = update.latestLocationSummary ?? existing?.latestLocationSummary
             if existing?.latestSnapshot == update.snapshot,
-               existing?.latestLocationSummary == update.latestLocationSummary,
+               existing?.latestLocationSummary == resolvedLocationSummary,
                existing?.gameTitle == update.gameTitle,
                existing?.system == update.system {
                 return
@@ -108,7 +110,7 @@ final class PlayInsightsStore {
                 eventStats: existing?.eventStats ?? GameEventStatsSummary(gameId: update.gameId),
                 sessions: existing?.sessions ?? [],
                 latestSnapshot: update.snapshot,
-                latestLocationSummary: update.latestLocationSummary,
+                latestLocationSummary: resolvedLocationSummary,
                 updatedAt: update.snapshot.timestamp
             )
 

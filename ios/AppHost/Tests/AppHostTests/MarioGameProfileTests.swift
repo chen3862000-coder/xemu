@@ -52,6 +52,16 @@ final class MarioGameProfileTests: XCTestCase {
         XCTAssertEqual(profile?.id, MarioGameProfile.metroidFusion.id)
     }
 
+    func testMetroidZeroMissionProfileMatchesROMHeaderTitle() {
+        let profile = MarioGameProfile.activeProfile(
+            title: "ZEROMISSIONE",
+            platform: .GBA,
+            romHash: ""
+        )
+
+        XCTAssertEqual(profile?.id, MarioGameProfile.metroidZeroMission.id)
+    }
+
     func testDragonBallAdvancedAdventureProfileMatchesCanonicalTitle() {
         let profile = MarioGameProfile.activeProfile(
             title: "Dragon Ball: Advanced Adventure",
@@ -110,6 +120,36 @@ final class MarioGameProfileTests: XCTestCase {
         )
 
         XCTAssertEqual(profile?.id, MarioGameProfile.castlevaniaHarmonyOfDissonance.id)
+    }
+
+    func testOnePieceProfileMatchesCanonicalTitle() {
+        let profile = MarioGameProfile.activeProfile(
+            title: "Shonen Jump's One Piece",
+            platform: .GBA,
+            romHash: ""
+        )
+
+        XCTAssertEqual(profile?.id, MarioGameProfile.onePiece.id)
+    }
+
+    func testKingdomHeartsChainOfMemoriesProfileMatchesCanonicalTitle() {
+        let profile = MarioGameProfile.activeProfile(
+            title: "Kingdom Hearts: Chain of Memories",
+            platform: .GBA,
+            romHash: ""
+        )
+
+        XCTAssertEqual(profile?.id, MarioGameProfile.kingdomHeartsChainOfMemories.id)
+    }
+
+    func testZeldaMinishCapProfileMatchesCanonicalTitle() {
+        let profile = MarioGameProfile.activeProfile(
+            title: "The Legend of Zelda: The Minish Cap",
+            platform: .GBA,
+            romHash: ""
+        )
+
+        XCTAssertEqual(profile?.id, MarioGameProfile.zeldaMinishCap.id)
     }
 
 }

@@ -152,12 +152,15 @@ public final class AudioEngine {
             maxConsecutiveBridgeBuffers = 0
         }
         debugQueueMetricsEnabled = latencyProfile == .streaming
-        
-        outputFormat = AVAudioFormat(commonFormat: .pcmFormatInt16,
-                                     sampleRate: sampleRate,
-                                     channels: self.channels,
-                                     interleaved: true)!
-        
+
+        guard let format = AVAudioFormat(commonFormat: .pcmFormatInt16,
+                                        sampleRate: sampleRate,
+                                        channels: self.channels,
+                                        interleaved: true) else {
+            fatalError("Failed to create audio format - sampleRate: \(sampleRate), channels: \(self.channels)")
+        }
+        outputFormat = format
+
         rebuildEngineGraph()
         #if os(iOS)
         routeObserver = NotificationCenter.default.addObserver(
