@@ -1620,6 +1620,10 @@ extension GamePlayViewModel: EmulatorRenderDelegate {
         autoreleasepool {
             guard fastForwardSpeed == 1 else { return }
             guard let samples = samples, !samples.isEmpty else { return }
+            let sampleCount = samples.count / MemoryLayout<Int16>.size
+            if audioDebugPacketCount < 2 {
+                NSLog("[AudioFeed] nativeSampleRate=%d core=%@ samples=%d bytes=%d", sampleRate, String(describing: currentPlatform), sampleCount, samples.count)
+            }
             let normalizedInputRate = resolvedInputSampleRate(sampleRate)
 
             var outputSamples = samples
@@ -1639,14 +1643,21 @@ extension GamePlayViewModel: EmulatorRenderDelegate {
 
             if audioDebugPacketCount < 6 {
                 audioDebugPacketCount += 1
+                let inputStats = audioMetrics(for: samples)
+                let outputStats = audioMetrics(for: outputSamples)
                 NSLog(
-                    "[AudioFeed] packet=%d inputRate=%d targetRate=%d inputBytes=%d outputBytes=%d platform=%@",
+                    "[AudioFeed] packet=%d inputRate=%d targetRate=%d inputBytes=%d outputBytes=%d platform=%@ inP=%d inR=%.0f outP=%d outR=%.0f clip=%d",
                     audioDebugPacketCount,
                     normalizedInputRate,
                     targetRate,
                     samples.count,
                     outputSamples.count,
-                    currentPlatform?.rawValue ?? "unknown"
+                    currentPlatform?.rawValue ?? "unknown",
+                    inputStats.peak,
+                    inputStats.rms,
+                    outputStats.peak,
+                    outputStats.rms,
+                    outputStats.clippedSamples
                 )
             }
 
@@ -1743,7 +1754,7 @@ extension GamePlayViewModel: EmulatorRenderDelegate {
 
                 // Use a slightly smoother interpolation curve when we have enough
                 // neighboring frames. This reduces faint grit on GB/GBC waveforms
-                // when downsampling the core's 65_536 Hz output to 48 kHz hardware.
+                // when downsampling the core's 65,536 Hz output to 48 kHz hardware.
                 if baseFrame > 0, nextFrame + 1 < workingFrames {
                     let sMinus1 = Double(workingSamples[((baseFrame - 1) * channelCount) + channel])
                     let sPlus2 = Double(workingSamples[((nextFrame + 1) * channelCount) + channel])
@@ -1776,6 +1787,7 @@ extension GamePlayViewModel: EmulatorRenderDelegate {
         )
 
         guard !outSamples.isEmpty else { return nil }
+
         return outSamples.withUnsafeBufferPointer { buffer in
             guard let base = buffer.baseAddress else { return Data() }
             return Data(bytes: base, count: buffer.count * MemoryLayout<Int16>.size)

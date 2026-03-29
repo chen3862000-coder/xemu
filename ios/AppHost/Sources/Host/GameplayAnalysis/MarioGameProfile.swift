@@ -332,10 +332,10 @@ struct MarioGameProfile: Sendable {
             maxHealthAddress16: 0x03001312,
             gameModeAddress: 0x03000BDE,
             contextFields: [
-                MarioLiveMemoryContextField(key: "area", address: 0x0300015D, width: .u8),
-                MarioLiveMemoryContextField(key: "room", address: 0x0300015E, width: .u8),
-                MarioLiveMemoryContextField(key: "mapX", address: 0x03000162, width: .u8),
-                MarioLiveMemoryContextField(key: "mapY", address: 0x03000163, width: .u8)
+                MarioLiveMemoryContextField(key: "area", address: 0x300002C, width: .u8),
+                MarioLiveMemoryContextField(key: "room", address: 0x300002D, width: .u8),
+                MarioLiveMemoryContextField(key: "mapX", address: 0x3000031, width: .u8),
+                MarioLiveMemoryContextField(key: "mapY", address: 0x3000032, width: .u8)
             ]
         )
     )
