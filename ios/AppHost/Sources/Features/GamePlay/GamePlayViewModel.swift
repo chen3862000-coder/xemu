@@ -1325,6 +1325,11 @@ class GamePlayViewModel: ObservableObject {
         statusMessage = normalizedSpeed > 1 ? "Fast forward: \(normalizedSpeed)x" : "Fast forward off"
     }
 
+    func setGameSound(enabled: Bool) {
+        audioEngine?.setVolume(enabled ? 1.0 : 0.0)
+        statusMessage = enabled ? "Sound on" : "Sound off"
+    }
+
     func currentRenderScale() -> Double {
         max(0.5, min(1.0, performanceProfiler.currentQualityProfile.renderScale))
     }

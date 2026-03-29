@@ -53,6 +53,7 @@ struct GamePlayView: View {
     @AppStorage("settings.dev.memoryMonitor") private var devMemoryMonitor = false
     @AppStorage("settings.dev.thermalLogging") private var devThermalLogging = false
     @AppStorage("settings.dev.gameplayEventOverlay") private var showGameplayEventOverlay = false
+    @AppStorage("gameSoundEnabled") private var gameSoundEnabled = true
     @StateObject private var performanceProfiler = PerformanceProfiler.shared
     #if DEBUG
     @AppStorage("showPerformanceHUD") private var showPerformanceHUD = false
@@ -557,7 +558,17 @@ struct GamePlayView: View {
                                     gbUtilityIcon(systemName: "forward.fill", tint: .yellow) {
                                         cycleFastForwardSpeed()
                                     }
-                                    gbUtilityIcon(systemName: "speaker.wave.2.fill", tint: .cyan) {}
+                                    ZStack {
+                                        gbUtilityIcon(systemName: "speaker.wave.2.fill", tint: .cyan) {
+                                            toggleGameSound()
+                                        }
+                                        if !gameSoundEnabled {
+                                            Image(systemName: "xmark.circle.fill")
+                                                .font(.system(size: 24, weight: .bold))
+                                                .foregroundColor(.red)
+                                                .shadow(color: .black.opacity(0.3), radius: 2, x: 0, y: 1)
+                                        }
+                                    }
                                 }
                                 .padding(.horizontal, 14)
                                 .padding(.bottom, 12)
@@ -693,7 +704,17 @@ struct GamePlayView: View {
                             gbUtilityIcon(systemName: "forward.fill", tint: .white) {
                                 cycleFastForwardSpeed()
                             }
-                            gbUtilityIcon(systemName: "speaker.wave.2", tint: .white) {}
+                            ZStack {
+                                gbUtilityIcon(systemName: "speaker.wave.2", tint: .white) {
+                                    toggleGameSound()
+                                }
+                                if !gameSoundEnabled {
+                                    Image(systemName: "xmark.circle.fill")
+                                        .font(.system(size: 20, weight: .bold))
+                                        .foregroundColor(.red)
+                                        .shadow(color: .black.opacity(0.3), radius: 2, x: 0, y: 1)
+                                }
+                            }
                         }
                         .padding(.horizontal, 10)
                         .padding(.vertical, 8)
@@ -833,7 +854,17 @@ struct GamePlayView: View {
                             gbUtilityIcon(systemName: "forward.fill", tint: .white) {
                                 cycleFastForwardSpeed()
                             }
-                            gbUtilityIcon(systemName: "speaker.wave.2", tint: .white) {}
+                            ZStack {
+                                gbUtilityIcon(systemName: "speaker.wave.2", tint: .white) {
+                                    toggleGameSound()
+                                }
+                                if !gameSoundEnabled {
+                                    Image(systemName: "xmark.circle.fill")
+                                        .font(.system(size: 20, weight: .bold))
+                                        .foregroundColor(.red)
+                                        .shadow(color: .black.opacity(0.3), radius: 2, x: 0, y: 1)
+                                }
+                            }
                         }
                         .padding(.horizontal, 10)
                         .frame(height: 44)
@@ -1317,7 +1348,17 @@ struct GamePlayView: View {
                                 gbUtilityIcon(systemName: "forward.fill", tint: .white) {
                                     cycleFastForwardSpeed()
                                 }
-                                gbUtilityIcon(systemName: "speaker.wave.2", tint: .white) {}
+                                ZStack {
+                                gbUtilityIcon(systemName: "speaker.wave.2", tint: .white) {
+                                    toggleGameSound()
+                                }
+                                if !gameSoundEnabled {
+                                    Image(systemName: "xmark.circle.fill")
+                                        .font(.system(size: 20, weight: .bold))
+                                        .foregroundColor(.red)
+                                        .shadow(color: .black.opacity(0.3), radius: 2, x: 0, y: 1)
+                                }
+                            }
                             }
                             .padding(.horizontal, 10)
                             .padding(.vertical, 8)
@@ -1525,7 +1566,17 @@ struct GamePlayView: View {
                             gbUtilityIcon(systemName: "forward.fill", tint: .white) {
                                 cycleFastForwardSpeed()
                             }
-                            gbUtilityIcon(systemName: "speaker.wave.2", tint: .white) {}
+                            ZStack {
+                                gbUtilityIcon(systemName: "speaker.wave.2", tint: .white) {
+                                    toggleGameSound()
+                                }
+                                if !gameSoundEnabled {
+                                    Image(systemName: "xmark.circle.fill")
+                                        .font(.system(size: 20, weight: .bold))
+                                        .foregroundColor(.red)
+                                        .shadow(color: .black.opacity(0.3), radius: 2, x: 0, y: 1)
+                                }
+                            }
                         }
                         .padding(.horizontal, 10)
                         .padding(.vertical, 8)
@@ -1698,7 +1749,17 @@ struct GamePlayView: View {
                                 gbUtilityIcon(systemName: "forward.fill", tint: .white) {
                                     cycleFastForwardSpeed()
                                 }
-                                gbUtilityIcon(systemName: "speaker.wave.2", tint: .white) {}
+                                ZStack {
+                                gbUtilityIcon(systemName: "speaker.wave.2", tint: .white) {
+                                    toggleGameSound()
+                                }
+                                if !gameSoundEnabled {
+                                    Image(systemName: "xmark.circle.fill")
+                                        .font(.system(size: 20, weight: .bold))
+                                        .foregroundColor(.red)
+                                        .shadow(color: .black.opacity(0.3), radius: 2, x: 0, y: 1)
+                                }
+                            }
                             }
                             .padding(.horizontal, 10)
                             .frame(height: 42)
@@ -2105,7 +2166,17 @@ struct GamePlayView: View {
                 cycleFastForwardSpeed()
             }
             Rectangle().fill(Color.black.opacity(0.18)).frame(width: 1, height: height - 8)
-            ndsLandscapeUtilitySegment(icon: "speaker.wave.2") {}
+            ZStack {
+                ndsLandscapeUtilitySegment(icon: "speaker.wave.2") {
+                    toggleGameSound()
+                }
+                if !gameSoundEnabled {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.system(size: 16, weight: .bold))
+                        .foregroundColor(.red)
+                        .shadow(color: .black.opacity(0.3), radius: 2, x: 0, y: 1)
+                }
+            }
         }
         .frame(width: width, height: height)
         .background(
@@ -2439,10 +2510,19 @@ struct GamePlayView: View {
 
                     Spacer(minLength: displayWidth)
 
-                    ndsSideRail(buttonLabel: "R", topIcon: "camera.macro", bottomIcon: "speaker.wave.2.fill") {
-                        viewModel.handleButtonPress(.r1, pressed: true)
-                    } onRelease: {
-                        viewModel.handleButtonPress(.r1, pressed: false)
+                    ZStack {
+                        ndsSideRail(buttonLabel: "R", topIcon: "camera.macro", bottomIcon: "speaker.wave.2.fill") {
+                            viewModel.handleButtonPress(.r1, pressed: true)
+                        } onRelease: {
+                            viewModel.handleButtonPress(.r1, pressed: false)
+                        }
+                        if !gameSoundEnabled {
+                            Image(systemName: "xmark.circle.fill")
+                                .font(.system(size: 18, weight: .bold))
+                                .foregroundColor(.red)
+                                .shadow(color: .black.opacity(0.3), radius: 2, x: 0, y: 1)
+                                .offset(y: -20)
+                        }
                     }
                     .frame(height: screenHalfHeight)
                     .offset(y: screenHalfHeight / 2 + 3)
@@ -3538,6 +3618,11 @@ struct GamePlayView: View {
         let nextIndex = (currentIndex + 1) % Self.fastForwardSpeeds.count
         fastForwardSpeed = Self.fastForwardSpeeds[nextIndex]
         viewModel.setFastForward(fastForwardSpeed)
+    }
+
+    private func toggleGameSound() {
+        gameSoundEnabled.toggle()
+        viewModel.setGameSound(enabled: gameSoundEnabled)
     }
 
     private var loadingPlatformName: String {
