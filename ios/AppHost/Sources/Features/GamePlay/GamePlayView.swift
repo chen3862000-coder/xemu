@@ -1419,10 +1419,6 @@ struct GamePlayView: View {
                         controllerBottomMargin: controllerBottomMargin
                     )
                         .padding(.bottom, 4)
-
-                    statusBar
-                        .padding(.horizontal, 8)
-                        .padding(.bottom, 4)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
                 .onAppear {
@@ -1564,6 +1560,7 @@ struct GamePlayView: View {
                     } onStartPress: { pressed in
                         viewModel.handleButtonPress(.start, pressed: pressed)
                     }
+                    .scaleEffect(0.85)
                     .padding(.horizontal, 20)
                     .padding(.bottom, 4)
                 }
@@ -1572,10 +1569,6 @@ struct GamePlayView: View {
             }
             .frame(width: shellWidth, height: shellHeight)
             .padding(.bottom, 6)
-
-            statusBar
-                .padding(.horizontal, 8)
-                .padding(.bottom, 4)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
     }
@@ -1738,10 +1731,6 @@ struct GamePlayView: View {
             }
             .frame(width: shellWidth, height: shellHeight)
             .padding(.bottom, 6)
-
-            statusBar
-                .padding(.horizontal, 8)
-                .padding(.bottom, 4)
         }
         .padding(.leading, safeLeading)
         .padding(.trailing, safeTrailing)
@@ -1857,10 +1846,6 @@ struct GamePlayView: View {
             }
             .frame(width: shellWidth, height: shellHeight)
             .padding(.bottom, 6)
-
-            statusBar
-                .padding(.horizontal, 8)
-                .padding(.bottom, 4)
         }
         .padding(.leading, safeLeading + cameraLeadingInset)
         .padding(.trailing, safeTrailing + cameraTrailingInset)
@@ -2321,10 +2306,14 @@ struct GamePlayView: View {
                 )
                 .shadow(color: .black.opacity(0.35), radius: 28, x: 0, y: 16)
 
-            VStack(spacing: 8) {
+            VStack(spacing: 4) {
                 ndsDisplayStack(shellWidth: shellWidth)
+                    .padding(.top, 30)
+                    .padding(.bottom, 4)
                 ndsCenterDots
+                    .padding(.bottom, 4)
                 ndsQuickStateRow
+                    .padding(.bottom, 4)
                 ndsControlDeck(
                     shellWidth: shellWidth,
                     viewportWidth: viewportWidth,
@@ -2407,32 +2396,6 @@ struct GamePlayView: View {
                             )
                             .padding(1)
                     )
-                    .overlay(
-                        VStack(spacing: 10) {
-                            RoundedRectangle(cornerRadius: 8, style: .continuous)
-                                .stroke(Color.white.opacity(0.09), lineWidth: 1)
-                                .frame(height: screenHalfHeight)
-                            RoundedRectangle(cornerRadius: 8, style: .continuous)
-                                .stroke(Color.white.opacity(0.09), lineWidth: 1)
-                                .frame(height: screenHalfHeight)
-                        }
-                        .padding(4)
-                    )
-                    .overlay(alignment: .center) {
-                        ZStack {
-                            Rectangle()
-                                .fill(Color(white: 0.86))
-                                .frame(height: 12)
-                            Rectangle()
-                                .fill(Color.black.opacity(0.92))
-                                .frame(height: 3)
-                            HStack(spacing: 18) {
-                                Capsule().fill(Color.black.opacity(0.35)).frame(width: 12, height: 2)
-                                Capsule().fill(Color.black.opacity(0.35)).frame(width: 12, height: 2)
-                            }
-                            .offset(y: 4)
-                        }
-                    }
                     .overlay(alignment: .topTrailing) {
                         Circle()
                             .fill(Color.black.opacity(0.2))
@@ -2526,6 +2489,7 @@ struct GamePlayView: View {
             }
         }
         .padding(.top, 2)
+        .padding(.bottom, -4)
     }
 
     private enum NDSControlSizePreset {
@@ -2786,15 +2750,15 @@ struct GamePlayView: View {
         homeTouchWidth: CGFloat,
         homeTouchHeight: CGFloat
     ) -> some View {
-        HStack(spacing: 10) {
-            HStack(spacing: 8) {
+        HStack(spacing: 8) {
+            HStack(spacing: 6) {
                 Text("SELECT")
-                    .font(.system(size: 11, weight: .semibold))
+                    .font(.system(size: 9, weight: .semibold))
                     .foregroundColor(Color.black.opacity(0.60))
                     .lineLimit(1)
                     .minimumScaleFactor(0.8)
                     .fixedSize(horizontal: true, vertical: false)
-                    .frame(minWidth: 38, alignment: .trailing)
+                    .frame(minWidth: 32, alignment: .trailing)
                 NDSPressableControl(
                     onPress: { viewModel.handleButtonPress(.select, pressed: true) },
                     onRelease: { viewModel.handleButtonPress(.select, pressed: false) }
@@ -2803,30 +2767,30 @@ struct GamePlayView: View {
                         .fill(Color.white.opacity(isPressed ? 0.84 : 0.98))
                         .overlay(Circle().stroke(Color.black.opacity(0.58), lineWidth: 1.5))
                         .shadow(color: Color.black.opacity(isPressed ? 0.0 : 0.15), radius: 4, x: 0, y: 2)
-                        .frame(width: systemButtonDiameter, height: systemButtonDiameter)
-                        .frame(width: systemTouchDiameter, height: systemTouchDiameter)
+                        .frame(width: systemButtonDiameter * 0.8, height: systemButtonDiameter * 0.8)
+                        .frame(width: systemTouchDiameter * 0.8, height: systemTouchDiameter * 0.8)
                 }
             }
 
-            Spacer(minLength: 8)
+            Spacer(minLength: 6)
 
             NDSPressableControl(onPress: { showPauseMenu = true }, onRelease: {}) { isPressed in
                 Capsule(style: .continuous)
                     .fill(Color.white.opacity(isPressed ? 0.86 : 0.98))
                     .overlay(Capsule(style: .continuous).stroke(Color.black.opacity(0.48), lineWidth: 1.5))
                     .shadow(color: Color.black.opacity(isPressed ? 0.0 : 0.15), radius: 4, x: 0, y: 2)
-                    .frame(width: homeWidth, height: homeHeight)
-                    .frame(width: homeTouchWidth, height: homeTouchHeight)
+                    .frame(width: homeWidth * 0.85, height: homeHeight * 0.85)
+                    .frame(width: homeTouchWidth * 0.85, height: homeTouchHeight * 0.85)
                     .overlay(
                         Image(systemName: "house.fill")
-                            .font(.system(size: 14, weight: .bold))
+                            .font(.system(size: 12, weight: .bold))
                             .foregroundColor(Color.black.opacity(0.50))
                     )
             }
 
-            Spacer(minLength: 8)
+            Spacer(minLength: 6)
 
-            HStack(spacing: 8) {
+            HStack(spacing: 6) {
                 NDSPressableControl(
                     onPress: { viewModel.handleButtonPress(.start, pressed: true) },
                     onRelease: { viewModel.handleButtonPress(.start, pressed: false) }
@@ -2835,16 +2799,16 @@ struct GamePlayView: View {
                         .fill(Color.white.opacity(isPressed ? 0.84 : 0.98))
                         .overlay(Circle().stroke(Color.black.opacity(0.58), lineWidth: 1.5))
                         .shadow(color: Color.black.opacity(isPressed ? 0.0 : 0.15), radius: 4, x: 0, y: 2)
-                        .frame(width: systemButtonDiameter, height: systemButtonDiameter)
-                        .frame(width: systemTouchDiameter, height: systemTouchDiameter)
+                        .frame(width: systemButtonDiameter * 0.8, height: systemButtonDiameter * 0.8)
+                        .frame(width: systemTouchDiameter * 0.8, height: systemTouchDiameter * 0.8)
                 }
                 Text("START")
-                    .font(.system(size: 11, weight: .semibold))
+                    .font(.system(size: 9, weight: .semibold))
                     .foregroundColor(Color.black.opacity(0.60))
                     .lineLimit(1)
                     .minimumScaleFactor(0.8)
                     .fixedSize(horizontal: true, vertical: false)
-                    .frame(minWidth: 34, alignment: .leading)
+                    .frame(minWidth: 28, alignment: .leading)
             }
         }
         .padding(.horizontal, 10)
@@ -2867,7 +2831,7 @@ struct GamePlayView: View {
         onStartPress: @escaping (Bool) -> Void
     ) -> some View {
         HStack(spacing: 10) {
-            ShellSystemButton(theme: theme, label: "MENU", icon: "house.fill", onPress: onMenu, onRelease: {}) 
+            ShellSystemButton(theme: theme, label: "MENU", icon: "house.fill", onPress: onMenu, onRelease: {})
             Spacer()
             ShellSystemButton(theme: theme, label: "SELECT", icon: nil) {
                 onSelectPress(true)
