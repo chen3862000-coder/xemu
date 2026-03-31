@@ -137,12 +137,6 @@ struct SettingsView: View {
             )
 
             ToggleSettingsRow(
-                title: L10n.string("settings.boot_intro.title", languageManager: languageManager),
-                subtitle: L10n.string("settings.boot_intro.subtitle", languageManager: languageManager),
-                isOn: hapticBinding($showCartridgeLaunchIntro)
-            )
-
-            ToggleSettingsRow(
                 title: L10n.string("settings.game_events_detection.title", languageManager: languageManager),
                 subtitle: L10n.string("settings.game_events_detection.subtitle", languageManager: languageManager),
                 isOn: hapticBinding($devHPDeathDetection)
@@ -238,6 +232,11 @@ struct SettingsView: View {
 
     private var developerSection: some View {
         Section(header: SettingsSectionHeader(L10n.string("settings.developer.section", languageManager: languageManager))) {
+            ToggleSettingsRow(
+                title: L10n.string("settings.boot_intro.title", languageManager: languageManager),
+                subtitle: L10n.string("settings.boot_intro.subtitle", languageManager: languageManager),
+                isOn: hapticBinding($showCartridgeLaunchIntro)
+            )
             ToggleSettingsRow(title: L10n.string("settings.dev.fps_overlay", languageManager: languageManager), isOn: hapticBinding($showFPSMeter))
             ToggleSettingsRow(title: L10n.string("settings.dev.memory_monitor", languageManager: languageManager), isOn: hapticBinding($devMemoryMonitor))
             ToggleSettingsRow(title: L10n.string("settings.dev.thermal_logging", languageManager: languageManager), isOn: hapticBinding($devThermalLogging))
