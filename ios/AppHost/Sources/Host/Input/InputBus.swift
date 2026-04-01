@@ -1,4 +1,5 @@
 import Foundation
+import CoreData
 @preconcurrency import GameController
 
 @MainActor
@@ -32,8 +33,59 @@ final class InputBus: InputRouting {
         for platform in Platform.allCases {
             controllerMappings[platform] = DefaultControllerMappings.profile(for: platform)
         }
+        // Load custom mappings after defaults to override them
+        loadCustomMappings()
     }
-    
+
+    private func loadCustomMappings() {
+        let context = PersistenceController.shared.container.viewContext
+
+        for platform in Platform.allCases {
+            // Try to load custom mappings for this platform
+            let fetchRequest = NSFetchRequest<NSManagedObject>(entityName: "ControllerMapping")
+            fetchRequest.predicate = NSPredicate(
+                format: "platformRaw == %@ AND controllerType == %@",
+                platform.rawValue,
+                "default"  // Controller type - currently using "default" for all
+            )
+            fetchRequest.fetchLimit = 1
+
+            do {
+                let results = try context.fetch(fetchRequest)
+                if let mapping = results.first,
+                   let mappingData = mapping.value(forKey: "mappingData") as? String,
+                   let data = mappingData.data(using: .utf8),
+                   let decoded = try? JSONDecoder().decode([String: String].self, from: data) {
+
+                    // Convert the decoded dictionary to ButtonMapping array
+                    var customMappings: [ButtonMapping] = []
+                    for (key, value) in decoded {
+                        if let button = ControllerButton(rawValue: key),
+                           let input = EmulatorInput(rawValue: value) {
+                            customMappings.append(ButtonMapping(
+                                controllerButton: button,
+                                emulatorInput: input
+                            ))
+                        }
+                    }
+
+                    // Override the default mappings with custom ones
+                    if !customMappings.isEmpty {
+                        controllerMappings[platform] = EmulatorControllerProfile(
+                            platform: platform,
+                            controllerType: "default",
+                            mappings: customMappings,
+                            createdAt: Date()
+                        )
+                    }
+                }
+            } catch {
+                // If loading custom mappings fails, just use defaults
+                // No error handling needed as defaults are already loaded
+            }
+        }
+    }
+
     func setPlatform(_ platform: Platform) {
         self.currentPlatform = platform
     }
