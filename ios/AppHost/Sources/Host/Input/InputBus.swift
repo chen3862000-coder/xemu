@@ -5,7 +5,7 @@ import CoreData
 @MainActor
 final class InputBus: InputRouting {
     static let shared = InputBus()
-    
+
     private let queue = DispatchQueue(label: "com.xemu.inputbus", qos: .userInteractive)
     private var listeners: [UUID: @Sendable (InputEvent) -> Void] = [:]
     private var isTesting = false
@@ -18,6 +18,17 @@ final class InputBus: InputRouting {
     var onControllerConnected: ((String) -> Void)?
     var onControllerDisconnected: (() -> Void)?
     var onUnsupportedController: ((String) -> Void)?
+
+    // Controller settings
+    private var stickSensitivity: StickSensitivity {
+        get {
+            guard let rawValue = UserDefaults.standard.string(forKey: "settings.controller.stickSensitivity"),
+                  let sensitivity = StickSensitivity(rawValue: rawValue) else {
+                return .medium
+            }
+            return sensitivity
+        }
+    }
 
     private init() {
         #if DEBUG
@@ -149,11 +160,12 @@ final class InputBus: InputRouting {
     }
 
     func routeAnalog(x: Float, y: Float, timestamp: TimeInterval) {
+        let threshold = stickSensitivity.threshold
         let horizontal: ControllerButton = x >= 0 ? .dpadRight : .dpadLeft
         let vertical: ControllerButton = y >= 0 ? .dpadUp : .dpadDown
 
-        let horizontalEvent = InputEvent(button: horizontal, isPressed: abs(x) > 0.3, timestamp: Date(timeIntervalSince1970: timestamp))
-        let verticalEvent = InputEvent(button: vertical, isPressed: abs(y) > 0.3, timestamp: Date(timeIntervalSince1970: timestamp))
+        let horizontalEvent = InputEvent(button: horizontal, isPressed: abs(x) > threshold, timestamp: Date(timeIntervalSince1970: timestamp))
+        let verticalEvent = InputEvent(button: vertical, isPressed: abs(y) > threshold, timestamp: Date(timeIntervalSince1970: timestamp))
 
         route(horizontalEvent)
         route(verticalEvent)
@@ -328,3 +340,19 @@ final class InputBus: InputRouting {
         }
     }
 }
+
+// MARK: - Stick Sensitivity
+private enum StickSensitivity: String {
+    case low
+    case medium
+    case high
+
+    var threshold: Float {
+        switch self {
+        case .low: return 0.2    // More sensitive - easier to trigger
+        case .medium: return 0.3  // Default sensitivity
+        case .high: return 0.45   // Less sensitive - harder to trigger
+        }
+    }
+}
+

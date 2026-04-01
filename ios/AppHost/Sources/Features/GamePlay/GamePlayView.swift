@@ -53,8 +53,14 @@ struct GamePlayView: View {
     @AppStorage("settings.dev.memoryMonitor") private var devMemoryMonitor = false
     @AppStorage("settings.dev.thermalLogging") private var devThermalLogging = false
     @AppStorage("settings.dev.gameplayEventOverlay") private var showGameplayEventOverlay = false
+    // Controller settings
+    @AppStorage("settings.controller.autoImmersive") private var autoImmersive = true
+    @AppStorage("settings.controller.hideTouchControls") private var hideTouchControls = false
+    @AppStorage("settings.controller.touchFallback") private var touchFallbackRaw = "auto"
+
     @State private var gameSoundEnabled = true
     @StateObject private var performanceProfiler = PerformanceProfiler.shared
+    @State private var isImmersiveMode = false
     #if DEBUG
     @AppStorage("showPerformanceHUD") private var showPerformanceHUD = false
     #endif
@@ -62,6 +68,46 @@ struct GamePlayView: View {
     init(game: Game, onExit: @escaping () -> Void) {
         self.game = game
         self.onExit = onExit
+    }
+
+    // MARK: - Controller Settings
+
+    private enum TouchFallbackMode: String {
+        case auto
+        case alwaysOn
+        case alwaysOff
+    }
+
+    private var touchFallbackMode: TouchFallbackMode {
+        TouchFallbackMode(rawValue: touchFallbackRaw) ?? .auto
+    }
+
+    private var shouldShowTouchControls: Bool {
+        // If explicitly set to always off, don't show
+        if touchFallbackMode == .alwaysOff {
+            return false
+        }
+
+        // If hideTouchControls is enabled, don't show
+        if hideTouchControls {
+            return false
+        }
+
+        // If explicitly set to always on, show
+        if touchFallbackMode == .alwaysOn {
+            return true
+        }
+
+        // Auto mode: show only when no controller is connected
+        if touchFallbackMode == .auto {
+            return !InputBus.shared.isControllerConnected()
+        }
+
+        return true
+    }
+
+    private var prefersImmersiveMode: Bool {
+        autoImmersive && InputBus.shared.isControllerConnected()
     }
     
     var body: some View {
@@ -151,6 +197,8 @@ struct GamePlayView: View {
         }
         .onAppear {
             beginLaunchSequence(allowResumeFlow: true)
+            setupControllerMonitoring()
+            updateImmersiveMode()
         }
         .onDisappear {
             startTask?.cancel()
@@ -166,7 +214,9 @@ struct GamePlayView: View {
             retroBootProgress = 0
             pendingLaunchResumeFlow = false
             viewModel.stopEmulation()
+            teardownControllerMonitoring()
         }
+        .persistentSystemOverlays(prefersImmersiveMode ? .hidden : .visible)
         .onChange(of: viewModel.latestUnlockedAchievement?.id) { _, _ in
             guard let unlocked = viewModel.latestUnlockedAchievement else { return }
             achievementToastTask?.cancel()
@@ -4595,6 +4645,28 @@ struct GamePlayView: View {
 
     private func screenFormat(_ key: String, _ fallback: String, _ value: CVarArg) -> String {
         L10n.format(key, value, table: "Screens", fallback: fallback, languageManager: languageManager)
+    }
+
+    // MARK: - Controller Monitoring
+
+    private func setupControllerMonitoring() {
+        // Set up callbacks for controller connection/disconnection
+        // Note: No weak self needed since GamePlayView is a struct (value type)
+        InputBus.shared.onControllerConnected = { [self] _ in
+            updateImmersiveMode()
+        }
+        InputBus.shared.onControllerDisconnected = { [self] in
+            updateImmersiveMode()
+        }
+    }
+
+    private func teardownControllerMonitoring() {
+        InputBus.shared.onControllerConnected = nil
+        InputBus.shared.onControllerDisconnected = nil
+    }
+
+    private func updateImmersiveMode() {
+        isImmersiveMode = prefersImmersiveMode
     }
 
     private enum PauseActionStyle {
