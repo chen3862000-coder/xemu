@@ -47,6 +47,7 @@ struct GamePlayView: View {
     @State private var achievementToast: PlayerAchievementUnlock?
     @State private var achievementToastTask: Task<Void, Never>?
     @State private var saveSlotSummaries: [SaveStateSlotSummary] = []
+    @State private var controllerObserverToken: UUID?
     @AppStorage("resumeLaunchPolicy") private var resumeLaunchPolicyRaw = ResumeLaunchPolicy.autoResumeLatest.rawValue
     @AppStorage("showFPSMeter") private var showFPSMeter = false
     @AppStorage("showCartridgeLaunchIntro") private var showCartridgeLaunchIntro = true
@@ -4654,19 +4655,21 @@ struct GamePlayView: View {
     // MARK: - Controller Monitoring
 
     private func setupControllerMonitoring() {
-        // Set up callbacks for controller connection/disconnection
-        // Note: No weak self needed since GamePlayView is a struct (value type)
-        InputBus.shared.onControllerConnected = { [self] _ in
-            updateImmersiveMode()
-        }
-        InputBus.shared.onControllerDisconnected = { [self] in
-            updateImmersiveMode()
-        }
+        guard controllerObserverToken == nil else { return }
+        controllerObserverToken = InputBus.shared.addControllerObserver(
+            onConnected: { _ in
+                updateImmersiveMode()
+            },
+            onDisconnected: {
+                updateImmersiveMode()
+            }
+        )
     }
 
     private func teardownControllerMonitoring() {
-        InputBus.shared.onControllerConnected = nil
-        InputBus.shared.onControllerDisconnected = nil
+        guard let controllerObserverToken else { return }
+        InputBus.shared.removeControllerObserver(controllerObserverToken)
+        self.controllerObserverToken = nil
     }
 
     private func updateImmersiveMode() {

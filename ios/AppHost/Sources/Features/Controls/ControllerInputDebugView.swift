@@ -2,6 +2,7 @@ import SwiftUI
 
 struct ControllerInputDebugView: View {
     @State private var listenerToken: UUID?
+    @State private var controllerObserverToken: UUID?
     @State private var isControllerConnected = false
     @State private var controllerName = "—"
     @State private var averageLatencyMs: Double?
@@ -72,18 +73,18 @@ struct ControllerInputDebugView: View {
     private func startListening() {
         refreshSnapshot()
 
-        InputBus.shared.onControllerConnected = { name in
-            Task { @MainActor in
-                isControllerConnected = true
-                controllerName = name
-            }
-        }
-        InputBus.shared.onControllerDisconnected = {
-            Task { @MainActor in
-                isControllerConnected = false
-                controllerName = "—"
-                pressedButtons.removeAll()
-            }
+        if controllerObserverToken == nil {
+            controllerObserverToken = InputBus.shared.addControllerObserver(
+                onConnected: { name in
+                    isControllerConnected = true
+                    controllerName = name
+                },
+                onDisconnected: {
+                    isControllerConnected = false
+                    controllerName = "—"
+                    pressedButtons.removeAll()
+                }
+            )
         }
 
         guard listenerToken == nil else { return }
@@ -99,8 +100,10 @@ struct ControllerInputDebugView: View {
             InputBus.shared.removeListener(listenerToken)
             self.listenerToken = nil
         }
-        InputBus.shared.onControllerConnected = nil
-        InputBus.shared.onControllerDisconnected = nil
+        if let controllerObserverToken {
+            InputBus.shared.removeControllerObserver(controllerObserverToken)
+            self.controllerObserverToken = nil
+        }
     }
 
     private func refreshSnapshot() {

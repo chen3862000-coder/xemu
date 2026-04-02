@@ -8,6 +8,9 @@ final class InputBus: InputRouting {
 
     private let queue = DispatchQueue(label: "com.xemu.inputbus", qos: .userInteractive)
     private var listeners: [UUID: @Sendable (InputEvent) -> Void] = [:]
+    private var controllerConnectedObservers: [UUID: @MainActor (String) -> Void] = [:]
+    private var controllerDisconnectedObservers: [UUID: @MainActor () -> Void] = [:]
+    private var unsupportedControllerObservers: [UUID: @MainActor (String) -> Void] = [:]
     private var isTesting = false
     private weak var targetCore: EmulatorCore?
     private var activeController: GCController?
@@ -15,9 +18,6 @@ final class InputBus: InputRouting {
     private var lastInputTimestamp: Date?
     private var inputLatencySamples: [TimeInterval] = []
     private let maxLatencySamples = 100
-    var onControllerConnected: ((String) -> Void)?
-    var onControllerDisconnected: (() -> Void)?
-    var onUnsupportedController: ((String) -> Void)?
 
     // Controller settings
     private var stickSensitivity: StickSensitivity {
@@ -52,53 +52,16 @@ final class InputBus: InputRouting {
         let context = PersistenceController.shared.container.viewContext
 
         for platform in Platform.allCases {
-            // Try to load custom mappings for this platform
-            let fetchRequest = NSFetchRequest<NSManagedObject>(entityName: "ControllerMapping")
-            fetchRequest.predicate = NSPredicate(
-                format: "platformRaw == %@ AND controllerType == %@",
-                platform.rawValue,
-                "default"  // Controller type - currently using "default" for all
-            )
-            fetchRequest.fetchLimit = 1
-
-            do {
-                let results = try context.fetch(fetchRequest)
-                if let mapping = results.first,
-                   let mappingData = mapping.value(forKey: "mappingData") as? String,
-                   let data = mappingData.data(using: .utf8),
-                   let decoded = try? JSONDecoder().decode([String: String].self, from: data) {
-
-                    // Convert the decoded dictionary to ButtonMapping array
-                    var customMappings: [ButtonMapping] = []
-                    for (key, value) in decoded {
-                        if let button = ControllerButton(rawValue: key),
-                           let input = EmulatorInput(rawValue: value) {
-                            customMappings.append(ButtonMapping(
-                                controllerButton: button,
-                                emulatorInput: input
-                            ))
-                        }
-                    }
-
-                    // Override the default mappings with custom ones
-                    if !customMappings.isEmpty {
-                        controllerMappings[platform] = EmulatorControllerProfile(
-                            platform: platform,
-                            controllerType: "default",
-                            mappings: customMappings,
-                            createdAt: Date()
-                        )
-                    }
-                }
-            } catch {
-                // If loading custom mappings fails, just use defaults
-                // No error handling needed as defaults are already loaded
-            }
+            reloadMappings(for: platform, controllerType: "default", in: context)
         }
     }
 
     func setPlatform(_ platform: Platform) {
         self.currentPlatform = platform
+    }
+
+    func reloadMappings(for platform: Platform, controllerType: String = "default") {
+        reloadMappings(for: platform, controllerType: controllerType, in: PersistenceController.shared.container.viewContext)
     }
     
     func getActiveControllerName() -> String? {
@@ -116,6 +79,30 @@ final class InputBus: InputRouting {
     
     func resetLatencySamples() {
         inputLatencySamples.removeAll()
+    }
+
+    func addControllerObserver(
+        onConnected: (@MainActor (String) -> Void)? = nil,
+        onDisconnected: (@MainActor () -> Void)? = nil,
+        onUnsupported: (@MainActor (String) -> Void)? = nil
+    ) -> UUID {
+        let token = UUID()
+        if let onConnected {
+            controllerConnectedObservers[token] = onConnected
+        }
+        if let onDisconnected {
+            controllerDisconnectedObservers[token] = onDisconnected
+        }
+        if let onUnsupported {
+            unsupportedControllerObservers[token] = onUnsupported
+        }
+        return token
+    }
+
+    func removeControllerObserver(_ token: UUID) {
+        controllerConnectedObservers[token] = nil
+        controllerDisconnectedObservers[token] = nil
+        unsupportedControllerObservers[token] = nil
     }
 
     // MARK: Listener Management
@@ -184,7 +171,7 @@ final class InputBus: InputRouting {
     public var currentPlatform: Platform? {
         didSet {
             if let platform = currentPlatform {
-                currentMappingProfile = DefaultControllerMappings.profile(for: platform)
+                currentMappingProfile = controllerMappings[platform] ?? DefaultControllerMappings.profile(for: platform)
             }
         }
     }
@@ -275,7 +262,7 @@ final class InputBus: InputRouting {
     private func handleControllerDisconnect(controller: GCController) {
         if controller == activeController {
             activeController = nil
-            onControllerDisconnected?()
+            notifyControllerDisconnected()
         }
     }
     
@@ -291,13 +278,13 @@ final class InputBus: InputRouting {
     private func attach(controller: GCController) {
         if !isControllerSupported(controller) {
             let name = controller.vendorName ?? controller.productCategory ?? "Unknown Controller"
-            onUnsupportedController?(name)
+            notifyUnsupportedController(name)
             return
         }
         
         activeController = controller
         let name = controller.vendorName ?? controller.productCategory ?? "Controller"
-        onControllerConnected?(name)
+        notifyControllerConnected(name)
         
         controller.extendedGamepad?.valueChangedHandler = { [weak self] gamepad, element in
             let timestamp = Date()
@@ -330,13 +317,93 @@ final class InputBus: InputRouting {
         case gamepad.buttonB: return .b
         case gamepad.buttonX: return .x
         case gamepad.buttonY: return .y
-        case gamepad.leftShoulder: return .l
-        case gamepad.rightShoulder: return .r
-        case gamepad.leftTrigger: return .triggerLeft
-        case gamepad.rightTrigger: return .triggerRight
+        case gamepad.leftShoulder: return .leftShoulder
+        case gamepad.rightShoulder: return .rightShoulder
+        case gamepad.leftTrigger: return .leftTrigger
+        case gamepad.rightTrigger: return .rightTrigger
         case gamepad.buttonMenu: return .menu
         case gamepad.buttonOptions: return .start
         default: return nil
+        }
+    }
+
+    private func reloadMappings(for platform: Platform, controllerType: String, in context: NSManagedObjectContext) {
+        let fetchRequest = NSFetchRequest<NSManagedObject>(entityName: "ControllerMapping")
+        fetchRequest.predicate = NSPredicate(
+            format: "platformRaw == %@ AND controllerType == %@",
+            platform.rawValue,
+            controllerType
+        )
+        fetchRequest.fetchLimit = 1
+
+        do {
+            let results = try context.fetch(fetchRequest)
+            guard
+                let mapping = results.first,
+                let mappingData = mapping.value(forKey: "mappingData") as? String,
+                let customMappings = decodeMappings(from: mappingData),
+                !customMappings.isEmpty
+            else {
+                controllerMappings[platform] = DefaultControllerMappings.profile(for: platform, controllerType: controllerType)
+                refreshCurrentProfileIfNeeded(for: platform)
+                return
+            }
+
+            controllerMappings[platform] = EmulatorControllerProfile(
+                platform: platform,
+                controllerType: controllerType,
+                mappings: customMappings,
+                createdAt: Date()
+            )
+            refreshCurrentProfileIfNeeded(for: platform)
+        } catch {
+            controllerMappings[platform] = DefaultControllerMappings.profile(for: platform, controllerType: controllerType)
+            refreshCurrentProfileIfNeeded(for: platform)
+        }
+    }
+
+    private func refreshCurrentProfileIfNeeded(for platform: Platform) {
+        guard currentPlatform == platform else { return }
+        currentMappingProfile = controllerMappings[platform] ?? DefaultControllerMappings.profile(for: platform)
+    }
+
+    private func decodeMappings(from rawValue: String) -> [ButtonMapping]? {
+        if let decoded = DefaultControllerMappings.fromData(rawValue) {
+            return decoded
+        }
+
+        guard
+            let data = rawValue.data(using: .utf8),
+            let decoded = try? JSONDecoder().decode([String: String].self, from: data)
+        else {
+            return nil
+        }
+
+        return decoded.compactMap { key, value in
+            guard let button = ControllerButton(rawValue: key),
+                  let input = EmulatorInput(rawValue: value) else {
+                return nil
+            }
+
+            return ButtonMapping(controllerButton: button, emulatorInput: input)
+        }
+    }
+
+    private func notifyControllerConnected(_ name: String) {
+        for observer in controllerConnectedObservers.values {
+            observer(name)
+        }
+    }
+
+    private func notifyControllerDisconnected() {
+        for observer in controllerDisconnectedObservers.values {
+            observer()
+        }
+    }
+
+    private func notifyUnsupportedController(_ name: String) {
+        for observer in unsupportedControllerObservers.values {
+            observer(name)
         }
     }
 }
@@ -355,4 +422,3 @@ private enum StickSensitivity: String {
         }
     }
 }
-

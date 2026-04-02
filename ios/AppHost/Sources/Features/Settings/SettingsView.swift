@@ -516,15 +516,18 @@ private struct ControllerSettingsView: View {
     @Binding var stickSensitivityRaw: String
     @Binding var hapticFeedback: Bool
     let showDevAdvanced: Bool
+    @State private var controllerObserverToken: UUID?
+    @State private var isControllerConnected = InputBus.shared.isControllerConnected()
+    @State private var activeControllerName = InputBus.shared.getActiveControllerName() ?? "—"
 
     private var controllerStatus: String {
-        InputBus.shared.isControllerConnected()
+        isControllerConnected
             ? L10n.string("settings.connected", languageManager: languageManager)
             : L10n.string("settings.not_connected", languageManager: languageManager)
     }
 
     private var controllerName: String {
-        InputBus.shared.getActiveControllerName() ?? "—"
+        activeControllerName
     }
 
     var body: some View {
@@ -586,9 +589,38 @@ private struct ControllerSettingsView: View {
         }
         .settingsListStyle()
         .navigationTitle(L10n.string("settings.controller.nav", languageManager: languageManager))
+        .onAppear(perform: startMonitoringController)
+        .onDisappear(perform: stopMonitoringController)
         #if os(iOS)
         .navigationBarTitleDisplayMode(.inline)
         #endif
+    }
+
+    private func startMonitoringController() {
+        refreshControllerSnapshot()
+        guard controllerObserverToken == nil else { return }
+
+        controllerObserverToken = InputBus.shared.addControllerObserver(
+            onConnected: { name in
+                isControllerConnected = true
+                activeControllerName = name
+            },
+            onDisconnected: {
+                isControllerConnected = false
+                activeControllerName = "—"
+            }
+        )
+    }
+
+    private func stopMonitoringController() {
+        guard let controllerObserverToken else { return }
+        InputBus.shared.removeControllerObserver(controllerObserverToken)
+        self.controllerObserverToken = nil
+    }
+
+    private func refreshControllerSnapshot() {
+        isControllerConnected = InputBus.shared.isControllerConnected()
+        activeControllerName = InputBus.shared.getActiveControllerName() ?? "—"
     }
 }
 
