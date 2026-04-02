@@ -122,6 +122,15 @@ final class MemoryGameAnalyzer {
         if memoryMap.kind == .zeldaMinishCap {
             return analyzeZeldaMinishCapLiveMemory(liveSample, memoryMap: memoryMap)
         }
+        if memoryMap.kind == .kirbyNightmareInDreamLand {
+            return analyzeKirbyNightmareInDreamLandLiveMemory(liveSample, memoryMap: memoryMap)
+        }
+        if memoryMap.kind == .kirbyAmazingMirror {
+            return analyzeKirbyAmazingMirrorLiveMemory(liveSample, memoryMap: memoryMap)
+        }
+        if memoryMap.kind == .goldenSun {
+            return analyzeGoldenSunLiveMemory(liveSample, memoryMap: memoryMap)
+        }
         if memoryMap.kind == .castlevaniaAriaOfSorrow {
             return analyzeCastlevaniaAriaOfSorrowLiveMemory(liveSample, memoryMap: memoryMap)
         }
@@ -1146,6 +1155,272 @@ final class MemoryGameAnalyzer {
         )
     }
 
+    private func analyzeKirbyNightmareInDreamLandLiveMemory(
+        _ liveSample: MarioLiveMemorySample,
+        memoryMap _: MarioLiveMemoryMap
+    ) -> MemoryGameObservation? {
+        guard let lives = liveSample.lives,
+              let health = liveSample.health else {
+            previousLiveSample = liveSample
+            return nil
+        }
+
+        let stage = liveSample.contextValues["level"] ?? 0
+        let invulnerability = liveSample.invulnerabilityTimer ?? 0
+        let isInvulnerable = invulnerability > 0
+        let isDeathState = health == 0
+        let playerState: MarioPlayerState = isDeathState ? .dead : (isInvulnerable ? .invulnerableBlink : .superState)
+        let gameplayPhase: MarioGameplayPhase = isDeathState ? .deathSequence : .gameplayActive
+
+        guard let previousLiveSample else {
+            self.previousLiveSample = liveSample
+            if health > 0 && lives > 0 {
+                lastStableLiveSample = liveSample
+                nonDeathEventsArmed = true
+            }
+            return MemoryGameObservation(
+                events: [],
+                confidence: 0.95,
+                lives: Int(lives),
+                health: Int(health),
+                powerUp: Int(stage),
+                playerState: playerState,
+                gameplayPhase: gameplayPhase,
+                blinkConfidence: isInvulnerable ? 0.95 : 0.0,
+                debugSummary: kirbyDebugSummary(
+                    lives: lives,
+                    health: health,
+                    stage: UInt8(stage & 0xFF),
+                    invulnerability: invulnerability
+                ),
+                locationSummary: kirbyNightmareLocationSummary(liveSample: liveSample),
+                pattern: nil
+            )
+        }
+
+        let previousHealth = previousLiveSample.health
+        let previousLives = previousLiveSample.lives
+        let previousWasDeath = previousHealth == 0
+
+        var events: [GameplayEvent] = []
+        if isDeathState && !previousWasDeath {
+            events.append(.deathDetected)
+        } else if let previousLives, lives < previousLives {
+            events.append(.deathDetected)
+        } else if nonDeathEventsArmed,
+                  let previousHealth,
+                  previousHealth > health,
+                  health > 0 {
+            let delta = previousHealth - health
+            events.append(delta >= 8 ? .damageHeavy : .damageLight)
+        }
+
+        if events.contains(.deathDetected) {
+            lastStableLiveSample = nil
+            nonDeathEventsArmed = false
+        } else if health > 0 && lives > 0 {
+            lastStableLiveSample = liveSample
+            nonDeathEventsArmed = true
+        }
+
+        self.previousLiveSample = liveSample
+
+        return MemoryGameObservation(
+            events: events,
+            confidence: 0.95,
+            lives: Int(lives),
+            health: Int(health),
+            powerUp: Int(stage),
+            playerState: playerState,
+            gameplayPhase: gameplayPhase,
+            blinkConfidence: isInvulnerable ? 0.95 : 0.0,
+            debugSummary: kirbyDebugSummary(
+                lives: lives,
+                health: health,
+                stage: UInt8(stage & 0xFF),
+                invulnerability: invulnerability
+            ),
+            locationSummary: kirbyNightmareLocationSummary(liveSample: liveSample),
+            pattern: nil
+        )
+    }
+
+    private func analyzeKirbyAmazingMirrorLiveMemory(
+        _ liveSample: MarioLiveMemorySample,
+        memoryMap _: MarioLiveMemoryMap
+    ) -> MemoryGameObservation? {
+        guard let lives = liveSample.lives,
+              let health = liveSample.health else {
+            previousLiveSample = liveSample
+            return nil
+        }
+
+        let state = liveSample.gameplayState ?? 0
+        let invulnerability = liveSample.invulnerabilityTimer ?? 0
+        let mirrorPieces = liveSample.contextValues["mirrorPieces"] ?? 0
+        let isInvulnerable = invulnerability > 0
+        let isDeathState = health == 0
+        let playerState: MarioPlayerState = isDeathState ? .dead : (isInvulnerable ? .invulnerableBlink : .superState)
+        let gameplayPhase: MarioGameplayPhase = isDeathState ? .deathSequence : .gameplayActive
+
+        guard let previousLiveSample else {
+            self.previousLiveSample = liveSample
+            if health > 0 && lives > 0 {
+                lastStableLiveSample = liveSample
+                nonDeathEventsArmed = true
+            }
+            return MemoryGameObservation(
+                events: [],
+                confidence: 0.95,
+                lives: Int(lives),
+                health: Int(health),
+                powerUp: Int(mirrorPieces),
+                playerState: playerState,
+                gameplayPhase: gameplayPhase,
+                blinkConfidence: isInvulnerable ? 0.95 : 0.0,
+                debugSummary: kirbyAmazingMirrorDebugSummary(
+                    lives: lives,
+                    health: health,
+                    state: state,
+                    mirrorPieces: UInt8(mirrorPieces & 0xFF),
+                    invulnerability: invulnerability
+                ),
+                locationSummary: kirbyAmazingMirrorLocationSummary(liveSample: liveSample),
+                pattern: nil
+            )
+        }
+
+        let previousHealth = previousLiveSample.health
+        let previousLives = previousLiveSample.lives
+        let previousWasDeath = previousHealth == 0
+
+        var events: [GameplayEvent] = []
+        if isDeathState && !previousWasDeath {
+            events.append(.deathDetected)
+        } else if let previousLives, lives < previousLives {
+            events.append(.deathDetected)
+        } else if nonDeathEventsArmed,
+                  let previousHealth,
+                  previousHealth > health,
+                  health > 0 {
+            let delta = previousHealth - health
+            events.append(delta >= 8 ? .damageHeavy : .damageLight)
+        }
+
+        if events.contains(.deathDetected) {
+            lastStableLiveSample = nil
+            nonDeathEventsArmed = false
+        } else if health > 0 && lives > 0 {
+            lastStableLiveSample = liveSample
+            nonDeathEventsArmed = true
+        }
+
+        self.previousLiveSample = liveSample
+
+        return MemoryGameObservation(
+            events: events,
+            confidence: 0.95,
+            lives: Int(lives),
+            health: Int(health),
+            powerUp: Int(mirrorPieces),
+            playerState: playerState,
+            gameplayPhase: gameplayPhase,
+            blinkConfidence: isInvulnerable ? 0.95 : 0.0,
+            debugSummary: kirbyAmazingMirrorDebugSummary(
+                lives: lives,
+                health: health,
+                state: state,
+                mirrorPieces: UInt8(mirrorPieces & 0xFF),
+                invulnerability: invulnerability
+            ),
+            locationSummary: kirbyAmazingMirrorLocationSummary(liveSample: liveSample),
+            pattern: nil
+        )
+    }
+
+    private func analyzeGoldenSunLiveMemory(
+        _ liveSample: MarioLiveMemorySample,
+        memoryMap _: MarioLiveMemoryMap
+    ) -> MemoryGameObservation? {
+        guard let health = liveSample.health,
+              let maxHealth = liveSample.maxHealth else {
+            previousLiveSample = liveSample
+            return nil
+        }
+
+        let area = liveSample.contextValues["area"] ?? 0
+        let isDeathState = health == 0
+        let playerState: MarioPlayerState = isDeathState ? .dead : .superState
+        let gameplayPhase: MarioGameplayPhase = isDeathState ? .deathSequence : .gameplayActive
+
+        guard let previousLiveSample else {
+            self.previousLiveSample = liveSample
+            if health > 0 {
+                lastStableLiveSample = liveSample
+                nonDeathEventsArmed = true
+            }
+            return MemoryGameObservation(
+                events: [],
+                confidence: 0.95,
+                lives: Int(maxHealth),
+                health: Int(health),
+                powerUp: Int(area),
+                playerState: playerState,
+                gameplayPhase: gameplayPhase,
+                blinkConfidence: 0.0,
+                debugSummary: goldenSunDebugSummary(
+                    health: health,
+                    maxHealth: maxHealth,
+                    area: area
+                ),
+                locationSummary: goldenSunLocationSummary(liveSample: liveSample),
+                pattern: nil
+            )
+        }
+
+        let previousHealth = previousLiveSample.health
+        let previousWasDeath = previousHealth == 0
+
+        var events: [GameplayEvent] = []
+        if isDeathState && !previousWasDeath {
+            events.append(.deathDetected)
+        } else if nonDeathEventsArmed,
+                  let previousHealth,
+                  previousHealth > health,
+                  health > 0 {
+            let delta = previousHealth - health
+            events.append(delta >= 10 ? .damageHeavy : .damageLight)
+        }
+
+        if events.contains(.deathDetected) {
+            lastStableLiveSample = nil
+            nonDeathEventsArmed = false
+        } else if health > 0 {
+            lastStableLiveSample = liveSample
+            nonDeathEventsArmed = true
+        }
+
+        self.previousLiveSample = liveSample
+
+        return MemoryGameObservation(
+            events: events,
+            confidence: 0.95,
+            lives: Int(maxHealth),
+            health: Int(health),
+            powerUp: Int(area),
+            playerState: playerState,
+            gameplayPhase: gameplayPhase,
+            blinkConfidence: 0.0,
+            debugSummary: goldenSunDebugSummary(
+                health: health,
+                maxHealth: maxHealth,
+                area: area
+            ),
+            locationSummary: goldenSunLocationSummary(liveSample: liveSample),
+            pattern: nil
+        )
+    }
+
     func reset() {
         cachedPatternMatch = nil
         cachedGameTitle = ""
@@ -1551,6 +1826,51 @@ final class MemoryGameAnalyzer {
         )
     }
 
+    private func kirbyDebugSummary(
+        lives: UInt8,
+        health: UInt16,
+        stage: UInt8,
+        invulnerability: UInt8
+    ) -> String {
+        String(
+            format: "kirby_ndl lives=%d health=%d stage=%02X invuln=%02X",
+            Int(lives),
+            Int(health),
+            Int(stage),
+            Int(invulnerability)
+        )
+    }
+
+    private func kirbyAmazingMirrorDebugSummary(
+        lives: UInt8,
+        health: UInt16,
+        state: UInt8,
+        mirrorPieces: UInt8,
+        invulnerability: UInt8
+    ) -> String {
+        String(
+            format: "kirby_am lives=%d health=%d state=%02X pieces=%02X invuln=%02X",
+            Int(lives),
+            Int(health),
+            Int(state),
+            Int(mirrorPieces),
+            Int(invulnerability)
+        )
+    }
+
+    private func goldenSunDebugSummary(
+        health: UInt16,
+        maxHealth: UInt16,
+        area: UInt16
+    ) -> String {
+        String(
+            format: "golden_sun health=%d/%d area=%04X",
+            Int(health),
+            Int(maxHealth),
+            Int(area)
+        )
+    }
+
     private func marioLocationSummary(for profile: MarioGameProfile, liveSample: MarioLiveMemorySample) -> String? {
         switch profile.id {
         case MarioGameProfile.sma2SuperMarioWorld.id:
@@ -1624,6 +1944,34 @@ final class MemoryGameAnalyzer {
             return nil
         }
         return "Loc area \(hex8(map)) • room \(hex8(room))"
+    }
+
+    private func kirbyNightmareLocationSummary(liveSample: MarioLiveMemorySample) -> String? {
+        guard let level = liveSample.contextValues["level"] else { return nil }
+        let completion = liveSample.contextValues["completion"].map(String.init) ?? "?"
+        return "Loc Stage \(max(1, Int(level))) • cleared \(completion)"
+    }
+
+    private func kirbyAmazingMirrorLocationSummary(liveSample: MarioLiveMemorySample) -> String? {
+        let pieces = liveSample.contextValues["mirrorPieces"].map(String.init) ?? "?"
+        let maps = liveSample.contextValues["mapsCollected"].map(String.init) ?? "?"
+        return "Loc Mirror pieces \(pieces) • maps \(maps)"
+    }
+
+    private func goldenSunLocationSummary(liveSample: MarioLiveMemorySample) -> String? {
+        guard let area = liveSample.contextValues["area"] else { return nil }
+        return "Loc \(goldenSunAreaLabel(area))"
+    }
+
+    private func goldenSunAreaLabel(_ area: UInt16) -> String {
+        switch area {
+        case 0x0000: return "World Map"
+        case 0x0001: return "Vale"
+        case 0x0002: return "Sol Sanctum"
+        case 0x0008: return "Vault"
+        case 0x0012: return "Goma Cave"
+        default: return "Area \(hex16(area))"
+        }
     }
 
     private func sma2MapName(_ value: UInt8) -> String {

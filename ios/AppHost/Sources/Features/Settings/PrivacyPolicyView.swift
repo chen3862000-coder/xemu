@@ -59,7 +59,7 @@ private struct LegalDocumentView: View {
             LegalDocumentWebView(html: html, baseURL: url)
         case .failed:
             VStack(spacing: 16) {
-                Text(L10n.string("settings.support.title", languageManager: languageManager))
+                Text(L10n.string(titleKey, languageManager: languageManager))
                     .font(.headline)
 
                 Text(url.absoluteString)
@@ -70,7 +70,7 @@ private struct LegalDocumentView: View {
                     .padding(.horizontal, 24)
 
                 Link(destination: url) {
-                    Text(L10n.string("settings.support.title", languageManager: languageManager))
+                    Text(url.host ?? url.absoluteString)
                 }
                 .buttonStyle(.borderedProminent)
             }

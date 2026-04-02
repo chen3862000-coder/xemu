@@ -36,17 +36,27 @@ enum LocalizedContentResolver {
         fallbackLanguage: String = "en"
     ) -> String? {
         let identifier = locale.identifier
+        let normalizedIdentifier = identifier.replacingOccurrences(of: "_", with: "-")
 
         if let exact = values[identifier] {
             return exact
         }
 
-        if identifier.hasPrefix("zh-Hant"), let hant = values["zh-Hant"] {
+        if let normalizedExact = values[normalizedIdentifier] {
+            return normalizedExact
+        }
+
+        if normalizedIdentifier.hasPrefix("zh-Hant"), let hant = values["zh-Hant"] {
             return hant
         }
 
-        if identifier.hasPrefix("zh-Hans"), let hans = values["zh-Hans"] {
+        if normalizedIdentifier.hasPrefix("zh-Hans"), let hans = values["zh-Hans"] {
             return hans
+        }
+
+        if let matchedLanguageKey = SupportedLanguage.bestMatch(for: normalizedIdentifier).localeIdentifier,
+           let matchedLanguageValue = values[matchedLanguageKey] {
+            return matchedLanguageValue
         }
 
         if let languageCode = locale.language.languageCode?.identifier,
@@ -72,11 +82,7 @@ enum LocalizedContentStore {
     }
 
     private static func loadResource<T: Decodable>(named name: String, bundle: Bundle) -> [T] {
-        guard let url = bundle.url(
-            forResource: name,
-            withExtension: "json",
-            subdirectory: "LocalizedContent"
-        ) else {
+        guard let url = resourceURL(named: name, bundle: bundle) else {
             return []
         }
 
@@ -86,5 +92,17 @@ enum LocalizedContentStore {
         } catch {
             return []
         }
+    }
+
+    static func resourceURL(named name: String, bundle: Bundle) -> URL? {
+        if let subdirectoryURL = bundle.url(
+            forResource: name,
+            withExtension: "json",
+            subdirectory: "LocalizedContent"
+        ) {
+            return subdirectoryURL
+        }
+
+        return bundle.url(forResource: name, withExtension: "json")
     }
 }

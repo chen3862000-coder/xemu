@@ -3,7 +3,7 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 77;
+	objectVersion = 63;
 	objects = {
 
 /* Begin PBXBuildFile section */
@@ -24,6 +24,7 @@
 		19B7BDA261F7BF91A41C2036 /* ExperimentalLaunchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5D62DC4B965230783C1FAB31 /* ExperimentalLaunchView.swift */; };
 		1BFE8C580B6A09CD9FCAD335 /* RomMetadataExtractor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97BC0CC6295F572F92C10E41 /* RomMetadataExtractor.swift */; };
 		1C682FA5B84F7CAFDFE538E4 /* AudioQualityView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F325654DBB4B2E065090133B /* AudioQualityView.swift */; };
+		1C72076970C0CF5E93020320 /* HelpSupportModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A30F7D86897B32B1D4E64AF /* HelpSupportModels.swift */; };
 		1CAE37E11D321DFE401906F5 /* TouchControlPad.swift in Sources */ = {isa = PBXBuildFile; fileRef = 672346EA96FF9A193B231B97 /* TouchControlPad.swift */; };
 		2140C004396845863E6AE966 /* PlayInsightsFormatter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E951C433E39C060D784675A /* PlayInsightsFormatter.swift */; };
 		2144EF6B095E672D5D2CE1DA /* SaveStatesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4364291217649D6912F145F5 /* SaveStatesView.swift */; };
@@ -105,6 +106,8 @@
 		A5D400BAB9A0BDAD956A2C73 /* consoles.json in Resources */ = {isa = PBXBuildFile; fileRef = 5A7502AD5E63DFBE75FCAAC5 /* consoles.json */; };
 		A864017BBDAB0057DAF1354F /* GameplayEvent.swift in Sources */ = {isa = PBXBuildFile; fileRef = F4BB8F686D8C05772E46657C /* GameplayEvent.swift */; };
 		A97A12BD1ABD56E12653866F /* RecentlyPlayedView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 58A46770D20436EFFDBD5E98 /* RecentlyPlayedView.swift */; };
+		A9938BCD412D824D41AB68F2 /* help_support.json in Resources */ = {isa = PBXBuildFile; fileRef = F16114E35568884F97D3D0E7 /* help_support.json */; };
+		AA224D92FA6200CEAA70EA1D /* HelpSupportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E384A0BAC8DD2EC86A971434 /* HelpSupportView.swift */; };
 		AB61E3A0EAD77C629C957B1A /* TouchPressTracker.swift in Sources */ = {isa = PBXBuildFile; fileRef = E74886D1D943F88DBC1D37D6 /* TouchPressTracker.swift */; };
 		ADE244CA47CA49B7DE4A4969 /* libc++.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = 28A32FA35950420C5322D737 /* libc++.tbd */; };
 		B0A2A37751DCB3ED0A2E77CD /* NESCore.swift in Sources */ = {isa = PBXBuildFile; fileRef = CCE9BE4FF1D1FAAD1A852E60 /* NESCore.swift */; };
@@ -159,7 +162,7 @@
 
 /* Begin PBXFileReference section */
 		000F52E3A3CFCB55E604AE04 /* XemuCores.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = XemuCores.swift; sourceTree = "<group>"; };
-		019DF21129B65716E23EF322 /* OfflineGraceManager.swift.bak */ = {isa = PBXFileReference; path = OfflineGraceManager.swift.bak; sourceTree = "<group>"; };
+		019DF21129B65716E23EF322 /* OfflineGraceManager.swift.bak */ = {isa = PBXFileReference; lastKnownFileType = text; path = OfflineGraceManager.swift.bak; sourceTree = "<group>"; };
 		02C868D2A7643FD7713FD40B /* xemu_cores.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = xemu_cores.h; sourceTree = "<group>"; };
 		04636AFBB1C5B621101AE08A /* GameDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameDetailView.swift; sourceTree = "<group>"; };
 		05114C577092C384F97A551D /* GamePlayViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GamePlayViewModel.swift; sourceTree = "<group>"; };
@@ -215,9 +218,9 @@
 		4A625B0491E9015409AEF8E7 /* L10n.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = L10n.swift; sourceTree = "<group>"; };
 		4B591E201AC5E233BC37F7DD /* MarioGameProfile.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarioGameProfile.swift; sourceTree = "<group>"; };
 		4C48534E106FC93B669B1859 /* Checkbox.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Checkbox.swift; sourceTree = "<group>"; };
-		4DE8FCC2F96A65DCDAB928F2 /* Xemu.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = Xemu.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		4DE8FCC2F96A65DCDAB928F2 /* Xemu.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Xemu.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		51E656E584201333675159E7 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
-		54AF13F28BAC35299C18C1B7 /* metadata_schema.sql */ = {isa = PBXFileReference; path = metadata_schema.sql; sourceTree = "<group>"; };
+		54AF13F28BAC35299C18C1B7 /* metadata_schema.sql */ = {isa = PBXFileReference; lastKnownFileType = text; path = metadata_schema.sql; sourceTree = "<group>"; };
 		58A46770D20436EFFDBD5E98 /* RecentlyPlayedView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecentlyPlayedView.swift; sourceTree = "<group>"; };
 		5A7502AD5E63DFBE75FCAAC5 /* consoles.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = consoles.json; sourceTree = "<group>"; };
 		5B46B7ED335E85F0798430D0 /* EmulatorModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmulatorModels.swift; sourceTree = "<group>"; };
@@ -237,6 +240,7 @@
 		74BECED9B221104E4F9B3DD8 /* Colors.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Colors.swift; sourceTree = "<group>"; };
 		76F9B895A2EADF68D6D81078 /* Model.xcdatamodel */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcdatamodel; path = Model.xcdatamodel; sourceTree = "<group>"; };
 		799609DB61FA42DC0104EEA3 /* DeveloperDiagnosticsOverlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeveloperDiagnosticsOverlay.swift; sourceTree = "<group>"; };
+		7A30F7D86897B32B1D4E64AF /* HelpSupportModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HelpSupportModels.swift; sourceTree = "<group>"; };
 		7BC15F83843091487D6BA3FF /* GameLibraryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameLibraryView.swift; sourceTree = "<group>"; };
 		7C7281AD7B7E76D709350D98 /* CollectorShelfViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CollectorShelfViews.swift; sourceTree = "<group>"; };
 		7CD8EC90E1B08EEC7D2AE206 /* CoreDataMigration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoreDataMigration.swift; sourceTree = "<group>"; };
@@ -266,7 +270,7 @@
 		ACFE85D5A008F2D881F62BA9 /* VirtualPadView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VirtualPadView.swift; sourceTree = "<group>"; };
 		AD2BA596028329B64FC9E98D /* OfflineGraceManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfflineGraceManager.swift; sourceTree = "<group>"; };
 		B5F8B87AEE815031D100445E /* glossary.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = glossary.json; sourceTree = "<group>"; };
-		B603DE63EE316FEE9E00898D /* cover_metadata.sqlite-wal */ = {isa = PBXFileReference; path = "cover_metadata.sqlite-wal"; sourceTree = "<group>"; };
+		B603DE63EE316FEE9E00898D /* cover_metadata.sqlite-wal */ = {isa = PBXFileReference; lastKnownFileType = text; path = "cover_metadata.sqlite-wal"; sourceTree = "<group>"; };
 		B65C2B2E7E71454EF6AA5F9B /* module.modulemap */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.module-map"; path = module.modulemap; sourceTree = "<group>"; };
 		B7061432D55E2D3F403DF94A /* GameplayAnalysisLogger.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameplayAnalysisLogger.swift; sourceTree = "<group>"; };
 		B7590148A026C7627A4511DC /* AzureApiStub.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AzureApiStub.swift; sourceTree = "<group>"; };
@@ -293,9 +297,10 @@
 		D3D6F286E7DF172700DA65DD /* LocalizationDiagnostics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalizationDiagnostics.swift; sourceTree = "<group>"; };
 		D6140F3FC5529F6F387CF2DB /* MyPlayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MyPlayView.swift; sourceTree = "<group>"; };
 		D7A97E34F6714D55B2ED6121 /* Button.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Button.swift; sourceTree = "<group>"; };
-		D96C91DB35FC25FB8CA6F9A9 /* cover_metadata.sqlite-shm */ = {isa = PBXFileReference; path = "cover_metadata.sqlite-shm"; sourceTree = "<group>"; };
+		D96C91DB35FC25FB8CA6F9A9 /* cover_metadata.sqlite-shm */ = {isa = PBXFileReference; lastKnownFileType = file; path = "cover_metadata.sqlite-shm"; sourceTree = "<group>"; };
 		D9B06594522E3AB0385931D9 /* RomImportCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RomImportCoordinator.swift; sourceTree = "<group>"; };
 		E34A757D05BE16111E361A97 /* MetalRenderer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MetalRenderer.swift; sourceTree = "<group>"; };
+		E384A0BAC8DD2EC86A971434 /* HelpSupportView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HelpSupportView.swift; sourceTree = "<group>"; };
 		E4115D5BB5D1F23FD637F921 /* FrameAnalysisCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FrameAnalysisCoordinator.swift; sourceTree = "<group>"; };
 		E514B341D6F387B8E9C152D7 /* LanguageManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LanguageManager.swift; sourceTree = "<group>"; };
 		E6B83C8DF59433DEA55727D3 /* libresolv.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = libresolv.tbd; path = usr/lib/libresolv.tbd; sourceTree = SDKROOT; };
@@ -305,6 +310,7 @@
 		EA48E5CBB14313449118F633 /* PlayerStatsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayerStatsView.swift; sourceTree = "<group>"; };
 		EBFCD24F74EE4522EAE30B33 /* ShellThemes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShellThemes.swift; sourceTree = "<group>"; };
 		ED11458A4C1FEBC6757494A9 /* GameplayEventDiagnosticsOverlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameplayEventDiagnosticsOverlay.swift; sourceTree = "<group>"; };
+		F16114E35568884F97D3D0E7 /* help_support.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = help_support.json; sourceTree = "<group>"; };
 		F325654DBB4B2E065090133B /* AudioQualityView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioQualityView.swift; sourceTree = "<group>"; };
 		F4BB8F686D8C05772E46657C /* GameplayEvent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameplayEvent.swift; sourceTree = "<group>"; };
 		F60F2916ECBF4B4BEF92004F /* Input.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Input.swift; sourceTree = "<group>"; };
@@ -575,6 +581,8 @@
 			children = (
 				F325654DBB4B2E065090133B /* AudioQualityView.swift */,
 				466D0058781640285EE96634 /* EntitlementStatusView.swift */,
+				7A30F7D86897B32B1D4E64AF /* HelpSupportModels.swift */,
+				E384A0BAC8DD2EC86A971434 /* HelpSupportView.swift */,
 				8832955480EAD662E523AC13 /* PrivacyPolicyView.swift */,
 				9360EC40197B186BF8A999A9 /* SettingsHeader.swift */,
 				AC3641DA7AB5979DD18519D7 /* SettingsItem.swift */,
@@ -696,6 +704,7 @@
 			children = (
 				5A7502AD5E63DFBE75FCAAC5 /* consoles.json */,
 				B5F8B87AEE815031D100445E /* glossary.json */,
+				F16114E35568884F97D3D0E7 /* help_support.json */,
 			);
 			path = LocalizedContent;
 			sourceTree = "<group>";
@@ -874,7 +883,6 @@
 				LastUpgradeCheck = 1600;
 				TargetAttributes = {
 					FC22F39D8E5DD809F0D0C14A = {
-						DevelopmentTeam = YOUR_TEAM_ID_HERE;
 						ProvisioningStyle = Automatic;
 					};
 				};
@@ -893,7 +901,6 @@
 			);
 			mainGroup = 0C1EC4B251E6BBE262A4AAA5;
 			minimizedProjectReferenceProxies = 1;
-			preferredProjectObjectVersion = 77;
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
@@ -916,6 +923,7 @@
 				82FE5A4BC7669E598A1B6582 /* cover_metadata.sqlite-shm in Resources */,
 				98CCE3FB5813129E4D702F5D /* cover_metadata.sqlite-wal in Resources */,
 				6E46938AA08CC169F9975752 /* glossary.json in Resources */,
+				A9938BCD412D824D41AB68F2 /* help_support.json in Resources */,
 				DCA06A10B711FE537E7C2F45 /* metadata_manifest.json in Resources */,
 				85573850445EEB227FEC6AF7 /* metadata_schema.sql in Resources */,
 				E3C9C5C2B2726545ABD113E4 /* sha1_checksums.txt in Resources */,
@@ -989,6 +997,8 @@
 				2C2483EBEDF1562D319DB5D7 /* GenesisCore.swift in Sources */,
 				491C0B990DFAF8B4637610E6 /* HapticManager.swift in Sources */,
 				F93E44807879255BA51E06C3 /* Header.swift in Sources */,
+				1C72076970C0CF5E93020320 /* HelpSupportModels.swift in Sources */,
+				AA224D92FA6200CEAA70EA1D /* HelpSupportView.swift in Sources */,
 				B42C87D3E4D4B188DBDD73C9 /* HomeView.swift in Sources */,
 				8DD05365CF261C921EA96AAB /* HybridGameplayAnalyzer.swift in Sources */,
 				8A942AB5E6436CC4D8394EB4 /* Input.swift in Sources */,
@@ -1075,34 +1085,21 @@
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
-				DEVELOPMENT_TEAM = YOUR_TEAM_ID_HERE;
+				DEVELOPMENT_TEAM = SGZHXCUVBD;
 				GENERATE_INFOPLIST_FILE = NO;
-				HEADER_SEARCH_PATHS = (
-					"$(SRCROOT)/Sources/XemuCoresLib/include",
-				);
+				HEADER_SEARCH_PATHS = "$(SRCROOT)/Sources/XemuCoresLib/include";
 				INFOPLIST_FILE = Sources/AppHost/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				"LIBRARY_SEARCH_PATHS[sdk=iphoneos*]" = (
-					"$(SRCROOT)/../../cores/XemuCores.xcframework/ios-arm64",
-				);
-				"LIBRARY_SEARCH_PATHS[sdk=iphonesimulator*]" = (
-					"$(SRCROOT)/../../cores/XemuCores.xcframework/ios-arm64_x86_64-simulator",
-				);
-				OTHER_LDFLAGS = (
-					"-lxemu_cores",
-				);
+				"LIBRARY_SEARCH_PATHS[sdk=iphoneos*]" = "$(SRCROOT)/../../cores/XemuCores.xcframework/ios-arm64";
+				"LIBRARY_SEARCH_PATHS[sdk=iphonesimulator*]" = "$(SRCROOT)/../../cores/XemuCores.xcframework/ios-arm64_x86_64-simulator";
+				OTHER_LDFLAGS = "-lxemu_cores";
 				PRODUCT_BUNDLE_IDENTIFIER = com.xemu.Xemu;
 				SDKROOT = iphoneos;
-				SWIFT_ACTIVE_COMPILATION_CONDITIONS = (
-					"$(inherited)",
-					USE_XEMU_CORES,
-				);
-				SWIFT_INCLUDE_PATHS = (
-					"$(SRCROOT)/Sources/XemuCoresLib/include",
-				);
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "$(inherited) USE_XEMU_CORES";
+				SWIFT_INCLUDE_PATHS = "$(SRCROOT)/Sources/XemuCoresLib/include";
 				SWIFT_OBJC_BRIDGING_HEADER = Sources/XemuCores/include/BridgingHeader.h;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
@@ -1238,34 +1235,21 @@
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
-				DEVELOPMENT_TEAM = YOUR_TEAM_ID_HERE;
+				DEVELOPMENT_TEAM = SGZHXCUVBD;
 				GENERATE_INFOPLIST_FILE = NO;
-				HEADER_SEARCH_PATHS = (
-					"$(SRCROOT)/Sources/XemuCoresLib/include",
-				);
+				HEADER_SEARCH_PATHS = "$(SRCROOT)/Sources/XemuCoresLib/include";
 				INFOPLIST_FILE = Sources/AppHost/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				"LIBRARY_SEARCH_PATHS[sdk=iphoneos*]" = (
-					"$(SRCROOT)/../../cores/XemuCores.xcframework/ios-arm64",
-				);
-				"LIBRARY_SEARCH_PATHS[sdk=iphonesimulator*]" = (
-					"$(SRCROOT)/../../cores/XemuCores.xcframework/ios-arm64_x86_64-simulator",
-				);
-				OTHER_LDFLAGS = (
-					"-lxemu_cores",
-				);
+				"LIBRARY_SEARCH_PATHS[sdk=iphoneos*]" = "$(SRCROOT)/../../cores/XemuCores.xcframework/ios-arm64";
+				"LIBRARY_SEARCH_PATHS[sdk=iphonesimulator*]" = "$(SRCROOT)/../../cores/XemuCores.xcframework/ios-arm64_x86_64-simulator";
+				OTHER_LDFLAGS = "-lxemu_cores";
 				PRODUCT_BUNDLE_IDENTIFIER = com.xemu.Xemu;
 				SDKROOT = iphoneos;
-				SWIFT_ACTIVE_COMPILATION_CONDITIONS = (
-					"$(inherited)",
-					USE_XEMU_CORES,
-				);
-				SWIFT_INCLUDE_PATHS = (
-					"$(SRCROOT)/Sources/XemuCoresLib/include",
-				);
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "$(inherited) USE_XEMU_CORES";
+				SWIFT_INCLUDE_PATHS = "$(SRCROOT)/Sources/XemuCoresLib/include";
 				SWIFT_OBJC_BRIDGING_HEADER = Sources/XemuCores/include/BridgingHeader.h;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};

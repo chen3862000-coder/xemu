@@ -183,21 +183,13 @@ struct SettingsView: View {
             }
             .buttonStyle(.plain)
 
-            Button {
-                if let url = appStoreURL {
-                    #if canImport(UIKit)
-                    UIApplication.shared.open(url)
-                    #endif
-                }
-            } label: {
-                SettingsTextStack(
-                    title: L10n.string("settings.support.title", languageManager: languageManager),
-                    subtitle: L10n.string("settings.support.subtitle", languageManager: languageManager)
-                )
-                .frame(maxWidth: .infinity, minHeight: SettingsTokens.rowHeight, alignment: .leading)
-                .contentShape(Rectangle())
+            NavigationSettingsRow(
+                title: L10n.string("settings.support.title", languageManager: languageManager),
+                subtitle: L10n.string("settings.support.subtitle", languageManager: languageManager)
+            ) {
+                HelpSupportView()
+                    .environmentObject(languageManager)
             }
-            .buttonStyle(.plain)
         }
     }
 
@@ -345,23 +337,23 @@ private struct NavigationSettingsRow<Destination: View>: View {
     let title: String
     let subtitle: String?
     let value: String?
-    let destination: Destination
+    let destination: () -> Destination
 
     init(
         title: String,
         subtitle: String? = nil,
         value: String? = nil,
-        @ViewBuilder destination: () -> Destination
+        @ViewBuilder destination: @escaping () -> Destination
     ) {
         self.title = title
         self.subtitle = subtitle
         self.value = value
-        self.destination = destination()
+        self.destination = destination
     }
 
     var body: some View {
         NavigationLink {
-            destination
+            destination()
         } label: {
             HStack(spacing: 12) {
                 SettingsTextStack(title: title, subtitle: subtitle)

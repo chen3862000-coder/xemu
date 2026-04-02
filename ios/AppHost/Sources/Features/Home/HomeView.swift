@@ -731,6 +731,7 @@ struct HomeView: View {
 struct StatCard: View {
     private static let minHeight: CGFloat = 120
     private static let valueAreaHeight: CGFloat = 78
+    private static let helperAreaHeight: CGFloat = 34
 
     let title: String
     let value: String
@@ -768,6 +769,7 @@ struct StatCard: View {
                 .font(.system(size: 13, weight: .medium))
                 .foregroundStyle(AppColors.Text.tertiary)
                 .lineLimit(2)
+                .frame(maxWidth: .infinity, minHeight: Self.helperAreaHeight, alignment: .topLeading)
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 14)

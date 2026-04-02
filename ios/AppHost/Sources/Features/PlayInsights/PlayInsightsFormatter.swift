@@ -40,6 +40,9 @@ enum PlayInsightsFormatterFactory {
         case .onePiece: return OnePieceTelemetryFormatter()
         case .kingdomHeartsChainOfMemories: return KingdomHeartsChainOfMemoriesTelemetryFormatter()
         case .zeldaMinishCap: return ZeldaMinishCapTelemetryFormatter()
+        case .kirbyNightmareInDreamLand: return KirbyNightmareInDreamLandTelemetryFormatter()
+        case .kirbyAmazingMirror: return KirbyAmazingMirrorTelemetryFormatter()
+        case .goldenSun: return GoldenSunTelemetryFormatter()
         case .metroidFusion: return MetroidFusionTelemetryFormatter()
         case .metroidZeroMission: return MetroidZeroMissionTelemetryFormatter()
         case .castlevaniaAriaOfSorrow: return AriaOfSorrowTelemetryFormatter()
@@ -483,6 +486,176 @@ private struct MetroidFusionTelemetryFormatter: GameTelemetryFormatter {
             primaryProgressLine: currentRun.primary,
             supportingStateLine: currentRun.secondary,
             badgeText: currentRun.badge
+        )
+    }
+}
+
+private struct KirbyNightmareInDreamLandTelemetryFormatter: GameTelemetryFormatter {
+    func makeProgressSummary(snapshot: GameSpecificTelemetrySnapshot?, stats _: GameEventStatsSummary) -> ProgressSummary? {
+        guard let snapshot else { return nil }
+        return ProgressSummary(
+            primary: kirbyNightmareStageTitle(snapshot),
+            secondary: kirbyNightmareProgressSummary(snapshot)
+        )
+    }
+
+    func makeCurrentRunSummary(snapshot: GameSpecificTelemetrySnapshot?, stats _: GameEventStatsSummary) -> CurrentRunSummary? {
+        guard let snapshot else { return nil }
+        return CurrentRunSummary(
+            primary: kirbyNightmareStageTitle(snapshot),
+            secondary: PlayInsightsL10n.string("playinsights.current_run.stage_tracked", "Current stage tracked"),
+            badge: PlayInsightsL10n.string("playinsights.badge.platforming", "Platforming")
+        )
+    }
+
+    func makePerformanceInsight(snapshot _: GameSpecificTelemetrySnapshot?, stats: GameEventStatsSummary, comparison: PlayInsightsComparison) -> String? {
+        if comparison.isImproving {
+            return PlayInsightsL10n.string("playinsights.insight.improving_recent", "You’re improving in recent sessions.")
+        }
+        if comparison.hasRiskyPattern {
+            return PlayInsightsL10n.string("playinsights.insight.risky_sections", "You tend to push forward through risky sections.")
+        }
+        if (stats.totalDeaths ?? 0) >= 5 {
+            return PlayInsightsL10n.string("playinsights.insight.platforming_retries", "This run still has a few retry-heavy sections.")
+        }
+        return PlayInsightsL10n.string("playinsights.insight.progress_tracked_recent", "Your progress is being tracked across recent sessions.")
+    }
+
+    func makePlayStyle(snapshot _: GameSpecificTelemetrySnapshot?, stats: GameEventStatsSummary, comparison: PlayInsightsComparison) -> PlayStyleSummary? {
+        if comparison.hasRiskyPattern {
+            return PlayStyleSummary(
+                title: PlayInsightsL10n.string("playinsights.style.risk_taker.title", "Risk Taker"),
+                bullet1: PlayInsightsL10n.string("playinsights.style.risk_taker.body", "Fast progress with higher damage pressure."),
+                bullet2: nil
+            )
+        }
+        if (stats.totalDamageEvents ?? 0) <= max(3, stats.totalDeaths ?? 0) {
+            return PlayStyleSummary(
+                title: PlayInsightsL10n.string("playinsights.style.precision_player.title", "Precision Player"),
+                bullet1: PlayInsightsL10n.string("playinsights.style.precision_player.body", "Precise control with minimal damage taken."),
+                bullet2: nil
+            )
+        }
+        return nil
+    }
+
+    func makeContinuePlayingSummary(snapshot: GameSpecificTelemetrySnapshot?, stats _: GameEventStatsSummary, comparison _: PlayInsightsComparison) -> ContinuePlayingSmartSummary? {
+        guard let snapshot else { return nil }
+        return ContinuePlayingSmartSummary(
+            primaryProgressLine: kirbyNightmareStageTitle(snapshot),
+            supportingStateLine: kirbyNightmareProgressSummary(snapshot),
+            badgeText: PlayInsightsL10n.string("playinsights.badge.platforming", "Platforming")
+        )
+    }
+}
+
+private struct KirbyAmazingMirrorTelemetryFormatter: GameTelemetryFormatter {
+    func makeProgressSummary(snapshot: GameSpecificTelemetrySnapshot?, stats _: GameEventStatsSummary) -> ProgressSummary? {
+        guard let snapshot else { return nil }
+        return ProgressSummary(
+            primary: kirbyAmazingMirrorTitle(snapshot),
+            secondary: kirbyAmazingMirrorProgressSummary(snapshot)
+        )
+    }
+
+    func makeCurrentRunSummary(snapshot: GameSpecificTelemetrySnapshot?, stats _: GameEventStatsSummary) -> CurrentRunSummary? {
+        guard let snapshot else { return nil }
+        return CurrentRunSummary(
+            primary: kirbyAmazingMirrorTitle(snapshot),
+            secondary: PlayInsightsL10n.string("playinsights.current_run.exploration_active", "Exploration active"),
+            badge: PlayInsightsL10n.string("playinsights.badge.exploration", "Exploration")
+        )
+    }
+
+    func makePerformanceInsight(snapshot _: GameSpecificTelemetrySnapshot?, stats: GameEventStatsSummary, comparison: PlayInsightsComparison) -> String? {
+        if comparison.isImproving {
+            return PlayInsightsL10n.string("playinsights.insight.more_consistent", "Your recent runs look more consistent.")
+        }
+        if comparison.hasRiskyPattern {
+            return PlayInsightsL10n.string("playinsights.insight.risky_sections", "You tend to push forward through risky sections.")
+        }
+        if (stats.totalDeaths ?? 0) >= 5 {
+            return PlayInsightsL10n.string("playinsights.insight.exploration_focused", "This title is currently exploration-focused.")
+        }
+        return PlayInsightsL10n.string("playinsights.insight.progress_tracked_recent", "Your progress is being tracked across recent sessions.")
+    }
+
+    func makePlayStyle(snapshot _: GameSpecificTelemetrySnapshot?, stats _: GameEventStatsSummary, comparison: PlayInsightsComparison) -> PlayStyleSummary? {
+        if comparison.isExplorationLed {
+            return PlayStyleSummary(
+                title: PlayInsightsL10n.string("playinsights.style.explorer.title", "Explorer"),
+                bullet1: PlayInsightsL10n.string("playinsights.style.explorer.area_body", "Steady area discovery defines your recent runs."),
+                bullet2: nil
+            )
+        }
+        if comparison.hasRiskyPattern {
+            return PlayStyleSummary(
+                title: PlayInsightsL10n.string("playinsights.style.risk_taker.title", "Risk Taker"),
+                bullet1: PlayInsightsL10n.string("playinsights.style.risk_taker.body", "Fast progress with higher damage pressure."),
+                bullet2: nil
+            )
+        }
+        return nil
+    }
+
+    func makeContinuePlayingSummary(snapshot: GameSpecificTelemetrySnapshot?, stats _: GameEventStatsSummary, comparison _: PlayInsightsComparison) -> ContinuePlayingSmartSummary? {
+        guard let snapshot else { return nil }
+        return ContinuePlayingSmartSummary(
+            primaryProgressLine: kirbyAmazingMirrorTitle(snapshot),
+            supportingStateLine: kirbyAmazingMirrorProgressSummary(snapshot),
+            badgeText: PlayInsightsL10n.string("playinsights.badge.exploration", "Exploration")
+        )
+    }
+}
+
+private struct GoldenSunTelemetryFormatter: GameTelemetryFormatter {
+    func makeProgressSummary(snapshot: GameSpecificTelemetrySnapshot?, stats _: GameEventStatsSummary) -> ProgressSummary? {
+        guard let snapshot else { return nil }
+        return ProgressSummary(
+            primary: goldenSunAreaTitle(snapshot),
+            secondary: goldenSunHealthSummary(snapshot)
+        )
+    }
+
+    func makeCurrentRunSummary(snapshot: GameSpecificTelemetrySnapshot?, stats _: GameEventStatsSummary) -> CurrentRunSummary? {
+        guard let snapshot else { return nil }
+        return CurrentRunSummary(
+            primary: goldenSunAreaTitle(snapshot),
+            secondary: goldenSunHealthSummary(snapshot),
+            badge: PlayInsightsL10n.string("playinsights.badge.exploration", "Exploration")
+        )
+    }
+
+    func makePerformanceInsight(snapshot _: GameSpecificTelemetrySnapshot?, stats: GameEventStatsSummary, comparison: PlayInsightsComparison) -> String? {
+        if comparison.isImproving {
+            return PlayInsightsL10n.string("playinsights.insight.more_consistent", "Your recent runs look more consistent.")
+        }
+        if comparison.isExplorationLed {
+            return PlayInsightsL10n.string("playinsights.insight.steady_exploration", "Your recent runs are focused on steady exploration.")
+        }
+        if (stats.totalDeaths ?? 0) >= 3 {
+            return PlayInsightsL10n.string("playinsights.insight.exploration_focused", "This title is currently exploration-focused.")
+        }
+        return PlayInsightsL10n.string("playinsights.insight.progress_tracked_recent", "Your progress is being tracked across recent sessions.")
+    }
+
+    func makePlayStyle(snapshot _: GameSpecificTelemetrySnapshot?, stats _: GameEventStatsSummary, comparison: PlayInsightsComparison) -> PlayStyleSummary? {
+        if comparison.isExplorationLed {
+            return PlayStyleSummary(
+                title: PlayInsightsL10n.string("playinsights.style.explorer.title", "Explorer"),
+                bullet1: PlayInsightsL10n.string("playinsights.style.explorer.area_body", "Steady area discovery defines your recent runs."),
+                bullet2: nil
+            )
+        }
+        return nil
+    }
+
+    func makeContinuePlayingSummary(snapshot: GameSpecificTelemetrySnapshot?, stats _: GameEventStatsSummary, comparison _: PlayInsightsComparison) -> ContinuePlayingSmartSummary? {
+        guard let snapshot else { return nil }
+        return ContinuePlayingSmartSummary(
+            primaryProgressLine: goldenSunAreaTitle(snapshot),
+            supportingStateLine: goldenSunHealthSummary(snapshot),
+            badgeText: PlayInsightsL10n.string("playinsights.badge.exploration", "Exploration")
         )
     }
 }
@@ -986,6 +1159,57 @@ private func metroidFusionLocationTitle(_ snapshot: GameSpecificTelemetrySnapsho
     return metroidFusionAreaDisplayName(area: area)
 }
 
+private func kirbyNightmareStageTitle(_ snapshot: GameSpecificTelemetrySnapshot) -> String {
+    let stage = max(1, Int(snapshot.payloadJson["level", default: 1]))
+    return PlayInsightsL10n.format("playinsights.progress.stage_format", "Stage %@", "\(stage)")
+}
+
+private func kirbyNightmareProgressSummary(_ snapshot: GameSpecificTelemetrySnapshot) -> String {
+    let completion = Int(snapshot.payloadJson["completion", default: 0])
+    if completion > 0 {
+        return PlayInsightsL10n.format("playinsights.progress.stages_cleared_format", "%@ stages cleared", "\(completion)")
+    }
+    return PlayInsightsL10n.string("playinsights.progress.stage_progress_tracked", "Stage progress tracked")
+}
+
+private func kirbyAmazingMirrorTitle(_ snapshot: GameSpecificTelemetrySnapshot) -> String {
+    let pieces = Int(snapshot.payloadJson["mirrorPieces", default: 0])
+    if pieces > 0 {
+        return PlayInsightsL10n.format("playinsights.progress.mirror_pieces_format", "%@ mirror pieces", "\(pieces)")
+    }
+    return PlayInsightsL10n.string("playinsights.progress.mirror_progress_tracked", "Mirror progress tracked")
+}
+
+private func kirbyAmazingMirrorProgressSummary(_ snapshot: GameSpecificTelemetrySnapshot) -> String {
+    let maps = Int(snapshot.payloadJson["mapsCollected", default: 0])
+    if maps > 0 {
+        return PlayInsightsL10n.format("playinsights.progress.area_maps_format", "%@ area maps", "\(maps)")
+    }
+    return PlayInsightsL10n.string("playinsights.progress.exploration_progress_tracked", "Exploration progress tracked")
+}
+
+private func goldenSunAreaTitle(_ snapshot: GameSpecificTelemetrySnapshot) -> String {
+    goldenSunAreaName(snapshot.payloadJson["area", default: 0])
+}
+
+private func goldenSunAreaName(_ area: UInt16) -> String {
+    switch area {
+    case 0x0000: return "World Map"
+    case 0x0001: return "Vale"
+    case 0x0002: return "Sol Sanctum"
+    case 0x0008: return "Vault"
+    case 0x0012: return "Goma Cave"
+    default:
+        return PlayInsightsL10n.format("playinsights.progress.area_format", "Area %@", playInsightsHex16(area))
+    }
+}
+
+private func goldenSunHealthSummary(_ snapshot: GameSpecificTelemetrySnapshot) -> String {
+    let health = snapshot.payloadJson["health", default: 0]
+    let maxHealth = max(health, snapshot.payloadJson["maxHealth", default: health])
+    return "HP \(health)/\(maxHealth)"
+}
+
 private func metroidZeroMissionLocationTitle(_ snapshot: GameSpecificTelemetrySnapshot) -> String {
     let area = Int(snapshot.payloadJson["area", default: 0])
     let room = Int(snapshot.payloadJson["room", default: 0])
@@ -1097,4 +1321,8 @@ private func zeldaMinishCapHealthSummary(_ snapshot: GameSpecificTelemetrySnapsh
 
 private func playInsightsHex8(_ value: UInt16) -> String {
     String(format: "%02X", Int(value & 0xFF))
+}
+
+private func playInsightsHex16(_ value: UInt16) -> String {
+    String(format: "%04X", Int(value))
 }

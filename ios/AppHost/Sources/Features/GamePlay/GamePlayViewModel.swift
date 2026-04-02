@@ -63,7 +63,6 @@ class GamePlayViewModel: ObservableObject {
     private var audioResamplerTargetRate: Int = 0
     private var audioResamplerPosition: Double = 0
     private var audioResamplerCarryFrame: (Int16, Int16)?
-    private var audioDebugPacketCount = 0
     private var ndsTouchIsPressed = false
     private var requestedNDSScreenLayout: NDSScreenLayout = .stacked
     private var ndsTouchPressedAtNs: UInt64 = 0
@@ -321,20 +320,10 @@ class GamePlayViewModel: ObservableObject {
             if activatedHardwareSampleRate > 0, abs(activatedHardwareSampleRate - activeAudioSampleRate) >= 1 {
                 rebuildAudioEngineForHardwareChange(sampleRate: activatedHardwareSampleRate)
             }
-            NSLog(
-                "[AudioLaunch] platform=%@ requestedRate=%d activatedRate=%d ioBufferMs=%d routeKind=%@ route=%@",
-                platform.rawValue,
-                Int(audioEngineRate.rounded()),
-                Int(session.sampleRate.rounded()),
-                Int((session.ioBufferDuration * 1000).rounded()),
-                String(describing: activeRouteKind),
-                session.currentRoute.outputs.map { "\($0.portType.rawValue):\($0.portName)" }.joined(separator: ",")
-            )
             #endif
             try? audioEngine?.start()
             audioEngine?.setVolume(0.8)
             resetAudioResamplerState()
-            audioDebugPacketCount = 0
 
             emulatorSession?.start()
             refreshSaveStateDebugLine()
@@ -618,15 +607,6 @@ class GamePlayViewModel: ObservableObject {
 
         let isNDSCore = activeCore is NDSCore
         let wasPaused = isPaused
-
-        NSLog(
-            "[AudioLaunch] rebuild platform=%@ oldRate=%d newRate=%d running=%@ paused=%@",
-            platform.rawValue,
-            Int(activeAudioSampleRate.rounded()),
-            Int(resolvedSampleRate.rounded()),
-            isRunning ? "1" : "0",
-            wasPaused ? "1" : "0"
-        )
 
         audioEngine?.stop()
         activeAudioSampleRate = resolvedSampleRate
@@ -1099,6 +1079,15 @@ class GamePlayViewModel: ObservableObject {
             if let health = liveSample.health { payload["health"] = health }
             if let maxHealth = liveSample.maxHealth { payload["maxHealth"] = maxHealth }
             if let gameplayState = liveSample.gameplayState { payload["state"] = UInt16(gameplayState) }
+        case .kirbyNightmareInDreamLand:
+            if let health = liveSample.health { payload["health"] = health }
+            if let lives = liveSample.lives { payload["lives"] = UInt16(lives) }
+        case .kirbyAmazingMirror:
+            if let health = liveSample.health { payload["health"] = health }
+            if let lives = liveSample.lives { payload["lives"] = UInt16(lives) }
+        case .goldenSun:
+            if let health = liveSample.health { payload["health"] = health }
+            if let maxHealth = liveSample.maxHealth { payload["maxHealth"] = maxHealth }
         }
 
         return payload
@@ -1620,10 +1609,6 @@ extension GamePlayViewModel: EmulatorRenderDelegate {
         autoreleasepool {
             guard fastForwardSpeed == 1 else { return }
             guard let samples = samples, !samples.isEmpty else { return }
-            let sampleCount = samples.count / MemoryLayout<Int16>.size
-            if audioDebugPacketCount < 2 {
-                NSLog("[AudioFeed] nativeSampleRate=%d core=%@ samples=%d bytes=%d", sampleRate, String(describing: currentPlatform), sampleCount, samples.count)
-            }
             let normalizedInputRate = resolvedInputSampleRate(sampleRate)
 
             var outputSamples = samples
@@ -1639,26 +1624,6 @@ extension GamePlayViewModel: EmulatorRenderDelegate {
                 outputSamples = resampled
             } else {
                 resetAudioResamplerState()
-            }
-
-            if audioDebugPacketCount < 6 {
-                audioDebugPacketCount += 1
-                let inputStats = audioMetrics(for: samples)
-                let outputStats = audioMetrics(for: outputSamples)
-                NSLog(
-                    "[AudioFeed] packet=%d inputRate=%d targetRate=%d inputBytes=%d outputBytes=%d platform=%@ inP=%d inR=%.0f outP=%d outR=%.0f clip=%d",
-                    audioDebugPacketCount,
-                    normalizedInputRate,
-                    targetRate,
-                    samples.count,
-                    outputSamples.count,
-                    currentPlatform?.rawValue ?? "unknown",
-                    inputStats.peak,
-                    inputStats.rms,
-                    outputStats.peak,
-                    outputStats.rms,
-                    outputStats.clippedSamples
-                )
             }
 
             switch audioQuality {

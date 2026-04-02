@@ -9,6 +9,9 @@ enum GameplayProfileKind: Sendable {
     case kingdomHeartsChainOfMemories
     case onePiece
     case zeldaMinishCap
+    case kirbyNightmareInDreamLand
+    case kirbyAmazingMirror
+    case goldenSun
     case castlevaniaAriaOfSorrow
     case castlevaniaCircleOfTheMoon
     case castlevaniaHarmonyOfDissonance
@@ -559,6 +562,136 @@ struct MarioGameProfile: Sendable {
         )
     )
 
+    static let kirbyNightmareInDreamLand = MarioGameProfile(
+        id: "kirby_nightmare_in_dream_land_gba",
+        displayName: "Kirby: Nightmare in Dream Land",
+        titleMatchers: [
+            "kirby nightmare in dream land",
+            "kirby nightmare in dreamland",
+            "nightmare in dream land",
+            "nightmare in dreamland",
+            "hoshi no kirby yume no izumi deluxe",
+            "agb-a7ke",
+            "agb-a7kp"
+        ],
+        nativeResolution: CGSize(width: 240, height: 160),
+        gameplayRegion: CGRect(x: 0.0, y: 0.10, width: 1.0, height: 0.80),
+        initialSearchRegion: CGRect(x: 0.08, y: 0.18, width: 0.84, height: 0.64),
+        minSampleInterval: 0.14,
+        damageCooldown: 0.8,
+        deathCooldown: 2.0,
+        fadeConfirmationThreshold: 0.38,
+        blackoutThreshold: 0.09,
+        smallHeightRange: 10...20,
+        superHeightRange: 21...32,
+        poweredUpHeightRange: 21...32,
+        liveMemory: MarioLiveMemoryMap(
+            kind: .kirbyNightmareInDreamLand,
+            livesAddress: 0x02007D48,
+            powerUpAddress: 0x020021AF,
+            gameplayStateAddress: 0x020023EC,
+            invulnerabilityTimerAddress: 0x02002182,
+            deathStateValues: [],
+            invulnerabilityStateValues: [],
+            smallPowerUpValues: [],
+            superPowerUpValues: [0],
+            poweredUpValues: Set(1...UInt8.max),
+            healthAddress16: nil,
+            maxHealthAddress16: nil,
+            healthAddress8: 0x02005588,
+            maxHealthAddress8: nil,
+            gameModeAddress: nil,
+            contextFields: [
+                MarioLiveMemoryContextField(key: "level", address: 0x020023EC, width: .u8),
+                MarioLiveMemoryContextField(key: "completion", address: 0x02002384, width: .u8)
+            ]
+        )
+    )
+
+    static let kirbyAmazingMirror = MarioGameProfile(
+        id: "kirby_amazing_mirror_gba",
+        displayName: "Kirby & The Amazing Mirror",
+        titleMatchers: [
+            "kirby the amazing mirror",
+            "kirby & the amazing mirror",
+            "kirby amazing mirror",
+            "the amazing mirror",
+            "hoshi no kirby kagami no daimeikyu",
+            "agb-b8ke"
+        ],
+        nativeResolution: CGSize(width: 240, height: 160),
+        gameplayRegion: CGRect(x: 0.0, y: 0.10, width: 1.0, height: 0.80),
+        initialSearchRegion: CGRect(x: 0.08, y: 0.18, width: 0.84, height: 0.64),
+        minSampleInterval: 0.14,
+        damageCooldown: 0.8,
+        deathCooldown: 2.0,
+        fadeConfirmationThreshold: 0.38,
+        blackoutThreshold: 0.09,
+        smallHeightRange: 10...20,
+        superHeightRange: 21...32,
+        poweredUpHeightRange: 21...32,
+        liveMemory: MarioLiveMemoryMap(
+            kind: .kirbyAmazingMirror,
+            livesAddress: 0x02020FE2,
+            powerUpAddress: 0x02020FE3,
+            gameplayStateAddress: 0x02020FE3,
+            invulnerabilityTimerAddress: 0x02020F3C,
+            deathStateValues: [],
+            invulnerabilityStateValues: [],
+            smallPowerUpValues: [],
+            superPowerUpValues: [0],
+            poweredUpValues: Set(1...UInt8.max),
+            healthAddress16: nil,
+            maxHealthAddress16: nil,
+            healthAddress8: 0x02020FE0,
+            maxHealthAddress8: nil,
+            gameModeAddress: nil,
+            contextFields: [
+                MarioLiveMemoryContextField(key: "mirrorPieces", address: 0x02038970, width: .u8),
+                MarioLiveMemoryContextField(key: "mapsCollected", address: 0x0203897C, width: .u16)
+            ]
+        )
+    )
+
+    static let goldenSun = MarioGameProfile(
+        id: "golden_sun_gba",
+        displayName: "Golden Sun",
+        titleMatchers: [
+            "golden sun",
+            "agb-agse",
+            "agb-agsp"
+        ],
+        nativeResolution: CGSize(width: 240, height: 160),
+        gameplayRegion: CGRect(x: 0.0, y: 0.10, width: 1.0, height: 0.80),
+        initialSearchRegion: CGRect(x: 0.08, y: 0.18, width: 0.84, height: 0.64),
+        minSampleInterval: 0.16,
+        damageCooldown: 0.9,
+        deathCooldown: 2.0,
+        fadeConfirmationThreshold: 0.38,
+        blackoutThreshold: 0.09,
+        smallHeightRange: 10...20,
+        superHeightRange: 21...32,
+        poweredUpHeightRange: 21...32,
+        liveMemory: MarioLiveMemoryMap(
+            kind: .goldenSun,
+            livesAddress: 0x0200051F,
+            powerUpAddress: 0x02030170,
+            gameplayStateAddress: 0x02000400,
+            invulnerabilityTimerAddress: 0x02030170,
+            deathStateValues: [],
+            invulnerabilityStateValues: [],
+            smallPowerUpValues: [],
+            superPowerUpValues: [0],
+            poweredUpValues: Set(1...UInt8.max),
+            healthAddress16: 0x02000548,
+            maxHealthAddress16: 0x02000544,
+            gameModeAddress: nil,
+            contextFields: [
+                MarioLiveMemoryContextField(key: "area", address: 0x02000400, width: .u16)
+            ]
+        )
+    )
+
     static let castlevaniaAriaOfSorrow = MarioGameProfile(
         id: "castlevania_aria_of_sorrow_gba",
         displayName: "Castlevania: Aria of Sorrow",
@@ -697,6 +830,9 @@ struct MarioGameProfile: Sendable {
         onePiece,
         kingdomHeartsChainOfMemories,
         zeldaMinishCap,
+        kirbyNightmareInDreamLand,
+        kirbyAmazingMirror,
+        goldenSun,
         castlevaniaAriaOfSorrow,
         castlevaniaCircleOfTheMoon,
         castlevaniaHarmonyOfDissonance

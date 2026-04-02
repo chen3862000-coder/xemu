@@ -3826,31 +3826,31 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "FAQ and help resources"
+            "value" : "Task-based help, troubleshooting, and support"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Preguntas frecuentes y recursos de ayuda"
+            "value" : "Ayuda por tareas, solución de problemas y soporte"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "FAQ とサポート情報"
+            "value" : "タスク別ヘルプ、トラブル解決、サポート"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "常见问题和帮助资源"
+            "value" : "按任务整理的帮助、排障与支持"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "常見問題與支援資源"
+            "value" : "按任務整理的幫助、排障與支援"
           }
         }
       }
@@ -3861,31 +3861,31 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Support"
+            "value" : "Help & Support"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Soporte"
+            "value" : "Ayuda y soporte"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "サポート"
+            "value" : "ヘルプとサポート"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "支持"
+            "value" : "帮助与支持"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "支援"
+            "value" : "幫助與支援"
           }
         }
       }

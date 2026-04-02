@@ -1,0 +1,1027 @@
+{
+  "ui": {
+    "screenTitle": {
+      "en": "Help & Support",
+      "zh-Hans": "帮助与支持",
+      "zh-Hant": "幫助與支援",
+      "ja": "ヘルプとサポート",
+      "es": "Ayuda y soporte"
+    },
+    "searchPlaceholder": {
+      "en": "Search help",
+      "zh-Hans": "搜索帮助",
+      "zh-Hant": "搜尋幫助",
+      "ja": "ヘルプを検索",
+      "es": "Buscar ayuda"
+    },
+    "popularHelpTitle": {
+      "en": "Popular Help",
+      "zh-Hans": "常用帮助",
+      "zh-Hant": "常用幫助",
+      "ja": "よく使うヘルプ",
+      "es": "Ayuda popular"
+    },
+    "browseByTopicTitle": {
+      "en": "Browse by Topic",
+      "zh-Hans": "按主题浏览",
+      "zh-Hant": "依主題瀏覽",
+      "ja": "トピック別に探す",
+      "es": "Explorar por tema"
+    },
+    "getInTouchTitle": {
+      "en": "Get in Touch",
+      "zh-Hans": "联系我们",
+      "zh-Hant": "聯絡我們",
+      "ja": "お問い合わせ",
+      "es": "Ponte en contacto"
+    },
+    "legalTitle": {
+      "en": "Legal",
+      "zh-Hans": "法律信息",
+      "zh-Hant": "法律資訊",
+      "ja": "法務",
+      "es": "Legal"
+    },
+    "noResultsTitle": {
+      "en": "No Results",
+      "zh-Hans": "没有结果",
+      "zh-Hant": "沒有結果",
+      "ja": "結果がありません",
+      "es": "Sin resultados"
+    },
+    "noResultsBody": {
+      "en": "Try different keywords like save, controller, or audio.",
+      "zh-Hans": "试试其他关键词，比如存档、手柄或音频。",
+      "zh-Hant": "試試其他關鍵字，例如存檔、控制器或音訊。",
+      "ja": "保存、コントローラ、オーディオなど別のキーワードで検索してください。",
+      "es": "Prueba con otras palabras clave como guardado, mando o audio."
+    },
+    "moreHelpComingTitle": {
+      "en": "More help is coming",
+      "zh-Hans": "更多帮助即将上线",
+      "zh-Hant": "更多幫助即將推出",
+      "ja": "さらにヘルプを追加予定です",
+      "es": "Más ayuda está en camino"
+    },
+    "moreHelpComingBody": {
+      "en": "This section will expand in future updates.",
+      "zh-Hans": "这个部分会在后续更新中继续扩展。",
+      "zh-Hant": "這個部分會在後續更新中持續擴充。",
+      "ja": "このセクションは今後のアップデートで拡充されます。",
+      "es": "Esta sección crecerá en futuras actualizaciones."
+    },
+    "expandedState": {
+      "en": "Expanded",
+      "zh-Hans": "已展开",
+      "zh-Hant": "已展開",
+      "ja": "展開済み",
+      "es": "Expandido"
+    },
+    "collapsedState": {
+      "en": "Collapsed",
+      "zh-Hans": "已折叠",
+      "zh-Hant": "已收合",
+      "ja": "折りたたみ済み",
+      "es": "Contraído"
+    },
+    "replayGuideTitle": {
+      "en": "Guide Ready",
+      "zh-Hans": "指南已准备好",
+      "zh-Hant": "指南已準備好",
+      "ja": "ガイドの準備ができました",
+      "es": "Guía lista"
+    },
+    "replayGuideMessage": {
+      "en": "The launch guide will appear the next time you start a game.",
+      "zh-Hans": "你下次启动游戏时会再次看到启动指南。",
+      "zh-Hant": "你下次啟動遊戲時會再次看到啟動指南。",
+      "ja": "次にゲームを起動すると開始ガイドが再び表示されます。",
+      "es": "La guía de inicio aparecerá la próxima vez que abras un juego."
+    }
+  },
+  "categories": [
+    {
+      "id": "quick_start",
+      "icon": "play.circle",
+      "title": {
+        "en": "Quick Start",
+        "zh-Hans": "快速开始",
+        "zh-Hant": "快速開始",
+        "ja": "クイックスタート",
+        "es": "Inicio rápido"
+      },
+      "items": [
+        {
+          "id": "start_playing",
+          "icon": "play.circle",
+          "title": {
+            "en": "How do I start playing a game?",
+            "zh-Hans": "怎样开始玩游戏？",
+            "zh-Hant": "怎樣開始玩遊戲？",
+            "ja": "ゲームを始めるには？",
+            "es": "¿Cómo empiezo a jugar?"
+          },
+          "keywords": {
+            "en": ["start", "play", "launch", "continue playing"]
+          },
+          "summary": {
+            "en": "Open your Library, tap a game, and it launches right away.",
+            "zh-Hans": "打开游戏库，点一下游戏，它就会立即启动。",
+            "zh-Hant": "打開遊戲庫，點一下遊戲，它就會立即啟動。",
+            "ja": "ライブラリからゲームをタップするとすぐに起動します。",
+            "es": "Abre tu Biblioteca, toca un juego y se iniciará al instante."
+          },
+          "steps": {
+            "en": ["Go to Library.", "Tap a game.", "It will launch instantly."],
+            "zh-Hans": ["前往游戏库。", "点按一款游戏。", "游戏会立即启动。"],
+            "zh-Hant": ["前往遊戲庫。", "點按一款遊戲。", "遊戲會立即啟動。"],
+            "ja": ["ライブラリを開きます。", "ゲームをタップします。", "すぐに起動します。"],
+            "es": ["Ve a Biblioteca.", "Toca un juego.", "Se iniciará al instante."]
+          },
+          "tip": {
+            "en": "Tip: Your recent games appear in Continue Playing for faster access.",
+            "zh-Hans": "提示：你最近玩过的游戏会显示在“继续游玩”中，方便快速返回。",
+            "zh-Hant": "提示：你最近玩過的遊戲會顯示在「繼續遊玩」中，方便快速返回。",
+            "ja": "ヒント: 最近遊んだゲームは「続ける」に表示され、すぐ再開できます。",
+            "es": "Consejo: Tus juegos recientes aparecen en Continuar jugando para volver más rápido."
+          },
+          "isFeatured": true
+        },
+        {
+          "id": "add_games",
+          "icon": "square.and.arrow.down",
+          "title": {
+            "en": "How do I add games?",
+            "zh-Hans": "怎样添加游戏？",
+            "zh-Hant": "怎樣新增遊戲？",
+            "ja": "ゲームを追加するには？",
+            "es": "¿Cómo agrego juegos?"
+          },
+          "keywords": {
+            "en": ["import", "add games", "files", "rom"]
+          },
+          "summary": {
+            "en": "Import compatible game files from your device or the Files app.",
+            "zh-Hans": "从设备或“文件”App 导入兼容的游戏文件。",
+            "zh-Hant": "從裝置或「檔案」App 匯入相容的遊戲檔案。",
+            "ja": "対応するゲームファイルをデバイスまたはファイルAppから取り込みます。",
+            "es": "Importa archivos de juego compatibles desde tu dispositivo o la app Archivos."
+          },
+          "steps": {
+            "en": ["Go to Library.", "Tap Import.", "Choose files from your device or the Files app."],
+            "zh-Hans": ["前往游戏库。", "点按“导入”。", "从设备或“文件”App 选择文件。"],
+            "zh-Hant": ["前往遊戲庫。", "點按「匯入」。", "從裝置或「檔案」App 選擇檔案。"],
+            "ja": ["ライブラリを開きます。", "「取り込む」をタップします。", "デバイスまたはファイルAppからファイルを選びます。"],
+            "es": ["Ve a Biblioteca.", "Toca Importar.", "Elige archivos desde tu dispositivo o la app Archivos."]
+          },
+          "tip": {
+            "en": "Make sure the file is for a supported system such as GB, GBC, or GBA.",
+            "zh-Hans": "请确认文件属于受支持的平台，例如 GB、GBC 或 GBA。",
+            "zh-Hant": "請確認檔案屬於受支援的平台，例如 GB、GBC 或 GBA。",
+            "ja": "GB、GBC、GBA など対応しているシステムのファイルか確認してください。",
+            "es": "Asegúrate de que el archivo sea de un sistema compatible como GB, GBC o GBA."
+          },
+          "isFeatured": true
+        },
+        {
+          "id": "missing_after_import",
+          "icon": "questionmark.folder",
+          "title": {
+            "en": "Why can’t I see my game after importing?",
+            "zh-Hans": "为什么导入后看不到游戏？",
+            "zh-Hant": "為什麼匯入後看不到遊戲？",
+            "ja": "取り込み後にゲームが見つからないのはなぜ？",
+            "es": "¿Por qué no veo mi juego después de importarlo?"
+          },
+          "keywords": {
+            "en": ["missing", "imported", "not showing"]
+          },
+          "summary": {
+            "en": "A missing game is usually caused by an unsupported format or a damaged file.",
+            "zh-Hans": "导入后看不到游戏，通常是因为格式不受支持或文件已损坏。",
+            "zh-Hant": "匯入後看不到遊戲，通常是因為格式不受支援或檔案已損壞。",
+            "ja": "表示されない原因は、未対応の形式か破損したファイルであることがほとんどです。",
+            "es": "Si no aparece, normalmente se debe a un formato no compatible o a un archivo dañado."
+          },
+          "steps": {
+            "en": ["Check that the file format is supported.", "Try importing the file again from the Files app.", "If it still fails, the file may be corrupted."],
+            "zh-Hans": ["确认文件格式受支持。", "从“文件”App 重新导入一次。", "如果仍然失败，文件可能已损坏。"],
+            "zh-Hant": ["確認檔案格式受支援。", "從「檔案」App 重新匯入一次。", "如果仍然失敗，檔案可能已損壞。"],
+            "ja": ["対応形式か確認します。", "ファイルAppからもう一度取り込みます。", "それでも表示されない場合はファイル破損の可能性があります。"],
+            "es": ["Comprueba que el formato sea compatible.", "Vuelve a importar el archivo desde Archivos.", "Si sigue fallando, el archivo puede estar dañado."]
+          },
+          "tip": {
+            "en": "If one file keeps failing, try a different dump of the same game.",
+            "zh-Hans": "如果某个文件一直失败，可以尝试同一游戏的其他转储文件。",
+            "zh-Hant": "如果某個檔案一直失敗，可以嘗試同一遊戲的其他轉儲檔。",
+            "ja": "同じゲームでも別のダンプなら正常に読み込める場合があります。",
+            "es": "Si un archivo siempre falla, prueba otro volcado del mismo juego."
+          },
+          "isFeatured": false
+        }
+      ]
+    },
+    {
+      "id": "enhanced_games",
+      "icon": "sparkles",
+      "title": {
+        "en": "Enhanced Games",
+        "zh-Hans": "增强游戏",
+        "zh-Hant": "增強遊戲",
+        "ja": "拡張対応ゲーム",
+        "es": "Juegos mejorados"
+      },
+      "items": [
+        {
+          "id": "what_enhanced_games",
+          "icon": "sparkles",
+          "title": {
+            "en": "What are Enhanced Games?",
+            "zh-Hans": "什么是“增强游戏”？",
+            "zh-Hant": "什麼是「增強遊戲」？",
+            "ja": "Enhanced Games とは？",
+            "es": "¿Qué son los Juegos mejorados?"
+          },
+          "keywords": {
+            "en": ["enhanced", "features", "hp feedback", "insights"]
+          },
+          "summary": {
+            "en": "Enhanced Games unlock extra features like HP feedback, death tracking, and play insights.",
+            "zh-Hans": "增强游戏会解锁额外功能，比如 HP 反馈、死亡追踪和游玩洞察。",
+            "zh-Hant": "增強遊戲會解鎖額外功能，例如 HP 回饋、死亡追蹤和遊玩洞察。",
+            "ja": "Enhanced Games では HP フィードバック、死亡トラッキング、プレイ分析などの追加機能を使えます。",
+            "es": "Los Juegos mejorados activan extras como vibración por HP, seguimiento de muertes y datos de juego."
+          },
+          "steps": {
+            "en": ["Look for the Enhanced label on supported games.", "Open the game normally.", "Extra features appear automatically when that game supports them."],
+            "zh-Hans": ["在受支持的游戏上寻找“增强”标识。", "像平常一样打开游戏。", "如果该游戏受支持，额外功能会自动出现。"],
+            "zh-Hant": ["在受支援的遊戲上尋找「增強」標識。", "像平常一樣開啟遊戲。", "如果該遊戲受支援，額外功能會自動出現。"],
+            "ja": ["対応ゲームの Enhanced ラベルを確認します。", "通常どおりゲームを開きます。", "対応していれば追加機能が自動で有効になります。"],
+            "es": ["Busca la etiqueta Enhanced en los juegos compatibles.", "Abre el juego normalmente.", "Las funciones extra aparecerán automáticamente cuando ese juego las admita."]
+          },
+          "tip": {
+            "en": "Available for supported games only, and support will grow over time.",
+            "zh-Hans": "该功能仅适用于受支持的游戏，支持范围会逐步扩大。",
+            "zh-Hant": "此功能僅適用於受支援的遊戲，支援範圍會逐步擴大。",
+            "ja": "対応ゲームのみで利用でき、今後さらに拡大していきます。",
+            "es": "Solo está disponible en juegos compatibles y seguirá ampliándose con el tiempo."
+          },
+          "isFeatured": true
+        },
+        {
+          "id": "why_some_games_extra_features",
+          "icon": "questionmark.circle",
+          "title": {
+            "en": "Why do some games have extra features and others don’t?",
+            "zh-Hans": "为什么有些游戏有额外功能，而有些没有？",
+            "zh-Hant": "為什麼有些遊戲有額外功能，而有些沒有？",
+            "ja": "ゲームによって追加機能が違うのはなぜ？",
+            "es": "¿Por qué algunos juegos tienen funciones extra y otros no?"
+          },
+          "keywords": {
+            "en": ["supported games", "extra features", "advanced features"]
+          },
+          "summary": {
+            "en": "Advanced features need game-specific support, and not every game exposes the right data.",
+            "zh-Hans": "高级功能需要针对特定游戏做支持，并不是每个游戏都会暴露所需数据。",
+            "zh-Hant": "進階功能需要針對特定遊戲做支援，並不是每個遊戲都會提供所需資料。",
+            "ja": "高度な機能にはゲームごとの対応が必要で、すべてのゲームが必要なデータを持っているわけではありません。",
+            "es": "Las funciones avanzadas requieren soporte específico para cada juego, y no todos exponen los datos necesarios."
+          },
+          "steps": {
+            "en": ["Check whether the game is labeled Enhanced.", "Open the Game Details page.", "If support is missing today, it may arrive in a future update."],
+            "zh-Hans": ["先确认游戏是否带有“增强”标识。", "打开游戏详情页。", "如果当前还不支持，可能会在后续更新中加入。"],
+            "zh-Hant": ["先確認遊戲是否帶有「增強」標識。", "打開遊戲詳情頁。", "如果目前還不支援，可能會在後續更新中加入。"],
+            "ja": ["Enhanced ラベルがあるか確認します。", "ゲーム詳細ページを開きます。", "現時点で未対応でも今後のアップデートで追加される可能性があります。"],
+            "es": ["Comprueba si el juego tiene la etiqueta Enhanced.", "Abre la página de Detalles del juego.", "Si hoy no tiene soporte, puede llegar en una actualización futura."]
+          },
+          "tip": {
+            "en": "We add support where the game can reliably provide health, death, or progress signals.",
+            "zh-Hans": "只有在游戏能稳定提供生命值、死亡或进度信号时，我们才会加入支持。",
+            "zh-Hant": "只有在遊戲能穩定提供生命值、死亡或進度訊號時，我們才會加入支援。",
+            "ja": "体力、死亡、進行状況の信号を安定して取得できるゲームから対応を追加しています。",
+            "es": "Añadimos soporte cuando el juego puede ofrecer señales fiables de salud, muerte o progreso."
+          },
+          "isFeatured": false
+        },
+        {
+          "id": "supported_game_howto",
+          "icon": "checkmark.seal",
+          "title": {
+            "en": "How do I know if a game is supported?",
+            "zh-Hans": "怎样知道某个游戏是否受支持？",
+            "zh-Hant": "怎樣知道某個遊戲是否受支援？",
+            "ja": "対応ゲームかどうか確認するには？",
+            "es": "¿Cómo sé si un juego es compatible?"
+          },
+          "keywords": {
+            "en": ["badge", "game details", "supported"]
+          },
+          "summary": {
+            "en": "Check for the Enhanced badge in Library or Continue Playing, or look in Play Insights on the Game Details page.",
+            "zh-Hans": "你可以在游戏库、“继续游玩”或游戏详情页中的“游玩洞察”里查看增强标识。",
+            "zh-Hant": "你可以在遊戲庫、「繼續遊玩」或遊戲詳情頁中的「遊玩洞察」查看增強標識。",
+            "ja": "ライブラリや「続ける」の Enhanced バッジ、またはゲーム詳細の Play Insights で確認できます。",
+            "es": "Busca la insignia Enhanced en Biblioteca o Continuar jugando, o revisa Play Insights en Detalles del juego."
+          },
+          "steps": {
+            "en": ["Look for the Enhanced badge in Library or Continue Playing.", "Open the Game Details page.", "Check the Play Insights section for supported data."],
+            "zh-Hans": ["在游戏库或“继续游玩”中查看“增强”徽章。", "打开游戏详情页。", "查看“游玩洞察”部分是否显示受支持的数据。"],
+            "zh-Hant": ["在遊戲庫或「繼續遊玩」中查看「增強」徽章。", "打開遊戲詳情頁。", "查看「遊玩洞察」部分是否顯示受支援的資料。"],
+            "ja": ["ライブラリや「続ける」で Enhanced バッジを確認します。", "ゲーム詳細ページを開きます。", "Play Insights セクションに対応データが出るか確認します。"],
+            "es": ["Busca la insignia Enhanced en Biblioteca o Continuar jugando.", "Abre la página de Detalles del juego.", "Comprueba si la sección Play Insights muestra datos compatibles."]
+          },
+          "tip": {
+            "en": "If you do not see the badge yet, the game probably uses the standard experience.",
+            "zh-Hans": "如果暂时看不到徽章，说明这款游戏目前仍使用标准体验。",
+            "zh-Hant": "如果暫時看不到徽章，表示這款遊戲目前仍使用標準體驗。",
+            "ja": "バッジがない場合は、今のところ標準体験として動作しています。",
+            "es": "Si no ves la insignia, lo más probable es que el juego use la experiencia estándar por ahora."
+          },
+          "isFeatured": false
+        },
+        {
+          "id": "hp_vibration_not_working",
+          "icon": "iphone.radiowaves.left.and.right",
+          "title": {
+            "en": "HP vibration is not working. Why?",
+            "zh-Hans": "HP 震动没有生效，为什么？",
+            "zh-Hant": "HP 震動沒有生效，為什麼？",
+            "ja": "HP 振動が動かないのはなぜ？",
+            "es": "La vibración por HP no funciona. ¿Por qué?"
+          },
+          "keywords": {
+            "en": ["haptics", "hp vibration", "silent mode"]
+          },
+          "summary": {
+            "en": "HP feedback only works when the game supports health tracking and haptics are enabled on your device.",
+            "zh-Hans": "只有在游戏支持生命值追踪且设备允许触感反馈时，HP 反馈才会工作。",
+            "zh-Hant": "只有在遊戲支援生命值追蹤且裝置允許觸覺回饋時，HP 回饋才會運作。",
+            "ja": "HP フィードバックは、ゲームが体力トラッキングに対応し、デバイス側で触覚フィードバックが有効な場合のみ動作します。",
+            "es": "La vibración por HP solo funciona cuando el juego admite seguimiento de salud y las vibraciones están activadas en tu dispositivo."
+          },
+          "steps": {
+            "en": ["Confirm the game supports HP tracking.", "Make sure Haptic Feedback is enabled in Settings.", "Check that your device is not in silent or low power mode."],
+            "zh-Hans": ["确认游戏支持生命值追踪。", "确认设置中的“触感反馈”已开启。", "检查设备没有处于静音模式或低电量模式。"],
+            "zh-Hant": ["確認遊戲支援生命值追蹤。", "確認設定中的「觸覺回饋」已開啟。", "檢查裝置沒有處於靜音模式或低電量模式。"],
+            "ja": ["ゲームが HP トラッキング対応か確認します。", "設定で触覚フィードバックを有効にします。", "デバイスがサイレントまたは低電力モードでないか確認します。"],
+            "es": ["Confirma que el juego admita seguimiento de HP.", "Asegúrate de que Vibración háptica esté activada en Ajustes.", "Comprueba que tu dispositivo no esté en modo silencio o bajo consumo."]
+          },
+          "tip": {
+            "en": "If everything is enabled and it still does not work, that game may not support HP feedback yet.",
+            "zh-Hans": "如果都已开启但仍然无效，说明这款游戏可能暂时还不支持 HP 反馈。",
+            "zh-Hant": "如果都已開啟但仍然無效，表示這款遊戲可能暫時還不支援 HP 回饋。",
+            "ja": "すべて有効でも動作しない場合、そのゲームはまだ HP フィードバック未対応かもしれません。",
+            "es": "Si todo está activado y aún no funciona, es posible que ese juego todavía no admita vibración por HP."
+          },
+          "isFeatured": false
+        },
+        {
+          "id": "play_insights",
+          "icon": "chart.bar",
+          "title": {
+            "en": "What are Play Insights?",
+            "zh-Hans": "什么是“游玩洞察”？",
+            "zh-Hant": "什麼是「遊玩洞察」？",
+            "ja": "Play Insights とは？",
+            "es": "¿Qué son Play Insights?"
+          },
+          "keywords": {
+            "en": ["play insights", "stats", "progress", "deaths"]
+          },
+          "summary": {
+            "en": "Play Insights show tracked progress, death counts, and game-specific stats for supported games.",
+            "zh-Hans": "“游玩洞察”会为受支持的游戏显示进度、死亡次数和游戏专属统计。",
+            "zh-Hant": "「遊玩洞察」會為受支援的遊戲顯示進度、死亡次數和遊戲專屬統計。",
+            "ja": "Play Insights では、対応ゲームの進行状況、死亡回数、ゲーム固有の統計を確認できます。",
+            "es": "Play Insights muestra progreso, conteo de muertes y estadísticas específicas para juegos compatibles."
+          },
+          "steps": {
+            "en": ["Open a supported game.", "Visit the Game Details page.", "Review the Play Insights section for tracked stats."],
+            "zh-Hans": ["打开一款受支持的游戏。", "进入游戏详情页。", "在“游玩洞察”部分查看已追踪的统计信息。"],
+            "zh-Hant": ["打開一款受支援的遊戲。", "進入遊戲詳情頁。", "在「遊玩洞察」部分查看已追蹤的統計資訊。"],
+            "ja": ["対応ゲームを開きます。", "ゲーム詳細ページに移動します。", "Play Insights セクションで追跡済みの統計を確認します。"],
+            "es": ["Abre un juego compatible.", "Ve a la página de Detalles del juego.", "Revisa la sección Play Insights para ver las estadísticas registradas."]
+          },
+          "tip": {
+            "en": "Only supported games expose the detailed data needed for insights.",
+            "zh-Hans": "只有受支持的游戏才会提供生成这些洞察所需的详细数据。",
+            "zh-Hant": "只有受支援的遊戲才會提供產生這些洞察所需的詳細資料。",
+            "ja": "詳細な分析に必要なデータは、対応ゲームのみが提供します。",
+            "es": "Solo los juegos compatibles exponen los datos detallados necesarios para estos insights."
+          },
+          "isFeatured": false
+        },
+        {
+          "id": "where_stats",
+          "icon": "list.bullet.rectangle",
+          "title": {
+            "en": "Where can I see my stats?",
+            "zh-Hans": "我在哪里查看统计数据？",
+            "zh-Hant": "我在哪裡查看統計資料？",
+            "ja": "統計はどこで見られますか？",
+            "es": "¿Dónde puedo ver mis estadísticas?"
+          },
+          "keywords": {
+            "en": ["stats", "details", "insights"]
+          },
+          "summary": {
+            "en": "Open the Game Details page and look for Play Insights.",
+            "zh-Hans": "打开游戏详情页，找到“游玩洞察”部分。",
+            "zh-Hant": "打開遊戲詳情頁，找到「遊玩洞察」部分。",
+            "ja": "ゲーム詳細ページを開き、Play Insights を確認してください。",
+            "es": "Abre la página de Detalles del juego y busca Play Insights."
+          },
+          "steps": {
+            "en": ["Open the game in Library.", "Go to the Game Details page.", "Tap or view the Play Insights section."],
+            "zh-Hans": ["在游戏库中打开该游戏。", "进入游戏详情页。", "点按或查看“游玩洞察”部分。"],
+            "zh-Hant": ["在遊戲庫中開啟該遊戲。", "進入遊戲詳情頁。", "點按或查看「遊玩洞察」部分。"],
+            "ja": ["ライブラリから対象ゲームを開きます。", "ゲーム詳細ページへ進みます。", "Play Insights セクションを開くか確認します。"],
+            "es": ["Abre el juego desde Biblioteca.", "Ve a la página de Detalles del juego.", "Toca o revisa la sección Play Insights."]
+          },
+          "tip": {
+            "en": "If the section is missing, that game is probably not supported for deeper analytics yet.",
+            "zh-Hans": "如果看不到该部分，说明这款游戏可能暂时还不支持更深入的分析。",
+            "zh-Hant": "如果看不到該部分，表示這款遊戲可能暫時還不支援更深入的分析。",
+            "ja": "セクションが表示されない場合、そのゲームはまだ詳細分析に未対応の可能性があります。",
+            "es": "Si no aparece la sección, probablemente ese juego aún no sea compatible con análisis más profundos."
+          },
+          "isFeatured": false
+        }
+      ]
+    },
+    {
+      "id": "save_progress",
+      "icon": "internaldrive",
+      "title": {
+        "en": "Save & Progress",
+        "zh-Hans": "存档与进度",
+        "zh-Hant": "存檔與進度",
+        "ja": "保存と進行状況",
+        "es": "Guardado y progreso"
+      },
+      "items": [
+        {
+          "id": "save_progress",
+          "icon": "square.and.arrow.down.on.square",
+          "title": {
+            "en": "How do I save my progress?",
+            "zh-Hans": "怎样保存游戏进度？",
+            "zh-Hant": "怎樣保存遊戲進度？",
+            "ja": "進行状況を保存するには？",
+            "es": "¿Cómo guardo mi progreso?"
+          },
+          "keywords": {
+            "en": ["save state", "save progress", "menu"]
+          },
+          "summary": {
+            "en": "Open the in-game menu and use Save State for an instant snapshot.",
+            "zh-Hans": "打开游戏菜单，使用“即时存档”即可快速保存当前状态。",
+            "zh-Hant": "打開遊戲選單，使用「即時存檔」即可快速保存當前狀態。",
+            "ja": "ゲーム内メニューからステート保存を使うと、その場で即座に保存できます。",
+            "es": "Abre el menú del juego y usa Guardar estado para crear una instantánea al momento."
+          },
+          "steps": {
+            "en": ["Open the menu.", "Tap Save State.", "Resume later from that saved moment."],
+            "zh-Hans": ["打开菜单。", "点按“即时存档”。", "之后可以从该保存点继续。"],
+            "zh-Hant": ["打開選單。", "點按「即時存檔」。", "之後可以從該保存點繼續。"],
+            "ja": ["メニューを開きます。", "ステート保存をタップします。", "あとでその時点から再開できます。"],
+            "es": ["Abre el menú.", "Toca Guardar estado.", "Después podrás continuar desde ese momento."]
+          },
+          "tip": {
+            "en": "Save States are the fastest way to pause and return later.",
+            "zh-Hans": "即时存档是随时暂停并稍后继续的最快方式。",
+            "zh-Hant": "即時存檔是隨時暫停並稍後繼續的最快方式。",
+            "ja": "あとで素早く再開したい場合はステート保存が最も便利です。",
+            "es": "Los Guardados de estado son la forma más rápida de pausar y volver más tarde."
+          },
+          "isFeatured": true
+        },
+        {
+          "id": "save_state_vs_ingame",
+          "icon": "square.stack.3d.up",
+          "title": {
+            "en": "What’s the difference between Save State and in-game save?",
+            "zh-Hans": "即时存档和游戏内存档有什么区别？",
+            "zh-Hant": "即時存檔和遊戲內存檔有什麼差別？",
+            "ja": "ステート保存とゲーム内セーブの違いは？",
+            "es": "¿Cuál es la diferencia entre Guardar estado y el guardado interno del juego?"
+          },
+          "keywords": {
+            "en": ["save state", "in game save", "difference"]
+          },
+          "summary": {
+            "en": "Save State captures the emulator instantly, while in-game save uses the game’s own save system.",
+            "zh-Hans": "即时存档会立刻保存模拟器当前状态，而游戏内存档使用的是游戏自带的保存机制。",
+            "zh-Hant": "即時存檔會立刻保存模擬器當前狀態，而遊戲內存檔使用的是遊戲自帶的保存機制。",
+            "ja": "ステート保存はエミュレータの状態を即座に保存し、ゲーム内セーブはゲーム本来の保存機能を使います。",
+            "es": "Guardar estado captura el emulador al instante, mientras que el guardado interno usa el sistema propio del juego."
+          },
+          "steps": {
+            "en": ["Use Save State for quick snapshots.", "Use the game’s built-in save when you want original save behavior.", "You can combine both for extra safety."],
+            "zh-Hans": ["想快速保存时使用“即时存档”。", "想保留原生保存逻辑时使用游戏内存档。", "为了更稳妥，也可以同时使用两者。"],
+            "zh-Hant": ["想快速保存時使用「即時存檔」。", "想保留原生保存邏輯時使用遊戲內存檔。", "為了更穩妥，也可以同時使用兩者。"],
+            "ja": ["素早いスナップショットにはステート保存を使います。", "ゲーム本来の挙動を残したいならゲーム内セーブを使います。", "安全のために両方使うこともできます。"],
+            "es": ["Usa Guardar estado para instantáneas rápidas.", "Usa el guardado del juego si quieres el comportamiento original.", "También puedes combinar ambos para mayor seguridad."]
+          },
+          "tip": {
+            "en": "For most players, Save State is the faster and more flexible option.",
+            "zh-Hans": "对大多数玩家来说，即时存档更快，也更灵活。",
+            "zh-Hant": "對大多數玩家來說，即時存檔更快，也更靈活。",
+            "ja": "多くのプレイヤーにとっては、ステート保存の方が速く柔軟です。",
+            "es": "Para la mayoría de jugadores, Guardar estado es la opción más rápida y flexible."
+          },
+          "isFeatured": false
+        },
+        {
+          "id": "auto_save",
+          "icon": "clock.arrow.circlepath",
+          "title": {
+            "en": "Can I enable auto-save?",
+            "zh-Hans": "可以开启自动保存吗？",
+            "zh-Hant": "可以開啟自動保存嗎？",
+            "ja": "自動保存は使えますか？",
+            "es": "¿Puedo activar el guardado automático?"
+          },
+          "keywords": {
+            "en": ["autosave", "automatic save", "settings"]
+          },
+          "summary": {
+            "en": "Auto-save may be available in Settings and can capture progress at key moments.",
+            "zh-Hans": "自动保存可能会在设置中提供，并在关键时刻自动记录进度。",
+            "zh-Hant": "自動保存可能會在設定中提供，並在關鍵時刻自動記錄進度。",
+            "ja": "自動保存は設定で利用できる場合があり、重要なタイミングで進行状況を記録します。",
+            "es": "El guardado automático puede estar disponible en Ajustes y guardar tu progreso en momentos clave."
+          },
+          "steps": {
+            "en": ["Open Settings.", "Look for save or progress options.", "Enable auto-save if the option is available."],
+            "zh-Hans": ["打开设置。", "查找与存档或进度相关的选项。", "如果提供该选项，就开启自动保存。"],
+            "zh-Hant": ["打開設定。", "查找與存檔或進度相關的選項。", "如果提供該選項，就開啟自動保存。"],
+            "ja": ["設定を開きます。", "保存または進行状況に関する項目を探します。", "項目があれば自動保存を有効にします。"],
+            "es": ["Abre Ajustes.", "Busca opciones relacionadas con guardado o progreso.", "Activa el guardado automático si la opción está disponible."]
+          },
+          "tip": {
+            "en": "Manual Save States are still useful before difficult sections or risky experiments.",
+            "zh-Hans": "在高难度关卡或尝试危险操作前，手动即时存档依然很有用。",
+            "zh-Hant": "在高難度關卡或嘗試危險操作前，手動即時存檔依然很有用。",
+            "ja": "難所の前や試したいことがある時は、手動のステート保存も引き続き有効です。",
+            "es": "Los Guardados de estado manuales siguen siendo útiles antes de secciones difíciles o pruebas arriesgadas."
+          },
+          "isFeatured": false
+        }
+      ]
+    },
+    {
+      "id": "controls_controllers",
+      "icon": "gamecontroller",
+      "title": {
+        "en": "Controls & Controllers",
+        "zh-Hans": "操作与控制器",
+        "zh-Hant": "操作與控制器",
+        "ja": "操作とコントローラ",
+        "es": "Controles y mandos"
+      },
+      "items": [
+        {
+          "id": "onscreen_controls",
+          "icon": "hand.tap",
+          "title": {
+            "en": "How do I use on-screen controls?",
+            "zh-Hans": "怎样使用屏幕上的触控按键？",
+            "zh-Hant": "怎樣使用螢幕上的觸控按鍵？",
+            "ja": "画面上の操作ボタンはどう使う？",
+            "es": "¿Cómo uso los controles en pantalla?"
+          },
+          "keywords": {
+            "en": ["touch controls", "on screen", "d-pad"]
+          },
+          "summary": {
+            "en": "Use the left side for movement and the right side for action buttons.",
+            "zh-Hans": "左侧用于移动，右侧用于动作按钮。",
+            "zh-Hant": "左側用於移動，右側用於動作按鈕。",
+            "ja": "左側で移動、右側でアクションボタンを操作します。",
+            "es": "Usa el lado izquierdo para moverte y el derecho para los botones de acción."
+          },
+          "steps": {
+            "en": ["Use the D-pad on the left for movement.", "Use the buttons on the right for actions.", "Adjust the layout in Settings if needed."],
+            "zh-Hans": ["使用左侧方向键进行移动。", "使用右侧按钮执行动作。", "如果需要，可在设置中调整布局。"],
+            "zh-Hant": ["使用左側方向鍵進行移動。", "使用右側按鈕執行動作。", "如果需要，可在設定中調整佈局。"],
+            "ja": ["左側の十字キーで移動します。", "右側のボタンでアクションします。", "必要に応じて設定でレイアウトを調整します。"],
+            "es": ["Usa la cruceta de la izquierda para moverte.", "Usa los botones de la derecha para las acciones.", "Ajusta el diseño en Ajustes si lo necesitas."]
+          },
+          "tip": {
+            "en": "Touch controls stay available unless you choose to hide them when a controller is connected.",
+            "zh-Hans": "除非你设置了连接控制器后隐藏触控按键，否则它们会一直可用。",
+            "zh-Hant": "除非你設定了連接控制器後隱藏觸控按鍵，否則它們會一直可用。",
+            "ja": "コントローラ接続時に非表示にしない限り、タッチ操作は引き続き使えます。",
+            "es": "Los controles táctiles seguirán disponibles salvo que elijas ocultarlos al conectar un mando."
+          },
+          "isFeatured": false
+        },
+        {
+          "id": "bluetooth_controller",
+          "icon": "gamecontroller",
+          "title": {
+            "en": "Can I use a Bluetooth controller?",
+            "zh-Hans": "可以使用蓝牙手柄吗？",
+            "zh-Hant": "可以使用藍牙控制器嗎？",
+            "ja": "Bluetooth コントローラは使えますか？",
+            "es": "¿Puedo usar un mando Bluetooth?"
+          },
+          "keywords": {
+            "en": ["bluetooth controller", "pair controller", "gamepad"]
+          },
+          "summary": {
+            "en": "Yes. Pair the controller in iOS Bluetooth settings, then open a game.",
+            "zh-Hans": "可以。先在 iOS 蓝牙设置中配对手柄，然后再打开游戏。",
+            "zh-Hant": "可以。先在 iOS 藍牙設定中配對控制器，再開啟遊戲。",
+            "ja": "はい。iOS の Bluetooth 設定でコントローラを接続してからゲームを開いてください。",
+            "es": "Sí. Empareja el mando en los ajustes de Bluetooth de iOS y luego abre un juego."
+          },
+          "steps": {
+            "en": ["Pair the controller in iOS Bluetooth settings.", "Open a game.", "Controls should map automatically."],
+            "zh-Hans": ["在 iOS 蓝牙设置中配对手柄。", "打开一款游戏。", "按键通常会自动映射。"],
+            "zh-Hant": ["在 iOS 藍牙設定中配對控制器。", "打開一款遊戲。", "按鍵通常會自動對應。"],
+            "ja": ["iOS の Bluetooth 設定でコントローラを接続します。", "ゲームを開きます。", "通常は自動でボタンが割り当てられます。"],
+            "es": ["Empareja el mando en los ajustes de Bluetooth de iOS.", "Abre un juego.", "Los controles deberían asignarse automáticamente."]
+          },
+          "tip": {
+            "en": "If your controller does not respond, restart the game after pairing.",
+            "zh-Hans": "如果配对后手柄仍无响应，请在连接完成后重启游戏。",
+            "zh-Hant": "如果配對後控制器仍無反應，請在連線完成後重新啟動遊戲。",
+            "ja": "接続後に反応しない場合は、ゲームを一度再起動してください。",
+            "es": "Si el mando no responde, reinicia el juego después de emparejarlo."
+          },
+          "isFeatured": false
+        },
+        {
+          "id": "button_mapping",
+          "icon": "slider.horizontal.3",
+          "title": {
+            "en": "Can I customize button mapping?",
+            "zh-Hans": "可以自定义按键映射吗？",
+            "zh-Hant": "可以自訂按鍵對應嗎？",
+            "ja": "ボタン配置は変更できますか？",
+            "es": "¿Puedo personalizar la asignación de botones?"
+          },
+          "keywords": {
+            "en": ["button mapping", "controls settings", "controller layout"]
+          },
+          "summary": {
+            "en": "Yes. Open Settings, then go to Controller and Button Mapping.",
+            "zh-Hans": "可以。打开设置，然后进入“控制器”和“按键映射”。",
+            "zh-Hant": "可以。打開設定，然後進入「控制器」與「按鍵對應」。",
+            "ja": "はい。設定から「コントローラ」→「ボタンマッピング」を開いてください。",
+            "es": "Sí. Abre Ajustes y luego entra en Mando y Asignación de botones."
+          },
+          "steps": {
+            "en": ["Open Settings.", "Go to Controller.", "Choose Button Mapping for your system."],
+            "zh-Hans": ["打开设置。", "进入“控制器”。", "为对应平台选择“按键映射”。"],
+            "zh-Hant": ["打開設定。", "進入「控制器」。", "為對應平台選擇「按鍵對應」。"],
+            "ja": ["設定を開きます。", "「コントローラ」に進みます。", "使用する機種のボタンマッピングを選びます。"],
+            "es": ["Abre Ajustes.", "Ve a Mando.", "Elige Asignación de botones para tu sistema."]
+          },
+          "tip": {
+            "en": "Separate mappings can exist for different consoles, so check the system you are editing.",
+            "zh-Hans": "不同主机平台可以使用不同映射，所以请确认你正在编辑的是正确的平台。",
+            "zh-Hant": "不同主機平台可以使用不同對應，所以請確認你正在編輯的是正確的平台。",
+            "ja": "機種ごとに別の設定があるため、編集しているシステムを確認してください。",
+            "es": "Puede haber asignaciones distintas por consola, así que revisa qué sistema estás editando."
+          },
+          "isFeatured": false
+        }
+      ]
+    },
+    {
+      "id": "audio_performance",
+      "icon": "speaker.wave.2",
+      "title": {
+        "en": "Audio & Performance",
+        "zh-Hans": "音频与性能",
+        "zh-Hant": "音訊與效能",
+        "ja": "オーディオと性能",
+        "es": "Audio y rendimiento"
+      },
+      "items": [
+        {
+          "id": "bluetooth_audio_lag",
+          "icon": "speaker.wave.2",
+          "title": {
+            "en": "Why is audio laggy with Bluetooth headphones?",
+            "zh-Hans": "为什么蓝牙耳机声音会延迟？",
+            "zh-Hant": "為什麼藍牙耳機聲音會延遲？",
+            "ja": "Bluetooth ヘッドホンで音が遅れるのはなぜ？",
+            "es": "¿Por qué el audio va con retraso en auriculares Bluetooth?"
+          },
+          "keywords": {
+            "en": ["bluetooth", "lag", "airpods", "sound delay"]
+          },
+          "summary": {
+            "en": "Bluetooth audio can add latency, especially when your device is busy.",
+            "zh-Hans": "蓝牙音频本身可能带来延迟，设备负载高时会更明显。",
+            "zh-Hant": "藍牙音訊本身可能帶來延遲，裝置負載高時會更明顯。",
+            "ja": "Bluetooth オーディオは遅延が発生しやすく、デバイス負荷が高いとさらに目立ちます。",
+            "es": "El audio Bluetooth puede añadir latencia, sobre todo cuando el dispositivo está ocupado."
+          },
+          "steps": {
+            "en": ["Try the device speaker or wired audio if available.", "Close background apps.", "Check audio settings for any optimization options."],
+            "zh-Hans": ["尽量改用扬声器或有线音频（如果可用）。", "关闭后台应用。", "检查音频设置中是否有优化选项。"],
+            "zh-Hant": ["盡量改用揚聲器或有線音訊（如果可用）。", "關閉背景應用。", "檢查音訊設定中是否有最佳化選項。"],
+            "ja": ["可能なら本体スピーカーや有線音声を試します。", "バックグラウンドアプリを閉じます。", "オーディオ設定に最適化オプションがないか確認します。"],
+            "es": ["Prueba con el altavoz del dispositivo o audio con cable si está disponible.", "Cierra las apps en segundo plano.", "Revisa los ajustes de audio por si hay opciones de optimización."]
+          },
+          "tip": {
+            "en": "Bluetooth delay is a common issue, so using speakers can be the quickest fix.",
+            "zh-Hans": "蓝牙延迟是常见问题，改用扬声器通常是最快的解决办法。",
+            "zh-Hant": "藍牙延遲是常見問題，改用揚聲器通常是最快的解法。",
+            "ja": "Bluetooth 遅延はよくあるため、最も手早い解決策は本体スピーカーを使うことです。",
+            "es": "El retraso Bluetooth es un problema común, así que usar el altavoz suele ser la solución más rápida."
+          },
+          "isFeatured": true
+        },
+        {
+          "id": "game_lagging",
+          "icon": "speedometer",
+          "title": {
+            "en": "Why is my game lagging or slow?",
+            "zh-Hans": "为什么游戏会卡顿或变慢？",
+            "zh-Hant": "為什麼遊戲會卡頓或變慢？",
+            "ja": "ゲームが重い、遅いのはなぜ？",
+            "es": "¿Por qué mi juego va lento o con tirones?"
+          },
+          "keywords": {
+            "en": ["performance", "fps", "lag", "slow"]
+          },
+          "summary": {
+            "en": "Performance drops usually happen when your device is under load or power limits.",
+            "zh-Hans": "性能下降通常发生在设备负载过高或受电源限制时。",
+            "zh-Hant": "效能下降通常發生在裝置負載過高或受電源限制時。",
+            "ja": "パフォーマンス低下は、デバイス負荷や電力制限が高いときに起こりやすくなります。",
+            "es": "Las caídas de rendimiento suelen ocurrir cuando el dispositivo está muy cargado o limitado por energía."
+          },
+          "steps": {
+            "en": ["Close background apps.", "Disable Low Power Mode.", "Restart the app if performance does not recover."],
+            "zh-Hans": ["关闭后台应用。", "关闭低电量模式。", "如果性能没有恢复，请重启应用。"],
+            "zh-Hant": ["關閉背景應用。", "關閉低電量模式。", "如果效能沒有恢復，請重新啟動 App。"],
+            "ja": ["バックグラウンドアプリを閉じます。", "低電力モードをオフにします。", "改善しない場合はアプリを再起動します。"],
+            "es": ["Cierra las apps en segundo plano.", "Desactiva el modo de bajo consumo.", "Reinicia la app si el rendimiento no mejora."]
+          },
+          "tip": {
+            "en": "Long sessions, screen recording, or Bluetooth accessories can all add extra load.",
+            "zh-Hans": "长时间游玩、屏幕录制或蓝牙配件都会增加额外负载。",
+            "zh-Hant": "長時間遊玩、螢幕錄製或藍牙配件都會增加額外負載。",
+            "ja": "長時間プレイ、画面録画、Bluetooth 周辺機器は負荷を増やす要因になります。",
+            "es": "Las sesiones largas, la grabación de pantalla o los accesorios Bluetooth pueden añadir carga extra."
+          },
+          "isFeatured": false
+        },
+        {
+          "id": "device_warm",
+          "icon": "thermometer.medium",
+          "title": {
+            "en": "Why does my device get warm?",
+            "zh-Hans": "为什么设备会发热？",
+            "zh-Hant": "為什麼裝置會發熱？",
+            "ja": "デバイスが熱くなるのはなぜ？",
+            "es": "¿Por qué mi dispositivo se calienta?"
+          },
+          "keywords": {
+            "en": ["warm", "heat", "overheating"]
+          },
+          "summary": {
+            "en": "Emulation is performance-intensive, so some warmth is expected during play.",
+            "zh-Hans": "模拟运行对性能要求较高，因此游玩时设备发热属于正常现象。",
+            "zh-Hant": "模擬運行對效能要求較高，因此遊玩時裝置發熱屬於正常現象。",
+            "ja": "エミュレーションは高負荷のため、プレイ中にある程度熱を持つのは正常です。",
+            "es": "La emulación exige bastante rendimiento, así que es normal que el dispositivo se caliente algo al jugar."
+          },
+          "steps": {
+            "en": ["Lower screen brightness.", "Take short breaks during long sessions.", "Avoid charging while playing when possible."],
+            "zh-Hans": ["降低屏幕亮度。", "长时间游玩时适当休息。", "如果可以，尽量避免边充电边玩。"],
+            "zh-Hant": ["降低螢幕亮度。", "長時間遊玩時適當休息。", "如果可以，盡量避免邊充電邊玩。"],
+            "ja": ["画面の明るさを下げます。", "長時間プレイ時は短い休憩を入れます。", "可能なら充電しながらのプレイを避けます。"],
+            "es": ["Baja el brillo de la pantalla.", "Haz pausas breves en sesiones largas.", "Evita jugar mientras cargas el dispositivo si es posible."]
+          },
+          "tip": {
+            "en": "If heat and slowdowns happen together, try the performance steps above first.",
+            "zh-Hans": "如果发热和卡顿同时出现，建议先尝试上面的性能优化步骤。",
+            "zh-Hant": "如果發熱和卡頓同時出現，建議先嘗試上面的效能最佳化步驟。",
+            "ja": "発熱と遅さが同時に起こる場合は、先に上のパフォーマンス対策を試してください。",
+            "es": "Si el calor y la lentitud ocurren juntos, prueba primero los pasos de rendimiento anteriores."
+          },
+          "isFeatured": false
+        }
+      ]
+    },
+    {
+      "id": "troubleshooting",
+      "icon": "wrench.and.screwdriver",
+      "title": {
+        "en": "Troubleshooting",
+        "zh-Hans": "故障排查",
+        "zh-Hant": "疑難排解",
+        "ja": "トラブルシューティング",
+        "es": "Solución de problemas"
+      },
+      "items": [
+        {
+          "id": "game_black_screen",
+          "icon": "display",
+          "title": {
+            "en": "Game won’t start or shows a black screen",
+            "zh-Hans": "游戏无法启动或黑屏",
+            "zh-Hant": "遊戲無法啟動或黑畫面",
+            "ja": "ゲームが起動しない、または黒い画面になる",
+            "es": "El juego no arranca o muestra una pantalla negra"
+          },
+          "keywords": {
+            "en": ["black screen", "won't start", "launch issue"]
+          },
+          "summary": {
+            "en": "This is usually caused by a bad import, unsupported file, or a temporary launch issue.",
+            "zh-Hans": "这通常是由导入异常、不受支持的文件或临时启动问题引起的。",
+            "zh-Hant": "這通常是由匯入異常、不受支援的檔案或暫時啟動問題引起的。",
+            "ja": "多くの場合、取り込み不良、未対応ファイル、または一時的な起動問題が原因です。",
+            "es": "Normalmente se debe a una importación incorrecta, un archivo no compatible o un problema temporal de arranque."
+          },
+          "steps": {
+            "en": ["Re-import the game.", "Make sure the file is supported.", "Restart the app and try again."],
+            "zh-Hans": ["重新导入游戏。", "确认文件属于受支持格式。", "重启应用后再试一次。"],
+            "zh-Hant": ["重新匯入遊戲。", "確認檔案屬於受支援格式。", "重新啟動 App 後再試一次。"],
+            "ja": ["ゲームを再取り込みします。", "対応ファイルか確認します。", "アプリを再起動してもう一度試します。"],
+            "es": ["Vuelve a importar el juego.", "Asegúrate de que el archivo sea compatible.", "Reinicia la app y vuelve a intentarlo."]
+          },
+          "tip": {
+            "en": "If one file always fails, test another known-good copy before troubleshooting the app.",
+            "zh-Hans": "如果某个文件总是失败，先尝试另一份已知正常的文件，再继续排查应用。",
+            "zh-Hant": "如果某個檔案總是失敗，先嘗試另一份已知正常的檔案，再繼續排查 App。",
+            "ja": "同じファイルだけ失敗する場合は、まず正常な別コピーでアプリ側かどうか確認してください。",
+            "es": "Si un archivo siempre falla, prueba primero otra copia conocida antes de seguir investigando la app."
+          },
+          "isFeatured": false
+        },
+        {
+          "id": "controls_not_responding",
+          "icon": "hand.raised",
+          "title": {
+            "en": "Controls are not responding",
+            "zh-Hans": "控制没有响应",
+            "zh-Hant": "控制沒有反應",
+            "ja": "操作が反応しない",
+            "es": "Los controles no responden"
+          },
+          "keywords": {
+            "en": ["controls", "not responding", "controller"]
+          },
+          "summary": {
+            "en": "A controller connection issue or mismatched button mapping is the most common cause.",
+            "zh-Hans": "最常见的原因是控制器连接异常或按键映射不正确。",
+            "zh-Hant": "最常見的原因是控制器連線異常或按鍵對應不正確。",
+            "ja": "多くの場合、コントローラ接続の問題かボタン設定の不一致が原因です。",
+            "es": "La causa más habitual es un problema de conexión del mando o una asignación de botones incorrecta."
+          },
+          "steps": {
+            "en": ["Check the controller connection.", "Restart the game.", "Verify the button mapping in Settings."],
+            "zh-Hans": ["检查控制器连接状态。", "重启游戏。", "在设置中确认按键映射是否正确。"],
+            "zh-Hant": ["檢查控制器連線狀態。", "重新啟動遊戲。", "在設定中確認按鍵對應是否正確。"],
+            "ja": ["コントローラの接続状態を確認します。", "ゲームを再起動します。", "設定でボタンマッピングを確認します。"],
+            "es": ["Comprueba la conexión del mando.", "Reinicia el juego.", "Verifica la asignación de botones en Ajustes."]
+          },
+          "tip": {
+            "en": "If touch controls also fail, reopen the game to refresh the input session.",
+            "zh-Hans": "如果触控按键也无响应，请重新打开游戏以刷新输入会话。",
+            "zh-Hant": "如果觸控按鍵也無反應，請重新開啟遊戲以刷新輸入工作階段。",
+            "ja": "タッチ操作も反応しない場合は、ゲームを開き直して入力セッションをリフレッシュしてください。",
+            "es": "Si los controles táctiles también fallan, vuelve a abrir el juego para refrescar la sesión de entrada."
+          },
+          "isFeatured": false
+        },
+        {
+          "id": "app_crashes",
+          "icon": "exclamationmark.triangle",
+          "title": {
+            "en": "The app crashes or freezes",
+            "zh-Hans": "应用崩溃或卡住了",
+            "zh-Hant": "App 閃退或卡住了",
+            "ja": "アプリがクラッシュまたはフリーズする",
+            "es": "La app se cierra o se queda congelada"
+          },
+          "keywords": {
+            "en": ["crash", "freeze", "stuck"]
+          },
+          "summary": {
+            "en": "A restart usually clears temporary state issues and is the fastest first recovery step.",
+            "zh-Hans": "重启通常能清除临时状态问题，是最快的第一步恢复办法。",
+            "zh-Hant": "重新啟動通常能清除暫時狀態問題，是最快的第一步恢復方式。",
+            "ja": "再起動で一時的な状態不良が解消することが多く、最も手早い回復手段です。",
+            "es": "Reiniciar suele limpiar problemas temporales de estado y es el paso de recuperación más rápido."
+          },
+          "steps": {
+            "en": ["Restart the app.", "Restart your device if the issue repeats.", "Update to the latest version when available."],
+            "zh-Hans": ["重启应用。", "如果问题重复出现，请重启设备。", "有新版本时请更新到最新版。"],
+            "zh-Hant": ["重新啟動 App。", "如果問題反覆出現，請重新啟動裝置。", "有新版本時請更新到最新版。"],
+            "ja": ["アプリを再起動します。", "繰り返す場合はデバイスも再起動します。", "新しいバージョンがあれば更新します。"],
+            "es": ["Reinicia la app.", "Reinicia tu dispositivo si el problema se repite.", "Actualiza a la versión más reciente cuando esté disponible."]
+          },
+          "tip": {
+            "en": "When you contact support, include the game name, device model, and what happened right before the crash.",
+            "zh-Hans": "联系支持时，请附上游戏名称、设备型号，以及崩溃前刚刚进行了什么操作。",
+            "zh-Hant": "聯絡支援時，請附上遊戲名稱、裝置型號，以及閃退前剛剛進行了什麼操作。",
+            "ja": "サポートへ連絡する際は、ゲーム名、デバイス名、クラッシュ直前の操作を添えてください。",
+            "es": "Cuando contactes con soporte, incluye el nombre del juego, el modelo del dispositivo y qué ocurrió justo antes del fallo."
+          },
+          "isFeatured": false
+        }
+      ]
+    }
+  ],
+  "supportActions": [
+    {
+      "id": "contact_support",
+      "destination": "contactSupport",
+      "icon": "envelope",
+      "title": {
+        "en": "Contact Support",
+        "zh-Hans": "联系支持",
+        "zh-Hant": "聯絡支援",
+        "ja": "サポートに連絡",
+        "es": "Contactar con soporte"
+      },
+      "subtitle": {
+        "en": "Report a problem and include the game, device, and issue details.",
+        "zh-Hans": "报告问题时请附上游戏名称、设备型号和问题描述。",
+        "zh-Hant": "回報問題時請附上遊戲名稱、裝置型號和問題描述。",
+        "ja": "ゲーム名、デバイス、問題の内容を添えて不具合を報告します。",
+        "es": "Informa de un problema incluyendo el juego, el dispositivo y los detalles del fallo."
+      },
+      "emailSubject": {
+        "en": "RetroMind Support Request",
+        "zh-Hans": "RetroMind 支持请求",
+        "zh-Hant": "RetroMind 支援請求",
+        "ja": "RetroMind サポート依頼",
+        "es": "Solicitud de soporte de RetroMind"
+      },
+      "emailBody": {
+        "en": "Game name:\nDevice model:\nIssue description:\nWhat happened before the issue:\n",
+        "zh-Hans": "游戏名称：\n设备型号：\n问题描述：\n问题发生前执行了什么操作：\n",
+        "zh-Hant": "遊戲名稱：\n裝置型號：\n問題描述：\n問題發生前進行了什麼操作：\n",
+        "ja": "ゲーム名:\nデバイス名:\n問題の内容:\n問題の直前に行った操作:\n",
+        "es": "Nombre del juego:\nModelo del dispositivo:\nDescripción del problema:\nQué ocurrió justo antes del fallo:\n"
+      }
+    },
+    {
+      "id": "send_feedback",
+      "destination": "sendFeedback",
+      "icon": "bubble.left.and.bubble.right",
+      "title": {
+        "en": "Send Feedback",
+        "zh-Hans": "发送反馈",
+        "zh-Hant": "傳送回饋",
+        "ja": "フィードバックを送る",
+        "es": "Enviar comentarios"
+      },
+      "subtitle": {
+        "en": "Share feature ideas or tell us what would make the app better.",
+        "zh-Hans": "告诉我们你想要的新功能，或分享能让应用更好的建议。",
+        "zh-Hant": "告訴我們你想要的新功能，或分享能讓 App 更好的建議。",
+        "ja": "追加してほしい機能や、アプリをより良くするアイデアを送れます。",
+        "es": "Comparte ideas de funciones o dinos qué haría mejor la app."
+      },
+      "emailSubject": {
+        "en": "RetroMind Feature Request",
+        "zh-Hans": "RetroMind 功能建议",
+        "zh-Hant": "RetroMind 功能建議",
+        "ja": "RetroMind 機能要望",
+        "es": "Solicitud de función para RetroMind"
+      },
+      "emailBody": {
+        "en": "Feature request:\nWhy it would help:\nAnything you expected to happen:\n",
+        "zh-Hans": "功能建议：\n它为什么会有帮助：\n你原本期待的体验：\n",
+        "zh-Hant": "功能建議：\n它為什麼會有幫助：\n你原本期待的體驗：\n",
+        "ja": "希望する機能:\n役立つ理由:\n期待していた体験:\n",
+        "es": "Función solicitada:\nPor qué ayudaría:\nQué esperabas que ocurriera:\n"
+      }
+    },
+    {
+      "id": "replay_guide",
+      "destination": "replayGuide",
+      "icon": "arrow.clockwise",
+      "title": {
+        "en": "Replay User Guide",
+        "zh-Hans": "重新播放用户指南",
+        "zh-Hant": "重新播放使用者指南",
+        "ja": "ユーザーガイドをもう一度見る",
+        "es": "Repetir guía de usuario"
+      },
+      "subtitle": {
+        "en": "Show the launch guide again the next time you start a game.",
+        "zh-Hans": "让你在下次启动游戏时再次看到启动指南。",
+        "zh-Hant": "讓你在下次啟動遊戲時再次看到啟動指南。",
+        "ja": "次にゲームを起動したとき、開始ガイドをもう一度表示します。",
+        "es": "Vuelve a mostrar la guía de inicio la próxima vez que abras un juego."
+      },
+      "emailSubject": null,
+      "emailBody": null
+    }
+  ]
+}

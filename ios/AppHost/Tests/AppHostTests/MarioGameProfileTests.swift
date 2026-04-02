@@ -152,4 +152,64 @@ final class MarioGameProfileTests: XCTestCase {
         XCTAssertEqual(profile?.id, MarioGameProfile.zeldaMinishCap.id)
     }
 
+    func testKirbyNightmareInDreamLandProfileMatchesCanonicalTitle() {
+        let profile = MarioGameProfile.activeProfile(
+            title: "Kirby: Nightmare in Dream Land",
+            platform: .GBA,
+            romHash: ""
+        )
+
+        XCTAssertEqual(profile?.id, MarioGameProfile.kirbyNightmareInDreamLand.id)
+    }
+
+    func testKirbyNightmareInDreamLandProfileMatchesROMHeaderTitle() {
+        let profile = MarioGameProfile.activeProfile(
+            title: "AGB-A7KE-USA",
+            platform: .GBA,
+            romHash: ""
+        )
+
+        XCTAssertEqual(profile?.id, MarioGameProfile.kirbyNightmareInDreamLand.id)
+    }
+
+    func testKirbyAmazingMirrorProfileMatchesCanonicalTitle() {
+        let profile = MarioGameProfile.activeProfile(
+            title: "Kirby & The Amazing Mirror",
+            platform: .GBA,
+            romHash: ""
+        )
+
+        XCTAssertEqual(profile?.id, MarioGameProfile.kirbyAmazingMirror.id)
+    }
+
+    func testKirbyAmazingMirrorProfileMatchesROMHeaderTitle() {
+        let profile = MarioGameProfile.activeProfile(
+            title: "AGB-B8KE-USA",
+            platform: .GBA,
+            romHash: ""
+        )
+
+        XCTAssertEqual(profile?.id, MarioGameProfile.kirbyAmazingMirror.id)
+    }
+
+    func testGoldenSunProfileMatchesCanonicalTitle() {
+        let profile = MarioGameProfile.activeProfile(
+            title: "Golden Sun",
+            platform: .GBA,
+            romHash: ""
+        )
+
+        XCTAssertEqual(profile?.id, MarioGameProfile.goldenSun.id)
+    }
+
+    func testGoldenSunProfileMatchesROMHeaderTitle() {
+        let profile = MarioGameProfile.activeProfile(
+            title: "AGB-AGSE-USA",
+            platform: .GBA,
+            romHash: ""
+        )
+
+        XCTAssertEqual(profile?.id, MarioGameProfile.goldenSun.id)
+    }
+
 }

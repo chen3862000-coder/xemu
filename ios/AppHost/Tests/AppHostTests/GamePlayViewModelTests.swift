@@ -276,4 +276,71 @@ final class GamePlayViewModelTests: XCTestCase {
         XCTAssertEqual(payload["mapX"], 18)
         XCTAssertEqual(payload["mapY"], 7)
     }
+
+    func testPlayInsightsPayloadIncludesKirbyNightmareVitalsAndProgress() {
+        let sample = MarioLiveMemorySample(
+            lives: 3,
+            powerUpState: 0,
+            gameplayState: 0x04,
+            invulnerabilityTimer: 0,
+            health: 36,
+            maxHealth: nil,
+            gameMode: nil,
+            contextValues: [
+                "level": 0x04,
+                "completion": 0x07
+            ]
+        )
+
+        let payload = GamePlayViewModel.playInsightsPayload(for: .kirbyNightmareInDreamLand, liveSample: sample)
+
+        XCTAssertEqual(payload["lives"], 3)
+        XCTAssertEqual(payload["health"], 36)
+        XCTAssertEqual(payload["level"], 0x04)
+        XCTAssertEqual(payload["completion"], 0x07)
+    }
+
+    func testPlayInsightsPayloadIncludesKirbyAmazingMirrorVitalsAndProgress() {
+        let sample = MarioLiveMemorySample(
+            lives: 4,
+            powerUpState: 0,
+            gameplayState: 0x03,
+            invulnerabilityTimer: 0,
+            health: 28,
+            maxHealth: nil,
+            gameMode: nil,
+            contextValues: [
+                "mirrorPieces": 0x03,
+                "mapsCollected": 0x0008
+            ]
+        )
+
+        let payload = GamePlayViewModel.playInsightsPayload(for: .kirbyAmazingMirror, liveSample: sample)
+
+        XCTAssertEqual(payload["lives"], 4)
+        XCTAssertEqual(payload["health"], 28)
+        XCTAssertEqual(payload["mirrorPieces"], 0x03)
+        XCTAssertEqual(payload["mapsCollected"], 0x0008)
+    }
+
+    func testPlayInsightsPayloadIncludesGoldenSunVitalsAndArea() {
+        let sample = MarioLiveMemorySample(
+            lives: nil,
+            powerUpState: 0,
+            gameplayState: 0x08,
+            invulnerabilityTimer: 0,
+            health: 72,
+            maxHealth: 95,
+            gameMode: nil,
+            contextValues: [
+                "area": 0x0008
+            ]
+        )
+
+        let payload = GamePlayViewModel.playInsightsPayload(for: .goldenSun, liveSample: sample)
+
+        XCTAssertEqual(payload["health"], 72)
+        XCTAssertEqual(payload["maxHealth"], 95)
+        XCTAssertEqual(payload["area"], 0x0008)
+    }
 }
