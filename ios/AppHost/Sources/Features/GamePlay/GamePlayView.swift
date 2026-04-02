@@ -985,16 +985,18 @@ struct GamePlayView: View {
                 .frame(width: geometry.size.width * 0.58)
                 .clipped()
 
-                VirtualPadView(
-                    platform: game.gamePlatform ?? .GB,
-                    onButtonPress: { button, isPressed in
-                        viewModel.handleButtonPress(button, pressed: isPressed)
-                    }
-                )
-                .scaleEffect(0.86)
-                .offset(y: -10)
-                .frame(width: geometry.size.width * 0.42)
-                .clipped()
+                if shouldShowTouchControls {
+                    VirtualPadView(
+                        platform: game.gamePlatform ?? .GB,
+                        onButtonPress: { button, isPressed in
+                            viewModel.handleButtonPress(button, pressed: isPressed)
+                        }
+                    )
+                    .scaleEffect(0.86)
+                    .offset(y: -10)
+                    .frame(width: geometry.size.width * 0.42)
+                    .clipped()
+                }
             }
             )
         } else {
@@ -1024,16 +1026,18 @@ struct GamePlayView: View {
                 }
                 .frame(height: geometry.size.height * 0.5)
                 .clipped()
-                
-                VirtualPadView(
-                    platform: game.gamePlatform ?? .GB,
-                    onButtonPress: { button, isPressed in
-                        viewModel.handleButtonPress(button, pressed: isPressed)
-                    }
-                )
-                .offset(y: -18)
-                .frame(height: geometry.size.height * 0.5)
-                .clipped()
+
+                if shouldShowTouchControls {
+                    VirtualPadView(
+                        platform: game.gamePlatform ?? .GB,
+                        onButtonPress: { button, isPressed in
+                            viewModel.handleButtonPress(button, pressed: isPressed)
+                        }
+                    )
+                    .offset(y: -18)
+                    .frame(height: geometry.size.height * 0.5)
+                    .clipped()
+                }
             }
             )
         }
