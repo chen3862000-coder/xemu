@@ -57,8 +57,10 @@ public struct ControllerMappingEditor: View {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save") {
                         Task {
-                            await viewModel.saveMappings()
-                            dismiss()
+                            let didSave = await viewModel.saveMappings()
+                            if didSave {
+                                dismiss()
+                            }
                         }
                     }
                     .disabled(viewModel.isLoading)
@@ -178,9 +180,15 @@ public class ControllerMappingViewModel: ObservableObject {
     private var originalMappings: [ControllerButton: EmulatorInput] = [:]
     
     var availableButtons: [ControllerButton] {
-        [.a, .b, .x, .y, .dpadUp, .dpadDown, .dpadLeft, .dpadRight,
-         .leftShoulder, .rightShoulder, .leftTrigger, .rightTrigger,
-         .start, .select, .menu]
+        let preferredOrder: [ControllerButton] = [
+            .a, .b, .x, .y,
+            .dpadUp, .dpadDown, .dpadLeft, .dpadRight,
+            .leftShoulder, .rightShoulder, .leftTrigger, .rightTrigger,
+            .leftStick, .rightStick,
+            .start, .select, .menu
+        ]
+        let mappedButtons = Set(DefaultControllerMappings.mappings(for: platform).map(\.controllerButton))
+        return preferredOrder.filter { mappedButtons.contains($0) || editableButtons.contains($0) }
     }
     
     var availableInputs: [EmulatorInput] {
@@ -225,14 +233,10 @@ public class ControllerMappingViewModel: ObservableObject {
             let results = try context.fetch(fetchRequest)
             if let mapping = results.first,
                let mappingData = mapping.value(forKey: "mappingData") as? String,
-               let data = mappingData.data(using: .utf8),
-               let decoded = try? JSONDecoder().decode([String: String].self, from: data) {
+               let decoded = Self.decodeMappings(from: mappingData) {
                 mappings = [:]
-                for (key, value) in decoded {
-                    if let button = ControllerButton(rawValue: key),
-                       let input = EmulatorInput(rawValue: value) {
-                        mappings[button] = input
-                    }
+                for mapping in decoded {
+                    mappings[mapping.controllerButton] = mapping.emulatorInput
                 }
             } else {
                 resetToDefaults()
@@ -245,7 +249,7 @@ public class ControllerMappingViewModel: ObservableObject {
         isLoading = false
     }
     
-    func saveMappings() async {
+    func saveMappings() async -> Bool {
         let context = PersistenceController.shared.container.viewContext
         
         let fetchRequest = NSFetchRequest<NSManagedObject>(entityName: "ControllerMapping")
@@ -269,16 +273,27 @@ public class ControllerMappingViewModel: ObservableObject {
                 mapping.setValue(controllerType, forKey: "controllerType")
             }
             
-            let encoded = mappings.mapKeys { $0.rawValue }
-                .mapValues { $0.rawValue }
-            let data = try JSONEncoder().encode(encoded)
-            mapping.setValue(String(data: data, encoding: .utf8), forKey: "mappingData")
+            let mappingList = mappings.map { key, value in
+                ButtonMapping(controllerButton: key, emulatorInput: value)
+            }
+            guard let encodedMappings = DefaultControllerMappings.toData(mappingList) else {
+                throw NSError(
+                    domain: "com.xemu.controller-mapping",
+                    code: 1,
+                    userInfo: [NSLocalizedDescriptionKey: "Unable to encode controller mappings"]
+                )
+            }
+            mapping.setValue(encodedMappings, forKey: "mappingData")
             mapping.setValue(Date(), forKey: "updatedAt")
             
             try context.save()
+            originalMappings = mappings
+            InputBus.shared.reloadMappings(for: platform, controllerType: controllerType)
+            return true
         } catch {
             errorMessage = "Failed to save mappings: \(error.localizedDescription)"
             showError = true
+            return false
         }
     }
     
@@ -287,6 +302,33 @@ public class ControllerMappingViewModel: ObservableObject {
         mappings = [:]
         for mapping in mappingsList {
             mappings[mapping.controllerButton] = mapping.emulatorInput
+        }
+    }
+
+    private var editableButtons: Set<ControllerButton> {
+        [.a, .b, .x, .y, .dpadUp, .dpadDown, .dpadLeft, .dpadRight,
+         .leftShoulder, .rightShoulder, .leftTrigger, .rightTrigger,
+         .start, .select, .menu]
+    }
+
+    private static func decodeMappings(from rawValue: String) -> [ButtonMapping]? {
+        if let mappings = DefaultControllerMappings.fromData(rawValue) {
+            return mappings
+        }
+
+        guard
+            let data = rawValue.data(using: .utf8),
+            let decoded = try? JSONDecoder().decode([String: String].self, from: data)
+        else {
+            return nil
+        }
+
+        return decoded.compactMap { key, value in
+            guard let button = ControllerButton(rawValue: key),
+                  let input = EmulatorInput(rawValue: value) else {
+                return nil
+            }
+            return ButtonMapping(controllerButton: button, emulatorInput: input)
         }
     }
 }
@@ -335,24 +377,5 @@ extension EmulatorInput {
         case .PS1, .PS2:
             return [.a, .b, .x, .y, .l, .r, .l2, .r2, .start, .select, .up, .down, .left, .right]
         }
-    }
-}
-
-extension Dictionary {
-    func mapKeys<T: Hashable>(_ transform: (Key) -> T) -> [T: Value] {
-        var result: [T: Value] = [:]
-        for (key, value) in self {
-            result[transform(key)] = value
-        }
-        return result
-    }
-    
-    func mapKeysAndValues<T: Hashable, U>(_ transform: (Key, Value) -> (T, U)) -> [T: U] {
-        var result: [T: U] = [:]
-        for (key, value) in self {
-            let (newKey, newValue) = transform(key, value)
-            result[newKey] = newValue
-        }
-        return result
     }
 }

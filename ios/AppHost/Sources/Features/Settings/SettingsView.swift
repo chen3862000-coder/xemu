@@ -137,12 +137,6 @@ struct SettingsView: View {
             )
 
             ToggleSettingsRow(
-                title: L10n.string("settings.boot_intro.title", languageManager: languageManager),
-                subtitle: L10n.string("settings.boot_intro.subtitle", languageManager: languageManager),
-                isOn: hapticBinding($showCartridgeLaunchIntro)
-            )
-
-            ToggleSettingsRow(
                 title: L10n.string("settings.game_events_detection.title", languageManager: languageManager),
                 subtitle: L10n.string("settings.game_events_detection.subtitle", languageManager: languageManager),
                 isOn: hapticBinding($devHPDeathDetection)
@@ -238,6 +232,11 @@ struct SettingsView: View {
 
     private var developerSection: some View {
         Section(header: SettingsSectionHeader(L10n.string("settings.developer.section", languageManager: languageManager))) {
+            ToggleSettingsRow(
+                title: L10n.string("settings.boot_intro.title", languageManager: languageManager),
+                subtitle: L10n.string("settings.boot_intro.subtitle", languageManager: languageManager),
+                isOn: hapticBinding($showCartridgeLaunchIntro)
+            )
             ToggleSettingsRow(title: L10n.string("settings.dev.fps_overlay", languageManager: languageManager), isOn: hapticBinding($showFPSMeter))
             ToggleSettingsRow(title: L10n.string("settings.dev.memory_monitor", languageManager: languageManager), isOn: hapticBinding($devMemoryMonitor))
             ToggleSettingsRow(title: L10n.string("settings.dev.thermal_logging", languageManager: languageManager), isOn: hapticBinding($devThermalLogging))
@@ -517,15 +516,18 @@ private struct ControllerSettingsView: View {
     @Binding var stickSensitivityRaw: String
     @Binding var hapticFeedback: Bool
     let showDevAdvanced: Bool
+    @State private var controllerObserverToken: UUID?
+    @State private var isControllerConnected = InputBus.shared.isControllerConnected()
+    @State private var activeControllerName = InputBus.shared.getActiveControllerName() ?? "—"
 
     private var controllerStatus: String {
-        InputBus.shared.isControllerConnected()
+        isControllerConnected
             ? L10n.string("settings.connected", languageManager: languageManager)
             : L10n.string("settings.not_connected", languageManager: languageManager)
     }
 
     private var controllerName: String {
-        InputBus.shared.getActiveControllerName() ?? "—"
+        activeControllerName
     }
 
     var body: some View {
@@ -549,8 +551,24 @@ private struct ControllerSettingsView: View {
             }
 
             Section(header: SettingsSectionHeader(L10n.string("settings.layout.section", languageManager: languageManager))) {
-                NavigationSettingsRow(title: L10n.string("settings.controller.button_mapping", languageManager: languageManager)) {
+                // GB Controller Mapping
+                NavigationSettingsRow(title: L10n.string("settings.controller.button_mapping", languageManager: languageManager), subtitle: "Game Boy") {
+                    ControllerMappingEditor(platform: .GB)
+                }
+
+                // GBC Controller Mapping
+                NavigationSettingsRow(title: L10n.string("settings.controller.button_mapping", languageManager: languageManager), subtitle: "Game Boy Color") {
+                    ControllerMappingEditor(platform: .GBC)
+                }
+
+                // GBA Controller Mapping
+                NavigationSettingsRow(title: L10n.string("settings.controller.button_mapping", languageManager: languageManager), subtitle: "Game Boy Advance") {
                     ControllerMappingEditor(platform: .GBA)
+                }
+
+                // NDS Controller Mapping
+                NavigationSettingsRow(title: L10n.string("settings.controller.button_mapping", languageManager: languageManager), subtitle: "Nintendo DS") {
+                    ControllerMappingEditor(platform: .NDS)
                 }
 
                 NavigationSettingsRow(
@@ -571,9 +589,38 @@ private struct ControllerSettingsView: View {
         }
         .settingsListStyle()
         .navigationTitle(L10n.string("settings.controller.nav", languageManager: languageManager))
+        .onAppear(perform: startMonitoringController)
+        .onDisappear(perform: stopMonitoringController)
         #if os(iOS)
         .navigationBarTitleDisplayMode(.inline)
         #endif
+    }
+
+    private func startMonitoringController() {
+        refreshControllerSnapshot()
+        guard controllerObserverToken == nil else { return }
+
+        controllerObserverToken = InputBus.shared.addControllerObserver(
+            onConnected: { name in
+                isControllerConnected = true
+                activeControllerName = name
+            },
+            onDisconnected: {
+                isControllerConnected = false
+                activeControllerName = "—"
+            }
+        )
+    }
+
+    private func stopMonitoringController() {
+        guard let controllerObserverToken else { return }
+        InputBus.shared.removeControllerObserver(controllerObserverToken)
+        self.controllerObserverToken = nil
+    }
+
+    private func refreshControllerSnapshot() {
+        isControllerConnected = InputBus.shared.isControllerConnected()
+        activeControllerName = InputBus.shared.getActiveControllerName() ?? "—"
     }
 }
 

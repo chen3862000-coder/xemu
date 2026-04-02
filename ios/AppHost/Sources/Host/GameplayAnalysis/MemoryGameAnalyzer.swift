@@ -7,6 +7,9 @@ final class MemoryGameAnalyzer {
     private var cachedPatternMatch: MarioMemoryPattern?
     private var cachedGameTitle: String = ""
 
+    // Track unique stages for Dragon Ball mapping discovery
+    private var dragonBallDiscoveredStages: Set<Int> = []
+
     // Mario game memory patterns organized by platform
     private let marioPatterns: [MarioMemoryPattern] = [
         // Game Boy Color games
@@ -1511,15 +1514,6 @@ final class MemoryGameAnalyzer {
     }
 
     private func dragonBallLocationSummary(liveSample: MarioLiveMemorySample) -> String? {
-        if liveSample.contextValues.isEmpty {
-            GameplayAnalysisLogger.event("dragon-ball location missing-context")
-        }
-        if let stage = liveSample.contextValues["stage"] {
-            if let locationName = dragonBallLocationName(Int(stage)) {
-                return "Loc \(locationName)"
-            }
-            GameplayAnalysisLogger.event("dragon-ball location unmapped stage=\(hex16(stage))")
-        }
         return nil
     }
 
@@ -1678,6 +1672,51 @@ final class MemoryGameAnalyzer {
 
     private func metroidRoomName(area: UInt8, room: UInt8) -> String? {
         switch (area, room) {
+        case (0x00, 0x01): return "Cactus Room"
+        case (0x00, 0x02): return "Save Room 1"
+        case (0x00, 0x03): return "Navigation Room"
+        case (0x00, 0x04): return "Data Room"
+        case (0x00, 0x05): return "Corridors Alpha"
+        case (0x00, 0x06): return "Corridors Beta"
+        case (0x00, 0x07): return "Operations Deck"
+        case (0x00, 0x08): return "Recharge Room"
+        case (0x00, 0x09): return "Save Room 2"
+        case (0x00, 0x0A): return "Quarantine Bay"
+        case (0x00, 0x0B): return "Laboratory Elevator"
+        case (0x00, 0x0C): return "LAB Workspace"
+        case (0x00, 0x0D): return "Data Room 2"
+        case (0x00, 0x0E): return "Cargo Bay"
+        case (0x00, 0x0F): return "Docking Bay"
+        case (0x01, 0x01): return "Sector 1 Main Hall"
+        case (0x01, 0x02): return "SRX Save Room"
+        case (0x01, 0x03): return "SRX Navigation Room"
+        case (0x01, 0x04): return " Reactor Room"
+        case (0x01, 0x05): return "Energy Recharge Station"
+        case (0x01, 0x06): return "SRX Data Room"
+        case (0x01, 0x07): return "Boss: Zazabi"
+        case (0x01, 0x08): return "Fungal Hall"
+        case (0x01, 0x09): return "Async Panel Room"
+        case (0x02, 0x01): return "Sector 2 Main Hall"
+        case (0x02, 0x02): return "TRO Save Room"
+        case (0x02, 0x03): return "TRO Navigation Room"
+        case (0x02, 0x04): return "Nettle Hole"
+        case (0x02, 0x05): return "Spore Spawn Room"
+        case (0x02, 0x06): return "Thermal Tunnel"
+        case (0x02, 0x07): return "Geothermal Core"
+        case (0x02, 0x08): return "Magma Chamber"
+        case (0x02, 0x09): return "Lava Reactor"
+        case (0x02, 0x0A): return "Grapple Point Area"
+        case (0x02, 0x0B): return "TRO Data Room"
+        case (0x03, 0x01): return "Sector 3 Main Hall"
+        case (0x03, 0x02): return "PYR Save Room"
+        case (0x03, 0x03): return "PYR Navigation Room"
+        case (0x03, 0x04): return "Hot Spring"
+        case (0x03, 0x05): return "Caterpillar Room"
+        case (0x03, 0x06): return "Volcano Hall"
+        case (0x03, 0x07): return "Eruption Site"
+        case (0x03, 0x08): return "Core Force Field"
+        case (0x03, 0x09): return "Pyrosphere"
+        case (0x03, 0x0A): return "Boss: Omega Metroid"
         case (0x04, 0x01): return "Sector 4 Main Hall"
         case (0x04, 0x02): return "Save Room Station 4"
         case (0x04, 0x03): return "Navigation Room Station 4"
@@ -1696,6 +1735,35 @@ final class MemoryGameAnalyzer {
         case (0x04, 0x25): return "AQA Maintenance Tunnel"
         case (0x04, 0x26): return "AQA Maintenance Access"
         case (0x04, 0x2B): return "Testing Tank"
+        case (0x05, 0x01): return "Sector 5 Main Hall"
+        case (0x05, 0x02): return "ARC Save Room"
+        case (0x05, 0x03): return "ARC Navigation Room"
+        case (0x05, 0x04): return "Neo Room"
+        case (0x05, 0x05): return "Space Jump Room"
+        case (0x05, 0x06): return "Gravity Chamber"
+        case (0x05, 0x07): return "Speed Booster Hall"
+        case (0x05, 0x08): return "Screw Attack Tunnel"
+        case (0x05, 0x09): return "Plasma Chamber"
+        case (0x05, 0x0A): return "Boss: Samus X"
+        case (0x06, 0x01): return "Sector 6 Main Hall"
+        case (0x06, 0x02): return "NOC Save Room"
+        case (0x06, 0x03): return "NOC Navigation Room"
+        case (0x06, 0x04): return "Dark Sector"
+        case (0x06, 0x05): return "Nocturnal Hall"
+        case (0x06, 0x06): return "Hunter Cave"
+        case (0x06, 0x07): return "Stalker Corridor"
+        case (0x06, 0x08): return "Nightmare's Chamber"
+        case (0x06, 0x09): return "Core Energy Chamber"
+        case (0x06, 0x0A): return "Boss: Nightmare"
+        case (0x07, 0x01): return "Restricted Lab Entry"
+        case (0x07, 0x02): return "Security Hall"
+        case (0x07, 0x03): return "Sublevel 1"
+        case (0x07, 0x04): return "Sublevel 2"
+        case (0x07, 0x05): return "Sublevel 3"
+        case (0x07, 0x06): return "Central Capsule"
+        case (0x07, 0x07): return "Beta Hybrid Chamber"
+        case (0x07, 0x08): return "Alpha Hybrid Chamber"
+        case (0x07, 0x09): return "Final Boss: SA-X"
         default: return nil
         }
     }

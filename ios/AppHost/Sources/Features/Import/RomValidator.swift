@@ -541,8 +541,6 @@ struct RomValidator {
         } else {
             parts.append("reason=\"\(String(describing: error))\"")
         }
-
-        print("[RomValidator] \(parts.joined(separator: " "))")
     }
 
     private static func validationCode(for error: Error) -> String {
