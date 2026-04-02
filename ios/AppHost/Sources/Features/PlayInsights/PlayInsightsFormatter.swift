@@ -281,8 +281,10 @@ enum PlayInsightsSummaryBuilder {
 
     static func preferredPrimaryText(base: String?, record: PlayInsightsStoredGameRecord) -> String? {
         switch record.supportedGame {
-        case .onePiece, .dragonBallAdvancedAdventure:
+        case .onePiece:
             return sanitizedLocationSummary(record.latestLocationSummary) ?? base
+        case .dragonBallAdvancedAdventure:
+            return nil
         default:
             return base
         }
@@ -961,40 +963,7 @@ private func dragonBallProgressTitle(_ snapshot: GameSpecificTelemetrySnapshot) 
 }
 
 func dragonBallLocationName(_ stage: Int) -> String? {
-    switch stage {
-    case 0x4F2C:
-        return "Goku's House"
-    case 0x4F46:
-        return "Oolong's Village"
-    case 0x4F5A:
-        return "West City"
-    case 0x4F6E:
-        return "Roshi's Island"
-    case 0x4F82:
-        return "Tournament Arena"
-    case 0x4F96:
-        return "Baba's Palace"
-    case 0x4FAA:
-        return "Red Ribbon Army Base"
-    case 0x4FBE:
-        return "Muscle Tower"
-    case 0x4FD2:
-        return "Carrot Lake"
-    case 0x4FE6:
-        return "Giant Dragon"
-    case 0x4FFA:
-        return "Fortuneteller Baba"
-    case 0x716A:
-        return "Oolong's Village"
-    case 0x717E:
-        return "Goku's House"
-    case 0x7192:
-        return "Roshi's Island"
-    case 0x71A6:
-        return "Tournament"
-    default:
-        return nil
-    }
+    return PlayInsightsL10n.string("playinsights.progress.adventure_in_progress", "Adventure in Progress")
 }
 
 func onePieceLocationName(_ progressState: Int) -> String? {

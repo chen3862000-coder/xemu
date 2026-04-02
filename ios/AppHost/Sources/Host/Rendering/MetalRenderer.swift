@@ -107,7 +107,6 @@ public final class MetalRenderer {
 
         // Defensive: Validate dimensions
         guard width > 0 && height > 0 && frame.bytesPerRow > 0 else {
-            print("[MetalRenderer] Invalid dimensions: width=\(width), height=\(height), bytesPerRow=\(frame.bytesPerRow)")
             return
         }
 

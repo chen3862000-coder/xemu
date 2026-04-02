@@ -46,5 +46,11 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+	<key>NSPrivacyPolicyURL</key>
+	<string>https://sites.google.com/view/retromind/privacy-policy</string>
+	<key>NSPrivacyContact</key>
+	<array>
+		<string>chen386_2000@icloud.com</string>
+	</array>
 </dict>
 </plist>

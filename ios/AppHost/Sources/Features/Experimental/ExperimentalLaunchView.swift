@@ -210,7 +210,5 @@ public struct ExperimentalSettings {
             notes: "Known issues with audio glitches on older devices"
         ),
         deviceClass: .tier2
-    ) { settings in
-        print("Launch with settings: \(settings)")
-    }
+    ) { _ in }
 }

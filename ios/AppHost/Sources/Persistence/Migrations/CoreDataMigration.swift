@@ -27,11 +27,6 @@ public actor CoreDataMigration {
         // Core Data automatically infers mappings when entities are added
         // Existing ROMLibraryEntry entity is preserved
         // New entities (SaveState, NativeSaveFile, GameSettings, ControllerMapping, UserEntitlement, AdEvent) are created fresh
-        
-        print("Core Data migration: v\(previousVersion) -> v\(currentVersion)")
-        print("Lightweight migration with automatic entity inference")
-        print("Entities added: SaveState, NativeSaveFile, GameSettings, ControllerMapping, UserEntitlement, AdEvent")
-        print("Existing entities preserved: ROMLibraryEntry")
     }
     
     /// Migration options for lightweight migration

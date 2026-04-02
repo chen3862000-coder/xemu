@@ -7,6 +7,9 @@ final class MemoryGameAnalyzer {
     private var cachedPatternMatch: MarioMemoryPattern?
     private var cachedGameTitle: String = ""
 
+    // Track unique stages for Dragon Ball mapping discovery
+    private var dragonBallDiscoveredStages: Set<Int> = []
+
     // Mario game memory patterns organized by platform
     private let marioPatterns: [MarioMemoryPattern] = [
         // Game Boy Color games
@@ -1511,15 +1514,6 @@ final class MemoryGameAnalyzer {
     }
 
     private func dragonBallLocationSummary(liveSample: MarioLiveMemorySample) -> String? {
-        if liveSample.contextValues.isEmpty {
-            GameplayAnalysisLogger.event("dragon-ball location missing-context")
-        }
-        if let stage = liveSample.contextValues["stage"] {
-            if let locationName = dragonBallLocationName(Int(stage)) {
-                return "Loc \(locationName)"
-            }
-            GameplayAnalysisLogger.event("dragon-ball location unmapped stage=\(hex16(stage))")
-        }
         return nil
     }
 
