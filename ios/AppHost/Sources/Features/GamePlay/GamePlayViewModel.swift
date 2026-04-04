@@ -16,6 +16,7 @@ import XemuCores
 class GamePlayViewModel: ObservableObject {
     private static let minimumTouchPressDurationNs: UInt64 = 60_000_000
     private static let minimumDirectionalPressDurationNs: UInt64 = 28_000_000
+    nonisolated static let saveStateThumbnailCanvasSize = CGSize(width: 560, height: 320)
     @Published var isRunning = false
     @Published var isPaused = false
     @Published var showTouchOverlay = true
@@ -1088,6 +1089,14 @@ class GamePlayViewModel: ObservableObject {
         case .goldenSun:
             if let health = liveSample.health { payload["health"] = health }
             if let maxHealth = liveSample.maxHealth { payload["maxHealth"] = maxHealth }
+        case .goldenSunTheLostAge:
+            if let health = liveSample.health { payload["health"] = health }
+            if let maxHealth = liveSample.maxHealth { payload["maxHealth"] = maxHealth }
+        case .fireEmblemTheSacredStones:
+            if let health = liveSample.health { payload["health"] = health }
+            if let maxHealth = liveSample.maxHealth { payload["maxHealth"] = maxHealth }
+        case .megaManZero:
+            if let health = liveSample.health { payload["health"] = health }
         }
 
         return payload
@@ -1460,6 +1469,8 @@ class GamePlayViewModel: ObservableObject {
                 uiImage = applyGBCColorAdjustments(to: uiImage) ?? uiImage
             }
 
+            uiImage = normalizedSaveStateThumbnailImage(from: uiImage)
+
             return uiImage.jpegData(compressionQuality: 0.72)
         }
         
@@ -1468,8 +1479,44 @@ class GamePlayViewModel: ObservableObject {
         return nil
         #endif
     }
+
+    static func saveStateThumbnailImageRect(
+        sourceSize: CGSize,
+        canvasSize: CGSize = saveStateThumbnailCanvasSize
+    ) -> CGRect {
+        guard sourceSize.width > 0, sourceSize.height > 0,
+              canvasSize.width > 0, canvasSize.height > 0 else {
+            return CGRect(origin: .zero, size: .zero)
+        }
+
+        let scale = min(canvasSize.width / sourceSize.width, canvasSize.height / sourceSize.height)
+        let fittedSize = CGSize(width: sourceSize.width * scale, height: sourceSize.height * scale)
+        let origin = CGPoint(
+            x: (canvasSize.width - fittedSize.width) / 2.0,
+            y: (canvasSize.height - fittedSize.height) / 2.0
+        )
+        return CGRect(origin: origin, size: fittedSize).integral
+    }
     
     #if canImport(UIKit)
+    private func normalizedSaveStateThumbnailImage(from image: UIImage) -> UIImage {
+        let canvasSize = Self.saveStateThumbnailCanvasSize
+        let drawRect = Self.saveStateThumbnailImageRect(sourceSize: image.size, canvasSize: canvasSize)
+        guard !drawRect.isEmpty else { return image }
+
+        let format = UIGraphicsImageRendererFormat.default()
+        format.scale = 1
+        format.opaque = true
+
+        let renderer = UIGraphicsImageRenderer(size: canvasSize, format: format)
+        return renderer.image { context in
+            let bounds = CGRect(origin: .zero, size: canvasSize)
+            UIColor.black.setFill()
+            context.fill(bounds)
+            image.draw(in: drawRect)
+        }
+    }
+
     private func swapRBChannels(in data: Data, width: Int, height: Int, bytesPerRow: Int) -> Data? {
         var result = Data(count: data.count)
         

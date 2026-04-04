@@ -469,19 +469,19 @@ final class PlayInsightsStoreTests: XCTestCase {
                         "state": 1
                     ]
                 ),
-                latestLocationSummary: nil
+                latestLocationSummary: "Loc Castle Oblivion • Level 14"
             )
         )
 
         let summary = try XCTUnwrap(store.summary(for: "khcom"))
-        XCTAssertEqual(summary.progressPrimaryValue, "Level 14")
+        XCTAssertEqual(summary.progressPrimaryValue, "Castle Oblivion • Level 14")
         XCTAssertEqual(summary.progressSecondaryValue, "HP 108/132")
-        XCTAssertEqual(summary.currentRunPrimary, "Level 14 • HP 108/132")
+        XCTAssertEqual(summary.currentRunPrimary, "Castle Oblivion • Level 14")
         XCTAssertEqual(summary.currentRunSecondary, "CP 275 equipped • HP 108/132")
         XCTAssertEqual(summary.currentRunBadge, "Deck Ready")
 
         let continueSummary = try XCTUnwrap(store.continuePlayingSummary(for: "khcom"))
-        XCTAssertEqual(continueSummary.primaryProgressLine, "Level 14 • HP 108/132")
+        XCTAssertEqual(continueSummary.primaryProgressLine, "Castle Oblivion • Level 14")
         XCTAssertEqual(continueSummary.supportingStateLine, "HP 108/132")
         XCTAssertEqual(continueSummary.badgeText, "Deck Ready")
     }
@@ -731,15 +731,141 @@ final class PlayInsightsStoreTests: XCTestCase {
         )
 
         let summary = try XCTUnwrap(store.summary(for: "golden-sun"))
-        XCTAssertEqual(summary.progressPrimaryValue, "Vault")
+        XCTAssertEqual(summary.progressPrimaryValue, "Current area tracked")
         XCTAssertEqual(summary.progressSecondaryValue, "HP 72/95")
-        XCTAssertEqual(summary.currentRunPrimary, "Vault")
+        XCTAssertEqual(summary.currentRunPrimary, "Current area tracked")
         XCTAssertEqual(summary.currentRunSecondary, "HP 72/95")
         XCTAssertEqual(summary.currentRunBadge, "Exploration")
 
         let continueSummary = try XCTUnwrap(store.continuePlayingSummary(for: "golden-sun"))
-        XCTAssertEqual(continueSummary.primaryProgressLine, "Vault")
+        XCTAssertEqual(continueSummary.primaryProgressLine, "Current area tracked")
         XCTAssertEqual(continueSummary.supportingStateLine, "HP 72/95")
         XCTAssertEqual(continueSummary.badgeText, "Exploration")
+    }
+
+    func testGoldenSunTheLostAgeSummaryBuildsLocaleAndHealthContext() throws {
+        let store = PlayInsightsStore(fileURL: tempURL)
+        let now = Date(timeIntervalSince1970: 1_700_302_350)
+
+        store.recordSession(
+            .init(
+                gameId: "golden-sun-tla",
+                gameTitle: "Golden Sun: The Lost Age",
+                system: "gba",
+                supportedGame: .goldenSunTheLostAge,
+                startedAt: now.addingTimeInterval(-900),
+                endedAt: now,
+                durationSeconds: 900,
+                deaths: 0,
+                damageEvents: 1,
+                snapshot: GameSpecificTelemetrySnapshot(
+                    gameId: "golden-sun-tla",
+                    timestamp: now,
+                    payloadType: PlayInsightsSupportedGame.goldenSunTheLostAge.profileID,
+                    payloadJson: [
+                        "locale": 0x08,
+                        "health": 88,
+                        "maxHealth": 102
+                    ]
+                ),
+                latestLocationSummary: "Loc Madra"
+            )
+        )
+
+        let summary = try XCTUnwrap(store.summary(for: "golden-sun-tla"))
+        XCTAssertEqual(summary.progressPrimaryValue, "Madra")
+        XCTAssertEqual(summary.progressSecondaryValue, "HP 88/102")
+        XCTAssertEqual(summary.currentRunPrimary, "Madra")
+        XCTAssertEqual(summary.currentRunSecondary, "HP 88/102")
+        XCTAssertEqual(summary.currentRunBadge, "Exploration")
+
+        let continueSummary = try XCTUnwrap(store.continuePlayingSummary(for: "golden-sun-tla"))
+        XCTAssertEqual(continueSummary.primaryProgressLine, "Madra")
+        XCTAssertEqual(continueSummary.supportingStateLine, "HP 88/102")
+        XCTAssertEqual(continueSummary.badgeText, "Exploration")
+    }
+
+    func testFireEmblemTheSacredStonesSummaryBuildsTacticsAndResourcesContext() throws {
+        let store = PlayInsightsStore(fileURL: tempURL)
+        let now = Date(timeIntervalSince1970: 1_700_302_450)
+
+        store.recordSession(
+            .init(
+                gameId: "fire-emblem-sacred-stones",
+                gameTitle: "Fire Emblem: The Sacred Stones",
+                system: "gba",
+                supportedGame: .fireEmblemTheSacredStones,
+                startedAt: now.addingTimeInterval(-960),
+                endedAt: now,
+                durationSeconds: 960,
+                deaths: 1,
+                damageEvents: 3,
+                snapshot: GameSpecificTelemetrySnapshot(
+                    gameId: "fire-emblem-sacred-stones",
+                    timestamp: now,
+                    payloadType: PlayInsightsSupportedGame.fireEmblemTheSacredStones.profileID,
+                    payloadJson: [
+                        "health": 18,
+                        "maxHealth": 24,
+                        "gold": 3200
+                    ]
+                ),
+                latestLocationSummary: "Loc Resources 3200G • HP 18/24"
+            )
+        )
+
+        let summary = try XCTUnwrap(store.summary(for: "fire-emblem-sacred-stones"))
+        XCTAssertEqual(summary.progressPrimaryValue, "Lead unit HP 18/24")
+        XCTAssertEqual(summary.progressSecondaryValue, "3200G on hand • HP 18/24")
+        XCTAssertEqual(summary.currentRunPrimary, "Lead unit HP 18/24")
+        XCTAssertEqual(summary.currentRunSecondary, "Tactical state tracked • HP 18/24")
+        XCTAssertEqual(summary.currentRunBadge, "Tactics")
+
+        let continueSummary = try XCTUnwrap(store.continuePlayingSummary(for: "fire-emblem-sacred-stones"))
+        XCTAssertEqual(continueSummary.primaryProgressLine, "Lead unit HP 18/24")
+        XCTAssertEqual(continueSummary.supportingStateLine, "HP 18/24")
+        XCTAssertEqual(continueSummary.badgeText, "Tactics")
+    }
+
+    func testMegaManZeroSummaryBuildsMissionAndRetriesContext() throws {
+        let store = PlayInsightsStore(fileURL: tempURL)
+        let now = Date(timeIntervalSince1970: 1_700_302_550)
+
+        store.recordSession(
+            .init(
+                gameId: "mega-man-zero",
+                gameTitle: "Mega Man Zero",
+                system: "gba",
+                supportedGame: .megaManZero,
+                startedAt: now.addingTimeInterval(-780),
+                endedAt: now,
+                durationSeconds: 780,
+                deaths: 1,
+                damageEvents: 4,
+                snapshot: GameSpecificTelemetrySnapshot(
+                    gameId: "mega-man-zero",
+                    timestamp: now,
+                    payloadType: PlayInsightsSupportedGame.megaManZero.profileID,
+                    payloadJson: [
+                        "mission": 0x03,
+                        "retries": 0x02,
+                        "health": 14
+                    ]
+                ),
+                latestLocationSummary: "Loc Mission 3 • retries 2"
+            )
+        )
+
+        let summary = try XCTUnwrap(store.summary(for: "mega-man-zero"))
+        XCTAssertEqual(summary.progressPrimaryValue, "Mission 3")
+        XCTAssertEqual(summary.progressSecondaryValue, "2 retries • HP 14")
+        XCTAssertEqual(summary.currentRunPrimary, "Mission 3")
+        XCTAssertEqual(summary.currentRunSecondary, "2 retries • HP 14")
+        XCTAssertEqual(summary.currentRunBadge, "Action")
+
+        let continueSummary = try XCTUnwrap(store.continuePlayingSummary(for: "mega-man-zero"))
+        XCTAssertEqual(continueSummary.primaryProgressLine, "Mission 3")
+        XCTAssertEqual(continueSummary.supportingStateLine, "HP 14")
+        XCTAssertEqual(continueSummary.badgeText, "Action")
     }
 }

@@ -142,6 +142,16 @@ final class MarioGameProfileTests: XCTestCase {
         XCTAssertEqual(profile?.id, MarioGameProfile.kingdomHeartsChainOfMemories.id)
     }
 
+    func testKingdomHeartsChainOfMemoriesProfileMatchesCompactROMHeaderTitle() {
+        let profile = MarioGameProfile.activeProfile(
+            title: "KINGDOMHEART",
+            platform: .GBA,
+            romHash: ""
+        )
+
+        XCTAssertEqual(profile?.id, MarioGameProfile.kingdomHeartsChainOfMemories.id)
+    }
+
     func testZeldaMinishCapProfileMatchesCanonicalTitle() {
         let profile = MarioGameProfile.activeProfile(
             title: "The Legend of Zelda: The Minish Cap",
@@ -210,6 +220,66 @@ final class MarioGameProfileTests: XCTestCase {
         )
 
         XCTAssertEqual(profile?.id, MarioGameProfile.goldenSun.id)
+    }
+
+    func testGoldenSunTheLostAgeProfileMatchesCanonicalTitle() {
+        let profile = MarioGameProfile.activeProfile(
+            title: "Golden Sun: The Lost Age",
+            platform: .GBA,
+            romHash: ""
+        )
+
+        XCTAssertEqual(profile?.id, MarioGameProfile.goldenSunTheLostAge.id)
+    }
+
+    func testGoldenSunTheLostAgeProfileMatchesROMHeaderTitle() {
+        let profile = MarioGameProfile.activeProfile(
+            title: "AGB-AGFE-USA",
+            platform: .GBA,
+            romHash: ""
+        )
+
+        XCTAssertEqual(profile?.id, MarioGameProfile.goldenSunTheLostAge.id)
+    }
+
+    func testFireEmblemTheSacredStonesProfileMatchesCanonicalTitle() {
+        let profile = MarioGameProfile.activeProfile(
+            title: "Fire Emblem: The Sacred Stones",
+            platform: .GBA,
+            romHash: ""
+        )
+
+        XCTAssertEqual(profile?.id, MarioGameProfile.fireEmblemTheSacredStones.id)
+    }
+
+    func testFireEmblemTheSacredStonesProfileMatchesROMHeaderTitle() {
+        let profile = MarioGameProfile.activeProfile(
+            title: "AGB-BE8E-USA",
+            platform: .GBA,
+            romHash: ""
+        )
+
+        XCTAssertEqual(profile?.id, MarioGameProfile.fireEmblemTheSacredStones.id)
+    }
+
+    func testMegaManZeroProfileMatchesCanonicalTitle() {
+        let profile = MarioGameProfile.activeProfile(
+            title: "Mega Man Zero",
+            platform: .GBA,
+            romHash: ""
+        )
+
+        XCTAssertEqual(profile?.id, MarioGameProfile.megaManZero.id)
+    }
+
+    func testMegaManZeroProfileMatchesROMHeaderTitle() {
+        let profile = MarioGameProfile.activeProfile(
+            title: "AGB-AZCE-USA",
+            platform: .GBA,
+            romHash: ""
+        )
+
+        XCTAssertEqual(profile?.id, MarioGameProfile.megaManZero.id)
     }
 
 }

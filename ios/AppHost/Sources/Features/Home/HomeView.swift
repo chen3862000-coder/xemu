@@ -969,6 +969,7 @@ struct RecentGameCard: View {
                 .resizable()
                 .aspectRatio(contentMode: .fill)
                 .frame(maxWidth: .infinity, minHeight: artworkHeight, maxHeight: artworkHeight)
+                .clipped()
                 .overlay(Color.white.opacity(0.12))
                 .clipShape(RoundedRectangle(cornerRadius: 12))
         } else if let coverData = game.coverData, let uiImage = UIImage(data: coverData) {
@@ -976,6 +977,7 @@ struct RecentGameCard: View {
                 .resizable()
                 .aspectRatio(contentMode: .fill)
                 .frame(maxWidth: .infinity, minHeight: artworkHeight, maxHeight: artworkHeight)
+                .clipped()
                 .overlay(Color.white.opacity(0.16))
                 .clipShape(RoundedRectangle(cornerRadius: 12))
         } else if let imageUrl = game.image, let url = URL(string: imageUrl) {
@@ -989,6 +991,7 @@ struct RecentGameCard: View {
                     .foregroundColor(AppColors.textMuted)
             }
             .frame(maxWidth: .infinity, minHeight: artworkHeight, maxHeight: artworkHeight)
+            .clipped()
             .overlay(Color.white.opacity(0.16))
             .clipShape(RoundedRectangle(cornerRadius: 12))
         } else {
@@ -1006,6 +1009,7 @@ struct RecentGameCard: View {
                     .foregroundColor(AppColors.textMuted)
             }
             .frame(maxWidth: .infinity, minHeight: artworkHeight, maxHeight: artworkHeight)
+            .clipped()
             .clipShape(RoundedRectangle(cornerRadius: 12))
         } else {
             fallbackArtwork
@@ -1342,7 +1346,12 @@ struct RomImportView: View {
                     .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
 
                     VStack(alignment: .leading, spacing: 8) {
-                        Label("Supports: .gb, .gbc, .gba, .nds", systemImage: "checkmark.seal")
+                        Label(
+                            "Supports: " + RomImportCoordinator.supportedROMFileExtensions
+                                .map { ".\($0)" }
+                                .joined(separator: ", "),
+                            systemImage: "checkmark.seal"
+                        )
                             .font(.system(size: 13, weight: .medium))
                             .foregroundColor(AppColors.textPrimary)
                         Label("Files stay on your device", systemImage: "lock.shield")

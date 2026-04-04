@@ -161,25 +161,25 @@
             "en": ["import", "add games", "files", "rom"]
           },
           "summary": {
-            "en": "Import compatible game files from your device or the Files app.",
-            "zh-Hans": "从设备或“文件”App 导入兼容的游戏文件。",
-            "zh-Hant": "從裝置或「檔案」App 匯入相容的遊戲檔案。",
-            "ja": "対応するゲームファイルをデバイスまたはファイルAppから取り込みます。",
-            "es": "Importa archivos de juego compatibles desde tu dispositivo o la app Archivos."
+            "en": "Open the Import ROMs screen and choose compatible raw ROM files from your device or the Files app.",
+            "zh-Hans": "打开“导入 ROM”界面，然后从设备或“文件”App 选择兼容的原始 ROM 文件。",
+            "zh-Hant": "打開「匯入 ROM」畫面，然後從裝置或「檔案」App 選擇相容的原始 ROM 檔案。",
+            "ja": "Import ROMs 画面を開き、デバイスまたはファイルAppから対応する生ROMファイルを選びます。",
+            "es": "Abre la pantalla Import ROMs y elige archivos ROM sin comprimir compatibles desde tu dispositivo o la app Archivos."
           },
           "steps": {
-            "en": ["Go to Library.", "Tap Import.", "Choose files from your device or the Files app."],
-            "zh-Hans": ["前往游戏库。", "点按“导入”。", "从设备或“文件”App 选择文件。"],
-            "zh-Hant": ["前往遊戲庫。", "點按「匯入」。", "從裝置或「檔案」App 選擇檔案。"],
-            "ja": ["ライブラリを開きます。", "「取り込む」をタップします。", "デバイスまたはファイルAppからファイルを選びます。"],
-            "es": ["Ve a Biblioteca.", "Toca Importar.", "Elige archivos desde tu dispositivo o la app Archivos."]
+            "en": ["From Home, open Import ROMs.", "Choose files from your device or the Files app.", "Imported games will appear in your library."],
+            "zh-Hans": ["在首页打开“导入 ROM”。", "从设备或“文件”App 选择文件。", "导入后的游戏会出现在游戏库中。"],
+            "zh-Hant": ["在首頁打開「匯入 ROM」。", "從裝置或「檔案」App 選擇檔案。", "匯入後的遊戲會出現在遊戲庫中。"],
+            "ja": ["ホームから Import ROMs を開きます。", "デバイスまたはファイルAppからファイルを選びます。", "取り込んだゲームはライブラリに表示されます。"],
+            "es": ["Desde Inicio, abre Import ROMs.", "Elige archivos desde tu dispositivo o la app Archivos.", "Los juegos importados aparecerán en tu biblioteca."]
           },
           "tip": {
-            "en": "Make sure the file is for a supported system such as GB, GBC, or GBA.",
-            "zh-Hans": "请确认文件属于受支持的平台，例如 GB、GBC 或 GBA。",
-            "zh-Hant": "請確認檔案屬於受支援的平台，例如 GB、GBC 或 GBA。",
-            "ja": "GB、GBC、GBA など対応しているシステムのファイルか確認してください。",
-            "es": "Asegúrate de que el archivo sea de un sistema compatible como GB, GBC o GBA."
+            "en": "Use raw ROM files for supported systems. Archive files such as ZIP, 7z, or RAR are not supported.",
+            "zh-Hans": "请使用受支持平台的原始 ROM 文件。ZIP、7z、RAR 等压缩包目前不受支持。",
+            "zh-Hant": "請使用受支援平台的原始 ROM 檔案。ZIP、7z、RAR 等壓縮檔目前不受支援。",
+            "ja": "対応システムの生ROMファイルを使用してください。ZIP、7z、RAR などのアーカイブは現在サポートされていません。",
+            "es": "Usa archivos ROM sin comprimir de sistemas compatibles. Los archivos ZIP, 7z o RAR no son compatibles actualmente."
           },
           "isFeatured": true
         },
@@ -246,18 +246,18 @@
             "en": ["enhanced", "features", "hp feedback", "insights"]
           },
           "summary": {
-            "en": "Enhanced Games unlock extra features like HP feedback, death tracking, and play insights.",
-            "zh-Hans": "增强游戏会解锁额外功能，比如 HP 反馈、死亡追踪和游玩洞察。",
-            "zh-Hant": "增強遊戲會解鎖額外功能，例如 HP 回饋、死亡追蹤和遊玩洞察。",
-            "ja": "Enhanced Games では HP フィードバック、死亡トラッキング、プレイ分析などの追加機能を使えます。",
-            "es": "Los Juegos mejorados activan extras como vibración por HP, seguimiento de muertes y datos de juego."
+            "en": "Some supported games unlock extra features like HP feedback, death tracking, and Play Insights.",
+            "zh-Hans": "部分受支持的游戏会解锁额外功能，例如 HP 反馈、死亡追踪和游玩洞察。",
+            "zh-Hant": "部分受支援的遊戲會解鎖額外功能，例如 HP 回饋、死亡追蹤和遊玩洞察。",
+            "ja": "一部の対応ゲームでは、HP フィードバック、死亡トラッキング、Play Insights などの追加機能を使えます。",
+            "es": "Algunos juegos compatibles activan extras como vibración por HP, seguimiento de muertes y Play Insights."
           },
           "steps": {
-            "en": ["Look for the Enhanced label on supported games.", "Open the game normally.", "Extra features appear automatically when that game supports them."],
-            "zh-Hans": ["在受支持的游戏上寻找“增强”标识。", "像平常一样打开游戏。", "如果该游戏受支持，额外功能会自动出现。"],
-            "zh-Hant": ["在受支援的遊戲上尋找「增強」標識。", "像平常一樣開啟遊戲。", "如果該遊戲受支援，額外功能會自動出現。"],
-            "ja": ["対応ゲームの Enhanced ラベルを確認します。", "通常どおりゲームを開きます。", "対応していれば追加機能が自動で有効になります。"],
-            "es": ["Busca la etiqueta Enhanced en los juegos compatibles.", "Abre el juego normalmente.", "Las funciones extra aparecerán automáticamente cuando ese juego las admita."]
+            "en": ["Open a supported game.", "Visit the Game Details page.", "If Play Insights appears, that game supports extra tracked features."],
+            "zh-Hans": ["打开一款受支持的游戏。", "进入游戏详情页。", "如果出现“游玩洞察”，说明这款游戏支持额外的追踪功能。"],
+            "zh-Hant": ["打開一款受支援的遊戲。", "進入遊戲詳情頁。", "如果出現「遊玩洞察」，表示這款遊戲支援額外的追蹤功能。"],
+            "ja": ["対応ゲームを開きます。", "ゲーム詳細ページに移動します。", "Play Insights が表示されれば、そのゲームは追加の追跡機能に対応しています。"],
+            "es": ["Abre un juego compatible.", "Ve a la página de Detalles del juego.", "Si aparece Play Insights, ese juego admite funciones extra de seguimiento."]
           },
           "tip": {
             "en": "Available for supported games only, and support will grow over time.",
@@ -289,11 +289,11 @@
             "es": "Las funciones avanzadas requieren soporte específico para cada juego, y no todos exponen los datos necesarios."
           },
           "steps": {
-            "en": ["Check whether the game is labeled Enhanced.", "Open the Game Details page.", "If support is missing today, it may arrive in a future update."],
-            "zh-Hans": ["先确认游戏是否带有“增强”标识。", "打开游戏详情页。", "如果当前还不支持，可能会在后续更新中加入。"],
-            "zh-Hant": ["先確認遊戲是否帶有「增強」標識。", "打開遊戲詳情頁。", "如果目前還不支援，可能會在後續更新中加入。"],
-            "ja": ["Enhanced ラベルがあるか確認します。", "ゲーム詳細ページを開きます。", "現時点で未対応でも今後のアップデートで追加される可能性があります。"],
-            "es": ["Comprueba si el juego tiene la etiqueta Enhanced.", "Abre la página de Detalles del juego.", "Si hoy no tiene soporte, puede llegar en una actualización futura."]
+            "en": ["Open the Game Details page.", "Check whether Play Insights appears for that game.", "If support is missing today, it may arrive in a future update."],
+            "zh-Hans": ["打开游戏详情页。", "查看该游戏是否显示“游玩洞察”。", "如果当前还不支持，可能会在后续更新中加入。"],
+            "zh-Hant": ["打開遊戲詳情頁。", "查看該遊戲是否顯示「遊玩洞察」。", "如果目前還不支援，可能會在後續更新中加入。"],
+            "ja": ["ゲーム詳細ページを開きます。", "そのゲームで Play Insights が表示されるか確認します。", "現時点で未対応でも今後のアップデートで追加される可能性があります."],
+            "es": ["Abre la página de Detalles del juego.", "Comprueba si Play Insights aparece para ese juego.", "Si hoy no tiene soporte, puede llegar en una actualización futura."]
           },
           "tip": {
             "en": "We add support where the game can reliably provide health, death, or progress signals.",
@@ -315,28 +315,28 @@
             "es": "¿Cómo sé si un juego es compatible?"
           },
           "keywords": {
-            "en": ["badge", "game details", "supported"]
+            "en": ["play insights", "game details", "supported"]
           },
           "summary": {
-            "en": "Check for the Enhanced badge in Library or Continue Playing, or look in Play Insights on the Game Details page.",
-            "zh-Hans": "你可以在游戏库、“继续游玩”或游戏详情页中的“游玩洞察”里查看增强标识。",
-            "zh-Hant": "你可以在遊戲庫、「繼續遊玩」或遊戲詳情頁中的「遊玩洞察」查看增強標識。",
-            "ja": "ライブラリや「続ける」の Enhanced バッジ、またはゲーム詳細の Play Insights で確認できます。",
-            "es": "Busca la insignia Enhanced en Biblioteca o Continuar jugando, o revisa Play Insights en Detalles del juego."
+            "en": "Open the Game Details page and check whether Play Insights appears for that game.",
+            "zh-Hans": "打开游戏详情页，查看该游戏是否显示“游玩洞察”。",
+            "zh-Hant": "打開遊戲詳情頁，查看該遊戲是否顯示「遊玩洞察」。",
+            "ja": "ゲーム詳細ページを開き、そのゲームで Play Insights が表示されるか確認します。",
+            "es": "Abre la página de Detalles del juego y comprueba si aparece Play Insights para ese juego."
           },
           "steps": {
-            "en": ["Look for the Enhanced badge in Library or Continue Playing.", "Open the Game Details page.", "Check the Play Insights section for supported data."],
-            "zh-Hans": ["在游戏库或“继续游玩”中查看“增强”徽章。", "打开游戏详情页。", "查看“游玩洞察”部分是否显示受支持的数据。"],
-            "zh-Hant": ["在遊戲庫或「繼續遊玩」中查看「增強」徽章。", "打開遊戲詳情頁。", "查看「遊玩洞察」部分是否顯示受支援的資料。"],
-            "ja": ["ライブラリや「続ける」で Enhanced バッジを確認します。", "ゲーム詳細ページを開きます。", "Play Insights セクションに対応データが出るか確認します。"],
-            "es": ["Busca la insignia Enhanced en Biblioteca o Continuar jugando.", "Abre la página de Detalles del juego.", "Comprueba si la sección Play Insights muestra datos compatibles."]
+            "en": ["Open the game from your library.", "Go to the Game Details page.", "Check whether the Play Insights section appears and shows tracked data."],
+            "zh-Hans": ["从游戏库打开这款游戏。", "进入游戏详情页。", "查看“游玩洞察”部分是否出现并显示追踪数据。"],
+            "zh-Hant": ["從遊戲庫打開這款遊戲。", "進入遊戲詳情頁。", "查看「遊玩洞察」部分是否出現並顯示追蹤資料。"],
+            "ja": ["ライブラリからそのゲームを開きます。", "ゲーム詳細ページに進みます。", "Play Insights セクションが表示され、追跡データが見えるか確認します。"],
+            "es": ["Abre el juego desde tu biblioteca.", "Ve a la página de Detalles del juego.", "Comprueba si aparece la sección Play Insights y muestra datos registrados."]
           },
           "tip": {
-            "en": "If you do not see the badge yet, the game probably uses the standard experience.",
-            "zh-Hans": "如果暂时看不到徽章，说明这款游戏目前仍使用标准体验。",
-            "zh-Hant": "如果暫時看不到徽章，表示這款遊戲目前仍使用標準體驗。",
-            "ja": "バッジがない場合は、今のところ標準体験として動作しています。",
-            "es": "Si no ves la insignia, lo más probable es que el juego use la experiencia estándar por ahora."
+            "en": "If Play Insights does not appear, the game currently uses the standard experience.",
+            "zh-Hans": "如果没有出现“游玩洞察”，说明这款游戏当前仍使用标准体验。",
+            "zh-Hant": "如果沒有出現「遊玩洞察」，表示這款遊戲目前仍使用標準體驗。",
+            "ja": "Play Insights が表示されない場合、そのゲームは現在標準体験として動作しています。",
+            "es": "Si no aparece Play Insights, lo más probable es que el juego use la experiencia estándar por ahora."
           },
           "isFeatured": false
         },
@@ -547,18 +547,18 @@
             "en": ["autosave", "automatic save", "settings"]
           },
           "summary": {
-            "en": "Auto-save may be available in Settings and can capture progress at key moments.",
-            "zh-Hans": "自动保存可能会在设置中提供，并在关键时刻自动记录进度。",
-            "zh-Hant": "自動保存可能會在設定中提供，並在關鍵時刻自動記錄進度。",
-            "ja": "自動保存は設定で利用できる場合があり、重要なタイミングで進行状況を記録します。",
-            "es": "El guardado automático puede estar disponible en Ajustes y guardar tu progreso en momentos clave."
+            "en": "Not currently. This version focuses on manual Save States and the game’s own save system.",
+            "zh-Hans": "目前还不支持。本版本主要使用即时存档和游戏自身的存档系统。",
+            "zh-Hant": "目前還不支援。本版本主要使用即時存檔和遊戲本身的存檔系統。",
+            "ja": "現在は利用できません。このバージョンでは手動のステート保存とゲーム本来の保存方式が中心です。",
+            "es": "No por ahora. Esta versión se centra en Guardar estado manual y en el sistema de guardado propio del juego."
           },
           "steps": {
-            "en": ["Open Settings.", "Look for save or progress options.", "Enable auto-save if the option is available."],
-            "zh-Hans": ["打开设置。", "查找与存档或进度相关的选项。", "如果提供该选项，就开启自动保存。"],
-            "zh-Hant": ["打開設定。", "查找與存檔或進度相關的選項。", "如果提供該選項，就開啟自動保存。"],
-            "ja": ["設定を開きます。", "保存または進行状況に関する項目を探します。", "項目があれば自動保存を有効にします。"],
-            "es": ["Abre Ajustes.", "Busca opciones relacionadas con guardado o progreso.", "Activa el guardado automático si la opción está disponible."]
+            "en": ["Open the in-game controls or pause menu.", "Use Save State or Load State when you want a manual snapshot.", "You can also use the game’s built-in save system when it is available."],
+            "zh-Hans": ["打开游戏内控制区或暂停菜单。", "在需要手动快照时使用“即时存档”或“读取存档”。", "如果游戏本身支持存档，也可以同时使用游戏内存档。"],
+            "zh-Hant": ["打開遊戲內控制區或暫停選單。", "在需要手動快照時使用「即時存檔」或「讀取存檔」。", "如果遊戲本身支援存檔，也可以同時使用遊戲內存檔。"],
+            "ja": ["ゲーム内コントロールまたは一時停止メニューを開きます。", "手動スナップショットが必要なときは Save State / Load State を使います。", "ゲーム本来のセーブ機能がある場合は、そちらも併用できます。"],
+            "es": ["Abre los controles del juego o el menú de pausa.", "Usa Guardar estado o Cargar estado cuando quieras una instantánea manual.", "También puedes usar el sistema de guardado propio del juego si está disponible."]
           },
           "tip": {
             "en": "Manual Save States are still useful before difficult sections or risky experiments.",

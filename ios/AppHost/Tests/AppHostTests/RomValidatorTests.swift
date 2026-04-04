@@ -60,6 +60,18 @@ final class RomValidatorTests: XCTestCase {
         }
     }
 
+    func testValidateRejectsNESROMWithFriendlySupportedSystemsMessage() throws {
+        let romData = Data([0x4E, 0x45, 0x53, 0x1A] + Array(repeating: 0, count: 32))
+        let url = try writeTempFile(data: romData, ext: "nes")
+        defer { try? FileManager.default.removeItem(at: url) }
+
+        XCTAssertThrowsError(try RomValidator.validate(at: url)) { error in
+            let message = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
+            XCTAssertTrue(message.contains("not supported right now"))
+            XCTAssertTrue(message.contains("GB, GBC, GBA, or NDS"))
+        }
+    }
+
     private func makeValidGBROM() -> Data {
         var rom = Data(repeating: 0, count: 32 * 1024)
 

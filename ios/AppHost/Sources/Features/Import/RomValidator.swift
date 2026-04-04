@@ -131,22 +131,30 @@ struct RomValidator {
             if isGBAROM(data) { return .gba }
         } else if ext == "nds" {
             if isNDSROM(data) { return .nds }
-        } else if ext == "nes" {
-            if isNESROM(data) { return .nes }
+        } else if !ext.isEmpty {
+            throw unsupportedImportError(forFileExtension: ext)
         }
-        
-        if isNESROM(data) { return .nes }
+
+        if isNESROM(data) {
+            throw unsupportedImportError(systemName: "NES")
+        }
         if matchesGBNintendoLogo(data) {
             if try isGBROM(data) {
                 return resolvedGBSystem(for: data, fileExtension: ext)
             }
         }
         if isGBAROM(data) { return .gba }
-        if isGenesisROM(data) { return .genesis }
         if isNDSROM(data) { return .nds }
-        if isPS1ROM(data) { return .ps1 }
-        
-        throw ROMValidationError.unsupportedSystem(reason: "Content signature did not match supported systems")
+        if isGenesisROM(data) {
+            throw unsupportedImportError(systemName: "Genesis / Mega Drive")
+        }
+        if isPS1ROM(data) {
+            throw unsupportedImportError(systemName: "PS1")
+        }
+
+        throw ROMValidationError.unsupportedSystem(
+            reason: "This file is not supported yet. Import GB, GBC, GBA, or NDS ROM files."
+        )
     }
     
     private static func isNESROM(_ data: Data) -> Bool {
@@ -257,6 +265,17 @@ struct RomValidator {
         let headerData = data.prefix(16)
         let str = String(data: headerData, encoding: .ascii) ?? ""
         return str.hasPrefix("PS-X")
+    }
+
+    private static func unsupportedImportError(forFileExtension fileExtension: String) -> ROMValidationError {
+        let normalized = fileExtension.uppercased()
+        return unsupportedImportError(systemName: normalized)
+    }
+
+    private static func unsupportedImportError(systemName: String) -> ROMValidationError {
+        ROMValidationError.unsupportedSystem(
+            reason: "\(systemName) files are not supported right now. Import GB, GBC, GBA, or NDS ROM files instead."
+        )
     }
 
     private static func preflightCheck(_ url: URL) throws {

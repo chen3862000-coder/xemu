@@ -12,6 +12,9 @@ enum GameplayProfileKind: Sendable {
     case kirbyNightmareInDreamLand
     case kirbyAmazingMirror
     case goldenSun
+    case goldenSunTheLostAge
+    case fireEmblemTheSacredStones
+    case megaManZero
     case castlevaniaAriaOfSorrow
     case castlevaniaCircleOfTheMoon
     case castlevaniaHarmonyOfDissonance
@@ -484,6 +487,7 @@ struct MarioGameProfile: Sendable {
             "kingdom hearts chain of memories",
             "chain of memories",
             "kingdom hearts",
+            "kingdomheart",
             "agb-b8ce-usa",
             "b8ce"
         ],
@@ -509,7 +513,7 @@ struct MarioGameProfile: Sendable {
             smallPowerUpValues: [],
             superPowerUpValues: [0],
             poweredUpValues: Set(1...UInt8.max),
-            healthAddress16: 0x0203314C,
+            healthAddress16: 0x02039BE2,
             maxHealthAddress16: 0x02039CA8,
             gameModeAddress: nil,
             contextFields: []
@@ -672,22 +676,114 @@ struct MarioGameProfile: Sendable {
         smallHeightRange: 10...20,
         superHeightRange: 21...32,
         poweredUpHeightRange: 21...32,
+        liveMemory: nil
+    )
+
+    static let goldenSunTheLostAge = MarioGameProfile(
+        id: "golden_sun_the_lost_age_gba",
+        displayName: "Golden Sun: The Lost Age",
+        titleMatchers: [
+            "golden sun the lost age",
+            "golden sun lost age",
+            "the lost age",
+            "agb-agfe"
+        ],
+        nativeResolution: CGSize(width: 240, height: 160),
+        gameplayRegion: CGRect(x: 0.0, y: 0.10, width: 1.0, height: 0.80),
+        initialSearchRegion: CGRect(x: 0.08, y: 0.18, width: 0.84, height: 0.64),
+        minSampleInterval: 0.16,
+        damageCooldown: 0.9,
+        deathCooldown: 2.0,
+        fadeConfirmationThreshold: 0.38,
+        blackoutThreshold: 0.09,
+        smallHeightRange: 10...20,
+        superHeightRange: 21...32,
+        poweredUpHeightRange: 21...32,
+        liveMemory: nil
+    )
+
+    static let fireEmblemTheSacredStones = MarioGameProfile(
+        id: "fire_emblem_sacred_stones_gba",
+        displayName: "Fire Emblem: The Sacred Stones",
+        titleMatchers: [
+            "fire emblem the sacred stones",
+            "fire emblem sacred stones",
+            "sacred stones",
+            "agb-be8e"
+        ],
+        nativeResolution: CGSize(width: 240, height: 160),
+        gameplayRegion: CGRect(x: 0.0, y: 0.10, width: 1.0, height: 0.80),
+        initialSearchRegion: CGRect(x: 0.08, y: 0.18, width: 0.84, height: 0.64),
+        minSampleInterval: 0.18,
+        damageCooldown: 0.9,
+        deathCooldown: 2.0,
+        fadeConfirmationThreshold: 0.38,
+        blackoutThreshold: 0.09,
+        smallHeightRange: 10...20,
+        superHeightRange: 21...32,
+        poweredUpHeightRange: 21...32,
         liveMemory: MarioLiveMemoryMap(
-            kind: .goldenSun,
-            livesAddress: 0x0200051F,
-            powerUpAddress: 0x02030170,
-            gameplayStateAddress: 0x02000400,
-            invulnerabilityTimerAddress: 0x02030170,
+            kind: .fireEmblemTheSacredStones,
+            livesAddress: 0x0202BCF8,
+            powerUpAddress: 0x0202BF7C,
+            gameplayStateAddress: 0x0202BF75,
+            invulnerabilityTimerAddress: 0x0202BF78,
             deathStateValues: [],
             invulnerabilityStateValues: [],
             smallPowerUpValues: [],
             superPowerUpValues: [0],
             poweredUpValues: Set(1...UInt8.max),
-            healthAddress16: 0x02000548,
-            maxHealthAddress16: 0x02000544,
+            healthAddress16: nil,
+            maxHealthAddress16: nil,
+            healthAddress8: 0x0202BF7F,
+            maxHealthAddress8: 0x0202BF7E,
             gameModeAddress: nil,
             contextFields: [
-                MarioLiveMemoryContextField(key: "area", address: 0x02000400, width: .u16)
+                MarioLiveMemoryContextField(key: "gold", address: 0x0202BCF8, width: .u16)
+            ]
+        )
+    )
+
+    static let megaManZero = MarioGameProfile(
+        id: "mega_man_zero_gba",
+        displayName: "Mega Man Zero",
+        titleMatchers: [
+            "mega man zero",
+            "megaman zero",
+            "rockman zero",
+            "agb-azce",
+            "agb-azcp"
+        ],
+        nativeResolution: CGSize(width: 240, height: 160),
+        gameplayRegion: CGRect(x: 0.0, y: 0.10, width: 1.0, height: 0.80),
+        initialSearchRegion: CGRect(x: 0.08, y: 0.18, width: 0.84, height: 0.64),
+        minSampleInterval: 0.14,
+        damageCooldown: 0.8,
+        deathCooldown: 2.0,
+        fadeConfirmationThreshold: 0.38,
+        blackoutThreshold: 0.09,
+        smallHeightRange: 10...20,
+        superHeightRange: 21...32,
+        poweredUpHeightRange: 21...32,
+        liveMemory: MarioLiveMemoryMap(
+            kind: .megaManZero,
+            livesAddress: 0x02022B34,
+            powerUpAddress: 0x02022B27,
+            gameplayStateAddress: 0x02022B27,
+            invulnerabilityTimerAddress: 0x02022B34,
+            deathStateValues: [],
+            invulnerabilityStateValues: [],
+            smallPowerUpValues: [],
+            superPowerUpValues: [0],
+            poweredUpValues: Set(1...UInt8.max),
+            healthAddress16: nil,
+            maxHealthAddress16: nil,
+            healthAddress8: 0x0202B62C,
+            maxHealthAddress8: nil,
+            gameModeAddress: nil,
+            contextFields: [
+                MarioLiveMemoryContextField(key: "mission", address: 0x02022B27, width: .u8),
+                MarioLiveMemoryContextField(key: "retries", address: 0x02022B34, width: .u8)
             ]
         )
     )
@@ -833,6 +929,9 @@ struct MarioGameProfile: Sendable {
         kirbyNightmareInDreamLand,
         kirbyAmazingMirror,
         goldenSun,
+        goldenSunTheLostAge,
+        fireEmblemTheSacredStones,
+        megaManZero,
         castlevaniaAriaOfSorrow,
         castlevaniaCircleOfTheMoon,
         castlevaniaHarmonyOfDissonance
