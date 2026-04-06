@@ -2048,7 +2048,11 @@ final class MemoryGameAnalyzer {
     }
 
     private func dragonBallLocationSummary(liveSample: MarioLiveMemorySample) -> String? {
-        return nil
+        guard let stage = liveSample.contextValues["stage"],
+              let locationName = dragonBallLocationName(Int(stage)) else {
+            return nil
+        }
+        return "Loc \(locationName)"
     }
 
     private func kingdomHeartsLocationSummary(liveSample: MarioLiveMemorySample) -> String? {

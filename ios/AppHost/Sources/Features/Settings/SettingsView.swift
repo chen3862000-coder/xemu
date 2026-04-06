@@ -9,6 +9,7 @@ struct SettingsView: View {
     @EnvironmentObject private var themeController: ThemeController
     @EnvironmentObject private var shellThemeManager: ShellThemeManager
     @EnvironmentObject private var languageManager: LanguageManager
+    @EnvironmentObject private var adsPolicyController: AdsPolicyController
 
     @State private var showingUpgrade = false
     @State private var showingShareSheet = false
@@ -26,7 +27,8 @@ struct SettingsView: View {
     @AppStorage("settings.dev.memoryMonitor") private var devMemoryMonitor = false
     @AppStorage("settings.dev.thermalLogging") private var devThermalLogging = false
     @AppStorage("settings.dev.hpDeathDetection") private var devHPDeathDetection = false
-
+    @AppStorage("settings.dev.membershipOverride") private var devMembershipOverrideRaw = DeveloperMembershipOverride.system.rawValue
+    @AppStorage("settings.dev.adProviderMode") private var devAdProviderModeRaw = DeveloperAdProviderMode.mock.rawValue
     @AppStorage("settings.controller.autoImmersive") private var controllerAutoImmersive = true
     @AppStorage("settings.controller.hideTouchControls") private var controllerHideTouchControls = false
     @AppStorage("settings.controller.touchFallback") private var controllerTouchFallback = TouchFallbackMode.auto.rawValue
@@ -46,6 +48,16 @@ struct SettingsView: View {
         devModeUnlocked || proUnlocked
     }
 
+    private var devMembershipOverride: DeveloperMembershipOverride {
+        get { DeveloperMembershipOverride(rawValue: devMembershipOverrideRaw) ?? .system }
+        set { devMembershipOverrideRaw = newValue.rawValue }
+    }
+
+    private var devAdProviderMode: DeveloperAdProviderMode {
+        get { DeveloperAdProviderMode(rawValue: devAdProviderModeRaw) ?? .mock }
+        set { devAdProviderModeRaw = newValue.rawValue }
+    }
+
     private var appVersionText: String {
         let short = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0"
         return L10n.format("settings.version.format", short, languageManager: languageManager)
@@ -58,6 +70,7 @@ struct SettingsView: View {
                 performanceSection
                 controlsSection
                 accountSection
+                privacyAdsSection
                 infoSection
                 if isDeveloperModeVisible { developerSection }
             }
@@ -166,7 +179,9 @@ struct SettingsView: View {
         Section(header: SettingsSectionHeader(L10n.string("settings.account.section", languageManager: languageManager))) {
             NavigationSettingsRow(
                 title: L10n.string("settings.upgrade.title", languageManager: languageManager),
-                subtitle: L10n.string("settings.upgrade.subtitle", languageManager: languageManager)
+                subtitle: adsPolicyController.isProUser
+                    ? L10n.string("settings.upgrade.account_subtitle.pro", languageManager: languageManager)
+                    : L10n.string("settings.upgrade.account_subtitle.free", languageManager: languageManager)
             ) {
                 UpgradeView()
             }
@@ -189,6 +204,19 @@ struct SettingsView: View {
             ) {
                 HelpSupportView()
                     .environmentObject(languageManager)
+            }
+        }
+    }
+
+    private var privacyAdsSection: some View {
+        Section(header: SettingsSectionHeader(L10n.string("ads.privacy.nav", languageManager: languageManager))) {
+            NavigationSettingsRow(
+                title: L10n.string("ads.ad_experience.title", languageManager: languageManager),
+                subtitle: adsPolicyController.isProUser
+                    ? L10n.string("ads.ad_experience.subtitle.pro", languageManager: languageManager)
+                    : L10n.string("ads.ad_experience.subtitle.free", languageManager: languageManager)
+            ) {
+                PrivacyAndAdsSettingsView()
             }
         }
     }
@@ -243,6 +271,22 @@ struct SettingsView: View {
                 isOn: hapticBinding($devGameplayEventLogging)
             )
 
+            NavigationSettingsRow(
+                title: L10n.string("settings.dev.monetization_tier.title", languageManager: languageManager),
+                subtitle: L10n.string("settings.dev.monetization_tier.subtitle", languageManager: languageManager),
+                value: monetizationTierLabel(devMembershipOverride)
+            ) {
+                DeveloperMembershipOverrideView(selection: $devMembershipOverrideRaw)
+            }
+
+            NavigationSettingsRow(
+                title: L10n.string("settings.dev.ad_provider.title", languageManager: languageManager),
+                subtitle: L10n.string("settings.dev.ad_provider.subtitle", languageManager: languageManager),
+                value: adProviderLabel(devAdProviderMode)
+            ) {
+                DeveloperAdProviderModeView(selection: $devAdProviderModeRaw)
+            }
+
             NavigationSettingsRow(title: L10n.string("settings.dev.debug_controller_input", languageManager: languageManager)) {
                 ControllerInputDebugView()
             }
@@ -271,6 +315,26 @@ struct SettingsView: View {
         }
     }
 
+    private func monetizationTierLabel(_ option: DeveloperMembershipOverride) -> String {
+        switch option {
+        case .system:
+            return L10n.string("settings.dev.monetization_tier.live", languageManager: languageManager)
+        case .free:
+            return L10n.string("settings.dev.monetization_tier.force_free", languageManager: languageManager)
+        case .pro:
+            return L10n.string("settings.dev.monetization_tier.force_pro", languageManager: languageManager)
+        }
+    }
+
+    private func adProviderLabel(_ option: DeveloperAdProviderMode) -> String {
+        switch option {
+        case .mock:
+            return L10n.string("settings.dev.ad_provider.mock", languageManager: languageManager)
+        case .adMobTest:
+            return L10n.string("settings.dev.ad_provider.admob_test", languageManager: languageManager)
+        }
+    }
+
     private func hapticBinding(_ binding: Binding<Bool>) -> Binding<Bool> {
         Binding(
             get: { binding.wrappedValue },
@@ -289,6 +353,9 @@ struct SettingsView: View {
         devThermalLogging = false
         devGameplayEventOverlay = false
         devGameplayEventLogging = false
+        devMembershipOverrideRaw = DeveloperMembershipOverride.system.rawValue
+        devAdProviderModeRaw = DeveloperAdProviderMode.mock.rawValue
+        adsPolicyController.refreshEntitlementStatus()
     }
 }
 
@@ -409,6 +476,148 @@ private struct InfoSettingsRow: View {
                 .multilineTextAlignment(.trailing)
         }
         .frame(minHeight: SettingsTokens.rowHeight, alignment: .leading)
+    }
+}
+
+private struct DeveloperMembershipOverrideView: View {
+    @Binding var selection: String
+    @EnvironmentObject private var adsPolicyController: AdsPolicyController
+    @EnvironmentObject private var languageManager: LanguageManager
+
+    var body: some View {
+        List {
+            Section {
+                optionRow(.system)
+                optionRow(.free)
+                optionRow(.pro)
+            } footer: {
+                Text(L10n.string("settings.dev.monetization_tier.footer", languageManager: languageManager))
+            }
+        }
+        .settingsListStyle()
+        .navigationTitle(L10n.string("settings.dev.monetization_tier.nav", languageManager: languageManager))
+#if os(iOS)
+        .navigationBarTitleDisplayMode(.inline)
+#endif
+    }
+
+    private var selectedOverride: DeveloperMembershipOverride {
+        DeveloperMembershipOverride(rawValue: selection) ?? .system
+    }
+
+    private func subtitle(for option: DeveloperMembershipOverride) -> String {
+        switch option {
+        case .system:
+            return L10n.string("settings.dev.monetization_tier.live.subtitle", languageManager: languageManager)
+        case .free:
+            return L10n.string("settings.dev.monetization_tier.force_free.subtitle", languageManager: languageManager)
+        case .pro:
+            return L10n.string("settings.dev.monetization_tier.force_pro.subtitle", languageManager: languageManager)
+        }
+    }
+
+    private func title(for option: DeveloperMembershipOverride) -> String {
+        switch option {
+        case .system:
+            return L10n.string("settings.dev.monetization_tier.live", languageManager: languageManager)
+        case .free:
+            return L10n.string("settings.dev.monetization_tier.force_free", languageManager: languageManager)
+        case .pro:
+            return L10n.string("settings.dev.monetization_tier.force_pro", languageManager: languageManager)
+        }
+    }
+
+    private func optionRow(_ option: DeveloperMembershipOverride) -> some View {
+        Button {
+            selection = option.rawValue
+            adsPolicyController.refreshEntitlementStatus()
+        } label: {
+            HStack {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(title(for: option))
+                    Text(subtitle(for: option))
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                }
+                Spacer()
+                if selectedOverride == option {
+                    Image(systemName: "checkmark")
+                        .foregroundStyle(Color.accentColor)
+                }
+            }
+            .frame(maxWidth: .infinity, minHeight: SettingsTokens.rowHeight, alignment: .leading)
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+private struct DeveloperAdProviderModeView: View {
+    @Binding var selection: String
+    @EnvironmentObject private var languageManager: LanguageManager
+
+    private var selectedMode: DeveloperAdProviderMode {
+        DeveloperAdProviderMode(rawValue: selection) ?? .mock
+    }
+
+    private func subtitle(for option: DeveloperAdProviderMode) -> String {
+        switch option {
+        case .mock:
+            return L10n.string("settings.dev.ad_provider.mock.subtitle", languageManager: languageManager)
+        case .adMobTest:
+            return L10n.string("settings.dev.ad_provider.admob_test.subtitle", languageManager: languageManager)
+        }
+    }
+
+    private func title(for option: DeveloperAdProviderMode) -> String {
+        switch option {
+        case .mock:
+            return L10n.string("settings.dev.ad_provider.mock", languageManager: languageManager)
+        case .adMobTest:
+            return L10n.string("settings.dev.ad_provider.admob_test", languageManager: languageManager)
+        }
+    }
+
+    private func optionRow(_ option: DeveloperAdProviderMode) -> some View {
+        Button {
+            selection = option.rawValue
+        } label: {
+            HStack(spacing: 12) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(title(for: option))
+                        .font(.body.weight(.semibold))
+                        .foregroundStyle(AppColors.Text.primary)
+                    Text(subtitle(for: option))
+                        .font(.footnote)
+                        .foregroundStyle(AppColors.Text.secondary)
+                        .multilineTextAlignment(.leading)
+                }
+                Spacer()
+                if option == selectedMode {
+                    Image(systemName: "checkmark.circle.fill")
+                        .foregroundStyle(AppColors.primary)
+                }
+            }
+            .frame(maxWidth: .infinity, minHeight: SettingsTokens.rowHeight, alignment: .leading)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+
+    var body: some View {
+        List {
+            Section {
+                ForEach(DeveloperAdProviderMode.allCases) { option in
+                    optionRow(option)
+                }
+            } footer: {
+                Text(L10n.string("settings.dev.ad_provider.footer", languageManager: languageManager))
+            }
+        }
+        .settingsListStyle()
+        .navigationTitle(L10n.string("settings.dev.ad_provider.nav", languageManager: languageManager))
+#if os(iOS)
+        .navigationBarTitleDisplayMode(.inline)
+#endif
     }
 }
 
@@ -855,6 +1064,9 @@ private struct ActivityViewController: UIViewControllerRepresentable {
 struct UpgradeView: View {
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var languageManager: LanguageManager
+    @EnvironmentObject private var adsPolicyController: AdsPolicyController
+    @StateObject private var purchaseController = PurchaseFlowController.shared
+    @State private var purchaseMessage: String?
 
     var body: some View {
         List {
@@ -864,10 +1076,37 @@ struct UpgradeView: View {
                     .foregroundStyle(.secondary)
                     .frame(minHeight: SettingsTokens.rowHeight, alignment: .leading)
 
-                Button(L10n.string("settings.upgrade.subscribe", languageManager: languageManager)) {
-                    dismiss()
+                Text(adsPolicyController.isProUser
+                     ? L10n.string("settings.upgrade.plan_summary.pro", languageManager: languageManager)
+                     : L10n.string("settings.upgrade.plan_summary.free", languageManager: languageManager))
+                    .font(.system(size: 15, weight: .regular))
+                    .foregroundStyle(.secondary)
+                    .frame(minHeight: SettingsTokens.rowHeight, alignment: .leading)
+
+                Button(removeAdsButtonTitle) {
+                    purchase(.removeAds)
                 }
+                .disabled(purchaseController.isPurchasing || adsPolicyController.isProUser)
                 .frame(minHeight: SettingsTokens.rowHeight, alignment: .leading)
+
+                Button(proBundleButtonTitle) {
+                    purchase(.proBundle)
+                }
+                .disabled(purchaseController.isPurchasing || adsPolicyController.isProUser)
+                .frame(minHeight: SettingsTokens.rowHeight, alignment: .leading)
+
+                Button(L10n.string("settings.upgrade.restore_purchases", languageManager: languageManager)) {
+                    restorePurchases()
+                }
+                .disabled(purchaseController.isPurchasing)
+                .frame(minHeight: SettingsTokens.rowHeight, alignment: .leading)
+
+                if let purchaseMessage {
+                    Text(purchaseMessage)
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                        .frame(minHeight: SettingsTokens.rowHeight, alignment: .leading)
+                }
             }
         }
         .settingsListStyle()
@@ -875,6 +1114,64 @@ struct UpgradeView: View {
         #if os(iOS)
         .navigationBarTitleDisplayMode(.inline)
         #endif
+        .onAppear {
+            adsPolicyController.refreshEntitlementStatus()
+        }
+    }
+
+    private var removeAdsButtonTitle: String {
+        if let price = purchaseController.getProductPrice(.removeAds) {
+            return L10n.format("settings.upgrade.remove_ads.price", price, languageManager: languageManager)
+        }
+        return L10n.string("settings.upgrade.remove_ads", languageManager: languageManager)
+    }
+
+    private var proBundleButtonTitle: String {
+        if let price = purchaseController.getProductPrice(.proBundle) {
+            return L10n.format("settings.upgrade.go_pro.price", price, languageManager: languageManager)
+        }
+        return L10n.string("ads.cta.go_pro", languageManager: languageManager)
+    }
+
+    private func purchase(_ code: ProductCode) {
+        Task {
+            let result = await purchaseController.purchase(productCode: code)
+            await MainActor.run {
+                switch result {
+                case .success:
+                    UserDefaults.standard.set(true, forKey: "proUnlocked")
+                    adsPolicyController.refreshEntitlementStatus()
+                    purchaseMessage = L10n.string("settings.upgrade.purchase.success", languageManager: languageManager)
+                    dismiss()
+                case .pending:
+                    purchaseMessage = L10n.string("settings.upgrade.purchase.pending", languageManager: languageManager)
+                case .cancelled:
+                    purchaseMessage = L10n.string("settings.upgrade.purchase.cancelled", languageManager: languageManager)
+                case .failed(let error):
+                    purchaseMessage = error.localizedDescription
+                }
+            }
+        }
+    }
+
+    private func restorePurchases() {
+        Task {
+            let result = await purchaseController.restorePurchases()
+            await MainActor.run {
+                switch result {
+                case .success:
+                    UserDefaults.standard.set(true, forKey: "proUnlocked")
+                    adsPolicyController.refreshEntitlementStatus()
+                    purchaseMessage = "Purchases restored."
+                case .pending:
+                    purchaseMessage = "Restore is pending."
+                case .cancelled:
+                    purchaseMessage = "No previous purchases were restored."
+                case .failed(let error):
+                    purchaseMessage = error.localizedDescription
+                }
+            }
+        }
     }
 }
 
@@ -931,4 +1228,5 @@ private struct LanguageSelectionView: View {
         .environmentObject(ThemeController.shared)
         .environmentObject(ShellThemeManager.shared)
         .environmentObject(LanguageManager.shared)
+        .environmentObject(AdsPolicyController())
 }

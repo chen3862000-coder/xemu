@@ -47,12 +47,14 @@
 		3E3B47FA3ACEF359A1FBBD18 /* L10n.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A625B0491E9015409AEF8E7 /* L10n.swift */; };
 		491C0B990DFAF8B4637610E6 /* HapticManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1401482B9019897D45053268 /* HapticManager.swift */; };
 		4A22E39D94CA207A2B4B760F /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 21860D43DA16DB3AF18139D3 /* SettingsView.swift */; };
+		4C3F3FC7B3E8D4AF32977F60 /* AdMobNativeAds.swift in Sources */ = {isa = PBXBuildFile; fileRef = D6C41A842AD23F45F6ADD8C0 /* AdMobNativeAds.swift */; };
 		50CA39455D8BC2354FB4CB56 /* SwipeBackModifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3AEF9FE24A117EA15A71E6D9 /* SwipeBackModifier.swift */; };
 		5131C250FDEFC17F026F6380 /* EntitlementStatusView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 466D0058781640285EE96634 /* EntitlementStatusView.swift */; };
 		54DFBEB1573942E3E97F3869 /* CollectorDesignSystem.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB3A9B2AC6BEA25CD41D0DA3 /* CollectorDesignSystem.swift */; };
 		553CCA8B5EAA9193B86AFB41 /* StringCatalogFallback.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3F3E1AAA8D6B877E3675F23F /* StringCatalogFallback.swift */; };
 		60CC3D8F51F23131BDE11143 /* Dialog.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA7B69F5DDE2C4A434A51CB6 /* Dialog.swift */; };
 		60F896E4EFDBDD31BC068F4A /* InputBus.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9485665368CFC41E8D938D95 /* InputBus.swift */; };
+		63EEB89D9EC95ADE43A30A66 /* AdsRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = EA81866E30CB7D1089F9970C /* AdsRepository.swift */; };
 		6437DFE8F6E3E05E992BE4CF /* PlayInsightsModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = B7649E18D80FCB86DED47AF9 /* PlayInsightsModels.swift */; };
 		681A2321A88EBB4EE0CE1B81 /* OfflineGraceManager.swift.bak in Resources */ = {isa = PBXBuildFile; fileRef = 019DF21129B65716E23EF322 /* OfflineGraceManager.swift.bak */; };
 		6B5759AF17C87B632334A256 /* PlaceholderPatterns.swift in Sources */ = {isa = PBXBuildFile; fileRef = CE8DE758ED002F2F23925456 /* PlaceholderPatterns.swift */; };
@@ -61,7 +63,6 @@
 		6E46938AA08CC169F9975752 /* glossary.json in Resources */ = {isa = PBXBuildFile; fileRef = B5F8B87AEE815031D100445E /* glossary.json */; };
 		70867E22BC48F79CF384061E /* Colors.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74BECED9B221104E4F9B3DD8 /* Colors.swift */; };
 		7252BA49E7D15814BB8B4713 /* LocalizationBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 250FEDCA0F2D09332DBF0CAB /* LocalizationBundle.swift */; };
-		73B08C5F1BF0AEECADD3CD3F /* AdsPolicyController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4102CE4E593EBFCBCEEAB4D3 /* AdsPolicyController.swift */; };
 		755788A7BD8D16F285B141EC /* GameDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 04636AFBB1C5B621101AE08A /* GameDetailView.swift */; };
 		785516E5F54E0C4E5FB2CADC /* PlayerProgressStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 710211EBC87871D278F005F1 /* PlayerProgressStore.swift */; };
 		7959B081188039B1F334D8C9 /* XemuCores.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000F52E3A3CFCB55E604AE04 /* XemuCores.swift */; };
@@ -99,6 +100,7 @@
 		9F2BD0FA00AE416667D9E068 /* DeveloperDiagnosticsOverlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = 799609DB61FA42DC0104EEA3 /* DeveloperDiagnosticsOverlay.swift */; };
 		9F458B275A1D6AAF44321994 /* SettingsItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC3641DA7AB5979DD18519D7 /* SettingsItem.swift */; };
 		A090415EC3FE06793D5989A3 /* GameplayAnalysisLogger.swift in Sources */ = {isa = PBXBuildFile; fileRef = B7061432D55E2D3F403DF94A /* GameplayAnalysisLogger.swift */; };
+		A2183D96378113868D2A35BD /* AdsPolicyController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 79578FE7016E8B6E0241CFF6 /* AdsPolicyController.swift */; };
 		A2B7576C283DE64022CDAC59 /* GameCardTitleFormatter.swift in Sources */ = {isa = PBXBuildFile; fileRef = C006E38CC2DDEDDEE76D7155 /* GameCardTitleFormatter.swift */; };
 		A4419F607D3506EA7E859D8B /* MemoryAddressCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14E56CF820786BE24AC1E077 /* MemoryAddressCache.swift */; };
 		A454C0D96D7DA59BC7FD4E8B /* SaveStatesViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9C3AC2668DE133B8A0B8881A /* SaveStatesViewModel.swift */; };
@@ -126,6 +128,7 @@
 		BE0FB37ED77223F8CE78FA70 /* GameLibraryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7BC15F83843091487D6BA3FF /* GameLibraryView.swift */; };
 		BEFB7203845DF217533380A6 /* PS1Core.swift in Sources */ = {isa = PBXBuildFile; fileRef = A99371B6A5786B7EB7314F3F /* PS1Core.swift */; };
 		C046D641921D13E2DE0FFB1E /* CommonTypes.swift in Sources */ = {isa = PBXBuildFile; fileRef = D066E4CDCFE4A0792D74EFA6 /* CommonTypes.swift */; };
+		C3B0158D1D4BE44D33C04B7C /* AdsViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = C936162DA036913C0653A54D /* AdsViews.swift */; };
 		CA5BC011E541B6CBC2A2542F /* SaveStateStorage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8DEADAF875199419D6BDC89A /* SaveStateStorage.swift */; };
 		CCEC88BCA650F440C4B73A88 /* AppUXState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A1AEC9A6F49F0A320672E48 /* AppUXState.swift */; };
 		D145C7F2A45C9B0674438326 /* DeviceProfileCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3868FC066CEDAC8E3EBEB31E /* DeviceProfileCache.swift */; };
@@ -136,12 +139,14 @@
 		D5E4A38D3B851CFC45B3A830 /* MetalView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 87CAE0469FD01C9174AA65D6 /* MetalView.swift */; };
 		D75163BBC025CB6190EE8AEB /* FrameAnalysisCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = E4115D5BB5D1F23FD637F921 /* FrameAnalysisCoordinator.swift */; };
 		DCA06A10B711FE537E7C2F45 /* metadata_manifest.json in Resources */ = {isa = PBXBuildFile; fileRef = FD800C27927573BE5610B6D9 /* metadata_manifest.json */; };
+		E07D1548AA2C3D68A8389C3F /* GoogleMobileAds in Frameworks */ = {isa = PBXBuildFile; productRef = 9AEA7D3BA055EB50B0E4CCBD /* GoogleMobileAds */; };
 		E35C16FC8740EE4182600EFE /* ProductionSafety.swift in Sources */ = {isa = PBXBuildFile; fileRef = 199E6D6873E58FF3A3616CD8 /* ProductionSafety.swift */; };
 		E39E450A1B148932D02BE9BB /* MemoryGameAnalyzer.swift in Sources */ = {isa = PBXBuildFile; fileRef = A98D038E7FB58CF9B22293A3 /* MemoryGameAnalyzer.swift */; };
 		E3C9C5C2B2726545ABD113E4 /* sha1_checksums.txt in Resources */ = {isa = PBXBuildFile; fileRef = 3996C0205ADC77C1FCC3A6BF /* sha1_checksums.txt */; };
 		E62C630456F0C5BAC8E91B7A /* OfflineGraceManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD2BA596028329B64FC9E98D /* OfflineGraceManager.swift */; };
 		E7C10B9284CFF119BD966DA2 /* SupportedLanguage.swift in Sources */ = {isa = PBXBuildFile; fileRef = C7B2F91701B3C022B32C4D83 /* SupportedLanguage.swift */; };
 		E9AD7186674D4091222C93D4 /* LocaleFormatting.swift in Sources */ = {isa = PBXBuildFile; fileRef = A6A3F1BDF86F2C18EFEABAC1 /* LocaleFormatting.swift */; };
+		EC446E081EDB11E2ED5A6615 /* AdsDomain.swift in Sources */ = {isa = PBXBuildFile; fileRef = C947ED6661C1070EAC094A20 /* AdsDomain.swift */; };
 		ED388FE9D1418AE72F857215 /* Screens.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = 6670C3525296B65E0A849EE4 /* Screens.xcstrings */; };
 		EE9F50CDBAF071F438E2617F /* LocalizedContent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 15C7CDA99B41A56D01D26CD5 /* LocalizedContent.swift */; };
 		EF9BD5A516293B07C8E53DEB /* CollectorShelfGrouping.swift in Sources */ = {isa = PBXBuildFile; fileRef = 914F519ECF129B08271F903E /* CollectorShelfGrouping.swift */; };
@@ -207,7 +212,6 @@
 		3DC3F048D8B029578EBC1C67 /* GameListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameListView.swift; sourceTree = "<group>"; };
 		3ED8B8DBD333B44E1A7A7C21 /* EmulatorCoreFactory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmulatorCoreFactory.swift; sourceTree = "<group>"; };
 		3F3E1AAA8D6B877E3675F23F /* StringCatalogFallback.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StringCatalogFallback.swift; sourceTree = "<group>"; };
-		4102CE4E593EBFCBCEEAB4D3 /* AdsPolicyController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdsPolicyController.swift; sourceTree = "<group>"; };
 		4143CBD12B5F19B2A461EDBB /* PerformanceProfiler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PerformanceProfiler.swift; sourceTree = "<group>"; };
 		4153D5824070B31DC65B6D3A /* version.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = version.h; sourceTree = "<group>"; };
 		4364291217649D6912F145F5 /* SaveStatesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SaveStatesView.swift; sourceTree = "<group>"; };
@@ -239,6 +243,7 @@
 		7467A101DF9338E0F3357D42 /* PurchaseFlowController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PurchaseFlowController.swift; sourceTree = "<group>"; };
 		74BECED9B221104E4F9B3DD8 /* Colors.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Colors.swift; sourceTree = "<group>"; };
 		76F9B895A2EADF68D6D81078 /* Model.xcdatamodel */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcdatamodel; path = Model.xcdatamodel; sourceTree = "<group>"; };
+		79578FE7016E8B6E0241CFF6 /* AdsPolicyController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdsPolicyController.swift; sourceTree = "<group>"; };
 		799609DB61FA42DC0104EEA3 /* DeveloperDiagnosticsOverlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeveloperDiagnosticsOverlay.swift; sourceTree = "<group>"; };
 		7A30F7D86897B32B1D4E64AF /* HelpSupportModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HelpSupportModels.swift; sourceTree = "<group>"; };
 		7BC15F83843091487D6BA3FF /* GameLibraryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameLibraryView.swift; sourceTree = "<group>"; };
@@ -286,6 +291,8 @@
 		C626FB0CA4B289019CD0CF84 /* Toggle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Toggle.swift; sourceTree = "<group>"; };
 		C7B2F91701B3C022B32C4D83 /* SupportedLanguage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupportedLanguage.swift; sourceTree = "<group>"; };
 		C84CCFE78029389CEFD3E97B /* iPhoneMockup.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = iPhoneMockup.swift; sourceTree = "<group>"; };
+		C936162DA036913C0653A54D /* AdsViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdsViews.swift; sourceTree = "<group>"; };
+		C947ED6661C1070EAC094A20 /* AdsDomain.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdsDomain.swift; sourceTree = "<group>"; };
 		CACC00583F9D175AB4408A31 /* Badge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Badge.swift; sourceTree = "<group>"; };
 		CCE9BE4FF1D1FAAD1A852E60 /* NESCore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NESCore.swift; sourceTree = "<group>"; };
 		CE72D17588960E37DD40E4C5 /* CoverMetadataManifest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoverMetadataManifest.swift; sourceTree = "<group>"; };
@@ -296,6 +303,7 @@
 		D3598A04582EA6802C14ED20 /* libsqlite3.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = libsqlite3.tbd; path = usr/lib/libsqlite3.tbd; sourceTree = SDKROOT; };
 		D3D6F286E7DF172700DA65DD /* LocalizationDiagnostics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalizationDiagnostics.swift; sourceTree = "<group>"; };
 		D6140F3FC5529F6F387CF2DB /* MyPlayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MyPlayView.swift; sourceTree = "<group>"; };
+		D6C41A842AD23F45F6ADD8C0 /* AdMobNativeAds.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdMobNativeAds.swift; sourceTree = "<group>"; };
 		D7A97E34F6714D55B2ED6121 /* Button.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Button.swift; sourceTree = "<group>"; };
 		D96C91DB35FC25FB8CA6F9A9 /* cover_metadata.sqlite-shm */ = {isa = PBXFileReference; lastKnownFileType = file; path = "cover_metadata.sqlite-shm"; sourceTree = "<group>"; };
 		D9B06594522E3AB0385931D9 /* RomImportCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RomImportCoordinator.swift; sourceTree = "<group>"; };
@@ -308,6 +316,7 @@
 		E74886D1D943F88DBC1D37D6 /* TouchPressTracker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TouchPressTracker.swift; sourceTree = "<group>"; };
 		E9F53D97F3749B5E71ECC486 /* XemuCoreSymbolStubs.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = XemuCoreSymbolStubs.swift; sourceTree = "<group>"; };
 		EA48E5CBB14313449118F633 /* PlayerStatsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayerStatsView.swift; sourceTree = "<group>"; };
+		EA81866E30CB7D1089F9970C /* AdsRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdsRepository.swift; sourceTree = "<group>"; };
 		EBFCD24F74EE4522EAE30B33 /* ShellThemes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShellThemes.swift; sourceTree = "<group>"; };
 		ED11458A4C1FEBC6757494A9 /* GameplayEventDiagnosticsOverlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameplayEventDiagnosticsOverlay.swift; sourceTree = "<group>"; };
 		F16114E35568884F97D3D0E7 /* help_support.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = help_support.json; sourceTree = "<group>"; };
@@ -329,6 +338,7 @@
 				ADE244CA47CA49B7DE4A4969 /* libc++.tbd in Frameworks */,
 				8675EBF87782893B77722E97 /* libresolv.tbd in Frameworks */,
 				89D7ED9DC5A78BA254D40CE4 /* libsqlite3.tbd in Frameworks */,
+				E07D1548AA2C3D68A8389C3F /* GoogleMobileAds in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -615,7 +625,6 @@
 		98C6EF507520433BE415B803 /* Library */ = {
 			isa = PBXGroup;
 			children = (
-				4102CE4E593EBFCBCEEAB4D3 /* AdsPolicyController.swift */,
 				0CBA3662153947F4A0A92E40 /* LibraryView.swift */,
 				486B84BFA72CBA7EA3DCDA05 /* ROMLibraryOperations.swift */,
 			);
@@ -741,9 +750,22 @@
 			path = Store;
 			sourceTree = "<group>";
 		};
+		D85B83A66B60CB7D43FA913E /* Ads */ = {
+			isa = PBXGroup;
+			children = (
+				D6C41A842AD23F45F6ADD8C0 /* AdMobNativeAds.swift */,
+				C947ED6661C1070EAC094A20 /* AdsDomain.swift */,
+				79578FE7016E8B6E0241CFF6 /* AdsPolicyController.swift */,
+				EA81866E30CB7D1089F9970C /* AdsRepository.swift */,
+				C936162DA036913C0653A54D /* AdsViews.swift */,
+			);
+			path = Ads;
+			sourceTree = "<group>";
+		};
 		D8D82C9EA2AB430801EC91AD /* Features */ = {
 			isa = PBXGroup;
 			children = (
+				D85B83A66B60CB7D43FA913E /* Ads */,
 				4995648B0969ABAEAF37BC8D /* Components */,
 				444E17329B050DB61DBA51AD /* Controls */,
 				5492528D8D78907B43C2426C /* Covers */,
@@ -868,6 +890,7 @@
 			);
 			name = Xemu;
 			packageProductDependencies = (
+				9AEA7D3BA055EB50B0E4CCBD /* GoogleMobileAds */,
 			);
 			productName = Xemu;
 			productReference = 4DE8FCC2F96A65DCDAB928F2 /* Xemu.app */;
@@ -901,6 +924,9 @@
 			);
 			mainGroup = 0C1EC4B251E6BBE262A4AAA5;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				6A34ADC726FDF0D4B4FE1DE7 /* XCRemoteSwiftPackageReference "swift-package-manager-google-mobile-ads" */,
+			);
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
@@ -937,7 +963,11 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				73B08C5F1BF0AEECADD3CD3F /* AdsPolicyController.swift in Sources */,
+				4C3F3FC7B3E8D4AF32977F60 /* AdMobNativeAds.swift in Sources */,
+				EC446E081EDB11E2ED5A6615 /* AdsDomain.swift in Sources */,
+				A2183D96378113868D2A35BD /* AdsPolicyController.swift in Sources */,
+				63EEB89D9EC95ADE43A30A66 /* AdsRepository.swift in Sources */,
+				C3B0158D1D4BE44D33C04B7C /* AdsViews.swift in Sources */,
 				928F0540A9B1BC37F7503C6D /* Alert.swift in Sources */,
 				F387AD69E5395A8C7F16E93E /* AppHost.swift in Sources */,
 				7C973C810F59DFA9F4038A06 /* AppResourceMonitor.swift in Sources */,
@@ -1277,6 +1307,25 @@
 			defaultConfigurationName = Debug;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		6A34ADC726FDF0D4B4FE1DE7 /* XCRemoteSwiftPackageReference "swift-package-manager-google-mobile-ads" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/googleads/swift-package-manager-google-mobile-ads.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 12.0.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		9AEA7D3BA055EB50B0E4CCBD /* GoogleMobileAds */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 6A34ADC726FDF0D4B4FE1DE7 /* XCRemoteSwiftPackageReference "swift-package-manager-google-mobile-ads" */;
+			productName = GoogleMobileAds;
+		};
+/* End XCSwiftPackageProductDependency section */
 
 /* Begin XCVersionGroup section */
 		2BDBEBD2AAFD8ADB7DE59761 /* Model.xcdatamodeld */ = {

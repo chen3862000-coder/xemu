@@ -158,7 +158,8 @@
             "es": "¿Cómo agrego juegos?"
           },
           "keywords": {
-            "en": ["import", "add games", "files", "rom"]
+            "en": ["import", "add games", "files", "rom"],
+            "es": ["importar", "agregar juegos", "rom", "archivos"]
           },
           "summary": {
             "en": "Open the Import ROMs screen and choose compatible raw ROM files from your device or the Files app.",

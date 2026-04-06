@@ -38,10 +38,10 @@ struct HelpSupportCatalog: Codable, Hashable {
                     if title == normalizedQuery { score += 400 }
                     if title.hasPrefix(normalizedQuery) { score += 250 }
                     if title.contains(normalizedQuery) { score += 200 }
-                    if keywords.contains(normalizedQuery) { score += 150 }
+                    if keywords.contains(normalizedQuery) { score += 300 }
                     if summary.contains(normalizedQuery) { score += 60 }
                     if steps.contains(normalizedQuery) { score += 40 }
-                    if item.isFeatured { score += 10 }
+                    if item.isFeatured { score += 75 }
 
                     guard score > 0 else { return nil }
                     return HelpSupportSearchResult(category: category, item: item, score: score)

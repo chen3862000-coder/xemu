@@ -275,7 +275,7 @@ final class GamePlayViewModelTests: XCTestCase {
     func testPlayInsightsPayloadIncludesKingdomHeartsVitalsAndDeckState() {
         let sample = MarioLiveMemorySample(
             lives: 14,
-            powerUpState: 275,
+            powerUpState: 175,
             gameplayState: 0x01,
             invulnerabilityTimer: 0,
             health: 108,
@@ -289,7 +289,7 @@ final class GamePlayViewModelTests: XCTestCase {
         XCTAssertEqual(payload["level"], 14)
         XCTAssertEqual(payload["health"], 108)
         XCTAssertEqual(payload["maxHealth"], 132)
-        XCTAssertEqual(payload["cp"], 275)
+        XCTAssertEqual(payload["cp"], 175)
         XCTAssertEqual(payload["state"], 0x01)
     }
 

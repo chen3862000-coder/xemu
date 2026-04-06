@@ -11,6 +11,11 @@ settings:
     TARGETED_DEVICE_FAMILY: "1,2"
     INFOPLIST_FILE: Sources/AppHost/Info.plist
 
+packages:
+  GoogleMobileAds:
+    url: https://github.com/googleads/swift-package-manager-google-mobile-ads.git
+    from: 12.0.0
+
 targets:
   Xemu:
     type: application
@@ -24,6 +29,7 @@ targets:
       - sdk: libc++.tbd
       - sdk: libresolv.tbd
       - sdk: libsqlite3.tbd
+      - package: GoogleMobileAds
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.xemu.Xemu
