@@ -7,6 +7,12 @@ enum PlayInsightsSupportedGame: String, CaseIterable, Codable, Sendable {
     case onePiece
     case kingdomHeartsChainOfMemories
     case zeldaMinishCap
+    case kirbyNightmareInDreamLand
+    case kirbyAmazingMirror
+    case goldenSun
+    case goldenSunTheLostAge
+    case fireEmblemTheSacredStones
+    case megaManZero
     case metroidFusion
     case metroidZeroMission
     case castlevaniaAriaOfSorrow
@@ -27,6 +33,18 @@ enum PlayInsightsSupportedGame: String, CaseIterable, Codable, Sendable {
             self = .kingdomHeartsChainOfMemories
         case MarioGameProfile.zeldaMinishCap.id:
             self = .zeldaMinishCap
+        case MarioGameProfile.kirbyNightmareInDreamLand.id:
+            self = .kirbyNightmareInDreamLand
+        case MarioGameProfile.kirbyAmazingMirror.id:
+            self = .kirbyAmazingMirror
+        case MarioGameProfile.goldenSun.id:
+            self = .goldenSun
+        case MarioGameProfile.goldenSunTheLostAge.id:
+            self = .goldenSunTheLostAge
+        case MarioGameProfile.fireEmblemTheSacredStones.id:
+            self = .fireEmblemTheSacredStones
+        case MarioGameProfile.megaManZero.id:
+            self = .megaManZero
         case MarioGameProfile.metroidFusion.id:
             self = .metroidFusion
         case MarioGameProfile.metroidZeroMission.id:
@@ -50,6 +68,12 @@ enum PlayInsightsSupportedGame: String, CaseIterable, Codable, Sendable {
         case .onePiece: return MarioGameProfile.onePiece.id
         case .kingdomHeartsChainOfMemories: return MarioGameProfile.kingdomHeartsChainOfMemories.id
         case .zeldaMinishCap: return MarioGameProfile.zeldaMinishCap.id
+        case .kirbyNightmareInDreamLand: return MarioGameProfile.kirbyNightmareInDreamLand.id
+        case .kirbyAmazingMirror: return MarioGameProfile.kirbyAmazingMirror.id
+        case .goldenSun: return MarioGameProfile.goldenSun.id
+        case .goldenSunTheLostAge: return MarioGameProfile.goldenSunTheLostAge.id
+        case .fireEmblemTheSacredStones: return MarioGameProfile.fireEmblemTheSacredStones.id
+        case .megaManZero: return MarioGameProfile.megaManZero.id
         case .metroidFusion: return MarioGameProfile.metroidFusion.id
         case .metroidZeroMission: return MarioGameProfile.metroidZeroMission.id
         case .castlevaniaAriaOfSorrow: return MarioGameProfile.castlevaniaAriaOfSorrow.id
@@ -60,9 +84,9 @@ enum PlayInsightsSupportedGame: String, CaseIterable, Codable, Sendable {
 
     var supportsEventMetrics: Bool {
         switch self {
-        case .superMarioAdvance2, .superMarioAdvance4, .dragonBallAdvancedAdventure, .onePiece, .kingdomHeartsChainOfMemories, .zeldaMinishCap, .metroidFusion, .metroidZeroMission, .castlevaniaAriaOfSorrow:
+        case .superMarioAdvance2, .superMarioAdvance4, .dragonBallAdvancedAdventure, .onePiece, .kingdomHeartsChainOfMemories, .zeldaMinishCap, .kirbyNightmareInDreamLand, .kirbyAmazingMirror, .fireEmblemTheSacredStones, .megaManZero, .metroidFusion, .metroidZeroMission, .castlevaniaAriaOfSorrow:
             return true
-        case .castlevaniaCircleOfTheMoon, .castlevaniaHarmonyOfDissonance:
+        case .goldenSun, .goldenSunTheLostAge, .castlevaniaCircleOfTheMoon, .castlevaniaHarmonyOfDissonance:
             return false
         }
     }
@@ -71,8 +95,10 @@ enum PlayInsightsSupportedGame: String, CaseIterable, Codable, Sendable {
         switch self {
         case .metroidFusion, .metroidZeroMission, .zeldaMinishCap, .castlevaniaAriaOfSorrow, .castlevaniaCircleOfTheMoon, .castlevaniaHarmonyOfDissonance:
             return true
-        case .superMarioAdvance2, .superMarioAdvance4, .dragonBallAdvancedAdventure, .onePiece, .kingdomHeartsChainOfMemories:
+        case .superMarioAdvance2, .superMarioAdvance4, .dragonBallAdvancedAdventure, .onePiece, .kingdomHeartsChainOfMemories, .kirbyNightmareInDreamLand, .kirbyAmazingMirror, .fireEmblemTheSacredStones, .megaManZero:
             return false
+        case .goldenSun, .goldenSunTheLostAge:
+            return true
         }
     }
 }

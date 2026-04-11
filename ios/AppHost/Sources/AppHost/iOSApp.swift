@@ -6,6 +6,7 @@ struct iOSApp: App {
     @StateObject private var themeController = ThemeController.shared
     @StateObject private var shellThemeManager = ShellThemeManager.shared
     @StateObject private var languageManager = LanguageManager.shared
+    @StateObject private var adsPolicyController = AdsPolicyController()
     
     var body: some Scene {
         WindowGroup {
@@ -14,10 +15,14 @@ struct iOSApp: App {
                 .environmentObject(themeController)
                 .environmentObject(shellThemeManager)
                 .environmentObject(languageManager)
+                .environmentObject(adsPolicyController)
                 .environment(\.locale, languageManager.formattingLocale)
                 .environment(\.colorScheme, themeController.colorScheme)
                 .preferredColorScheme(themeController.colorScheme)
                 .id("app-theme-\(themeController.mode.rawValue)-lang-\(languageManager.refreshID)")
+                .task {
+                    AdMobBootstrap.startIfAvailable()
+                }
         }
     }
 }

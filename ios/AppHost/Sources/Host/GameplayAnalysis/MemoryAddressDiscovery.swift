@@ -41,7 +41,12 @@ final class MemoryAddressDiscovery {
         if knownCheats.isEmpty {
             GameplayAnalysisLogger.session("memory-address-discovery no-known-cheats title=\(gameTitle)")
             // Use heuristic discovery
-            return await heuristicDiscovery(for: gameTitle, platform: platform)
+            let discovered = await heuristicDiscovery(for: gameTitle, platform: platform)
+            if let discovered {
+                cache.setAddresses(discovered, for: gameKey)
+                lastDiscoveryAt = discovered.lastUpdate
+            }
+            return discovered
         }
 
         // Extract addresses from known cheats

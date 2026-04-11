@@ -469,19 +469,19 @@ final class PlayInsightsStoreTests: XCTestCase {
                         "state": 1
                     ]
                 ),
-                latestLocationSummary: nil
+                latestLocationSummary: "Loc Castle Oblivion • Level 14"
             )
         )
 
         let summary = try XCTUnwrap(store.summary(for: "khcom"))
-        XCTAssertEqual(summary.progressPrimaryValue, "Level 14")
+        XCTAssertEqual(summary.progressPrimaryValue, "Castle Oblivion • Level 14")
         XCTAssertEqual(summary.progressSecondaryValue, "HP 108/132")
-        XCTAssertEqual(summary.currentRunPrimary, "Level 14 • HP 108/132")
+        XCTAssertEqual(summary.currentRunPrimary, "Castle Oblivion • Level 14")
         XCTAssertEqual(summary.currentRunSecondary, "CP 275 equipped • HP 108/132")
         XCTAssertEqual(summary.currentRunBadge, "Deck Ready")
 
         let continueSummary = try XCTUnwrap(store.continuePlayingSummary(for: "khcom"))
-        XCTAssertEqual(continueSummary.primaryProgressLine, "Level 14 • HP 108/132")
+        XCTAssertEqual(continueSummary.primaryProgressLine, "Castle Oblivion • Level 14")
         XCTAssertEqual(continueSummary.supportingStateLine, "HP 108/132")
         XCTAssertEqual(continueSummary.badgeText, "Deck Ready")
     }
@@ -613,5 +613,259 @@ final class PlayInsightsStoreTests: XCTestCase {
         XCTAssertEqual(continueSummary.primaryProgressLine, "Chozodia")
         XCTAssertEqual(continueSummary.supportingStateLine, "HP 34/99")
         XCTAssertEqual(continueSummary.badgeText, "Exploration")
+    }
+
+    func testKirbyNightmareSummaryBuildsStageAndVitalsContext() throws {
+        let store = PlayInsightsStore(fileURL: tempURL)
+        let now = Date(timeIntervalSince1970: 1_700_302_050)
+
+        store.recordSession(
+            .init(
+                gameId: "kirby-nightmare",
+                gameTitle: "Kirby: Nightmare in Dream Land",
+                system: "gba",
+                supportedGame: .kirbyNightmareInDreamLand,
+                startedAt: now.addingTimeInterval(-780),
+                endedAt: now,
+                durationSeconds: 780,
+                deaths: 1,
+                damageEvents: 2,
+                snapshot: GameSpecificTelemetrySnapshot(
+                    gameId: "kirby-nightmare",
+                    timestamp: now,
+                    payloadType: PlayInsightsSupportedGame.kirbyNightmareInDreamLand.profileID,
+                    payloadJson: [
+                        "level": 0x04,
+                        "completion": 0x07,
+                        "health": 36,
+                        "lives": 3
+                    ]
+                ),
+                latestLocationSummary: "Loc Stage 4 • cleared 7"
+            )
+        )
+
+        let summary = try XCTUnwrap(store.summary(for: "kirby-nightmare"))
+        XCTAssertEqual(summary.progressPrimaryValue, "Stage 4")
+        XCTAssertEqual(summary.progressSecondaryValue, "7 stages cleared • HP 36 • 3 lives left")
+        XCTAssertEqual(summary.currentRunPrimary, "Stage 4")
+        XCTAssertEqual(summary.currentRunSecondary, "Current stage tracked • HP 36 • 3 lives left")
+        XCTAssertEqual(summary.currentRunBadge, "Platforming")
+
+        let continueSummary = try XCTUnwrap(store.continuePlayingSummary(for: "kirby-nightmare"))
+        XCTAssertEqual(continueSummary.primaryProgressLine, "Stage 4")
+        XCTAssertEqual(continueSummary.supportingStateLine, "HP 36 • 3 lives left")
+        XCTAssertEqual(continueSummary.badgeText, "Platforming")
+    }
+
+    func testKirbyAmazingMirrorSummaryBuildsProgressAndVitalsContext() throws {
+        let store = PlayInsightsStore(fileURL: tempURL)
+        let now = Date(timeIntervalSince1970: 1_700_302_150)
+
+        store.recordSession(
+            .init(
+                gameId: "kirby-amazing-mirror",
+                gameTitle: "Kirby & The Amazing Mirror",
+                system: "gba",
+                supportedGame: .kirbyAmazingMirror,
+                startedAt: now.addingTimeInterval(-840),
+                endedAt: now,
+                durationSeconds: 840,
+                deaths: 0,
+                damageEvents: 2,
+                snapshot: GameSpecificTelemetrySnapshot(
+                    gameId: "kirby-amazing-mirror",
+                    timestamp: now,
+                    payloadType: PlayInsightsSupportedGame.kirbyAmazingMirror.profileID,
+                    payloadJson: [
+                        "mirrorPieces": 0x03,
+                        "mapsCollected": 0x0008,
+                        "health": 28,
+                        "lives": 4
+                    ]
+                ),
+                latestLocationSummary: "Loc Mirror pieces 3 • maps 8"
+            )
+        )
+
+        let summary = try XCTUnwrap(store.summary(for: "kirby-amazing-mirror"))
+        XCTAssertEqual(summary.progressPrimaryValue, "3 mirror pieces")
+        XCTAssertEqual(summary.progressSecondaryValue, "8 area maps • HP 28 • 4 lives left")
+        XCTAssertEqual(summary.currentRunPrimary, "3 mirror pieces")
+        XCTAssertEqual(summary.currentRunSecondary, "Exploration active • HP 28 • 4 lives left")
+        XCTAssertEqual(summary.currentRunBadge, "Exploration")
+
+        let continueSummary = try XCTUnwrap(store.continuePlayingSummary(for: "kirby-amazing-mirror"))
+        XCTAssertEqual(continueSummary.primaryProgressLine, "3 mirror pieces")
+        XCTAssertEqual(continueSummary.supportingStateLine, "HP 28 • 4 lives left")
+        XCTAssertEqual(continueSummary.badgeText, "Exploration")
+    }
+
+    func testGoldenSunSummaryBuildsAreaAndHealthContext() throws {
+        let store = PlayInsightsStore(fileURL: tempURL)
+        let now = Date(timeIntervalSince1970: 1_700_302_250)
+
+        store.recordSession(
+            .init(
+                gameId: "golden-sun",
+                gameTitle: "Golden Sun",
+                system: "gba",
+                supportedGame: .goldenSun,
+                startedAt: now.addingTimeInterval(-900),
+                endedAt: now,
+                durationSeconds: 900,
+                deaths: 0,
+                damageEvents: 1,
+                snapshot: GameSpecificTelemetrySnapshot(
+                    gameId: "golden-sun",
+                    timestamp: now,
+                    payloadType: PlayInsightsSupportedGame.goldenSun.profileID,
+                    payloadJson: [
+                        "area": 0x0008,
+                        "health": 72,
+                        "maxHealth": 95
+                    ]
+                ),
+                latestLocationSummary: "Loc Vault"
+            )
+        )
+
+        let summary = try XCTUnwrap(store.summary(for: "golden-sun"))
+        XCTAssertEqual(summary.progressPrimaryValue, "Current area tracked")
+        XCTAssertEqual(summary.progressSecondaryValue, "HP 72/95")
+        XCTAssertEqual(summary.currentRunPrimary, "Current area tracked")
+        XCTAssertEqual(summary.currentRunSecondary, "HP 72/95")
+        XCTAssertEqual(summary.currentRunBadge, "Exploration")
+
+        let continueSummary = try XCTUnwrap(store.continuePlayingSummary(for: "golden-sun"))
+        XCTAssertEqual(continueSummary.primaryProgressLine, "Current area tracked")
+        XCTAssertEqual(continueSummary.supportingStateLine, "HP 72/95")
+        XCTAssertEqual(continueSummary.badgeText, "Exploration")
+    }
+
+    func testGoldenSunTheLostAgeSummaryBuildsLocaleAndHealthContext() throws {
+        let store = PlayInsightsStore(fileURL: tempURL)
+        let now = Date(timeIntervalSince1970: 1_700_302_350)
+
+        store.recordSession(
+            .init(
+                gameId: "golden-sun-tla",
+                gameTitle: "Golden Sun: The Lost Age",
+                system: "gba",
+                supportedGame: .goldenSunTheLostAge,
+                startedAt: now.addingTimeInterval(-900),
+                endedAt: now,
+                durationSeconds: 900,
+                deaths: 0,
+                damageEvents: 1,
+                snapshot: GameSpecificTelemetrySnapshot(
+                    gameId: "golden-sun-tla",
+                    timestamp: now,
+                    payloadType: PlayInsightsSupportedGame.goldenSunTheLostAge.profileID,
+                    payloadJson: [
+                        "locale": 0x08,
+                        "health": 88,
+                        "maxHealth": 102
+                    ]
+                ),
+                latestLocationSummary: "Loc Madra"
+            )
+        )
+
+        let summary = try XCTUnwrap(store.summary(for: "golden-sun-tla"))
+        XCTAssertEqual(summary.progressPrimaryValue, "Madra")
+        XCTAssertEqual(summary.progressSecondaryValue, "HP 88/102")
+        XCTAssertEqual(summary.currentRunPrimary, "Madra")
+        XCTAssertEqual(summary.currentRunSecondary, "HP 88/102")
+        XCTAssertEqual(summary.currentRunBadge, "Exploration")
+
+        let continueSummary = try XCTUnwrap(store.continuePlayingSummary(for: "golden-sun-tla"))
+        XCTAssertEqual(continueSummary.primaryProgressLine, "Madra")
+        XCTAssertEqual(continueSummary.supportingStateLine, "HP 88/102")
+        XCTAssertEqual(continueSummary.badgeText, "Exploration")
+    }
+
+    func testFireEmblemTheSacredStonesSummaryBuildsTacticsAndResourcesContext() throws {
+        let store = PlayInsightsStore(fileURL: tempURL)
+        let now = Date(timeIntervalSince1970: 1_700_302_450)
+
+        store.recordSession(
+            .init(
+                gameId: "fire-emblem-sacred-stones",
+                gameTitle: "Fire Emblem: The Sacred Stones",
+                system: "gba",
+                supportedGame: .fireEmblemTheSacredStones,
+                startedAt: now.addingTimeInterval(-960),
+                endedAt: now,
+                durationSeconds: 960,
+                deaths: 1,
+                damageEvents: 3,
+                snapshot: GameSpecificTelemetrySnapshot(
+                    gameId: "fire-emblem-sacred-stones",
+                    timestamp: now,
+                    payloadType: PlayInsightsSupportedGame.fireEmblemTheSacredStones.profileID,
+                    payloadJson: [
+                        "health": 18,
+                        "maxHealth": 24,
+                        "gold": 3200
+                    ]
+                ),
+                latestLocationSummary: "Loc Resources 3200G • HP 18/24"
+            )
+        )
+
+        let summary = try XCTUnwrap(store.summary(for: "fire-emblem-sacred-stones"))
+        XCTAssertEqual(summary.progressPrimaryValue, "Lead unit HP 18/24")
+        XCTAssertEqual(summary.progressSecondaryValue, "3200G on hand • HP 18/24")
+        XCTAssertEqual(summary.currentRunPrimary, "Lead unit HP 18/24")
+        XCTAssertEqual(summary.currentRunSecondary, "Tactical state tracked • HP 18/24")
+        XCTAssertEqual(summary.currentRunBadge, "Tactics")
+
+        let continueSummary = try XCTUnwrap(store.continuePlayingSummary(for: "fire-emblem-sacred-stones"))
+        XCTAssertEqual(continueSummary.primaryProgressLine, "Lead unit HP 18/24")
+        XCTAssertEqual(continueSummary.supportingStateLine, "HP 18/24")
+        XCTAssertEqual(continueSummary.badgeText, "Tactics")
+    }
+
+    func testMegaManZeroSummaryBuildsMissionAndRetriesContext() throws {
+        let store = PlayInsightsStore(fileURL: tempURL)
+        let now = Date(timeIntervalSince1970: 1_700_302_550)
+
+        store.recordSession(
+            .init(
+                gameId: "mega-man-zero",
+                gameTitle: "Mega Man Zero",
+                system: "gba",
+                supportedGame: .megaManZero,
+                startedAt: now.addingTimeInterval(-780),
+                endedAt: now,
+                durationSeconds: 780,
+                deaths: 1,
+                damageEvents: 4,
+                snapshot: GameSpecificTelemetrySnapshot(
+                    gameId: "mega-man-zero",
+                    timestamp: now,
+                    payloadType: PlayInsightsSupportedGame.megaManZero.profileID,
+                    payloadJson: [
+                        "mission": 0x03,
+                        "retries": 0x02,
+                        "health": 14
+                    ]
+                ),
+                latestLocationSummary: "Loc Mission 3 • retries 2"
+            )
+        )
+
+        let summary = try XCTUnwrap(store.summary(for: "mega-man-zero"))
+        XCTAssertEqual(summary.progressPrimaryValue, "Mission 3")
+        XCTAssertEqual(summary.progressSecondaryValue, "2 retries • HP 14")
+        XCTAssertEqual(summary.currentRunPrimary, "Mission 3")
+        XCTAssertEqual(summary.currentRunSecondary, "2 retries • HP 14")
+        XCTAssertEqual(summary.currentRunBadge, "Action")
+
+        let continueSummary = try XCTUnwrap(store.continuePlayingSummary(for: "mega-man-zero"))
+        XCTAssertEqual(continueSummary.primaryProgressLine, "Mission 3")
+        XCTAssertEqual(continueSummary.supportingStateLine, "HP 14")
+        XCTAssertEqual(continueSummary.badgeText, "Action")
     }
 }

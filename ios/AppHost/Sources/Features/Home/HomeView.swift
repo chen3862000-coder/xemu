@@ -25,6 +25,7 @@ struct HomeView: View {
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.verticalSizeClass) private var verticalSizeClass
     @EnvironmentObject private var languageManager: LanguageManager
+    @EnvironmentObject private var adsPolicyController: AdsPolicyController
     @StateObject private var viewModel = HomeViewModel()
     @StateObject private var performanceProfiler = PerformanceProfiler.shared
     @State private var showingSettings = false
@@ -86,6 +87,7 @@ struct HomeView: View {
                             recentGamesSection
                             emulatorsSection
                         }
+                        homeAdSection
                     }
                     .padding(.top, 8)
                     .padding(.horizontal, RMSpacing.lg)
@@ -138,6 +140,12 @@ struct HomeView: View {
             GamePlayView(game: game, onExit: {
                 selectedGame = nil
             })
+            .onAppear {
+                adsPolicyController.noteGameplayStarted()
+            }
+            .onDisappear {
+                adsPolicyController.noteGameplayEnded()
+            }
             .swipeBack {
                 selectedGame = nil
             }
@@ -193,11 +201,13 @@ struct HomeView: View {
         .onAppear {
             refreshHome()
             markInteraction()
+            adsPolicyController.refreshEntitlementStatus()
         }
         .onChange(of: scenePhase) { _, phase in
             if phase == .active {
                 refreshHome()
                 markInteraction()
+                adsPolicyController.refreshEntitlementStatus()
             } else {
                 isIdle = false
             }
@@ -301,6 +311,55 @@ struct HomeView: View {
             collectorRecentlyAddedSection
         }
         .padding(.horizontal, 8)
+    }
+
+    @ViewBuilder
+    private var homeAdSection: some View {
+        if !adsPolicyController.isProUser {
+            VStack(alignment: .leading, spacing: 12) {
+                Divider()
+                    .overlay(AppColors.Border.softDivider)
+                    .padding(.top, 4)
+
+                Text(L10n.string("ads.home.section_title", languageManager: languageManager))
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(AppColors.Text.tertiary)
+
+                HomeFeedAdSlot()
+
+                if adsPolicyController.shouldSuggestProUpgrade {
+                    Button {
+                        showingSettings = true
+                    } label: {
+                        HStack(alignment: .center, spacing: 12) {
+                            Image(systemName: "sparkles.tv.fill")
+                                .font(.system(size: 18, weight: .semibold))
+                                .foregroundStyle(AppColors.Text.accent)
+
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(L10n.string("ads.home.upsell.title", languageManager: languageManager))
+                                    .font(.headline)
+                                    .foregroundStyle(AppColors.Text.primary)
+                                Text(L10n.string("ads.home.upsell.subtitle", languageManager: languageManager))
+                                    .font(.subheadline)
+                                    .foregroundStyle(AppColors.Text.secondary)
+                            }
+
+                            Spacer()
+
+                            Image(systemName: "chevron.right")
+                                .font(.system(size: 14, weight: .semibold))
+                                .foregroundStyle(AppColors.Text.tertiary)
+                        }
+                        .padding(16)
+                        .background(AppColors.Surface.cardSecondary)
+                        .overlay(RoundedRectangle(cornerRadius: 22).stroke(AppColors.Border.subtle, lineWidth: 1))
+                        .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+        }
     }
 
     private var collectorActionsRow: some View {
@@ -728,9 +787,48 @@ struct HomeView: View {
     }
 }
 
+private struct HomeFeedAdSlot: View {
+    @EnvironmentObject private var adsPolicyController: AdsPolicyController
+
+    var body: some View {
+        Group {
+            if adsPolicyController.adProviderMode == .adMobTest {
+                AdMobNativeCardSlot(
+                    adUnitID: AdMobTestConfig.nativeAdUnitID,
+                    onImpression: {
+                        adsPolicyController.markImpression(for: .homeFeedNative)
+                    },
+                    onClick: {
+                        adsPolicyController.markClick(for: .homeFeedNative)
+                    }
+                )
+            } else if let ad = adsPolicyController.nativeSlots[.homeFeedNative] {
+                SponsoredNativeCard(
+                    ad: ad,
+                    onAppearImpression: {
+                        adsPolicyController.markImpression(for: .homeFeedNative)
+                    },
+                    onTapCTA: {
+                        adsPolicyController.markClick(for: .homeFeedNative)
+                    }
+                )
+                .transition(.opacity)
+            } else {
+                SponsoredNativeLoadingCard()
+            }
+        }
+        .task {
+            if adsPolicyController.adProviderMode == .mock {
+                await adsPolicyController.prepareNativeAd(for: .homeFeedNative, on: .home)
+            }
+        }
+    }
+}
+
 struct StatCard: View {
     private static let minHeight: CGFloat = 120
     private static let valueAreaHeight: CGFloat = 78
+    private static let helperAreaHeight: CGFloat = 34
 
     let title: String
     let value: String
@@ -768,6 +866,7 @@ struct StatCard: View {
                 .font(.system(size: 13, weight: .medium))
                 .foregroundStyle(AppColors.Text.tertiary)
                 .lineLimit(2)
+                .frame(maxWidth: .infinity, minHeight: Self.helperAreaHeight, alignment: .topLeading)
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 14)
@@ -967,6 +1066,7 @@ struct RecentGameCard: View {
                 .resizable()
                 .aspectRatio(contentMode: .fill)
                 .frame(maxWidth: .infinity, minHeight: artworkHeight, maxHeight: artworkHeight)
+                .clipped()
                 .overlay(Color.white.opacity(0.12))
                 .clipShape(RoundedRectangle(cornerRadius: 12))
         } else if let coverData = game.coverData, let uiImage = UIImage(data: coverData) {
@@ -974,6 +1074,7 @@ struct RecentGameCard: View {
                 .resizable()
                 .aspectRatio(contentMode: .fill)
                 .frame(maxWidth: .infinity, minHeight: artworkHeight, maxHeight: artworkHeight)
+                .clipped()
                 .overlay(Color.white.opacity(0.16))
                 .clipShape(RoundedRectangle(cornerRadius: 12))
         } else if let imageUrl = game.image, let url = URL(string: imageUrl) {
@@ -987,6 +1088,7 @@ struct RecentGameCard: View {
                     .foregroundColor(AppColors.textMuted)
             }
             .frame(maxWidth: .infinity, minHeight: artworkHeight, maxHeight: artworkHeight)
+            .clipped()
             .overlay(Color.white.opacity(0.16))
             .clipShape(RoundedRectangle(cornerRadius: 12))
         } else {
@@ -1004,6 +1106,7 @@ struct RecentGameCard: View {
                     .foregroundColor(AppColors.textMuted)
             }
             .frame(maxWidth: .infinity, minHeight: artworkHeight, maxHeight: artworkHeight)
+            .clipped()
             .clipShape(RoundedRectangle(cornerRadius: 12))
         } else {
             fallbackArtwork
@@ -1340,7 +1443,12 @@ struct RomImportView: View {
                     .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
 
                     VStack(alignment: .leading, spacing: 8) {
-                        Label("Supports: .gb, .gbc, .gba, .nds", systemImage: "checkmark.seal")
+                        Label(
+                            "Supports: " + RomImportCoordinator.supportedROMFileExtensions
+                                .map { ".\($0)" }
+                                .joined(separator: ", "),
+                            systemImage: "checkmark.seal"
+                        )
                             .font(.system(size: 13, weight: .medium))
                             .foregroundColor(AppColors.textPrimary)
                         Label("Files stay on your device", systemImage: "lock.shield")

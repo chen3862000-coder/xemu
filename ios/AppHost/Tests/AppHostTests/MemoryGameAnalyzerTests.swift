@@ -683,6 +683,7 @@ final class MemoryGameAnalyzerTests: XCTestCase {
         XCTAssertEqual(result?.events, [.damageLight])
         XCTAssertEqual(result?.playerState, .superState)
         XCTAssertEqual(result?.gameplayPhase, .gameplayActive)
+        XCTAssertEqual(result?.locationSummary, "Loc Castle Oblivion • Level 12")
     }
 
     func testKingdomHeartsChainOfMemoriesZeroHealthEmitsDeathFromLiveMemory() {
@@ -711,6 +712,7 @@ final class MemoryGameAnalyzerTests: XCTestCase {
         XCTAssertEqual(result?.events, [.deathDetected])
         XCTAssertEqual(result?.playerState, .dead)
         XCTAssertEqual(result?.gameplayPhase, .deathSequence)
+        XCTAssertEqual(result?.locationSummary, "Loc Castle Oblivion • Level 12")
     }
 
     func testZeldaMinishCapHealthDropEmitsDamageFromLiveMemory() {

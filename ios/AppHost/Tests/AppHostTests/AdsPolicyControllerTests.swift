@@ -1,53 +1,119 @@
 import XCTest
-import Combine
 @testable import Xemu
 
 @MainActor
 final class AdsPolicyControllerTests: XCTestCase {
-
-    var controller: AdsPolicyController!
-    var cancellables: Set<AnyCancellable>!
+    private var preferences: AdPreferences!
+    private var now = Date(timeIntervalSince1970: 1_000)
 
     override func setUp() {
         super.setUp()
-        AdPreferences.shared.resetToDefaults()
-        controller = AdsPolicyController()
-        cancellables = Set<AnyCancellable>()
+        preferences = AdPreferences(storageKey: nil)
+        preferences.resetToDefaults()
     }
 
     override func tearDown() {
-        controller = nil
-        cancellables = nil
+        preferences = nil
         super.tearDown()
     }
 
-    func testAdPlacementLibraryBanner() {
-        let placement = AdsPolicyController.AdPlacement.libraryBanner
-        let canShow = controller.shouldShowAd(for: placement)
-        XCTAssertTrue(canShow)
+    func testNativeAdsWaitUntilTwoMinutesIntoSession() async {
+        let controller = makeController()
+        await controller.reloadEntitlementStatus()
+
+        XCTAssertFalse(controller.shouldShowAd(for: .homeFeedNative, on: .home))
+
+        now.addTimeInterval(121)
+
+        XCTAssertTrue(controller.shouldShowAd(for: .homeFeedNative, on: .home))
     }
 
-    func testAdPlacementInterstitial() {
-        let placement = AdsPolicyController.AdPlacement.interstitial
-        let canShow = controller.shouldShowAd(for: placement)
-        XCTAssertFalse(canShow)
+    func testProUsersNeverSeeAds() async {
+        let controller = makeController(entitlementService: MockEntitlementService(status: .active))
+        await controller.reloadEntitlementStatus()
+        now.addTimeInterval(121)
+
+        XCTAssertFalse(controller.shouldShowAd(for: .homeFeedNative, on: .home))
+        XCTAssertFalse(controller.shouldShowAd(for: .rewardedExtraSaveSlot, on: .settings))
     }
 
-    func testMarkAdShown() {
-        let placement = AdsPolicyController.AdPlacement.interstitial
-        controller.markAdShown(for: placement)
-        let canShowAgain = controller.shouldShowAd(for: placement)
-        XCTAssertFalse(canShowAgain)
+    func testLibraryAdInsertionRequiresScrollAndEnoughItems() async {
+        let controller = makeController()
+        await controller.reloadEntitlementStatus()
+        now.addTimeInterval(121)
+
+        XCTAssertFalse(controller.shouldInsertLibraryAd(afterContentIndex: 16, totalCount: 24, hasScrolledPastFirstViewport: false))
+        XCTAssertFalse(controller.shouldInsertLibraryAd(afterContentIndex: 16, totalCount: 12, hasScrolledPastFirstViewport: true))
+        XCTAssertTrue(controller.shouldInsertLibraryAd(afterContentIndex: 16, totalCount: 24, hasScrolledPastFirstViewport: true))
     }
 
-    func testRecordAdLoadFailed() {
-        let placement = AdsPolicyController.AdPlacement.preLaunchInterstitial
-        controller.recordAdLoadFailed(for: placement)
+    func testThirdImpressionTriggersProUpsell() async {
+        let controller = makeController()
+        await controller.reloadEntitlementStatus()
+        now.addTimeInterval(121)
+
+        controller.markImpression(for: .homeFeedNative)
+        now.addTimeInterval(91)
+        controller.markImpression(for: .libraryGridNative)
+        now.addTimeInterval(91)
+        controller.markImpression(for: .homeFeedNative)
+
+        XCTAssertTrue(controller.shouldSuggestProUpgrade)
     }
 
-    func testResetToDefaults() {
-        controller.markAdShown(for: .interstitial)
-        let canShowBefore = controller.shouldShowAd(for: .interstitial)
-        XCTAssertFalse(canShowBefore)
+    func testRewardedRedemptionStoresTemporaryUnlock() async {
+        let controller = makeController()
+        await controller.reloadEntitlementStatus()
+
+        XCTAssertNil(controller.offerState(for: .rewardedExtraSaveSlot)?.activeUntil)
+
+        await controller.redeemReward(for: .rewardedExtraSaveSlot)
+
+        XCTAssertNotNil(controller.offerState(for: .rewardedExtraSaveSlot)?.activeUntil)
+        XCTAssertTrue(controller.shouldSuggestProUpgrade)
+    }
+
+    func testGameplayCooldownBlocksAmbientAds() async {
+        let controller = makeController()
+        await controller.reloadEntitlementStatus()
+        now.addTimeInterval(180)
+
+        controller.noteGameplayStarted()
+        controller.noteGameplayEnded()
+
+        XCTAssertFalse(controller.shouldShowAd(for: .homeFeedNative, on: .home))
+
+        now.addTimeInterval(AdRules.gameplayCooldownAfterExit + 1)
+
+        XCTAssertTrue(controller.shouldShowAd(for: .homeFeedNative, on: .home))
+    }
+
+    func testDeveloperOverrideCanForceFreeOrPro() async {
+        let defaults = UserDefaults(suiteName: "AdsPolicyControllerTests.\(#function)")!
+        defaults.removePersistentDomain(forName: "AdsPolicyControllerTests.\(#function)")
+        let entitlementCache = EntitlementCache()
+        let service = CachedEntitlementService(entitlementCache: entitlementCache, userDefaults: defaults)
+
+        defaults.set(DeveloperMembershipOverride.pro.rawValue, forKey: "settings.dev.membershipOverride")
+        let forcedProStatus = await service.checkEntitlementStatus()
+        XCTAssertEqual(forcedProStatus, .active)
+
+        defaults.set(DeveloperMembershipOverride.free.rawValue, forKey: "settings.dev.membershipOverride")
+        let forcedFreeStatus = await service.checkEntitlementStatus()
+        XCTAssertEqual(forcedFreeStatus, .inactive)
+
+        defaults.removeObject(forKey: "settings.dev.membershipOverride")
+    }
+
+    private func makeController(
+        entitlementService: EntitlementService? = nil
+    ) -> AdsPolicyController {
+        AdsPolicyController(
+            repository: MockAdRepository(),
+            entitlementService: entitlementService ?? MockEntitlementService(status: .inactive),
+            preferences: preferences,
+            policy: AdPolicyEngine(),
+            now: { self.now }
+        )
     }
 }

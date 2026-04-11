@@ -3,10 +3,12 @@ import CoreData
 
 struct LibraryView: View {
     @Environment(\.managedObjectContext) private var viewContext
+    @EnvironmentObject private var adsPolicyController: AdsPolicyController
     @StateObject private var viewModel = LibraryViewModel()
     @State private var selectedFilter: LibraryFilter = .all
     @State private var searchText = ""
     @State private var selectedRom: ROMLibraryEntry?
+    @State private var didScrollPastFirstViewport = false
 
     var body: some View {
         ZStack {
@@ -19,6 +21,7 @@ struct LibraryView: View {
         .searchable(text: $searchText, prompt: "Search ROMs...")
         .onAppear {
             viewModel.loadEntries(in: viewContext)
+            adsPolicyController.refreshEntitlementStatus()
         }
         .onReceive(NotificationCenter.default.publisher(for: .coverArtDidChange)) { _ in
             viewModel.loadEntries(in: viewContext)
@@ -60,14 +63,53 @@ struct LibraryView: View {
             LazyVGrid(columns: [
                 GridItem(.adaptive(minimum: 120), spacing: 16)
             ], spacing: 16) {
-                ForEach(filteredRomEntries) { entry in
-                    RomCard(entry: entry) {
-                        selectedRom = entry
+                ForEach(gridItems) { item in
+                    switch item.content {
+                    case .game(let entry, let index):
+                        RomCard(entry: entry) {
+                            selectedRom = entry
+                        }
+                        .onAppear {
+                            if index >= 7 {
+                                didScrollPastFirstViewport = true
+                            }
+                        }
+                    case .ad:
+                        LibraryAdSlot()
                     }
                 }
             }
             .padding()
         }
+    }
+
+    private var gridItems: [LibraryGridItem] {
+        let entries = filteredRomEntries
+        var items: [LibraryGridItem] = []
+
+        for (index, entry) in entries.enumerated() {
+            items.append(
+                LibraryGridItem(
+                    id: entry.objectID.uriRepresentation().absoluteString,
+                    content: .game(entry, index)
+                )
+            )
+
+            if adsPolicyController.shouldInsertLibraryAd(
+                afterContentIndex: index + 1,
+                totalCount: entries.count,
+                hasScrolledPastFirstViewport: didScrollPastFirstViewport
+            ) {
+                items.append(
+                    LibraryGridItem(
+                        id: "library-ad-\(index + 1)",
+                        content: .ad(.libraryGridNative)
+                    )
+                )
+            }
+        }
+
+        return items
     }
 
     private var filteredRomEntries: [ROMLibraryEntry] {
@@ -81,6 +123,16 @@ struct LibraryView: View {
 
         return entries
     }
+}
+
+private struct LibraryGridItem: Identifiable {
+    enum Content {
+        case game(ROMLibraryEntry, Int)
+        case ad(AdPlacement)
+    }
+
+    let id: String
+    let content: Content
 }
 
 struct FilterChip: View {
@@ -174,6 +226,44 @@ struct RomCard: View {
         }
         let hours = minutes / 60
         return "\(hours)h"
+    }
+}
+
+private struct LibraryAdSlot: View {
+    @EnvironmentObject private var adsPolicyController: AdsPolicyController
+
+    var body: some View {
+        Group {
+            if adsPolicyController.adProviderMode == .adMobTest {
+                AdMobNativeCardSlot(
+                    adUnitID: AdMobTestConfig.nativeAdUnitID,
+                    onImpression: {
+                        adsPolicyController.markImpression(for: .libraryGridNative)
+                    },
+                    onClick: {
+                        adsPolicyController.markClick(for: .libraryGridNative)
+                    }
+                )
+            } else if let ad = adsPolicyController.nativeSlots[.libraryGridNative] {
+                SponsoredNativeCard(
+                    ad: ad,
+                    onAppearImpression: {
+                        adsPolicyController.markImpression(for: .libraryGridNative)
+                    },
+                    onTapCTA: {
+                        adsPolicyController.markClick(for: .libraryGridNative)
+                    }
+                )
+            } else {
+                SponsoredNativeLoadingCard()
+            }
+        }
+        .gridCellColumns(2)
+        .task {
+            if adsPolicyController.adProviderMode == .mock {
+                await adsPolicyController.prepareNativeAd(for: .libraryGridNative, on: .library)
+            }
+        }
     }
 }
 

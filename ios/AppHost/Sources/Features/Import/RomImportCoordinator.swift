@@ -17,9 +17,12 @@ struct ImportProgress {
 
 @MainActor
 final class RomImportCoordinator: ObservableObject {
+    static let supportedROMFileExtensions = ["gb", "gbc", "gba", "nds"]
+
     enum ImportError: LocalizedError {
         case fileAccessFailed
         case invalidROMFormat
+        case unsupportedROM(reason: String)
         case duplicateROM
 
         var errorDescription: String? {
@@ -28,6 +31,8 @@ final class RomImportCoordinator: ObservableObject {
                 return "Failed to access selected ROM file"
             case .invalidROMFormat:
                 return "Invalid or unsupported ROM format"
+            case .unsupportedROM(let reason):
+                return reason
             case .duplicateROM:
                 return "This ROM is already in your library"
             }
@@ -79,13 +84,7 @@ final class RomImportCoordinator: ObservableObject {
             UTType(filenameExtension: "gb")!,
             UTType(filenameExtension: "gbc")!,
             UTType(filenameExtension: "gba")!,
-            UTType(filenameExtension: "nes")!,
-            UTType(filenameExtension: "gen")!,
-            UTType(filenameExtension: "md")!,
-            UTType(filenameExtension: "bin")!,
-            UTType(filenameExtension: "smc")!,
-            UTType(filenameExtension: "sfc")!,
-            UTType.item
+            UTType(filenameExtension: "nds")!
         ])
         documentPicker.allowsMultipleSelection = true
         documentPicker.delegate = delegate
@@ -192,6 +191,8 @@ final class RomImportCoordinator: ObservableObject {
             
             importedEntries.append(entry)
             return entry
+        } catch let error as ROMValidationError {
+            throw mapValidationError(error)
         } catch {
             throw error
         }
@@ -242,6 +243,18 @@ final class RomImportCoordinator: ObservableObject {
                 let digest = Insecure.SHA1.hash(data: data)
                 continuation.resume(returning: digest.map { String(format: "%02x", $0) }.joined())
             }
+        }
+    }
+
+    private func mapValidationError(_ error: ROMValidationError) -> ImportError {
+        switch error {
+        case .unsupportedSystem(let reason),
+             .unsupportedArchive(let reason),
+             .invalidFormat(let reason),
+             .corruptData(let reason),
+             .invalidChecksum(let reason),
+             .fileRejected(let reason):
+            return .unsupportedROM(reason: reason)
         }
     }
 }

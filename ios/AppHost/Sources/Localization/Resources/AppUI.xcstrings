@@ -3826,31 +3826,31 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "FAQ and help resources"
+            "value" : "Task-based help, troubleshooting, and support"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Preguntas frecuentes y recursos de ayuda"
+            "value" : "Ayuda por tareas, solución de problemas y soporte"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "FAQ とサポート情報"
+            "value" : "タスク別ヘルプ、トラブル解決、サポート"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "常见问题和帮助资源"
+            "value" : "按任务整理的帮助、排障与支持"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "常見問題與支援資源"
+            "value" : "按任務整理的幫助、排障與支援"
           }
         }
       }
@@ -3861,31 +3861,31 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Support"
+            "value" : "Help & Support"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Soporte"
+            "value" : "Ayuda y soporte"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "サポート"
+            "value" : "ヘルプとサポート"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "支持"
+            "value" : "帮助与支持"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "支援"
+            "value" : "幫助與支援"
           }
         }
       }
@@ -4343,6 +4343,744 @@
             "value" : "解鎖 Pro 功能"
           }
         }
+      }
+    },
+    "ads.ad_experience.subtitle.free" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Ambient native ads and optional rewarded perks only." } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Solo anuncios nativos discretos y recompensas opcionales." } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "控えめなネイティブ広告と任意のリワード特典のみです。" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "仅包含轻量原生广告和可选激励特权。" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "僅包含輕量原生廣告與可選獎勵特權。" } }
+      }
+    },
+    "ads.ad_experience.subtitle.pro" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Pro removes all browsing ads." } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Pro elimina todos los anuncios de navegación." } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "Pro では閲覧中の広告がすべてなくなります。" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "Pro 会移除所有浏览广告。" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "Pro 會移除所有瀏覽廣告。" } }
+      }
+    },
+    "ads.ad_experience.title" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Ad experience" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Experiencia con anuncios" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "広告体験" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "广告体验" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "廣告體驗" } }
+      }
+    },
+    "ads.admob.helper" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Served by AdMob test ads for integration verification." } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Mostrado con anuncios de prueba de AdMob para verificar la integración." } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "連携確認のため、AdMob のテスト広告を表示しています。" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "此处显示的是 AdMob 测试广告，用于验证集成。" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "此處顯示的是 AdMob 測試廣告，用於驗證整合。" } }
+      }
+    },
+    "ads.admob.unavailable.message" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Verify the Google Mobile Ads package is linked to the iOS app target and the sample app ID is present in Info.plist." } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Verifica que el paquete Google Mobile Ads esté vinculado al destino iOS y que el app ID de ejemplo esté en Info.plist." } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "Google Mobile Ads パッケージが iOS ターゲットにリンクされ、Info.plist にサンプル App ID があることを確認してください。" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "请确认 Google Mobile Ads 包已链接到 iOS target，且 Info.plist 中包含示例 App ID。" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "請確認 Google Mobile Ads 套件已連結到 iOS target，且 Info.plist 中包含範例 App ID。" } }
+      }
+    },
+    "ads.admob.unavailable.title" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "AdMob test ad unavailable" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Anuncio de prueba de AdMob no disponible" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "AdMob テスト広告を取得できません" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "AdMob 测试广告暂不可用" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "AdMob 測試廣告暫時無法使用" } }
+      }
+    },
+    "ads.card.helper" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Curated to feel like part of the library, not a break from it." } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Diseñado para sentirse como parte de tu biblioteca, no como una interrupción." } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "ライブラリの一部として自然に感じられるように配置しています。" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "让它看起来像资料库的一部分，而不是一次打断。" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "讓它看起來像資料庫的一部分，而不是一次打斷。" } }
+      }
+    },
+    "ads.cta.browse" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Browse" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Explorar" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "見る" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "浏览" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "瀏覽" } }
+      }
+    },
+    "ads.cta.go_pro" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Go Pro" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Hazte Pro" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "Pro にする" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "升级 Pro" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "升級 Pro" } }
+      }
+    },
+    "ads.cta.learn_more" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Learn More" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Más información" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "詳しく見る" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "了解更多" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "了解更多" } }
+      }
+    },
+    "ads.guardrails" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "No ads during gameplay, onboarding, or critical emulator flows." } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "No se muestran anuncios durante el juego, la introducción ni los flujos críticos del emulador." } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "ゲーム中、オンボーディング中、重要なエミュレーター処理中には広告を表示しません。" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "游戏中、首次引导中和模拟器关键流程中不会显示广告。" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "遊戲中、首次引導中與模擬器關鍵流程中不會顯示廣告。" } }
+      }
+    },
+    "ads.home.section_title" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Sponsored • Discover new gear" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Patrocinado • Descubre nuevo equipo" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "スポンサー • 新しいギアを見つける" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "赞助内容 • 发现新装备" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "贊助內容 • 探索新裝備" } }
+      }
+    },
+    "ads.home.upsell.subtitle" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Upgrade to Pro for uninterrupted browsing and premium shell access." } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Pásate a Pro para navegar sin interrupciones y desbloquear carcasas premium." } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "Pro にアップグレードすると、広告なしの閲覧とプレミアムシェルが利用できます。" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "升级到 Pro，享受不中断的浏览体验和高级外壳。" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "升級到 Pro，享受不中斷的瀏覽體驗與高級外殼。" } }
+      }
+    },
+    "ads.home.upsell.title" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Go ad-free and unlock premium perks" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Quita los anuncios y desbloquea ventajas premium" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "広告をなくしてプレミアム特典を解放" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "移除广告并解锁高级权益" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "移除廣告並解鎖高級權益" } }
+      }
+    },
+    "ads.mock.home.advertiser" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Retro Supply Co." } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Retro Supply Co." } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "Retro Supply Co." } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "Retro Supply Co." } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "Retro Supply Co." } }
+      }
+    },
+    "ads.mock.home.body" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Cases, grips, and display stands that fit right into your setup." } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Fundas, agarres y soportes que encajan perfectamente en tu espacio." } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "ケースやグリップ、ディスプレイスタンドをあなたの環境に自然に追加できます。" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "收纳盒、握把和展示架，能够自然融入你的摆设。" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "收納盒、握把與展示架，能自然融入你的擺設。" } }
+      }
+    },
+    "ads.mock.home.headline" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Discover collector-grade accessories" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Descubre accesorios de nivel coleccionista" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "コレクター向けアクセサリーを見つける" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "发现收藏级配件" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "探索收藏級配件" } }
+      }
+    },
+    "ads.mock.library.advertiser" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Pixel Archive" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Pixel Archive" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "Pixel Archive" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "Pixel Archive" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "Pixel Archive" } }
+      }
+    },
+    "ads.mock.library.body" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Protect cartridges, label save dumps, and keep your shelf looking sharp." } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Protege cartuchos, etiqueta tus guardados y mantén tu estantería impecable." } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "カートリッジを保護し、セーブデータを整理して、棚を美しく保てます。" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "保护卡带、整理存档，并让你的收藏架保持整洁。" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "保護卡帶、整理存檔，並讓你的收藏架保持整潔。" } }
+      }
+    },
+    "ads.mock.library.headline" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Archive your library without the clutter" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Archiva tu biblioteca sin desorden" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "散らかさずにライブラリを整理" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "井井有条地归档你的游戏库" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "井然有序地歸檔你的遊戲庫" } }
+      }
+    },
+    "ads.offer.extra_save_slot.label" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "+1 save slot for 24h" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "+1 ranura de guardado por 24 h" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "24時間 +1 セーブスロット" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "24 小时内 +1 存档位" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "24 小時內 +1 存檔位" } }
+      }
+    },
+    "ads.offer.extra_save_slot.message" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Watch a short ad to unlock one more save slot for 24 hours." } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Ve un anuncio corto para desbloquear una ranura de guardado extra durante 24 horas." } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "短い広告を見ると、24時間追加のセーブスロットを1つ解放できます。" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "观看一段短广告，可在 24 小时内解锁一个额外存档位。" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "觀看一段短廣告，可在 24 小時內解鎖一個額外存檔位。" } }
+      }
+    },
+    "ads.offer.extra_save_slot.title" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Extra save slot" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Ranura de guardado extra" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "追加セーブスロット" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "额外存档位" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "額外存檔位" } }
+      }
+    },
+    "ads.offer.shell_trial.label" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Session-long shell preview" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Vista previa del tema durante la sesión" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "セッション中シェルを試す" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "本次会话内预览外壳" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "本次階段內預覽外殼" } }
+      }
+    },
+    "ads.offer.shell_trial.message" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Preview a premium shell style for your current session." } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Prueba un estilo de carcasa premium durante tu sesión actual." } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "現在のセッション中だけプレミアムシェルを試せます。" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "在当前会话期间预览一款高级外壳风格。" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "在目前階段期間預覽一款高級外殼風格。" } }
+      }
+    },
+    "ads.offer.shell_trial.title" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Premium shell preview" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Vista previa de carcasa premium" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "プレミアムシェルのプレビュー" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "高级外壳预览" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "高級外殼預覽" } }
+      }
+    },
+    "ads.personalized.helper" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Keep recommendations more relevant while you browse the library." } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Mantén las recomendaciones más relevantes mientras navegas por la biblioteca." } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "ライブラリ閲覧中のおすすめをより関連性の高いものにします。" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "让你在浏览资料库时看到更相关的推荐内容。" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "讓你在瀏覽資料庫時看到更相關的推薦內容。" } }
+      }
+    },
+    "ads.personalized.toggle" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Personalized ads" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Anuncios personalizados" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "パーソナライズ広告" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "个性化广告" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "個人化廣告" } }
+      }
+    },
+    "ads.plan.badge.free" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Free" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Gratis" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "無料" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "免费" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "免費" } }
+      }
+    },
+    "ads.plan.badge.pro" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Ad-free" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Sin anuncios" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "広告なし" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "无广告" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "無廣告" } }
+      }
+    },
+    "ads.plan.free.subtitle" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Ads only appear in idle browsing surfaces and rewarded flows." } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Los anuncios solo aparecen en superficies de exploración y recompensas opcionales." } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "広告は閲覧中の画面とリワードフローにのみ表示されます。" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "广告只会出现在浏览场景和激励流程中。" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "廣告只會出現在瀏覽場景與獎勵流程中。" } }
+      }
+    },
+    "ads.plan.free.title" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "RetroMind Free" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "RetroMind Gratis" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "RetroMind Free" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "RetroMind 免费版" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "RetroMind 免費版" } }
+      }
+    },
+    "ads.plan.pro.subtitle" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Browsing stays ad-free across Home, Library, and perks." } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "La navegación permanece sin anuncios en Inicio, Biblioteca y ventajas." } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "ホーム、ライブラリ、特典画面を広告なしで閲覧できます。" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "首页、资料库和特权页面浏览时都保持无广告。" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "首頁、資料庫與特權頁面瀏覽時都保持無廣告。" } }
+      }
+    },
+    "ads.plan.pro.title" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "RetroMind Pro" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "RetroMind Pro" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "RetroMind Pro" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "RetroMind Pro" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "RetroMind Pro" } }
+      }
+    },
+    "ads.plan.section" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Plan" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Plan" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "プラン" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "方案" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "方案" } }
+      }
+    },
+    "ads.privacy.nav" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Privacy & Ads" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Privacidad y anuncios" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "プライバシーと広告" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "隐私与广告" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "隱私與廣告" } }
+      }
+    },
+    "ads.privacy.section" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Privacy & Ads" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Privacidad y anuncios" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "プライバシーと広告" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "隐私与广告" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "隱私與廣告" } }
+      }
+    },
+    "ads.reward.active" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Active" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Activo" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "有効" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "已生效" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "已生效" } }
+      }
+    },
+    "ads.reward.extra_save_slot.label" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "+1 temporary save slot" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "+1 ranura temporal" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "一時的に +1 セーブスロット" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "临时 +1 存档位" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "臨時 +1 存檔位" } }
+      }
+    },
+    "ads.reward.extra_save_slot.message" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Watch a short ad to unlock one extra save slot for the next 24 hours." } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Ve un anuncio corto para desbloquear una ranura extra durante las próximas 24 horas." } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "短い広告を見ると、次の24時間だけ追加のセーブスロットを1つ解放できます。" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "观看一段短广告，可在接下来的 24 小时内解锁一个额外存档位。" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "觀看一段短廣告，可在接下來的 24 小時內解鎖一個額外存檔位。" } }
+      }
+    },
+    "ads.reward.extra_save_slot.title" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Need one more save slot?" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "¿Necesitas una ranura de guardado más?" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "セーブスロットをもう1つ使いますか？" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "需要再多一个存档位吗？" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "需要再多一個存檔位嗎？" } }
+      }
+    },
+    "ads.reward.footer" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Rewards apply only after a completed ad and never interrupt gameplay." } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Las recompensas solo se aplican tras completar el anuncio y nunca interrumpen la partida." } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "報酬は広告の完了後にのみ付与され、ゲームプレイを妨げません。" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "奖励仅会在广告完整观看后发放，并且绝不会打断游戏。" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "獎勵僅會在廣告完整觀看後發放，且絕不打斷遊戲。" } }
+      }
+    },
+    "ads.reward.shell_trial.label" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Premium shell preview" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Vista previa de carcasa premium" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "プレミアムシェルのプレビュー" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "高级外壳预览" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "高級外殼預覽" } }
+      }
+    },
+    "ads.reward.shell_trial.message" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Preview a premium shell theme for your current app session after a short ad." } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Prueba un tema de carcasa premium durante tu sesión actual tras un anuncio corto." } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "短い広告の後、現在のセッション中だけプレミアムシェルテーマを試せます。" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "观看一段短广告后，可在当前会话中预览高级外壳主题。" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "觀看一段短廣告後，可在目前階段中預覽高級外殼主題。" } }
+      }
+    },
+    "ads.reward.shell_trial.title" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Try a premium shell for this session" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Prueba una carcasa premium en esta sesión" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "このセッションでプレミアムシェルを試す" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "在本次会话中试用高级外壳" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "在本次階段中試用高級外殼" } }
+      }
+    },
+    "ads.reward.watch_button" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Watch Ad • %@" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Ver anuncio • %@" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "広告を見る • %@" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "观看广告 • %@" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "觀看廣告 • %@" } }
+      }
+    },
+    "ads.rewarded.section" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Rewarded Perks" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Ventajas con recompensa" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "リワード特典" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "激励特权" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "獎勵特權" } }
+      }
+    },
+    "ads.sponsored" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Sponsored" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Patrocinado" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "スポンサー" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "赞助内容" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "贊助內容" } }
+      }
+    },
+    "ads.status.content_unavailable" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Ad content is unavailable right now." } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "El contenido del anuncio no está disponible en este momento." } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "現在、広告コンテンツを利用できません。" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "当前广告内容暂不可用。" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "目前廣告內容暫時無法使用。" } }
+      }
+    },
+    "ads.status.opening_sponsored" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Opening sponsored content." } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Abriendo contenido patrocinado." } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "スポンサーコンテンツを開いています。" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "正在打开赞助内容。" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "正在開啟贊助內容。" } }
+      }
+    },
+    "ads.status.reward_unavailable" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Rewarded ad is unavailable right now." } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "El anuncio con recompensa no está disponible en este momento." } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "現在、リワード広告を利用できません。" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "当前激励广告暂不可用。" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "目前獎勵廣告暫時無法使用。" } }
+      }
+    },
+    "ads.status.reward_unlocked" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "%@ unlocked." } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "%@ desbloqueado." } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "%@ を解放しました。" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "已解锁：%@" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "已解鎖：%@" } }
+      }
+    },
+    "ads.status.title" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Ad Status" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Estado del anuncio" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "広告ステータス" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "广告状态" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "廣告狀態" } }
+      }
+    },
+    "settings.dev.ad_provider.admob_test" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "AdMob Test Ads" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Anuncios de prueba de AdMob" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "AdMob テスト広告" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "AdMob 测试广告" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "AdMob 測試廣告" } }
+      }
+    },
+    "settings.dev.ad_provider.admob_test.subtitle" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Load Google test ads through the real Mobile Ads SDK on iOS." } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Carga anuncios de prueba de Google mediante el SDK real de Mobile Ads en iOS." } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "iOS で実際の Mobile Ads SDK を通して Google のテスト広告を読み込みます。" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "在 iOS 上通过真实的 Mobile Ads SDK 加载 Google 测试广告。" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "在 iOS 上透過真實的 Mobile Ads SDK 載入 Google 測試廣告。" } }
+      }
+    },
+    "settings.dev.ad_provider.footer" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "AdMob test ads require the Google Mobile Ads package in the iOS app target and are safe for simulator or device testing." } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Los anuncios de prueba de AdMob requieren el paquete Google Mobile Ads en el destino iOS y son seguros para probar en simulador o dispositivo." } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "AdMob テスト広告を使うには、iOS ターゲットに Google Mobile Ads パッケージが必要で、シミュレータや実機で安全に検証できます。" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "AdMob 测试广告需要在 iOS target 中接入 Google Mobile Ads 包，可安全用于模拟器或真机测试。" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "AdMob 測試廣告需要在 iOS target 中接入 Google Mobile Ads 套件，可安全用於模擬器或真機測試。" } }
+      }
+    },
+    "settings.dev.ad_provider.mock" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Mock Ads" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Anuncios simulados" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "モック広告" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "模拟广告" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "模擬廣告" } }
+      }
+    },
+    "settings.dev.ad_provider.mock.subtitle" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Use local sponsored cards with deterministic copy." } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Usa tarjetas patrocinadas locales con texto determinista." } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "ローカルのスポンサー表示カードを固定文言で使います。" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "使用本地赞助卡片，并显示固定文案。" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "使用本地贊助卡片，並顯示固定文案。" } }
+      }
+    },
+    "settings.dev.ad_provider.nav" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Ad Provider" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Proveedor de anuncios" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "広告プロバイダ" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "广告提供方" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "廣告提供方" } }
+      }
+    },
+    "settings.dev.ad_provider.subtitle" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Switch between local mock cards and AdMob test ads for browsing surfaces." } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Cambia entre tarjetas simuladas locales y anuncios de prueba de AdMob en las superficies de navegación." } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "閲覧画面でローカルのモックカードと AdMob テスト広告を切り替えます。" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "在浏览场景中切换本地模拟卡片和 AdMob 测试广告。" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "在瀏覽場景中切換本地模擬卡片與 AdMob 測試廣告。" } }
+      }
+    },
+    "settings.dev.ad_provider.title" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Ad provider" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Proveedor de anuncios" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "広告プロバイダ" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "广告提供方" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "廣告提供方" } }
+      }
+    },
+    "settings.dev.monetization_tier.footer" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Live follows real purchases and cached entitlements. Force Free and Force Pro are local-only developer overrides." } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "En vivo sigue las compras reales y los permisos en caché. Forzar Gratis y Forzar Pro son anulaciones locales de desarrollador." } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "Live は実際の購入とキャッシュされた権利状態に従います。Force Free と Force Pro はローカル専用の開発者オーバーライドです。" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "实时模式会遵循真实购买和缓存权益。强制免费与强制 Pro 仅是本地开发者覆盖。" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "即時模式會遵循真實購買與快取權益。強制免費與強制 Pro 僅是本地開發者覆寫。" } }
+      }
+    },
+    "settings.dev.monetization_tier.force_free" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Force Free" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Forzar Gratis" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "無料を強制" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "强制免费" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "強制免費" } }
+      }
+    },
+    "settings.dev.monetization_tier.force_free.subtitle" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Show ads and rewarded flows as a free user." } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Muestra anuncios y flujos con recompensa como si fueras un usuario gratuito." } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "無料ユーザーとして広告とリワードフローを表示します。" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "以免费用户身份显示广告和激励流程。" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "以免費用戶身分顯示廣告與獎勵流程。" } }
+      }
+    },
+    "settings.dev.monetization_tier.force_pro" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Force Pro" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Forzar Pro" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "Pro を強制" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "强制 Pro" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "強制 Pro" } }
+      }
+    },
+    "settings.dev.monetization_tier.force_pro.subtitle" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Hide ads and treat the app as Pro." } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Oculta los anuncios y trata la app como Pro." } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "広告を非表示にして、アプリを Pro として扱います。" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "隐藏广告，并将应用视为 Pro。" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "隱藏廣告，並將應用視為 Pro。" } }
+      }
+    },
+    "settings.dev.monetization_tier.live" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Live" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "En vivo" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "実際の状態" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "实时" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "即時" } }
+      }
+    },
+    "settings.dev.monetization_tier.live.subtitle" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Use actual purchases and entitlement cache." } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Usa las compras reales y la caché de permisos." } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "実際の購入情報と権利キャッシュを使います。" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "使用真实购买信息和权益缓存。" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "使用真實購買資訊與權益快取。" } }
+      }
+    },
+    "settings.dev.monetization_tier.nav" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Monetization Tier" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Nivel de monetización" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "収益化ティア" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "变现层级" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "變現層級" } }
+      }
+    },
+    "settings.dev.monetization_tier.subtitle" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Force Free or Pro while testing ads and upgrade flows." } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Fuerza Gratis o Pro mientras pruebas anuncios y flujos de mejora." } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "広告やアップグレードの検証中に、無料または Pro を強制します。" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "在测试广告和升级流程时，强制切换为免费或 Pro。" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "在測試廣告與升級流程時，強制切換為免費或 Pro。" } }
+      }
+    },
+    "settings.dev.monetization_tier.title" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Monetization tier" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Nivel de monetización" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "収益化ティア" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "变现层级" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "變現層級" } }
+      }
+    },
+    "settings.upgrade.account_subtitle.free" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Remove ads and unlock premium perks." } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Quita los anuncios y desbloquea ventajas premium." } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "広告をなくしてプレミアム特典を解放します。" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "移除广告并解锁高级权益。" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "移除廣告並解鎖高級權益。" } }
+      }
+    },
+    "settings.upgrade.account_subtitle.pro" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "You are on Pro and browsing ad-free." } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Ya estás en Pro y navegas sin anuncios." } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "現在 Pro プランで、広告なしで閲覧できます。" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "你当前已是 Pro，浏览时无广告。" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "你目前已是 Pro，瀏覽時無廣告。" } }
+      }
+    },
+    "settings.upgrade.go_pro.price" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Go Pro • %@" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Hazte Pro • %@" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "Pro にする • %@" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "升级 Pro • %@" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "升級 Pro • %@" } }
+      }
+    },
+    "settings.upgrade.plan_summary.free" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Free includes ambient browsing ads and optional rewarded perks. Pro removes ads and keeps premium cosmetics unlocked." } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Gratis incluye anuncios discretos al navegar y recompensas opcionales. Pro elimina los anuncios y mantiene desbloqueados los cosméticos premium." } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "Free には閲覧中の広告と任意のリワード特典が含まれます。Pro では広告がなくなり、プレミアム外観も解放されたままです。" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "免费版包含浏览时的轻量广告和可选激励特权。Pro 会移除广告，并保持高级外观已解锁。" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "免費版包含瀏覽時的輕量廣告與可選獎勵特權。Pro 會移除廣告，並保持高級外觀已解鎖。" } }
+      }
+    },
+    "settings.upgrade.plan_summary.pro" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "You already have an ad-free plan." } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Ya tienes un plan sin anuncios." } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "すでに広告なしプランをご利用中です。" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "你已经拥有无广告方案。" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "你已經擁有無廣告方案。" } }
+      }
+    },
+    "settings.upgrade.purchase.cancelled" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Purchase cancelled." } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Compra cancelada." } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "購入をキャンセルしました。" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "购买已取消。" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "購買已取消。" } }
+      }
+    },
+    "settings.upgrade.purchase.pending" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Purchase is pending approval." } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "La compra está pendiente de aprobación." } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "購入は承認待ちです。" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "购买正在等待批准。" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "購買正在等待批准。" } }
+      }
+    },
+    "settings.upgrade.purchase.success" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Purchase successful. Ads are now removed." } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Compra completada. Los anuncios ya se han eliminado." } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "購入が完了しました。広告は削除されました。" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "购买成功。广告现已移除。" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "購買成功。廣告現已移除。" } }
+      }
+    },
+    "settings.upgrade.remove_ads" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Remove Ads" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Quitar anuncios" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "広告を削除" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "移除广告" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "移除廣告" } }
+      }
+    },
+    "settings.upgrade.remove_ads.price" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Remove Ads • %@" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Quitar anuncios • %@" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "広告を削除 • %@" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "移除广告 • %@" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "移除廣告 • %@" } }
+      }
+    },
+    "settings.upgrade.restore_purchases" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Restore Purchases" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Restaurar compras" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "購入を復元" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "恢复购买" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "恢復購買" } }
       }
     },
     "settings.upgrade.title" : {

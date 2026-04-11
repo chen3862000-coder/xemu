@@ -3,6 +3,28 @@ import XCTest
 
 @MainActor
 final class GamePlayViewModelTests: XCTestCase {
+    func testSaveStateThumbnailRectFitsPortraitFramesIntoFixedCanvas() {
+        let rect = GamePlayViewModel.saveStateThumbnailImageRect(
+            sourceSize: CGSize(width: 256, height: 384)
+        )
+
+        XCTAssertEqual(rect.width, 213, accuracy: 1)
+        XCTAssertEqual(rect.height, 320, accuracy: 1)
+        XCTAssertEqual(rect.minX, 174, accuracy: 1)
+        XCTAssertEqual(rect.minY, 0, accuracy: 1)
+    }
+
+    func testSaveStateThumbnailRectFitsLandscapeFramesIntoFixedCanvas() {
+        let rect = GamePlayViewModel.saveStateThumbnailImageRect(
+            sourceSize: CGSize(width: 512, height: 192)
+        )
+
+        XCTAssertEqual(rect.width, 560, accuracy: 1)
+        XCTAssertEqual(rect.height, 210, accuracy: 1)
+        XCTAssertEqual(rect.minX, 0, accuracy: 1)
+        XCTAssertEqual(rect.minY, 55, accuracy: 1)
+    }
+
     func testNDSFrameDimensionsMatchExpectedLayouts() {
         let stacked = GamePlayViewModel.ndsFrameDimensions(for: .stacked)
         XCTAssertEqual(stacked.width, 256)
@@ -250,6 +272,27 @@ final class GamePlayViewModelTests: XCTestCase {
         XCTAssertEqual(payload["stage"], 0x4F2C)
     }
 
+    func testPlayInsightsPayloadIncludesKingdomHeartsVitalsAndDeckState() {
+        let sample = MarioLiveMemorySample(
+            lives: 14,
+            powerUpState: 175,
+            gameplayState: 0x01,
+            invulnerabilityTimer: 0,
+            health: 108,
+            maxHealth: 132,
+            gameMode: nil,
+            contextValues: [:]
+        )
+
+        let payload = GamePlayViewModel.playInsightsPayload(for: .kingdomHeartsChainOfMemories, liveSample: sample)
+
+        XCTAssertEqual(payload["level"], 14)
+        XCTAssertEqual(payload["health"], 108)
+        XCTAssertEqual(payload["maxHealth"], 132)
+        XCTAssertEqual(payload["cp"], 175)
+        XCTAssertEqual(payload["state"], 0x01)
+    }
+
     func testPlayInsightsPayloadIncludesMetroidZeroMissionVitalsAndLocation() {
         let sample = MarioLiveMemorySample(
             lives: nil,
@@ -275,5 +318,136 @@ final class GamePlayViewModelTests: XCTestCase {
         XCTAssertEqual(payload["room"], 0x1C)
         XCTAssertEqual(payload["mapX"], 18)
         XCTAssertEqual(payload["mapY"], 7)
+    }
+
+    func testPlayInsightsPayloadIncludesKirbyNightmareVitalsAndProgress() {
+        let sample = MarioLiveMemorySample(
+            lives: 3,
+            powerUpState: 0,
+            gameplayState: 0x04,
+            invulnerabilityTimer: 0,
+            health: 36,
+            maxHealth: nil,
+            gameMode: nil,
+            contextValues: [
+                "level": 0x04,
+                "completion": 0x07
+            ]
+        )
+
+        let payload = GamePlayViewModel.playInsightsPayload(for: .kirbyNightmareInDreamLand, liveSample: sample)
+
+        XCTAssertEqual(payload["lives"], 3)
+        XCTAssertEqual(payload["health"], 36)
+        XCTAssertEqual(payload["level"], 0x04)
+        XCTAssertEqual(payload["completion"], 0x07)
+    }
+
+    func testPlayInsightsPayloadIncludesKirbyAmazingMirrorVitalsAndProgress() {
+        let sample = MarioLiveMemorySample(
+            lives: 4,
+            powerUpState: 0,
+            gameplayState: 0x03,
+            invulnerabilityTimer: 0,
+            health: 28,
+            maxHealth: nil,
+            gameMode: nil,
+            contextValues: [
+                "mirrorPieces": 0x03,
+                "mapsCollected": 0x0008
+            ]
+        )
+
+        let payload = GamePlayViewModel.playInsightsPayload(for: .kirbyAmazingMirror, liveSample: sample)
+
+        XCTAssertEqual(payload["lives"], 4)
+        XCTAssertEqual(payload["health"], 28)
+        XCTAssertEqual(payload["mirrorPieces"], 0x03)
+        XCTAssertEqual(payload["mapsCollected"], 0x0008)
+    }
+
+    func testPlayInsightsPayloadIncludesGoldenSunVitalsAndArea() {
+        let sample = MarioLiveMemorySample(
+            lives: nil,
+            powerUpState: 0,
+            gameplayState: 0x08,
+            invulnerabilityTimer: 0,
+            health: 72,
+            maxHealth: 95,
+            gameMode: nil,
+            contextValues: [
+                "area": 0x0008
+            ]
+        )
+
+        let payload = GamePlayViewModel.playInsightsPayload(for: .goldenSun, liveSample: sample)
+
+        XCTAssertEqual(payload["health"], 72)
+        XCTAssertEqual(payload["maxHealth"], 95)
+        XCTAssertEqual(payload["area"], 0x0008)
+    }
+
+    func testPlayInsightsPayloadIncludesGoldenSunTheLostAgeVitalsAndLocale() {
+        let sample = MarioLiveMemorySample(
+            lives: nil,
+            powerUpState: 0,
+            gameplayState: 0x01,
+            invulnerabilityTimer: 0,
+            health: 88,
+            maxHealth: 102,
+            gameMode: nil,
+            contextValues: [
+                "locale": 0x08
+            ]
+        )
+
+        let payload = GamePlayViewModel.playInsightsPayload(for: .goldenSunTheLostAge, liveSample: sample)
+
+        XCTAssertEqual(payload["health"], 88)
+        XCTAssertEqual(payload["maxHealth"], 102)
+        XCTAssertEqual(payload["locale"], 0x08)
+    }
+
+    func testPlayInsightsPayloadIncludesFireEmblemTheSacredStonesVitalsAndGold() {
+        let sample = MarioLiveMemorySample(
+            lives: nil,
+            powerUpState: 0,
+            gameplayState: 0x04,
+            invulnerabilityTimer: 0,
+            health: 18,
+            maxHealth: 24,
+            gameMode: nil,
+            contextValues: [
+                "gold": 3200
+            ]
+        )
+
+        let payload = GamePlayViewModel.playInsightsPayload(for: .fireEmblemTheSacredStones, liveSample: sample)
+
+        XCTAssertEqual(payload["health"], 18)
+        XCTAssertEqual(payload["maxHealth"], 24)
+        XCTAssertEqual(payload["gold"], 3200)
+    }
+
+    func testPlayInsightsPayloadIncludesMegaManZeroVitalsAndMissionState() {
+        let sample = MarioLiveMemorySample(
+            lives: nil,
+            powerUpState: 0x03,
+            gameplayState: 0x03,
+            invulnerabilityTimer: 0,
+            health: 14,
+            maxHealth: nil,
+            gameMode: nil,
+            contextValues: [
+                "mission": 0x03,
+                "retries": 0x02
+            ]
+        )
+
+        let payload = GamePlayViewModel.playInsightsPayload(for: .megaManZero, liveSample: sample)
+
+        XCTAssertEqual(payload["health"], 14)
+        XCTAssertEqual(payload["mission"], 0x03)
+        XCTAssertEqual(payload["retries"], 0x02)
     }
 }

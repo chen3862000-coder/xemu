@@ -53,10 +53,7 @@ public final class AudioEngine {
     private let saturationThreshold: Int32 = 32_200
     private let abruptDeltaThreshold: Int32 = 30_000
     private var preferredIOBufferDuration: TimeInterval
-    private let debugQueueMetricsEnabled: Bool
-    private var debugChunkCount: Int = 0
     private var debugLastNonZeroQueuedFrames: UInt32 = 0
-    private var debugLoggedEnqueueEvents = 0
     private var shouldUseRecoveryStartThreshold = false
     private var consecutiveBridgeBuffers = 0
     private var routeKind: RouteKind = .speakerOrWired
@@ -151,8 +148,6 @@ public final class AudioEngine {
             underrunBridgeFrames = initialTuning.minPartialScheduleFrames
             maxConsecutiveBridgeBuffers = 0
         }
-        debugQueueMetricsEnabled = latencyProfile == .streaming
-
         guard let format = AVAudioFormat(commonFormat: .pcmFormatInt16,
                                         sampleRate: sampleRate,
                                         channels: self.channels,
@@ -199,7 +194,6 @@ public final class AudioEngine {
         engine = AVAudioEngine()
         playerNode = AVAudioPlayerNode()
         setupEngine()
-        debugLog("graph_rebuilt outputRate=\(Int(outputFormat.sampleRate.rounded())) preparedFrames=\(preferredScheduleFrames * 4)")
     }
     
     public var isEngineRunning: Bool {
@@ -209,7 +203,6 @@ public final class AudioEngine {
     public func start() throws {
         guard !engine.isRunning else { return }
         try engine.start()
-        debugLog("engine_started outputNodeRate=\(Int(engine.outputNode.outputFormat(forBus: 0).sampleRate.rounded()))")
     }
 
     static func preferredHardwareSampleRate(fallback: Double) -> Double {
@@ -600,7 +593,7 @@ public final class AudioEngine {
                     self.playBufferOnQueue(bridgeBuffer, isBridgeBuffer: true)
                     return
                 }
-                if (self.debugQueueMetricsEnabled || self.maxConsecutiveBridgeBuffers > 0),
+                if self.maxConsecutiveBridgeBuffers > 0,
                    self.isPlaying,
                    self.queuedFrames == 0,
                    pendingFrames == 0,
@@ -686,7 +679,6 @@ public final class AudioEngine {
             let baseTuning = Self.tuning(sampleRate: sampleRate, latencyProfile: latencyProfile)
             applyTuning(baseTuning, routeKind: routeKind)
             rebuildEngineGraph()
-            debugLog("startup_route_override routeKind=\(routeKind) preparedFrames=\(preferredScheduleFrames * 4)")
         }
     }
     #endif
@@ -763,7 +755,6 @@ public final class AudioEngine {
             refreshSessionConfiguration(session)
             rebuildEngineGraph()
             let actualSampleRate = session.sampleRate > 0 ? session.sampleRate : sampleRate
-            debugLog(sessionSnapshot(prefix: "configure_session", session: session))
             if abs(actualSampleRate - sampleRate) >= 1 {
                 DispatchQueue.main.async { [weak self] in
                     self?.onHardwareConfigurationChanged?(actualSampleRate)
@@ -812,7 +803,6 @@ public final class AudioEngine {
             let actualSampleRate = session.sampleRate > 0 ? session.sampleRate : self.sampleRate
             self.refreshSessionConfiguration(session)
             self.rebuildEngineGraph()
-            self.debugLog(self.sessionSnapshot(prefix: "route_change reason=\(reason?.rawValue ?? 0)", session: session))
             if abs(actualSampleRate - self.sampleRate) >= 1 {
                 DispatchQueue.main.async { [weak self] in
                     self?.onHardwareConfigurationChanged?(actualSampleRate)
@@ -836,7 +826,6 @@ public final class AudioEngine {
         let baseTuning = Self.tuning(sampleRate: sampleRate, latencyProfile: latencyProfile)
         applyTuning(baseTuning, routeKind: newRouteKind)
         try? session.setPreferredIOBufferDuration(preferredIOBufferDuration)
-        debugLog("session_config route=\(routeDescription(session)) routeKind=\(newRouteKind) sessionRate=\(Int(session.sampleRate.rounded())) ioBufferMs=\(Int((session.ioBufferDuration * 1000).rounded())) start=\(minStartQueuedFrames) sched=\(preferredScheduleFrames) partial=\(minPartialScheduleFrames) softCap=\(softLatencyCapFrames) max=\(maxQueuedFrames)")
     }
     #endif
 
@@ -863,34 +852,15 @@ public final class AudioEngine {
         queuedFrames: UInt32,
         extra: String
     ) {
-        guard debugQueueMetricsEnabled else { return }
-        debugChunkCount += 1
+        _ = event
+        _ = incomingFrames
+        _ = pendingFrames
+        _ = extra
         if queuedFrames > 0 {
             debugLastNonZeroQueuedFrames = queuedFrames
         }
-        let shouldLog = event == "underrun" || event == "bridge" || event == "hard_reset" || event == "start_playback"
-        if shouldLog {
-            debugLog("queue event=\(event) incoming=\(incomingFrames) pending=\(pendingFrames) queued=\(queuedFrames) extra=\(extra)")
-            return
-        }
-        guard debugLoggedEnqueueEvents < 4 else { return }
-        debugLoggedEnqueueEvents += 1
-        debugLog("queue event=\(event) incoming=\(incomingFrames) pending=\(pendingFrames) queued=\(queuedFrames) extra=\(extra)")
-    }
-
-    private func debugLog(_ message: String) {
-        NSLog("[AudioEngine] %@", message)
     }
 
     #if os(iOS)
-    private func routeDescription(_ session: AVAudioSession) -> String {
-        let outputs = session.currentRoute.outputs.map { "\($0.portType.rawValue):\($0.portName)" }
-        return outputs.isEmpty ? "none" : outputs.joined(separator: ",")
-    }
-
-    private func sessionSnapshot(prefix: String, session: AVAudioSession) -> String {
-        let outputNodeRate = Int(engine.outputNode.outputFormat(forBus: 0).sampleRate.rounded())
-        return "\(prefix) sessionRate=\(Int(session.sampleRate.rounded())) outputNodeRate=\(outputNodeRate) ioBufferMs=\(Int((session.ioBufferDuration * 1000).rounded())) route=\(routeDescription(session))"
-    }
     #endif
 }

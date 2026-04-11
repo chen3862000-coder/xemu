@@ -1223,6 +1223,7 @@ struct GamePlayView: View {
         let shellHeight = safeFrameValue(max(360, min(geometry.size.height - 18, 900.0)), fallback: 360)
         let screenWidth = safeFrameValue(min(shellWidth - 30, 380.0), fallback: 120)
         let screenHeight = safeFrameValue(screenWidth * (160.0 / 240.0), fallback: 80)
+        let controlRowWidth = safeFrameValue(screenWidth + 18, fallback: 138)
         let dpadScale = CGFloat(shellOverride.dpadScaleMultiplier ?? 0.82)
         let faceScale = CGFloat(shellOverride.faceButtonScaleMultiplier ?? 0.82)
 
@@ -1325,7 +1326,7 @@ struct GamePlayView: View {
                         .scaleEffect(faceScale)
                         .opacity(shellTheme.controlStyle.idleOpacity)
                     }
-                    .padding(.horizontal, 12)
+                    .frame(width: controlRowWidth)
                     .offset(y: -4)
 
                     shellSystemButtonsRow(theme: .neoGlass) {
@@ -1335,7 +1336,7 @@ struct GamePlayView: View {
                     } onStartPress: { pressed in
                         viewModel.handleButtonPress(.start, pressed: pressed)
                     }
-                    .padding(.horizontal, 20)
+                    .frame(width: controlRowWidth)
                     .padding(.bottom, 2)
                     .offset(y: -6)
                 }
