@@ -260,9 +260,7 @@ private struct LibraryAdSlot: View {
         }
         .gridCellColumns(2)
         .task {
-            if adsPolicyController.adProviderMode == .mock {
-                await adsPolicyController.prepareNativeAd(for: .libraryGridNative, on: .library)
-            }
+            await adsPolicyController.prepareNativeAd(for: .libraryGridNative, on: .library)
         }
     }
 }

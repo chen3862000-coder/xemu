@@ -355,6 +355,61 @@ private enum AdMobRootViewControllerResolver {
         return controller
     }
 }
+
+@MainActor
+final class AdMobRewardedPresentationBridge: NSObject {
+    @MainActor static let shared = AdMobRewardedPresentationBridge()
+
+    private var continuation: CheckedContinuation<RewardedAdPresentationResult, Never>?
+    private var rewardedAd: RewardedAd?
+
+    func present(adUnitID: String) async -> RewardedAdPresentationResult {
+        guard continuation == nil else { return .cancelled }
+        guard let rootViewController = AdMobRootViewControllerResolver.topViewController() else {
+            return .unavailable
+        }
+
+        AdMobBootstrap.startIfAvailable()
+
+        return await withCheckedContinuation { continuation in
+            self.continuation = continuation
+
+            RewardedAd.load(with: adUnitID, request: Request()) { [weak self] ad, error in
+                guard let self else {
+                    continuation.resume(returning: .unavailable)
+                    return
+                }
+
+                guard error == nil, let ad else {
+                    self.finishRewardPresentation(.unavailable)
+                    return
+                }
+
+                self.rewardedAd = ad
+                ad.fullScreenContentDelegate = self
+                ad.present(from: rootViewController) { [weak self] in
+                    self?.finishRewardPresentation(.completed)
+                }
+            }
+        }
+    }
+
+    private func finishRewardPresentation(_ result: RewardedAdPresentationResult) {
+        rewardedAd = nil
+        continuation?.resume(returning: result)
+        continuation = nil
+    }
+}
+
+extension AdMobRewardedPresentationBridge: FullScreenContentDelegate {
+    func adDidDismissFullScreenContent(_ ad: any FullScreenPresentingAd) {
+        finishRewardPresentation(.cancelled)
+    }
+
+    func ad(_ ad: any FullScreenPresentingAd, didFailToPresentFullScreenContentWithError error: any Error) {
+        finishRewardPresentation(.unavailable)
+    }
+}
 #else
 enum AdMobBootstrap {
     @MainActor
@@ -368,6 +423,17 @@ struct AdMobNativeCardSlot: View {
 
     var body: some View {
         SponsoredNativeUnavailableCard()
+    }
+}
+
+@MainActor
+final class AdMobRewardedPresentationBridge {
+    @MainActor static let shared = AdMobRewardedPresentationBridge()
+
+    private init() {}
+
+    func present(adUnitID: String) async -> RewardedAdPresentationResult {
+        .unavailable
     }
 }
 #endif

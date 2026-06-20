@@ -28,7 +28,7 @@ struct SettingsView: View {
     @AppStorage("settings.dev.thermalLogging") private var devThermalLogging = false
     @AppStorage("settings.dev.hpDeathDetection") private var devHPDeathDetection = false
     @AppStorage("settings.dev.membershipOverride") private var devMembershipOverrideRaw = DeveloperMembershipOverride.system.rawValue
-    @AppStorage("settings.dev.adProviderMode") private var devAdProviderModeRaw = DeveloperAdProviderMode.mock.rawValue
+    @AppStorage("settings.dev.adProviderMode") private var devAdProviderModeRaw = DeveloperAdProviderMode.adMobTest.rawValue
     @AppStorage("settings.controller.autoImmersive") private var controllerAutoImmersive = true
     @AppStorage("settings.controller.hideTouchControls") private var controllerHideTouchControls = false
     @AppStorage("settings.controller.touchFallback") private var controllerTouchFallback = TouchFallbackMode.auto.rawValue
@@ -54,7 +54,7 @@ struct SettingsView: View {
     }
 
     private var devAdProviderMode: DeveloperAdProviderMode {
-        get { DeveloperAdProviderMode(rawValue: devAdProviderModeRaw) ?? .mock }
+        get { DeveloperAdProviderMode(rawValue: devAdProviderModeRaw) ?? .adMobTest }
         set { devAdProviderModeRaw = newValue.rawValue }
     }
 
@@ -354,7 +354,7 @@ struct SettingsView: View {
         devGameplayEventOverlay = false
         devGameplayEventLogging = false
         devMembershipOverrideRaw = DeveloperMembershipOverride.system.rawValue
-        devAdProviderModeRaw = DeveloperAdProviderMode.mock.rawValue
+        devAdProviderModeRaw = DeveloperAdProviderMode.adMobTest.rawValue
         adsPolicyController.refreshEntitlementStatus()
     }
 }
@@ -556,7 +556,7 @@ private struct DeveloperAdProviderModeView: View {
     @EnvironmentObject private var languageManager: LanguageManager
 
     private var selectedMode: DeveloperAdProviderMode {
-        DeveloperAdProviderMode(rawValue: selection) ?? .mock
+        DeveloperAdProviderMode(rawValue: selection) ?? .adMobTest
     }
 
     private func subtitle(for option: DeveloperAdProviderMode) -> String {
@@ -1139,7 +1139,7 @@ struct UpgradeView: View {
             await MainActor.run {
                 switch result {
                 case .success:
-                    UserDefaults.standard.set(true, forKey: "proUnlocked")
+                    syncLocalUnlockFlagsFromCache()
                     adsPolicyController.refreshEntitlementStatus()
                     purchaseMessage = L10n.string("settings.upgrade.purchase.success", languageManager: languageManager)
                     dismiss()
@@ -1160,7 +1160,7 @@ struct UpgradeView: View {
             await MainActor.run {
                 switch result {
                 case .success:
-                    UserDefaults.standard.set(true, forKey: "proUnlocked")
+                    syncLocalUnlockFlagsFromCache()
                     adsPolicyController.refreshEntitlementStatus()
                     purchaseMessage = "Purchases restored."
                 case .pending:
@@ -1172,6 +1172,13 @@ struct UpgradeView: View {
                 }
             }
         }
+    }
+
+    private func syncLocalUnlockFlagsFromCache() {
+        let defaults = UserDefaults.standard
+        let entitlementCache = EntitlementCache.shared
+        defaults.set(entitlementCache.hasActiveEntitlement(.removeAds), forKey: "removeAdsUnlocked")
+        defaults.set(entitlementCache.hasActiveEntitlement(.proBundle), forKey: "proUnlocked")
     }
 }
 

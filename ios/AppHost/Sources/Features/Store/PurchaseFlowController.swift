@@ -40,7 +40,7 @@ public final class PurchaseFlowController: NSObject, ObservableObject {
     @Published public var lastPurchaseResult: PurchaseResult?
     @Published public var availableProducts: [ProductCode: Product] = [:]
 
-    private let apiStub = AzureApiStub.shared
+    private let entitlementCache = EntitlementCache.shared
     private let logger = Logger(subsystem: "com.xemu.app", category: "PurchaseFlow")
     private var updateListenerTask: Task<Void, Never>?
 
@@ -97,10 +97,10 @@ public final class PurchaseFlowController: NSObject, ObservableObject {
             switch result {
             case .success(let verification):
                 let transaction = try checkVerified(verification)
-                await handleSuccessfulTransaction(transaction, productCode: productCode)
+                let activatedCode = try await handleSuccessfulTransaction(transaction, productCode: productCode)
                 await transaction.finish()
 
-                return .success(productCode)
+                return .success(activatedCode)
 
             case .pending:
                 return .pending(productCode)
@@ -119,67 +119,87 @@ public final class PurchaseFlowController: NSObject, ObservableObject {
     private func handleTransactionUpdate(_ verification: VerificationResult<Transaction>) async {
         do {
             let transaction = try checkVerified(verification)
-            await handleSuccessfulTransaction(transaction, productCode: nil)
+            _ = try await handleSuccessfulTransaction(transaction, productCode: nil)
             await transaction.finish()
         } catch {
             logger.error("Failed to handle transaction update: \(error.localizedDescription, privacy: .public)")
         }
     }
 
-    private func handleSuccessfulTransaction(_ transaction: Transaction, productCode: ProductCode?) async {
-        guard transaction.productType == .nonConsumable else { return }
-
-        do {
-            let receipt = try await fetchReceipt()
-            try await validateReceipt(receipt, transactionID: transaction.id)
-            try await refreshEntitlements()
-
-            await MainActor.run {
-                let code = productCode ?? ProductCode(rawValue: transaction.productID)
-                lastPurchaseResult = code.map { .success($0) }
-            }
-        } catch {
-            logger.error("Failed to handle successful transaction: \(error.localizedDescription, privacy: .public)")
-            await MainActor.run {
-                lastPurchaseResult = .failed(.receiptValidationFailed(error))
-            }
+    private func handleSuccessfulTransaction(_ transaction: Transaction, productCode: ProductCode?) async throws -> ProductCode {
+        guard transaction.productType == .nonConsumable else {
+            throw PurchaseError.transactionFailed("Unsupported transaction type")
         }
-    }
 
-    private func fetchReceipt() async throws -> Data {
-        if let appStoreReceiptURL = Bundle.main.appStoreReceiptURL,
-           let receiptData = try? Data(contentsOf: appStoreReceiptURL) {
-            return receiptData
-        }
-        throw PurchaseError.receiptValidationFailed(URLError(.fileDoesNotExist))
-    }
-
-    private func validateReceipt(_: Data, transactionID _: UInt64) async throws {
-        do {
-            let entitlementBundle = try await apiStub.fetchEntitlements()
-
-            let hasValidEntitlement = entitlementBundle.entitlements.contains { entitlement in
-                entitlement.status == "Active"
-            }
-
-            guard hasValidEntitlement else {
-                throw PurchaseError.receiptValidationFailed(
-                    NSError(domain: "PurchaseFlow", code: -1, userInfo: [
-                        NSLocalizedDescriptionKey: "No valid entitlements found"
-                    ])
+        let bundle = try await syncEntitlementsFromStoreKit()
+        guard let code = productCode ?? ProductCode(rawValue: transaction.productID) else {
+            let error = PurchaseError.receiptValidationFailed(
+                NSError(
+                    domain: "PurchaseFlow",
+                    code: -4,
+                    userInfo: [NSLocalizedDescriptionKey: "Transaction product is not mapped to a known entitlement."]
                 )
+            )
+            await MainActor.run {
+                lastPurchaseResult = .failed(error)
             }
-        } catch {
-            throw PurchaseError.receiptValidationFailed(error)
+            throw error
         }
+
+        guard bundle.entitlements.contains(where: { $0.productCode == code && $0.status == .active }) else {
+            let error = PurchaseError.receiptValidationFailed(
+                NSError(
+                    domain: "PurchaseFlow",
+                    code: -3,
+                    userInfo: [NSLocalizedDescriptionKey: "Verified transaction did not produce an active entitlement."]
+                )
+            )
+            await MainActor.run {
+                lastPurchaseResult = .failed(error)
+            }
+            throw error
+        }
+
+        await MainActor.run {
+            lastPurchaseResult = .success(code)
+        }
+        return code
     }
 
-    private func refreshEntitlements() async throws {
-        do {
-            _ = try await apiStub.fetchEntitlements()
-        } catch {
-            throw PurchaseError.entitlementRefreshFailed(error)
+    private func syncEntitlementsFromStoreKit() async throws -> EntitlementBundle {
+        var entitlements: [Entitlement] = []
+
+        for await result in Transaction.currentEntitlements {
+            let transaction = try checkVerified(result)
+            guard let productCode = ProductCode(rawValue: transaction.productID) else { continue }
+
+            let status: EntitlementStatus
+            if transaction.revocationReason != nil {
+                status = .revoked
+            } else if let expirationDate = transaction.expirationDate, expirationDate < Date() {
+                status = .expired
+            } else {
+                status = .active
+            }
+
+            entitlements.append(
+                Entitlement(
+                    entitlementId: UUID(),
+                    productCode: productCode,
+                    status: status,
+                    activatedAt: transaction.purchaseDate,
+                    expiresAt: transaction.expirationDate
+                )
+            )
         }
+
+        let bundle = EntitlementBundle(
+            userId: entitlementCache.getCachedBundle()?.userId ?? UUID(),
+            entitlements: entitlements,
+            deviceProfile: entitlementCache.getCachedDeviceProfile()
+        )
+        entitlementCache.cache(bundle)
+        return bundle
     }
 
     public func restorePurchases() async -> PurchaseResult {
@@ -195,25 +215,21 @@ public final class PurchaseFlowController: NSObject, ObservableObject {
 
         do {
             try await AppStore.sync()
+            let bundle = try await syncEntitlementsFromStoreKit()
+            let activeEntitlements = bundle.entitlements.filter { $0.status == .active }
 
-            do {
-                try await refreshEntitlements()
-
-                let entitlementBundle = try await apiStub.fetchEntitlements()
-                let hasActiveEntitlement = entitlementBundle.entitlements.contains {
-                    $0.status == "Active"
-                }
-
-                if hasActiveEntitlement {
-                    return .success(.proBundle)
-                } else {
-                    return .cancelled
-                }
-            } catch {
-                return .failed(.entitlementRefreshFailed(error))
+            if activeEntitlements.contains(where: { $0.productCode == .proBundle }) {
+                return .success(.proBundle)
             }
+            if activeEntitlements.contains(where: { $0.productCode == .removeAds }) {
+                return .success(.removeAds)
+            }
+            if let firstActive = activeEntitlements.first {
+                return .success(firstActive.productCode)
+            }
+            return .cancelled
         } catch {
-            return .failed(.purchaseFailed(error))
+            return .failed(.entitlementRefreshFailed(error))
         }
     }
 
@@ -260,10 +276,5 @@ extension PurchaseFlowController {
             description: product.description,
             price: product.displayPrice
         )
-    }
-}
-
-extension EntitlementCache {
-    func updateEntitlements(from bundle: AzureApiStub.EntitlementBundle) async throws {
     }
 }

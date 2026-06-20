@@ -52,6 +52,7 @@ final class CachedEntitlementService: EntitlementService {
         }
 
         if userDefaults.bool(forKey: "proUnlocked")
+            || userDefaults.bool(forKey: "removeAdsUnlocked")
             || entitlementCache.hasActiveEntitlement(.removeAds)
             || entitlementCache.hasActiveEntitlement(.proBundle) {
             return .active
@@ -187,6 +188,7 @@ final class AdsPolicyController: ObservableObject {
     @Published private(set) var statusMessage: String?
 
     private let repository: AdRepository
+    private let rewardedPresenter: RewardedAdPresenting
     private let entitlementService: EntitlementService
     private let preferences: AdPreferences
     private let policy: AdPolicyEvaluating
@@ -203,6 +205,7 @@ final class AdsPolicyController: ObservableObject {
     convenience init() {
         self.init(
             repository: MockAdRepository(),
+            rewardedPresenter: Self.makeRewardedPresenter(),
             entitlementService: CachedEntitlementService.shared,
             preferences: .shared,
             policy: AdPolicyEngine(),
@@ -212,12 +215,14 @@ final class AdsPolicyController: ObservableObject {
 
     init(
         repository: AdRepository,
+        rewardedPresenter: RewardedAdPresenting,
         entitlementService: EntitlementService,
         preferences: AdPreferences,
         policy: AdPolicyEvaluating,
         now: @escaping () -> Date
     ) {
         self.repository = repository
+        self.rewardedPresenter = rewardedPresenter
         self.entitlementService = entitlementService
         self.preferences = preferences
         self.policy = policy
@@ -233,7 +238,7 @@ final class AdsPolicyController: ObservableObject {
     var adProviderMode: DeveloperAdProviderMode {
         DeveloperAdProviderMode(
             rawValue: UserDefaults.standard.string(forKey: "settings.dev.adProviderMode") ?? ""
-        ) ?? .mock
+        ) ?? .adMobTest
     }
 
     var personalizedAdsEnabled: Bool {
@@ -341,6 +346,13 @@ final class AdsPolicyController: ObservableObject {
 
         do {
             let reward = try await repository.loadRewardedAd(for: placement)
+            let presentationResult = await rewardedPresenter.presentRewardedAd(for: placement)
+            guard presentationResult == .completed else {
+                if presentationResult == .unavailable {
+                    statusMessage = L10n.string("ads.status.reward_unavailable")
+                }
+                return
+            }
             rewardedShownThisSession += 1
             let expiry = now().addingTimeInterval(reward.duration)
 
@@ -383,6 +395,17 @@ final class AdsPolicyController: ObservableObject {
                 activeUntil: preferences.shellTrialRewardUntil
             )
         ]
+    }
+
+    private static func makeRewardedPresenter() -> RewardedAdPresenting {
+        switch DeveloperAdProviderMode(
+            rawValue: UserDefaults.standard.string(forKey: "settings.dev.adProviderMode") ?? ""
+        ) ?? .adMobTest {
+        case .mock:
+            return MockRewardedAdPresenter()
+        case .adMobTest:
+            return AdMobRewardedAdPresenter.shared
+        }
     }
 
     private func makeContext(placement: AdPlacement, surface: AppSurface) -> AdContext {

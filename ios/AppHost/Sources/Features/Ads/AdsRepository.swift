@@ -5,6 +5,32 @@ protocol AdRepository: Sendable {
     func loadRewardedAd(for placement: AdPlacement) async throws -> RewardedAdPayload
 }
 
+enum RewardedAdPresentationResult: Equatable, Sendable {
+    case completed
+    case cancelled
+    case unavailable
+}
+
+protocol RewardedAdPresenting: AnyObject {
+    func presentRewardedAd(for placement: AdPlacement) async -> RewardedAdPresentationResult
+}
+
+final class MockRewardedAdPresenter: RewardedAdPresenting {
+    private let resultProvider: @Sendable (AdPlacement) -> RewardedAdPresentationResult
+
+    init(result: RewardedAdPresentationResult = .unavailable) {
+        self.resultProvider = { _ in result }
+    }
+
+    init(resultProvider: @escaping @Sendable (AdPlacement) -> RewardedAdPresentationResult) {
+        self.resultProvider = resultProvider
+    }
+
+    func presentRewardedAd(for placement: AdPlacement) async -> RewardedAdPresentationResult {
+        resultProvider(placement)
+    }
+}
+
 enum MockAdRepositoryError: Error {
     case unsupportedPlacement
 }

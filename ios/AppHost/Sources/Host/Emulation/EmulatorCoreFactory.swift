@@ -12,19 +12,13 @@ public final class EmulatorCoreFactory {
         let core: EmulatorCore
         
         switch platform {
-        case .NES:
-            core = NESCore()
         case .GB, .GBC:
             core = GBCore()
         case .GBA:
             core = GBACore()
-        case .GENESIS:
-            core = GenesisCore()
         case .NDS:
             core = NDSCore()
-        case .PS1:
-            core = PS1Core()
-        case .PS2, ._3DS:
+        case .NES, .GENESIS, .PS1, .PS2, ._3DS:
             throw EmulatorCoreError.unsupportedPlatform(platform)
         }
         
@@ -40,9 +34,9 @@ public final class EmulatorCoreFactory {
     /// - Returns: true if the platform is supported, false otherwise
     public static func isPlatformSupported(_ platform: Platform) -> Bool {
         switch platform {
-        case .NES, .GB, .GBC, .GBA, .GENESIS, .NDS, .PS1:
+        case .GB, .GBC, .GBA, .NDS:
             return true
-        case .PS2, ._3DS:
+        case .NES, .GENESIS, .PS1, .PS2, ._3DS:
             return false
         }
     }
@@ -50,13 +44,13 @@ public final class EmulatorCoreFactory {
     /// Get a list of all supported platforms
     /// - Returns: Array of supported Platform values
     public static func supportedPlatforms() -> [Platform] {
-        return [.NES, .GB, .GBC, .GBA, .GENESIS, .NDS, .PS1]
+        return [.GB, .GBC, .GBA, .NDS]
     }
     
     /// Get a list of all unsupported platforms
     /// - Returns: Array of unsupported Platform values
     public static func unsupportedPlatforms() -> [Platform] {
-        return [.PS2, ._3DS]
+        return [.NES, .GENESIS, .PS1, .PS2, ._3DS]
     }
 }
 

@@ -106,10 +106,12 @@ final class AdsPolicyControllerTests: XCTestCase {
     }
 
     private func makeController(
-        entitlementService: EntitlementService? = nil
+        entitlementService: EntitlementService? = nil,
+        rewardedPresenter: RewardedAdPresenting = MockRewardedAdPresenter(result: .completed)
     ) -> AdsPolicyController {
         AdsPolicyController(
             repository: MockAdRepository(),
+            rewardedPresenter: rewardedPresenter,
             entitlementService: entitlementService ?? MockEntitlementService(status: .inactive),
             preferences: preferences,
             policy: AdPolicyEngine(),

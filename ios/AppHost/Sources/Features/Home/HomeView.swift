@@ -33,6 +33,7 @@ struct HomeView: View {
     @State private var showingGameLibrary = false
     @State private var showingRecentlyPlayed = false
     @State private var showingPlayerStats = false
+    @State private var showingMyPlay = false
     @State private var selectedPlatform: EmulatorPlatform?
     @State private var selectedGame: Game?
     @State private var activeAlert: HomeAlertState?
@@ -124,9 +125,15 @@ struct HomeView: View {
         .fullScreenCover(isPresented: $showingPlayerStats) {
             PlayerStatsView()
         }
+        .fullScreenCover(isPresented: $showingMyPlay) {
+            MyPlayView()
+        }
         #else
         .sheet(isPresented: $showingPlayerStats) {
             PlayerStatsView()
+        }
+        .sheet(isPresented: $showingMyPlay) {
+            MyPlayView()
         }
         #endif
         .sheet(item: $selectedPlatform) { platform in
@@ -216,6 +223,7 @@ struct HomeView: View {
         .onChange(of: showingGameLibrary) { _, shown in if !shown { refreshHome() } }
         .onChange(of: showingRecentlyPlayed) { _, shown in if !shown { refreshHome() } }
         .onChange(of: showingPlayerStats) { _, shown in if !shown { refreshHome() } }
+        .onChange(of: showingMyPlay) { _, shown in if !shown { refreshHome() } }
         .onChange(of: showingSettings) { _, shown in if !shown { refreshHome() } }
         .onChange(of: selectedPlatform) { _, platform in if platform == nil { refreshHome() } }
         .onReceive(NotificationCenter.default.publisher(for: .romLibraryDidChange)) { _ in
@@ -400,6 +408,24 @@ struct HomeView: View {
             }
             .buttonStyle(.plain)
 
+            Button {
+                showingMyPlay = true
+            } label: {
+                HStack(spacing: 6) {
+                    Image(systemName: "sparkles.rectangle.stack.fill")
+                        .font(.system(size: 12, weight: .semibold))
+                    Text(L10n.string("playinsights.my_play.title", table: "Screens", fallback: "My Play", languageManager: languageManager))
+                        .font(.system(size: 13, weight: .semibold))
+                }
+                .foregroundStyle(AppColors.Text.primary)
+                .padding(.horizontal, 14)
+                .frame(height: 38)
+                .background(AppColors.Surface.cardElevated)
+                .overlay(Capsule().stroke(AppColors.Border.subtle, lineWidth: 1))
+                .clipShape(Capsule())
+            }
+            .buttonStyle(.plain)
+
             Spacer()
         }
     }
@@ -535,39 +561,72 @@ struct HomeView: View {
     }
     
     private var statsGrid: some View {
-        HStack(spacing: RMSpacing.lg) {
-            Button(action: {
-                showingGameLibrary = true
-            }) {
-                StatCard(
-                    title: L10n.string("home.total_games", languageManager: languageManager),
-                    value: "\(viewModel.totalGames)",
-                    icon: "gamecontroller.fill",
-                    helper: L10n.format("home.total_games.helper", Int64(viewModel.emulators.count), languageManager: languageManager),
-                    gradient: [AppColors.primary, AppColors.accent]
+        VStack(spacing: RMSpacing.md) {
+            HStack(spacing: RMSpacing.lg) {
+                Button(action: {
+                    showingGameLibrary = true
+                }) {
+                    StatCard(
+                        title: L10n.string("home.total_games", languageManager: languageManager),
+                        value: "\(viewModel.totalGames)",
+                        icon: "gamecontroller.fill",
+                        helper: L10n.format("home.total_games.helper", Int64(viewModel.emulators.count), languageManager: languageManager),
+                        gradient: [AppColors.primary, AppColors.accent]
+                    )
+                }
+                .buttonStyle(PlainButtonStyle())
+                
+                Button(action: {
+                    showingPlayerStats = true
+                }) {
+                    StatCard(
+                        title: L10n.string("home.game_stats", languageManager: languageManager),
+                        value: viewModel.totalHours,
+                        icon: "chart.bar.fill",
+                        helper: viewModel.gameStatsHelper,
+                        gradient: [AppColors.info, AppColors.primary]
+                    )
+                }
+                .buttonStyle(PlainButtonStyle())
+                .scaleEffect(idleTarget == .gameStats ? (idleBreathing ? 1.03 : 0.985) : 1.0)
+                .shadow(
+                    color: AppColors.primary.opacity(idleTarget == .gameStats ? (idleBreathing ? 0.24 : 0.12) : 0.08),
+                    radius: idleTarget == .gameStats ? 16 : 8,
+                    x: 0,
+                    y: idleTarget == .gameStats ? 9 : 5
                 )
             }
-            .buttonStyle(PlainButtonStyle())
-            
+
             Button(action: {
-                showingPlayerStats = true
+                showingMyPlay = true
             }) {
-                StatCard(
-                    title: L10n.string("home.game_stats", languageManager: languageManager),
-                    value: viewModel.totalHours,
-                    icon: "chart.bar.fill",
-                    helper: viewModel.gameStatsHelper,
-                    gradient: [AppColors.info, AppColors.primary]
+                HStack(spacing: 10) {
+                    Image(systemName: "sparkles.rectangle.stack.fill")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundStyle(AppColors.primary)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(L10n.string("playinsights.my_play.title", table: "Screens", fallback: "My Play", languageManager: languageManager))
+                            .font(.system(size: 15, weight: .semibold))
+                            .foregroundColor(AppColors.textPrimary)
+                        Text(L10n.string("home.game_stats", languageManager: languageManager))
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundColor(AppColors.textSecondary)
+                    }
+                    Spacer()
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(AppColors.textMuted)
+                }
+                .padding(.horizontal, 16)
+                .frame(maxWidth: .infinity, minHeight: 52, alignment: .leading)
+                .background(AppColors.surface)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16)
+                        .stroke(AppColors.surfaceLight.opacity(0.55), lineWidth: 1)
                 )
+                .clipShape(RoundedRectangle(cornerRadius: 16))
             }
-            .buttonStyle(PlainButtonStyle())
-            .scaleEffect(idleTarget == .gameStats ? (idleBreathing ? 1.03 : 0.985) : 1.0)
-            .shadow(
-                color: AppColors.primary.opacity(idleTarget == .gameStats ? (idleBreathing ? 0.24 : 0.12) : 0.08),
-                radius: idleTarget == .gameStats ? 16 : 8,
-                x: 0,
-                y: idleTarget == .gameStats ? 9 : 5
-            )
+            .buttonStyle(.plain)
         }
     }
     
@@ -818,9 +877,7 @@ private struct HomeFeedAdSlot: View {
             }
         }
         .task {
-            if adsPolicyController.adProviderMode == .mock {
-                await adsPolicyController.prepareNativeAd(for: .homeFeedNative, on: .home)
-            }
+            await adsPolicyController.prepareNativeAd(for: .homeFeedNative, on: .home)
         }
     }
 }

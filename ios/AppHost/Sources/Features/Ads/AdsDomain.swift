@@ -16,6 +16,21 @@ enum DeveloperAdProviderMode: String, CaseIterable, Identifiable {
     }
 }
 
+@MainActor
+final class AdMobRewardedAdPresenter: RewardedAdPresenting {
+    @MainActor static let shared = AdMobRewardedAdPresenter()
+
+    private init() {}
+
+    func presentRewardedAd(for placement: AdPlacement) async -> RewardedAdPresentationResult {
+        #if os(iOS) && canImport(GoogleMobileAds)
+        return await AdMobRewardedPresentationBridge.shared.present(adUnitID: AdMobTestConfig.rewardedAdUnitID)
+        #else
+        return .unavailable
+        #endif
+    }
+}
+
 enum AdPlacement: String, CaseIterable, Identifiable, Sendable {
     case homeFeedNative
     case libraryGridNative

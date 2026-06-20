@@ -9,13 +9,13 @@ public class GenesisCore: EmulatorCore, @unchecked Sendable {
     public init() {}
     
     public func initialize() -> Bool {
-        isInitialized = true
-        return true
+        isInitialized = false
+        return false
     }
     
     public func loadROM(romPath: String) -> Bool {
         self.romPath = romPath
-        return isInitialized
+        return false
     }
     
     public func start() {
